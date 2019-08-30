@@ -1,4 +1,4 @@
-# PowerSystems
+# InfrastrucutreSystems
 
 [![Build Status](https://travis-ci.org/NREL/PowerSystems.jl.svg?branch=master)](https://travis-ci.org/NREL/InfrastructureSystems.jl)
 
