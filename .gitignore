@@ -1,2 +1,20 @@
 
 *.log
+*_checkpoints
+*.jl.cov
+*.jl.*.cov
+*.jl.mem
+docs/build/*
+.DS_Store
+*.R
+*.PNG
+*.csv
+*.ipynb
+*.log
+*.m
+*.RAW
+*.zip
+data
+*.bak
+*~
+*.vscode
