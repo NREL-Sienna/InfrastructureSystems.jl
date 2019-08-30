@@ -1,10 +1,9 @@
 # Logging
-This document describes logging facilities available in the PowerSystems
-module. The examples assume the following imports:
+This document describes logging facilities available in the modules that use InfrastructureSystems. The examples assume the following imports:
 
 ```julia
 import Logging
-import PowerSystems: configure_logging, open_file_logger, MultiLogger, LogEventTracker
+import InfrastructureSystems: configure_logging, open_file_logger, MultiLogger, LogEventTracker
 ```
 
 ## Use Cases
@@ -42,7 +41,7 @@ console_logger = ConsoleLogger(stderr, Logging.Error)
 open_file_logger("log.txt", Logging.Info) do file_logger
     multi_logger = MultiLogger([console_logger, file_logger])
     global_logger(multi_logger)
-    
+
     do_stuff()
 end
 ```
@@ -55,11 +54,11 @@ try/finally block and reset the global logger upon exit.
 ```julia
 function run_tests()
     console_logger = ConsoleLogger(stderr, Logging.Error)
-    
+
     open_file_logger("log.txt", Logging.Info) do file_logger
         multi_logger = MultiLogger([console_logger, file_logger])
         global_logger(multi_logger)
-        
+
         do_stuff()
     end
 end
