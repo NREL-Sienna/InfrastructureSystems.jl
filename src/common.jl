@@ -1,4 +1,4 @@
 
-struct InvalidParameter <: Exception
+struct DataFormatError <: Exception
     msg::AbstractString
 end

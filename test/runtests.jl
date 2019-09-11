@@ -3,9 +3,14 @@ using Test
 using Logging
 
 using InfrastructureSystems
+import InfrastructureSystems
 
+const IS = InfrastructureSystems
+const BASE_DIR = abspath(joinpath(dirname(Base.find_package("InfrastructureSystems")), ".."))
+const DATA_DIR = joinpath(BASE_DIR, "test", "data")
+const FORECASTS_DIR = joinpath(DATA_DIR, "forecasts")
 
-LOG_FILE = "systems.log"
+const LOG_FILE = "infrastructure-systems.log"
 
 LOG_LEVELS = Dict(
     "Debug" => Logging.Debug,
