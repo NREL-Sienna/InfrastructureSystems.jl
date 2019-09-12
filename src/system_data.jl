@@ -1,11 +1,11 @@
 
-struct SystemData{T}
+struct SystemData
     components::Components
     forecasts::Forecasts
 end
 
-function SystemData{T}() where T <: Component
-    return SystemData{T}(Components{T}(), Forecasts())
+function SystemData()
+    return SystemData(Components(), Forecasts())
 end
 
 """
@@ -55,9 +55,74 @@ function add_forecast!(data::SystemData, forecast::T) where T <: Forecast
 end
 
 """
-    add_forecasts!(data::SystemData, metadata_file::AbstractString; resolution=nothing)
+    add_forecast!(
+                  data::SystemData,
+                  filename::AbstractString,
+                  component::InfrastructureSystemsType,
+                  label::AbstractString,
+                  scaling_factor::Union{String, Float64}=1.0,
+                 )
 
-Add forecasts from a metadata file.
+Add a forecast from a CSV file.
+
+See [`TimeseriesFileMetadata`](@ref) for description of scaling_factor.
+"""
+function add_forecast!(
+                       data::SystemData,
+                       filename::AbstractString,
+                       component::InfrastructureSystemsType,
+                       label::AbstractString,
+                       scaling_factor::Union{String, Float64}=1.0,
+                      )
+    component_name = get_name(component)
+    ts = read_timeseries(filename, component_name)
+    timeseries = ts[Symbol(component_name)]
+    _add_forecast!(data, component, label, timeseries, scaling_factor)
+end
+
+"""
+    add_forecast!(
+                  data::SystemData,
+                  ta::TimeSeries.TimeArray,
+                  component::InfrastructureSystemsType,
+                  label::AbstractString,
+                  scaling_factor::Union{String, Float64}=1.0,
+                 )
+
+Add a forecast to a system from a TimeSeries.TimeArray.
+
+See [`TimeseriesFileMetadata`](@ref) for description of scaling_factor.
+"""
+function add_forecast!(
+                       data::SystemData,
+                       ta::TimeSeries.TimeArray,
+                       component::InfrastructureSystemsType,
+                       label::AbstractString,
+                       scaling_factor::Union{String, Float64}=1.0,
+                      )
+    timeseries = ta[Symbol(get_name(component))]
+    _add_forecast!(data, component, label, timeseries, scaling_factor)
+end
+
+"""
+    add_forecast!(sys::System, df::DataFrames.DataFrame, component::InfrastructureSystemsType,
+                  label::AbstractString, scaling_factor::Union{String, Float64}=1.0)
+
+Add a forecast to a system from a DataFrames.DataFrame.
+
+See [`TimeseriesFileMetadata`](@ref) for description of scaling_factor.
+"""
+function add_forecast!(data::SystemData, df::DataFrames.DataFrame, component::InfrastructureSystemsType,
+                       label::AbstractString, scaling_factor::Union{String, Float64}=1.0;
+                       timestamp=:timestamp)
+    timeseries = TimeSeries.TimeArray(df; timestamp=timestamp)
+    add_forecast!(data, timeseries, component, label, scaling_factor)
+end
+
+"""
+    make_forecasts(data::SystemData, metadata_file::AbstractString; resolution=nothing)
+
+Makes forecasts from a metadata file.
 
 # Arguments
 - `data::SystemData`: system
@@ -66,23 +131,24 @@ Add forecasts from a metadata file.
 
 See [`TimeseriesFileMetadata`](@ref) for description of what the file should contain.
 """
-function add_forecasts!(data::SystemData, metadata_file::AbstractString, mod::Module;
+function make_forecasts(data::SystemData, metadata_file::AbstractString, mod::Module;
                         resolution=nothing)
-    add_forecasts!(data, read_timeseries_metadata(metadata_file), mod; resolution=resolution)
+    return make_forecasts(data, read_timeseries_metadata(metadata_file), mod;
+                          resolution=resolution)
 end
 
 """
-    add_forecasts!(data::SystemData, timeseries_metadata::Vector{TimeseriesFileMetadata};
+    make_forecasts(data::SystemData, timeseries_metadata::Vector{TimeseriesFileMetadata};
                    resolution=nothing)
 
-Add forecasts from a vector of TimeseriesFileMetadata values.
+Return a vector of forecasts from a vector of TimeseriesFileMetadata values.
 
 # Arguments
 - `data::SystemData`: system
 - `timeseries_metadata::Vector{TimeseriesFileMetadata}`: metadata values
 - `resolution::{Nothing, Dates.Period}`: skip any forecasts that don't match this resolution
 """
-function add_forecasts!(
+function make_forecasts(
                         data::SystemData,
                         timeseries_metadata::Vector{TimeseriesFileMetadata},
                         mod::Module;
@@ -93,56 +159,7 @@ function add_forecasts!(
         add_forecast_info!(forecast_infos, data, ts_metadata, mod)
     end
 
-    _add_forecasts!(data, forecast_infos, resolution)
-end
-
-"""
-    add_forecast!(data::SystemData, filename::AbstractString, component::Component,
-                  label::AbstractString, scaling_factor::Union{String, Float64}=1.0)
-
-Add a forecast from a CSV file.
-
-See [`TimeseriesFileMetadata`](@ref) for description of scaling_factor.
-"""
-function add_forecast!(data::SystemData, filename::AbstractString, component::Component,
-                       label::AbstractString, scaling_factor::Union{String, Float64}=1.0)
-    component_name = get_name(component)
-    # TODO: this only support Deterministic forecasts. If the component_name is in
-    # multiple columns then create ScenarioBased instead.
-    # Probabilistic would need to accept probabilities vector. This function should take a
-    # metadata file instead of single CSV file.
-    ts = read_timeseries(filename, component_name)
-    timeseries = ts[Symbol(component_name)]
-    _add_forecast!(data, component, label, timeseries, scaling_factor)
-end
-
-"""
-    add_forecast!(data::SystemData, ta::TimeSeries.TimeArray, component::Component,
-                  label::AbstractString, scaling_factor::Union{String, Float64}=1.0)
-
-Add a forecast to a system from a TimeSeries.TimeArray.
-
-See [`TimeseriesFileMetadata`](@ref) for description of scaling_factor.
-"""
-function add_forecast!(data::SystemData, ta::TimeSeries.TimeArray, component::Component,
-                       label::AbstractString, scaling_factor::Union{String, Float64}=1.0)
-    timeseries = ta[Symbol(get_name(component))]
-    _add_forecast!(data, component, label, timeseries, scaling_factor)
-end
-
-"""
-    add_forecast!(sys::System, df::DataFrames.DataFrame, component::Component,
-                  label::AbstractString, scaling_factor::Union{String, Float64}=1.0)
-
-Add a forecast to a system from a DataFrames.DataFrame.
-
-See [`TimeseriesFileMetadata`](@ref) for description of scaling_factor.
-"""
-function add_forecast!(data::SystemData, df::DataFrames.DataFrame, component::Component,
-                       label::AbstractString, scaling_factor::Union{String, Float64}=1.0;
-                       timestamp=:timestamp)
-    timeseries = TimeSeries.TimeArray(df; timestamp=timestamp)
-    add_forecast!(data, timeseries, component, label, scaling_factor)
+    return _make_forecasts(forecast_infos, resolution)
 end
 
 """
@@ -172,41 +189,41 @@ function split_forecasts!(
 end
  
 
-function _add_forecast!(data::SystemData, component::Component, label::AbstractString,
-                        timeseries::TimeSeries.TimeArray, scaling_factor)
+function _add_forecast!(
+                        data::SystemData,
+                        component::InfrastructureSystemsType,
+                        label::AbstractString,
+                        timeseries::TimeSeries.TimeArray,
+                        scaling_factor,
+                       )
     timeseries = _handle_scaling_factor(timeseries, scaling_factor)
-    # TODO DT: shouldn't hard-code to Deterministic
+    # TODO: This code path needs to accept a metdata file or parameters telling it which
+    # type of forecast to create.
     forecast = Deterministic(component, label, timeseries)
     add_forecast!(data, forecast)
 end
 
-function _add_forecasts!(data::SystemData, forecast_infos::ForecastInfos, resolution)
-    for forecast in forecast_infos.forecasts
-        len = length(forecast.data)
+function _make_forecasts(forecast_infos::ForecastInfos, resolution)
+    forecasts = Vector{Forecast}()
+
+    for forecast_info in forecast_infos.forecasts
+        len = length(forecast_info.data)
         @assert len >= 2
-        timestamps = TimeSeries.timestamp(forecast.data)
+        timestamps = TimeSeries.timestamp(forecast_info.data)
         res = timestamps[2] - timestamps[1]
         if !isnothing(resolution) && res != resolution
             @debug "Skip forecast with resolution=$res; doesn't match user=$resolution"
             continue
         end
 
-        # TODO: needs special handling in PowerSystems
-        #if forecast.component isa LoadZones
-        #    uuids = Set([get_uuid(x) for x in forecast.component.buses])
-        #    forecast_components = [load for load in get_components(ElectricLoad, data)
-        #                           if get_bus(load) |> get_uuid in uuids]
-        #else
-        #    forecast_components = [forecast.component]
-        #end
-
-        forecast_components = [forecast.component]
-        timeseries = forecast.data[Symbol(get_name(forecast.component))]
-        timeseries = _handle_scaling_factor(timeseries, forecast.scaling_factor)
-        forecasts = [Deterministic(x, forecast.label, timeseries)
-                     for x in forecast_components]
-        add_forecasts!(data, forecasts)
+        timeseries = forecast_info.data[Symbol(get_name(forecast_info.component))]
+        timeseries = _handle_scaling_factor(timeseries, forecast_info.scaling_factor)
+        forecast_type = get_forecast_type(forecast_info)
+        forecast = forecast_type(forecast_info.component, forecast_info.label, timeseries)
+        push!(forecasts, forecast)
     end
+
+    return forecasts
 end
 
 function add_forecast_info!(infos::ForecastInfos, data::SystemData,
@@ -248,8 +265,8 @@ function _get_forecast_component(data::SystemData, category, name)
     return component
 end
 
-""" Checks that the component exists in and the UUID's match"""
-function _validate_forecast(data::SystemData, forecast::T) where T <: Forecast
+"""Checks that the component exists in data and the UUID's match."""
+function _validate_forecast(data::SystemData, forecast::Forecast)
     # Validate that each forecast's component is stored in the system.
     comp = forecast.component
     ctype = typeof(comp)
@@ -294,24 +311,39 @@ function Base.summary(io::IO, data::SystemData)
     Base.summary(io, data.forecasts)
 end
 
-iterate_components(data::SystemData) = iterate_components(data.components)
-add_component!(data::SystemData, component; kwargs...) = add_component!(data.components, component; kwargs...)
+function compare_values(x::SystemData, y::SystemData)::Bool
+    match = true
+    for key in keys(x.components.data)
+        if !compare_values(x.components.data[key], y.components.data[key])
+            @debug "System components do not match"
+            match = false
+        end
+    end
 
-remove_components!(::Type{T}, data::SystemData) where T = remove_components!(T, data.components)
-remove_component!(data::SystemData, component) = remove_component!(data.components, component)
+    if !compare_values(x.forecasts.data, y.forecasts.data)
+        @debug "System forecasts do not match"
+        match = false
+    end
+
+    return match
+end
+
+add_component!(data::SystemData, component; kwargs...) = add_component!(data.components, component; kwargs...)
+iterate_components(data::SystemData) = iterate_components(data.components)
+
 remove_component!(::Type{T}, data::SystemData, name) where T = remove_component!(T, data.components, name)
+remove_component!(data::SystemData, component) = remove_component!(data.components, component)
+remove_components!(::Type{T}, data::SystemData) where T = remove_components!(T, data.components)
 
 get_component(::Type{T}, data::SystemData, args...) where T = get_component(T, data.components, args...)
 get_components(::Type{T}, data::SystemData) where T = get_components(T, data.components)
 get_components_by_name(::Type{T}, data::SystemData, args...) where T = get_components_by_name(T, data.components, args...)
-get_component_forecasts(::Type{T}, data::SystemData, args...) where T = get_component_forecasts(T, data.forecasts, args...)
 
-add_forecasts!(data::SystemData, metadata::AbstractString; kwargs...) = add_forecasts!(data.forecasts, metadata; kwargs...)
-add_forecasts!(data::SystemData, metadata::Vector{TimeseriesFileMetadata}; kwargs...) = add_forecasts!(data.forecasts, metadata; kwargs...)
+clear_forecasts!(data::SystemData) = clear_forecasts!(data.forecasts)
+get_component_forecasts(::Type{T}, data::SystemData, args...) where T = get_component_forecasts(T, data.forecasts, args...)
 get_forecasts(::Type{T}, data::SystemData, args...) where T = get_forecasts(T, data.forecasts, args...)
 iterate_forecasts(data::SystemData) = iterate_forecasts(data.forecasts)
 remove_forecast!(data::SystemData, args...) = remove_forecast!(data.forecasts, args...)
-clear_forecasts!(data::SystemData) = clear_forecasts!(data.forecasts)
 
 get_forecast_initial_times(data::SystemData) = get_forecast_initial_times(data.forecasts)
 get_forecasts_horizon(data::SystemData) = get_forecasts_horizon(data.forecasts)

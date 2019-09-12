@@ -1,12 +1,12 @@
 
-const ComponentsByType = Dict{DataType, Dict{String, <:T}} where T <: Component
+const ComponentsByType = Dict{DataType, Dict{String, <:InfrastructureSystemsType}}
 
-struct Components{T}
+struct Components
     data::ComponentsByType
     validation_descriptors::Vector
 end
 
-function Components{T}(; validation_descriptor_file=nothing) where T <: Component
+function Components(; validation_descriptor_file=nothing)
     if isnothing(validation_descriptor_file)
         validation_descriptors = Vector()
     else
@@ -14,11 +14,11 @@ function Components{T}(; validation_descriptor_file=nothing) where T <: Componen
                                              Vector()
     end
 
-    return Components{T}(ComponentsByType{T}(), validation_descriptors)
+    return Components(ComponentsByType(), validation_descriptors)
 end
 
 """
-    add_component!(components::Components, component::T) where T <: Component
+    add_component!(components::Components, component::T) where T <: InfrastructureSystemsType
 
 Add a component to the system.
 
@@ -31,7 +31,7 @@ function add_component!(
                         components::Components,
                         component::T;
                         kwargs...
-                       ) where T <: Component
+                       ) where T <: InfrastructureSystemsType
     if !isconcretetype(T)
         throw(ArgumentError("add_component! only accepts concrete types"))
     end
@@ -46,13 +46,13 @@ function add_component!(
 end
 
 """
-    remove_components!(::Type{T}, components::Components) where T <: Component
+    remove_components!(::Type{T}, components::Components) where T <: InfrastructureSystemsType
 
 Remove all components of type T from the system.
 
 Throws ArgumentError if the type is not stored.
 """
-function remove_components!(::Type{T}, components::Components) where T <: Component
+function remove_components!(::Type{T}, components::Components) where T <: InfrastructureSystemsType
     if !haskey(components.data, T)
         throw(ArgumentError("component $T is not stored"))
     end
@@ -62,13 +62,13 @@ function remove_components!(::Type{T}, components::Components) where T <: Compon
 end
 
 """
-    remove_component!(components::Components, component::T) where T <: Component
+    remove_component!(components::Components, component::T) where T <: InfrastructureSystemsType
 
 Remove a component from the system by its value.
 
 Throws ArgumentError if the component is not stored.
 """
-function remove_component!(components::Components, component::T) where T <: Component
+function remove_component!(components::Components, component::T) where T <: InfrastructureSystemsType
     _remove_component!(T, components, get_name(component))
 end
 
@@ -77,7 +77,7 @@ end
                       ::Type{T},
                       components::Components,
                       name::AbstractString,
-                      ) where T <: Component
+                      ) where T <: InfrastructureSystemsType
 
 Remove a component from the system by its name.
 
@@ -87,7 +87,7 @@ function remove_component!(
                            ::Type{T},
                            components::Components,
                            name::AbstractString,
-                          ) where T <: Component
+                          ) where T <: InfrastructureSystemsType
     _remove_component!(T, components, name)
 end
 
@@ -95,7 +95,7 @@ function _remove_component!(
                             ::Type{T},
                             components::Components,
                             name::AbstractString,
-                           ) where T <: Component
+                           ) where T <: InfrastructureSystemsType
     if !haskey(components.data, T)
         throw(ArgumentError("component $T is not stored"))
     end
@@ -113,7 +113,7 @@ end
                   ::Type{T},
                   components::Components,
                   name::AbstractString
-                 )::Union{T, Nothing} where T <: Component
+                 )::Union{T, Nothing} where T <: InfrastructureSystemsType
 
 Get the component of concrete type T with name. Returns nothing if no component matches.
 
@@ -125,7 +125,7 @@ function get_component(
                        ::Type{T},
                        components::Components,
                        name::AbstractString
-                      )::Union{T, Nothing} where T <: Component
+                      )::Union{T, Nothing} where T <: InfrastructureSystemsType
     if !isconcretetype(T)
         throw(ArgumentError("get_component only supports concrete types: $T"))
     end
@@ -143,7 +143,7 @@ end
                            ::Type{T},
                            components::Components,
                            name::AbstractString
-                          )::Vector{T} where T <: Component
+                          )::Vector{T} where T <: InfrastructureSystemsType
 
 Get the components of abstract type T with name. Note that
 InfrastructureSystems enforces unique names on each concrete type but not
@@ -157,7 +157,7 @@ function get_components_by_name(
                                 ::Type{T},
                                 components::Components,
                                 name::AbstractString
-                               )::Vector{T} where T <: Component
+                               )::Vector{T} where T <: InfrastructureSystemsType
     if !isabstracttype(T)
         throw(ArgumentError("get_components_by_name only supports abstract types: $T"))
     end
@@ -177,7 +177,7 @@ end
     get_components(
                    ::Type{T},
                    components::Components,
-                  )::FlattenIteratorWrapper{T} where T <: Component
+                  )::FlattenIteratorWrapper{T} where T <: InfrastructureSystemsType
 
 Returns an iterator of components. T can be concrete or abstract.
 Call collect on the result if an array is desired.
@@ -195,7 +195,7 @@ See also: [`iterate_components`](@ref)
 function get_components(
                         ::Type{T},
                         components::Components,
-                       )::FlattenIteratorWrapper{T} where T <: Component
+                       )::FlattenIteratorWrapper{T} where T <: InfrastructureSystemsType
     if isconcretetype(T)
         components_ = get(components.data, T, nothing)
         if isnothing(components_)
@@ -214,7 +214,7 @@ function get_components(
 end
 
 """
-    iterate_components(obj) where T <: Component
+    iterate_components(obj) where T <: InfrastructureSystemsType
 
 Iterates over all components.
 
@@ -227,10 +227,12 @@ end
 
 See also: [`get_components`](@ref)
 """
-function iterate_components(components::Components{T}) where T <: Component
+function iterate_components(components::Components)
     Channel() do channel
-        for component in get_components(T, components)
-            put!(channel, component)
+        for comp_dict in values(components.data)
+            for component in comp_dict
+                put!(channel, component)
+            end
         end
     end
 end
@@ -245,7 +247,7 @@ end
 
 function encode_for_json(components::Components)
     # Convert each name-to-value component dictionary to arrays.
-    new_components = Dict{DataType, Vector{<:Component}}()
+    new_components = Dict{DataType, Vector{<:InfrastructureSystemsType}}()
     for (data_type, component_dict) in components.data
         new_components[data_type] = [x for x in values(component_dict)]
     end

@@ -34,6 +34,7 @@ function read_timeseries_metadata(file_path::AbstractString)::Vector{TimeseriesF
                     item["label"],
                     scaling_factor,
                     item["data_file"],
+                    # Use default values until CDM data is updated.
                     get(item, "probabilities", []),
                     get(item, "forecast_type", "Deterministic"),
                 ))
@@ -69,7 +70,7 @@ end
 
 struct ForecastInfo
     simulation::String
-    component::Component
+    component::InfrastructureSystemsType
     label::String  # Component field on which timeseries data is based.
     scaling_factor::Union{String, Float64}
     data::TimeSeries.TimeArray
@@ -84,7 +85,8 @@ struct ForecastInfo
     end
 end
 
-function ForecastInfo(metadata::TimeseriesFileMetadata, component::Component,
+function ForecastInfo(metadata::TimeseriesFileMetadata,
+                      component::InfrastructureSystemsType,
                       timeseries::TimeSeries.TimeArray)
     return ForecastInfo(metadata.simulation, component, metadata.label,
                         metadata.scaling_factor, timeseries, metadata.probabilities,
@@ -92,7 +94,7 @@ function ForecastInfo(metadata::TimeseriesFileMetadata, component::Component,
 end
 
 function get_forecast_type(forecast_info::ForecastInfo)
-    return getfield(InfrastructureSystems, Symbol(forecast_type))
+    return getfield(InfrastructureSystems, Symbol(forecast_info.forecast_type))
 end
 
 struct ForecastInfos

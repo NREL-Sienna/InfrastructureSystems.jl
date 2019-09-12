@@ -141,7 +141,7 @@ function encode_for_json(forecast::T) where T <: Forecast
             continue
         end
         val = getfield(forecast, name)
-        if val isa Component
+        if val isa InfrastructureSystemsType
             push!(vals, get_uuid(val))
         else
             push!(vals, val)
@@ -175,7 +175,7 @@ function convert_type(
         end
 
         val = getfield(data, fieldname)
-        if fieldtype <: Component
+        if fieldtype <: InfrastructureSystemsType
             uuid = Base.UUID(val.value)
             component = component_cache[uuid]
             component_type = typeof(component)

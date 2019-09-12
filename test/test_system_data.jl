@@ -1,13 +1,13 @@
 
 @testset "Test components" begin
-    data = SystemData{Component}()
+    data = SystemData()
 
     name = "component1"
     component = TestComponent(name, 5)
     add_component!(data, component)
 
     component = get_component(TestComponent, data, name)
-    @test get_name(component) == name
+    @test component.name == name
 
     components = get_components(TestComponent, data)
     @test length(components) == 1
@@ -23,9 +23,9 @@
     @test length(components) == 0
 
     add_component!(data, component)
-    components = get_components_by_name(Component, data, name)
+    components = get_components_by_name(InfrastructureSystemsType, data, name)
     @test length(components) == 1
-    @test get_name(components[1]) == name
+    @test components[1].name == name
 
     remove_components!(TestComponent, data)
     components = get_components(TestComponent, data)

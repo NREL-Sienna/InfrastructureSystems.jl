@@ -1,6 +1,6 @@
 
-"""Constructs Deterministic from a Component, label, and TimeArray."""
-function Deterministic(component::Component, label::String, data::TimeSeries.TimeArray)
+"""Constructs Deterministic from a InfrastructureSystemsType, label, and TimeArray."""
+function Deterministic(component::InfrastructureSystemsType, label::String, data::TimeSeries.TimeArray)
     resolution = get_resolution(data)
     initial_time = TimeSeries.timestamp(data)[1]
     Deterministic(component, label, Dates.Minute(resolution), initial_time, data)
@@ -8,7 +8,7 @@ end
 
 """Constructs Deterministic after constructing a TimeArray from initial_time and time_steps.
 """
-function Deterministic(component::Component,
+function Deterministic(component::InfrastructureSystemsType,
                        label::String,
                        resolution::Dates.Period,
                        initial_time::Dates.DateTime,
@@ -20,7 +20,7 @@ function Deterministic(component::Component,
     return Deterministic(component, label, Dates.Minute(resolution), initial_time, data)
 end
 
-function Deterministic(component::Component,
+function Deterministic(component::InfrastructureSystemsType,
                        label::AbstractString,
                        resolution::Dates.Period,
                        initial_time::Dates.DateTime,
@@ -34,7 +34,7 @@ end
 
 """Constructs Probabilistic after constructing a TimeArray from initial_time and time_steps.
 """
-function Probabilistic(component::Component,
+function Probabilistic(component::InfrastructureSystemsType,
                        label::String,
                        resolution::Dates.Period,
                        initial_time::Dates.DateTime,
@@ -52,7 +52,7 @@ end
 
 """Constructs Probabilistic Forecast after constructing a TimeArray from initial_time and time_steps.
 """
-function Probabilistic(component::Component,
+function Probabilistic(component::InfrastructureSystemsType,
                        label::String,
                        quantiles::Vector{Float64},  # Quantiles for the probabilistic forecast
                        data::TimeSeries.TimeArray,
@@ -69,7 +69,7 @@ function Probabilistic(component::Component,
                          quantiles, data)
 end
 
-function Probabilistic(component::Component,
+function Probabilistic(component::InfrastructureSystemsType,
                        label::String,
                        resolution::Dates.Period,
                        initial_time::Dates.DateTime,
@@ -84,7 +84,7 @@ end
 
 """Constructs ScenarioBased Forecast after constructing a TimeArray from initial_time and time_steps.
 """
-function ScenarioBased(component::Component,
+function ScenarioBased(component::InfrastructureSystemsType,
                        label::String,
                        resolution::Dates.Period,
                        initial_time::Dates.DateTime,
@@ -102,7 +102,7 @@ end
 
 """Constructs ScenarioBased Forecast after constructing a TimeArray from initial_time and time_steps.
 """
-function ScenarioBased(component::Component,
+function ScenarioBased(component::InfrastructureSystemsType,
                        label::String,
                        data::TimeSeries.TimeArray,
                       )
@@ -114,7 +114,7 @@ function ScenarioBased(component::Component,
                          data)
 end
 
-function ScenarioBased(component::Component,
+function ScenarioBased(component::InfrastructureSystemsType,
                        label::String,
                        resolution::Dates.Period,
                        initial_time::Dates.DateTime,

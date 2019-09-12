@@ -1,6 +1,6 @@
 
 @testset "Test add_component" begin
-    container = Components{Component}()
+    container = Components()
 
     component = TestComponent("component1", 5)
     add_component!(container, component)
@@ -14,13 +14,13 @@
         val::Int
     end
 
-    container = Components{Component}()
+    container = Components()
     component = BadComponent("component1", 5)
     @test_throws MethodError add_component!(container, component)
 end
 
 @testset "Test remove_component" begin
-    container = Components{Component}()
+    container = Components()
 
     component = TestComponent("component1", 5)
     add_component!(container, component)
@@ -33,7 +33,7 @@ end
 end
 
 @testset "Test get_components" begin
-    container = Components{Component}()
+    container = Components()
 
     # empty
     components = get_components(TestComponent, container)
@@ -43,7 +43,7 @@ end
     add_component!(container, component)
 
     # by abstract type
-    components = get_components(Component, container)
+    components = get_components(InfrastructureSystemsType, container)
     @test length(components) == 1
 
     # by concrete type
@@ -53,7 +53,7 @@ end
 end
 
 @testset "Test get_component" begin
-    container = Components{Component}()
+    container = Components()
 
     component = TestComponent("component1", 5)
     add_component!(container, component)
@@ -62,23 +62,23 @@ end
     @test component.name == "component1"
     @test component.val == 5
 
-    @test_throws ArgumentError get_component(Component, container, "component1")
+    @test_throws ArgumentError get_component(InfrastructureSystemsType, container, "component1")
 end
 
 @testset "Test get_components_by_name" begin
-    container = Components{Component}()
+    container = Components()
 
     component = TestComponent("component1", 5)
     add_component!(container, component)
 
-    components = get_components_by_name(Component, container, "component1")
+    components = get_components_by_name(InfrastructureSystemsType, container, "component1")
     @test length(components) == 1
     @test component.name == "component1"
     @test component.val == 5
 end
 
 @testset "Test iterate_components" begin
-    container = Components{Component}()
+    container = Components()
     component = TestComponent("component1", 5)
     add_component!(container, component)
 
@@ -90,7 +90,7 @@ end
 end
 
 @testset "Summarize components" begin
-    container = Components{Component}()
+    container = Components()
     component = TestComponent("component1", 5)
     add_component!(container, component)
     summary(devnull, container)

@@ -2,7 +2,7 @@
   {
     "struct_name": "Deterministic",
     "docstring": "A deterministic forecast for a particular data field in a Component.",
-    "parametric": "Component",
+    "parametric": "InfrastructureSystemsType",
     "fields": [
       {
         "name": "component",
@@ -47,7 +47,7 @@
   {
     "struct_name": "Probabilistic",
     "docstring": "A Probabilistic forecast for a particular data field in a Component.",
-    "parametric": "Component",
+    "parametric": "InfrastructureSystemsType",
     "fields": [
       {
         "name": "component",
@@ -97,7 +97,7 @@
   {
     "struct_name": "ScenarioBased",
     "docstring": "A Discrete Scenario Based forecast for a particular data field in a Component.",
-    "parametric": "Component",
+    "parametric": "InfrastructureSystemsType",
     "fields": [
       {
         "name": "component",

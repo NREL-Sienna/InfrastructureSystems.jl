@@ -3,7 +3,7 @@ This file is auto-generated. Do not edit.
 =#
 
 """A deterministic forecast for a particular data field in a Component."""
-mutable struct Deterministic{T <: Component} <: Forecast
+mutable struct Deterministic{T <: InfrastructureSystemsType} <: Forecast
     component::T
     label::String  # label of component parameter forecasted
     resolution::Dates.Period

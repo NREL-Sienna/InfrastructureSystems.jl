@@ -58,7 +58,7 @@ function validate_fields(sys::System, ps_struct::T) where T <: InfrastructureSys
         field_value = getfield(ps_struct, name)
         if isnothing(field_value)  # Many structs are of type Union{Nothing, xxx}.
             ;
-        elseif fieldtype <: Union{Nothing, InfrastructureSystemsType} && !(fieldtype <: Component)
+        elseif fieldtype <: Union{Nothing, InfrastructureSystemsType} && !(fieldtype <: InfrastructureSystemsType)
             # Recurse. Components are validated separately and do not need to
             # be validated twice.
             if !validate_fields(sys, getfield(ps_struct, name))

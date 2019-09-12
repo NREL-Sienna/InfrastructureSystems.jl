@@ -7,7 +7,6 @@ import JSON
 import JSON2
 import TimeSeries
 
-export Component
 export Components
 export FlattenIteratorWrapper
 export Forecasts
@@ -54,14 +53,11 @@ export read_timeseries_metadata
 
 export runtests
 
-# Every subtype must implement get_name().
-# TODO: how to document interface formally?
+# Every subtype must implement InfrastructureSystems.get_name() or have a field called name.
 abstract type InfrastructureSystemsType end
 
-# TODO: not correct, just a placeholder
 get_name(value::InfrastructureSystemsType) = value.name
 
-abstract type Component <: InfrastructureSystemsType end
 
 include("common.jl")
 include("internal.jl")
@@ -72,8 +68,9 @@ include("utils/utils.jl")
 
 include("components.jl")
 include("forecasts.jl")
-include("forecast_parser.jl")
 include("generated/includes.jl")
+include("deterministic_forecast.jl")
+include("forecast_parser.jl")
 include("supplemental_constructors.jl")
 include("supplemental_accessors.jl")
 include("timeseries_formats.jl")

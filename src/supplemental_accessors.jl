@@ -14,3 +14,4 @@ function get_forecast_value(forecast::Forecast, ix)
     return TimeSeries.values(ta)
 
 end
+

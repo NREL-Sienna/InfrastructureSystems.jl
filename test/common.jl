@@ -1,5 +1,5 @@
 
-struct TestComponent <: Component
+struct TestComponent <: InfrastructureSystemsType
     name::AbstractString
     val::Int
     internal::InfrastructureSystemsInternal
@@ -10,7 +10,7 @@ function TestComponent(name, val, internal=InfrastructureSystemsInternal())
 end
 
 function create_system_data(; with_forecasts=false)
-    data = SystemData{Component}()
+    data = SystemData()
 
     name = "Component1"
     component = TestComponent(name, 5)
@@ -18,7 +18,7 @@ function create_system_data(; with_forecasts=false)
 
     if with_forecasts
         file = joinpath(FORECASTS_DIR, "ComponentsAsColumnsNoTime.json")
-        add_forecasts!(data, file, IS)
+        add_forecasts!(data, make_forecasts(data, file, IS))
 
         forecasts = get_all_forecasts(data)
         @assert length(forecasts) > 0

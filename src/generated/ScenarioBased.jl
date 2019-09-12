@@ -3,7 +3,7 @@ This file is auto-generated. Do not edit.
 =#
 
 """A Discrete Scenario Based forecast for a particular data field in a Component."""
-mutable struct ScenarioBased{T <: Component} <: Forecast
+mutable struct ScenarioBased{T <: InfrastructureSystemsType} <: Forecast
     component::T
     label::String  # label of component parameter forecasted
     resolution::Dates.Period

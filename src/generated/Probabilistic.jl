@@ -3,7 +3,7 @@ This file is auto-generated. Do not edit.
 =#
 
 """A Probabilistic forecast for a particular data field in a Component."""
-mutable struct Probabilistic{T <: Component} <: Forecast
+mutable struct Probabilistic{T <: InfrastructureSystemsType} <: Forecast
     component::T
     label::String  # label of component parameter forecasted
     resolution::Dates.Period
