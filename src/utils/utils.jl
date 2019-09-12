@@ -77,7 +77,8 @@ function convert_type(::Type{T}, data::Any) where T
     # Improvement: implement the conversion logic. Need to recursively convert fieldnames
     # to fieldtypes, collect the values, and pass them to T(). Also handle literals.
     # The JSON2 library already handles almost all of the cases.
-    if data isa AbstractString
+    #if data isa AbstractString && T <: AbstractString
+    if T <: AbstractString
         return T(data)
     end
 

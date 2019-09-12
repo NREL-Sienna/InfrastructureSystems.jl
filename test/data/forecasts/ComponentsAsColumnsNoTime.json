@@ -1,0 +1,10 @@
+[
+  {
+    "simulation": "simulation",
+    "category": "InfrastructureSystemsType",
+    "component_name": "Component1",
+    "label": "val",
+    "scaling_factor": 1,
+    "data_file": "ComponentsAsColumnsNoTime.csv"
+  }
+]

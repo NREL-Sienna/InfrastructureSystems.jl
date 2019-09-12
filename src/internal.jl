@@ -10,6 +10,6 @@ end
 InfrastructureSystemsInternal() = InfrastructureSystemsInternal(UUIDs.uuid4())
 
 """Gets the UUID for any PowerSystemType."""
-function get_uuid(obj::InfrastructureSystemType)::Base.UUID
+function get_uuid(obj::InfrastructureSystemsType)::Base.UUID
     return obj.internal.uuid
 end
