@@ -11,7 +11,7 @@ end
 """
     add_forecasts!(data::SystemData, forecasts)
 
-Add forecasts to the system.
+Add forecasts.
 
 # Arguments
 - `data::SystemData`: system
@@ -40,7 +40,7 @@ end
 """
     add_forecast!(data::SystemData, forecasts)
 
-Add forecasts to the system.
+Add forecasts.
 
 # Arguments
 - `data::SystemData`: infrastructure
@@ -105,16 +105,27 @@ function add_forecast!(
 end
 
 """
-    add_forecast!(sys::System, df::DataFrames.DataFrame, component::InfrastructureSystemsType,
-                  label::AbstractString, scaling_factor::Union{String, Float64}=1.0)
+    add_forecast!(
+                  data::SystemData,
+                  df::DataFrames.DataFrame,
+                  component::InfrastructureSystemsType,
+                  label::AbstractString,
+                  scaling_factor::Union{String, Float64}=1.0;
+                  timestamp=:timestamp,
+                 )
 
 Add a forecast to a system from a DataFrames.DataFrame.
 
 See [`TimeseriesFileMetadata`](@ref) for description of scaling_factor.
 """
-function add_forecast!(data::SystemData, df::DataFrames.DataFrame, component::InfrastructureSystemsType,
-                       label::AbstractString, scaling_factor::Union{String, Float64}=1.0;
-                       timestamp=:timestamp)
+function add_forecast!(
+                       data::SystemData,
+                       df::DataFrames.DataFrame,
+                       component::InfrastructureSystemsType,
+                       label::AbstractString,
+                       scaling_factor::Union{String, Float64}=1.0;
+                       timestamp=:timestamp,
+                      )
     timeseries = TimeSeries.TimeArray(df; timestamp=timestamp)
     add_forecast!(data, timeseries, component, label, scaling_factor)
 end
@@ -127,6 +138,7 @@ Makes forecasts from a metadata file.
 # Arguments
 - `data::SystemData`: system
 - `metadata_file::AbstractString`: path to metadata file
+- `mod::Module`: calling module
 - `resolution::{Nothing, Dates.Period}`: skip any forecasts that don't match this resolution
 
 See [`TimeseriesFileMetadata`](@ref) for description of what the file should contain.
@@ -265,7 +277,9 @@ function _get_forecast_component(data::SystemData, category, name)
     return component
 end
 
-"""Checks that the component exists in data and the UUID's match."""
+"""
+Checks that the component exists in data and the UUID's match.
+"""
 function _validate_forecast(data::SystemData, forecast::Forecast)
     # Validate that each forecast's component is stored in the system.
     comp = forecast.component
@@ -285,23 +299,23 @@ function _validate_forecast(data::SystemData, forecast::Forecast)
     end
 end
 
-function JSON2.read(io::IO, ::Type{SystemData})
-    error("exit in SystemData IS")
-end
-
 function get_component_types_raw(::Type{SystemData}, raw::NamedTuple)
     return get_component_types_raw(Components, raw.components)
 end
 
-function get_components_raw(::Type{SystemData}, ::Type{T}, raw::NamedTuple) where T <: InfrastructureSystemsType
+function get_components_raw(
+                            ::Type{SystemData},
+                            ::Type{T},
+                            raw::NamedTuple,
+                           ) where T <: InfrastructureSystemsType
     return get_components_raw(Components, T, raw.components)
 end
 
-function convert_type!(
-                       data::SystemData,
-                       raw::NamedTuple,
-                       component_cache::Dict,
-                      ) where T <: Forecast
+function convert_forecasts!(
+                            data::SystemData,
+                            raw::NamedTuple,
+                            component_cache::Dict,
+                           ) where T <: Forecast
     return convert_type!(data.forecasts, raw.forecasts, component_cache)
 end
 
@@ -328,20 +342,38 @@ function compare_values(x::SystemData, y::SystemData)::Bool
     return match
 end
 
-add_component!(data::SystemData, component; kwargs...) = add_component!(data.components, component; kwargs...)
+
+# Redirect functions to Components and Forecasts
+
+
+add_component!(data::SystemData, component; kwargs...) = add_component!(
+    data.components, component; kwargs...
+)
 iterate_components(data::SystemData) = iterate_components(data.components)
 
-remove_component!(::Type{T}, data::SystemData, name) where T = remove_component!(T, data.components, name)
-remove_component!(data::SystemData, component) = remove_component!(data.components, component)
-remove_components!(::Type{T}, data::SystemData) where T = remove_components!(T, data.components)
+remove_component!(::Type{T}, data::SystemData, name) where T = remove_component!(
+    T, data.components, name
+)
+remove_component!(data::SystemData, component) = remove_component!(
+    data.components, component
+)
+remove_components!(::Type{T}, data::SystemData) where T = remove_components!(
+    T, data.components
+)
 
-get_component(::Type{T}, data::SystemData, args...) where T = get_component(T, data.components, args...)
+get_component(::Type{T}, data::SystemData, args...) where T = get_component(
+    T, data.components, args...
+)
 get_components(::Type{T}, data::SystemData) where T = get_components(T, data.components)
-get_components_by_name(::Type{T}, data::SystemData, args...) where T = get_components_by_name(T, data.components, args...)
+get_components_by_name(::Type{T}, data::SystemData, args...) where T =
+    get_components_by_name(T, data.components, args...)
 
 clear_forecasts!(data::SystemData) = clear_forecasts!(data.forecasts)
-get_component_forecasts(::Type{T}, data::SystemData, args...) where T = get_component_forecasts(T, data.forecasts, args...)
-get_forecasts(::Type{T}, data::SystemData, args...) where T = get_forecasts(T, data.forecasts, args...)
+get_component_forecasts(::Type{T}, data::SystemData, args...) where T =
+    get_component_forecasts(T, data.forecasts, args...)
+get_forecasts(::Type{T}, data::SystemData, args...) where T = get_forecasts(
+    T, data.forecasts, args...
+)
 iterate_forecasts(data::SystemData) = iterate_forecasts(data.forecasts)
 remove_forecast!(data::SystemData, args...) = remove_forecast!(data.forecasts, args...)
 

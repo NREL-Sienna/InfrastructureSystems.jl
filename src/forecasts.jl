@@ -589,11 +589,14 @@ end
     make_forecasts(forecast::FlattenIteratorWrapper{T},
                     interval::Dates.Period, horizon::Int) where T <: Forecast
 
-Make a iterator of forecasts by incrementing through a vector of forecasts
+Make an iterator of forecasts by incrementing through a vector of forecasts
 by interval and horizon.
 """
-function make_forecasts(forecast::FlattenIteratorWrapper{T},
-                        interval::Dates.Period, horizon::Int) where T <: Forecast
+function make_forecasts(
+                        forecast::FlattenIteratorWrapper{T},
+                        interval::Dates.Period,
+                        horizon::Int,
+                       ) where T <: Forecast
 
     forecasts = [make_forecasts(f, interval, horizon) for f in forecast]
 

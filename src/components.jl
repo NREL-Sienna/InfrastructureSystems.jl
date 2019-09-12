@@ -18,9 +18,13 @@ function Components(; validation_descriptor_file=nothing)
 end
 
 """
-    add_component!(components::Components, component::T) where T <: InfrastructureSystemsType
+    add_component!(
+                   components::Components,
+                   component::T;
+                   kwargs...
+                  ) where T <: InfrastructureSystemsType
 
-Add a component to the system.
+Add a component.
 
 Throws ArgumentError if the component's name is already stored for its concrete type.
 
@@ -46,13 +50,19 @@ function add_component!(
 end
 
 """
-    remove_components!(::Type{T}, components::Components) where T <: InfrastructureSystemsType
+    remove_components!(
+                       ::Type{T},
+                       components::Components,
+                      ) where T <: InfrastructureSystemsType
 
-Remove all components of type T from the system.
+Remove all components of type T.
 
 Throws ArgumentError if the type is not stored.
 """
-function remove_components!(::Type{T}, components::Components) where T <: InfrastructureSystemsType
+function remove_components!(
+                            ::Type{T},
+                            components::Components,
+                           ) where T <: InfrastructureSystemsType
     if !haskey(components.data, T)
         throw(ArgumentError("component $T is not stored"))
     end
@@ -62,13 +72,19 @@ function remove_components!(::Type{T}, components::Components) where T <: Infras
 end
 
 """
-    remove_component!(components::Components, component::T) where T <: InfrastructureSystemsType
+    remove_component!(
+                      components::Components,
+                      component::T,
+                     ) where T <: InfrastructureSystemsType
 
-Remove a component from the system by its value.
+Remove a component by its value.
 
 Throws ArgumentError if the component is not stored.
 """
-function remove_component!(components::Components, component::T) where T <: InfrastructureSystemsType
+function remove_component!(
+                           components::Components,
+                           component::T,
+                          ) where T <: InfrastructureSystemsType
     _remove_component!(T, components, get_name(component))
 end
 
@@ -79,7 +95,7 @@ end
                       name::AbstractString,
                       ) where T <: InfrastructureSystemsType
 
-Remove a component from the system by its name.
+Remove a component by its name.
 
 Throws ArgumentError if the component is not stored.
 """
@@ -255,11 +271,21 @@ function encode_for_json(components::Components)
     return new_components
 end
 
+"""
+Return an iterable of component types deserialized from JSON.
+"""
 function get_component_types_raw(::Type{Components}, raw::NamedTuple)
     return propertynames(raw)
 end
 
-function get_components_raw(::Type{Components}, ::Type{T}, raw::NamedTuple) where T <: InfrastructureSystemsType
+"""
+Return an iterable of components as NamedTuples deserialized from JSON.
+"""
+function get_components_raw(
+                            ::Type{Components},
+                            ::Type{T},
+                            raw::NamedTuple,
+                           ) where T <: InfrastructureSystemsType
     return getproperty(raw, Symbol(T))  
 end
 
