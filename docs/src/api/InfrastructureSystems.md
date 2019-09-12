@@ -1,34 +1,34 @@
-# InfrastrucutreSystems
+# InfrastructureSystems
 
 ```@meta
-CurrentModule = InfrastrucutreSystems
+CurrentModule = InfrastructureSystems
 DocTestSetup  = quote
-    using InfrastrucutreSystems
+    using InfrastructureSystems
 end
 ```
 
 API documentation
 
 ```@contents
-Pages = ["InfrastrucutreSystems.md"]
+Pages = ["InfrastructureSystems.md"]
 ```
 
 ## Index
 
 ```@index
-Pages = ["InfrastrucutreSystems.md"]
+Pages = ["InfrastructureSystems.md"]
 ```
 
 ## Exported
 
 ```@autodocs
-Modules = [InfrastrucutreSystems]
+Modules = [InfrastructureSystems]
 Private = false
 ```
 
 ## Internal
 
 ```@autodocs
-Modules = [InfrastrucutreSystems]
+Modules = [InfrastructureSystems]
 Public = false
 ```
