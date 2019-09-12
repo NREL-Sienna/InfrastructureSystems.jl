@@ -153,7 +153,7 @@ function _add_forecasts!(forecasts::Forecasts, forecasts_)
 
     if is_uninitialized(forecasts)
         # This is the first forecast added.
-        forecast = forecasts_[1]
+        forecast = iterate(forecasts_)[1]
         forecasts.horizon = get_horizon(forecast)
         forecasts.resolution = forecast.resolution
         forecasts.initial_time = forecast.initial_time
@@ -200,8 +200,8 @@ end
                             ::Type{T},
                             forecasts::Forecasts,
                             initial_time::Dates.DateTime,
-                           ) where T <: Component 
-    
+                           ) where T <: InfrastructureSystemsType
+
 Get the forecasts of a component of type T with initial_time.
 The resulting container can contain Forecasts of dissimilar types.
 
@@ -213,7 +213,7 @@ function get_component_forecasts(
                                  ::Type{T},
                                  forecasts::Forecasts,
                                  initial_time::Dates.DateTime,
-                                ) where T <: Component 
+                                ) where T <: InfrastructureSystemsType
     if !isconcretetype(T)
         throw(ArgumentError("get_component_forecasts only supports concrete types: $T"))
     end
@@ -667,7 +667,7 @@ end
     make_forecasts(forecast::FlattenIteratorWrapper{T},
                     interval::Dates.Period, horizon::Int) where T <: Forecast
 
-Make a vector of forecasts by incrementing through a vector of forecasts
+Make a iterator of forecasts by incrementing through a vector of forecasts
 by interval and horizon.
 """
 function make_forecasts(forecast::FlattenIteratorWrapper{T},
@@ -675,7 +675,7 @@ function make_forecasts(forecast::FlattenIteratorWrapper{T},
 
     forecasts = [make_forecasts(f, interval, horizon) for f in forecast]
 
-    return vcat(forecasts...) # FlattenIteratorWrapper(T, forecasts) TODO: Revert to FlattenIteratorWrapper when #297 is addressed
+    return FlattenIteratorWrapper(T, forecasts)
 end
 
 function get_resolution(ts::TimeSeries.TimeArray)
