@@ -12,7 +12,7 @@ mutable struct TimeseriesFileMetadata
                                             #   value in the column.
                                             # Use any float for a custom scaling factor.
     data_file::String  # path to the timeseries data file
-    probabilities::Vector{Float64}
+    percentiles::Vector{Float64}
     forecast_type::String
 end
 
@@ -35,7 +35,7 @@ function read_timeseries_metadata(file_path::AbstractString)::Vector{TimeseriesF
                     scaling_factor,
                     item["data_file"],
                     # Use default values until CDM data is updated.
-                    get(item, "probabilities", []),
+                    get(item, "percentiles", []),
                     get(item, "forecast_type", "Deterministic"),
                 ))
             end
@@ -51,7 +51,7 @@ function read_timeseries_metadata(file_path::AbstractString)::Vector{TimeseriesF
                                                    row.Parameter,
                                                    row[Symbol("Scaling Factor")],
                                                    row[Symbol("Data File")],
-                                                   row[Symbol("Probabilities")],
+                                                   row[Symbol("Percentiles")],
                                                   )
             )
         end
@@ -74,13 +74,13 @@ struct ForecastInfo
     label::String  # Component field on which timeseries data is based.
     scaling_factor::Union{String, Float64}
     data::TimeSeries.TimeArray
-    probabilities::Vector{Float64}
+    percentiles::Vector{Float64}
     file_path::String
     forecast_type::String
 
-    function ForecastInfo(simulation, component, label, scaling_factor, data, probabilities,
+    function ForecastInfo(simulation, component, label, scaling_factor, data, percentiles,
                           file_path, forecast_type)
-        new(simulation, component, label, scaling_factor, data, probabilities,
+        new(simulation, component, label, scaling_factor, data, percentiles,
             abspath(file_path), forecast_type)
     end
 end
@@ -89,7 +89,7 @@ function ForecastInfo(metadata::TimeseriesFileMetadata,
                       component::InfrastructureSystemsType,
                       timeseries::TimeSeries.TimeArray)
     return ForecastInfo(metadata.simulation, component, metadata.label,
-                        metadata.scaling_factor, timeseries, metadata.probabilities,
+                        metadata.scaling_factor, timeseries, metadata.percentiles,
                         metadata.data_file, metadata.forecast_type)
 end
 
