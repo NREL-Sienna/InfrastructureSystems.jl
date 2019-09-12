@@ -230,6 +230,6 @@ end
 """
 Validates a struct.
 """
-function validate_struct(components::Components, ist::InfrastructureSystemsType)
+function validate_struct(ist::InfrastructureSystemsType)
     return true
 end

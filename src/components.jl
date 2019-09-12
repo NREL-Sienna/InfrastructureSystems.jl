@@ -49,7 +49,7 @@ function add_component!(
         end
     end
 
-    if !skip_validation && !validate_struct(components, component)
+    if !skip_validation && !validate_struct(component)
         throw(ArgumentError("Invalid struct definiton for $(component)"))
     end
 
