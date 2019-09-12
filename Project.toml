@@ -1,6 +1,6 @@
 name = "InfrastructureSystems"
 uuid = "2cd47ed4-ca9b-11e9-27f2-ab636a7671f1"
-authors = ["Daniel Thom <daniel.thom@nrel.gov>"]
+authors = ["Daniel Thom", "Jose Daniel Lara", "Clayton Barrows"]
 version = "0.1.0"
 
 [deps]
@@ -18,9 +18,14 @@ UUIDs = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"
 YAML = "ddb6d928-2868-570f-bddf-ab3f9cf99eb6"
 
 [compat]
+CSV = "~0.5"
 DataFrames = "~0.19"
+JSON = "~0.21"
+JSON2 = "~0.3"
 TimeSeries = "~0.16"
-julia = "~1.2"
+YAML = "~0.3"
+Mustache = "~0.5"
+julia = "^1.2"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
