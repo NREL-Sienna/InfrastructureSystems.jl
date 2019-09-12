@@ -83,5 +83,6 @@ include("serialization.jl")
 include("system_data.jl")
 include("test.jl")
 include("validation.jl")
+include("generate_structs.jl")
 
 end # module
