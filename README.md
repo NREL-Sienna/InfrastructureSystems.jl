@@ -1,10 +1,10 @@
 # InfrastructureSystems
 
-[![Build Status](https://travis-ci.org/NREL/PowerSystems.jl.svg?branch=master)](https://travis-ci.org/NREL/InfrastructureSystems.jl)
+[![Build Status](https://travis-ci.org/NREL/InfrastructureSystems.jl.svg?branch=master)](https://travis-ci.org/NREL/InfrastructureSystems.jl)
+[![Build status](https://ci.appveyor.com/api/projects/status/i632i3xfv6ppqh9q?svg=true)](https://ci.appveyor.com/project/jd-lara/infrastructuresystems-jl)
+[![codecov](https://codecov.io/gh/NREL/InfrastructureSystems.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/NREL/InfrastructureSystems.jl)
 
-[![codecov](https://codecov.io/gh/NREL/PowerSystems.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/NREL/InfrastructureSystems.jl)
-
-The `InfrastructureSystems.jl` package provides a rigorous data model using Julia structures to enable power systems analysis. In addition to stand-alone system analysis tools and model building, the `InfrastructureSystems.jl` package is used as the foundational data container for the [PowerSystems.jl](https://github.com/NREL/PowerSystems.jl) package.
+The `InfrastructureSystems.jl` package provides utilities to support data models for infrastructure modeling data using Julia. The `InfrastructureSystems.jl` package is used as the foundational data container for the [PowerSystems.jl](https://github.com/NREL/PowerSystems.jl).
 
 ## Development
 
