@@ -50,7 +50,7 @@ function add_component!(
     end
 
     if !skip_validation && !validate_struct(component)
-        throw(ArgumentError("Invalid struct definiton for $(component)"))
+        throw(InvalidValue("Invalid value for $(component)"))
     end
 
     components.data[T][component.name] = component

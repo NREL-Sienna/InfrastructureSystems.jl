@@ -57,6 +57,7 @@ export runtests
 
 export DataFormatError
 export InvalidRange
+export InvalidValue
 
 # Every subtype must implement InfrastructureSystems.get_name() or have a field called name.
 abstract type InfrastructureSystemsType end
