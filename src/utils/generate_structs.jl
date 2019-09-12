@@ -1,5 +1,4 @@
 
-import JSON2
 import Mustache
 
 template = """
