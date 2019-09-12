@@ -1,10 +1,13 @@
 @testset "Test generated structs" begin
     descriptor_file = joinpath(@__DIR__, "..", "src", "descriptors", "structs.json")
     existing_dir = joinpath(@__DIR__, "..", "src", "generated")
-    output_dir = "tmp"
+    output_dir = "tmp-test-generated-structs"
+    if isdir(output_dir)
+        rm(output_dir; recursive=true)
+    end
     mkdir(output_dir)
 
-    IS.generate_structs(descriptor_file, output_dir)
+    IS.generate_structs(descriptor_file, output_dir; print_results=false)
 
     matched = true
     try

@@ -61,7 +61,7 @@ function read_json_data(filename::String)
     end
 end
 
-function generate_structs(directory, data::Vector)
+function generate_structs(directory, data::Vector; print_results=true)
     struct_names = Vector{String}()
     unique_accessor_functions = Set{String}()
 
@@ -103,7 +103,10 @@ function generate_structs(directory, data::Vector)
             write(io, Mustache.render(template, item))
             push!(struct_names, item["struct_name"])
         end
-        println("Wrote $filename")
+
+        if print_results
+            println("Wrote $filename")
+        end
     end
 
     accessors = sort!(collect(unique_accessor_functions))
@@ -118,7 +121,10 @@ function generate_structs(directory, data::Vector)
         for accessor in accessors
             write(io, "export $accessor\n")
         end
-        println("Wrote $filename")
+
+        if print_results
+            println("Wrote $filename")
+        end
     end
 end
 
@@ -131,12 +137,13 @@ function namedtuple_to_dict(tuple)
     return parameters
 end
 
-function generate_structs(input_file::AbstractString, output_directory::AbstractString)
+function generate_structs(input_file::AbstractString, output_directory::AbstractString;
+                          print_results=true)
     # Include each generated file.
     if !isdir(output_directory)
         mkdir(output_directory)
     end
 
     data = read_json_data(input_file)
-    generate_structs(output_directory, data)
+    generate_structs(output_directory, data, print_results=print_results)
 end
