@@ -67,8 +67,10 @@ get_name(value::InfrastructureSystemsType) = value.name
 include("common.jl")
 include("internal.jl")
 include("utils/flatten_iterator_wrapper.jl")
+include("utils/generate_structs.jl")
 include("utils/lazy_dict_from_iterator.jl")
 include("utils/logging.jl")
+include("utils/test.jl")
 include("utils/utils.jl")
 
 include("components.jl")
@@ -81,8 +83,6 @@ include("forecast_parser.jl")
 include("timeseries_formats.jl")
 include("serialization.jl")
 include("system_data.jl")
-include("test.jl")
 include("validation.jl")
-include("generate_structs.jl")
 
 end # module
