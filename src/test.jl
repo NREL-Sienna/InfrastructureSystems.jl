@@ -8,6 +8,9 @@ function runtests(args...)
         push!(ARGS, arg)
     end
 
-    include("test/runtests.jl")
-    empty!(ARGS)
+    try
+        include("test/runtests.jl")
+    finally
+        empty!(ARGS)
+    end
 end
