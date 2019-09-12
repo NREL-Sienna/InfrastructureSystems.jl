@@ -20,8 +20,10 @@ export Deterministic
 export Probabilistic
 export ScenarioBased
 
+export get_limits
 export get_name
 export open_file_logger
+export validate_struct
 
 # Components functions
 export iterate_components
@@ -53,6 +55,9 @@ export read_timeseries_metadata
 
 export runtests
 
+export DataFormatError
+export InvalidRange
+
 # Every subtype must implement InfrastructureSystems.get_name() or have a field called name.
 abstract type InfrastructureSystemsType end
 
@@ -77,5 +82,6 @@ include("timeseries_formats.jl")
 include("serialization.jl")
 include("system_data.jl")
 include("test.jl")
+include("validation.jl")
 
 end # module

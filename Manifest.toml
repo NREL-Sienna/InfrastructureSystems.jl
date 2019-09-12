@@ -15,6 +15,12 @@ git-tree-sha1 = "13240cfcc884837fc1aa89b60d500a652bcc3f10"
 uuid = "324d7699-5711-5eae-9e2f-1d82baa6b597"
 version = "0.5.5"
 
+[[Codecs]]
+deps = ["Test"]
+git-tree-sha1 = "70885e5e038cba1c4c17a84ad6c40756e10a4fb5"
+uuid = "19ecbf4d-ef7c-5e4b-b54a-0a0ff23c5aed"
+version = "0.5.0"
+
 [[Compat]]
 deps = ["Base64", "Dates", "DelimitedFiles", "Distributed", "InteractiveUtils", "LibGit2", "Libdl", "LinearAlgebra", "Markdown", "Mmap", "Pkg", "Printf", "REPL", "Random", "Serialization", "SharedArrays", "Sockets", "SparseArrays", "Statistics", "Test", "UUIDs", "Unicode"]
 git-tree-sha1 = "84aa74986c5b9b898b0d1acaf3258741ee64754f"
@@ -220,3 +226,9 @@ deps = ["Random", "Test"]
 git-tree-sha1 = "9a0bb82eede528debe631b642eeb48a631a69bc2"
 uuid = "ea10d353-3f73-51f8-a26c-33c1cb351aa5"
 version = "0.6.1"
+
+[[YAML]]
+deps = ["Codecs", "Compat"]
+git-tree-sha1 = "3bde77cee95cce0c0b9b18813d85e18e8ed4f415"
+uuid = "ddb6d928-2868-570f-bddf-ab3f9cf99eb6"
+version = "0.3.2"

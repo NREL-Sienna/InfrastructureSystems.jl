@@ -6,12 +6,9 @@ struct Components
     validation_descriptors::Vector
 end
 
-function Components(; validation_descriptor_file=nothing)
-    if isnothing(validation_descriptor_file)
+function Components(validation_descriptors=nothing)
+    if isnothing(validation_descriptors)
         validation_descriptors = Vector()
-    else
-        validation_descriptors = runchecks ? read_validation_descriptor(configpath) :
-                                             Vector()
     end
 
     return Components(ComponentsByType(), validation_descriptors)
@@ -34,7 +31,7 @@ range.
 function add_component!(
                         components::Components,
                         component::T;
-                        kwargs...
+                        skip_validation=false,
                        ) where T <: InfrastructureSystemsType
     if !isconcretetype(T)
         throw(ArgumentError("add_component! only accepts concrete types"))
@@ -46,7 +43,18 @@ function add_component!(
         throw(ArgumentError("$(component.name) is already stored for type $T"))
     end
 
+    if !isempty(components.validation_descriptors) && !skip_validation
+        if !validate_fields(components, component)
+            throw(InvalidRange("Invalid value"))
+        end
+    end
+
+    if !skip_validation && !validate_struct(components, component)
+        throw(ArgumentError("Invalid struct definiton for $(component)"))
+    end
+
     components.data[T][component.name] = component
+    return
 end
 
 """
@@ -197,14 +205,6 @@ end
 
 Returns an iterator of components. T can be concrete or abstract.
 Call collect on the result if an array is desired.
-
-# Examples
-```julia
-iter = InfrastructureSystems.get_components(ThermalStandard, sys)
-iter = InfrastructureSystems.get_components(Generator, sys)
-components = InfrastructureSystems.get_components(Generator, sys) |> collect
-components = collect(InfrastructureSystems.get_components(Generator, sys))
-```
 
 See also: [`iterate_components`](@ref)
 """

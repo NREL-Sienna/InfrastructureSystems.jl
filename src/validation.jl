@@ -1,8 +1,11 @@
 
+import JSON
+import YAML
+
 struct ValidationInfo
     field_descriptor::Dict
     struct_name::AbstractString
-    ps_struct::InfrastructureSystemsType
+    ist_struct::InfrastructureSystemsType
     field_type::Any
     limits:: Union{NamedTuple{(:min, :max)}, NamedTuple{(:min, :max, :zero)}}
 end
@@ -36,7 +39,9 @@ function get_config_descriptor(config::Vector, name::AbstractString)
         end
     end
 
-    throw(DataFormatError("PowerSystems struct $name does not exist in validation configuration file"))
+    throw(DataFormatError(
+        "InfrastructureSystems struct $name does not exist in validation configuration file"
+    ))
 end
 
 # Get validation info for one field of one struct.
@@ -47,21 +52,27 @@ function get_field_descriptor(struct_descriptor::Dict, fieldname::AbstractString
         end
     end
 
-    throw(DataFormatError("field $fieldname does not exist in $(struct_descriptor["struct_name"]) validation config"))
+    throw(DataFormatError(
+        "field $fieldname does not exist in $(struct_descriptor["struct_name"]) validation config"
+    ))
 end
 
-function validate_fields(sys::System, ps_struct::T) where T <: InfrastructureSystemsType
-    struct_descriptor = get_config_descriptor(sys.validation_descriptor, repr(T))
+function validate_fields(
+                         components::Components,
+                         ist_struct::T,
+                        ) where T <: InfrastructureSystemsType
+    struct_descriptor = get_config_descriptor(components.validation_descriptors, repr(T))
     is_valid = true
 
     for (name, fieldtype) in zip(fieldnames(T), fieldtypes(T))
-        field_value = getfield(ps_struct, name)
+        field_value = getfield(ist_struct, name)
         if isnothing(field_value)  # Many structs are of type Union{Nothing, xxx}.
             ;
-        elseif fieldtype <: Union{Nothing, InfrastructureSystemsType} && !(fieldtype <: InfrastructureSystemsType)
+        elseif fieldtype <: Union{Nothing, InfrastructureSystemsType} &&
+                !(fieldtype <: InfrastructureSystemsType)
             # Recurse. Components are validated separately and do not need to
             # be validated twice.
-            if !validate_fields(sys, getfield(ps_struct, name))
+            if !validate_fields(components, getfield(ist_struct, name))
                 is_valid = false
             end
         else
@@ -70,9 +81,9 @@ function validate_fields(sys::System, ps_struct::T) where T <: InfrastructureSys
                 continue
             end
             valid_range = field_descriptor["valid_range"]
-            limits = get_limits(valid_range, ps_struct)
+            limits = get_limits(valid_range, ist_struct)
             valid_info = ValidationInfo(field_descriptor, struct_descriptor["struct_name"],
-                                        ps_struct, fieldtype, limits)
+                                        ist_struct, fieldtype, limits)
             if !validate_range(valid_range, valid_info, field_value)
                 is_valid = false
             end
@@ -81,7 +92,7 @@ function validate_fields(sys::System, ps_struct::T) where T <: InfrastructureSys
     return is_valid
 end
 
-function get_limits(valid_range::String, ps_struct::InfrastructureSystemsType)
+function get_limits(valid_range::String, ist_struct::InfrastructureSystemsType)
     # Gets min and max values from activepowerlimits for activepower, etc.
     function recur(d, a, i=1)
         if i <= length(a)
@@ -92,34 +103,30 @@ function get_limits(valid_range::String, ps_struct::InfrastructureSystemsType)
         end
     end
 
-    valid_range, ps_struct
-    vr = recur(ps_struct, split(valid_range, "."))
+    valid_range, ist_struct
+    vr = recur(ist_struct, split(valid_range, "."))
 
     if isnothing(vr)
         limits = (min=nothing, max=nothing)
     else
-        limits = get_limits(vr, ps_struct)
+        limits = get_limits(vr, ist_struct)
     end
 
     return limits
 end
 
 function get_limits(valid_range::Dict, unused::InfrastructureSystemsType)
-    # Gets min and max value defined for a field, e.g. "valid_range": {"min":-1.571, "max":1.571}.
+    # Gets min and max value defined for a field,
+    # e.g. "valid_range": {"min":-1.571, "max":1.571}.
     return (min = valid_range["min"], max = valid_range["max"])
 end
 
 
 function get_limits(valid_range::Union{NamedTuple{(:min,:max)}, NamedTuple{(:max,:min)}},
                     unused::InfrastructureSystemsType)
-    # Gets min and max value defined for a field, e.g. "valid_range": {"min":-1.571, "max":1.571}.
+    # Gets min and max value defined for a field,
+    # e.g. "valid_range": {"min":-1.571, "max":1.571}.
     return (min = valid_range.min, max = valid_range.max)
-end
-
-function get_limits(valid_range::Union{NamedTuple{(:min,:max)}, NamedTuple{(:max,:min)}},
-                    unused::T) where T <: Generator
-    # Gets min and max value defined for a field, e.g. "valid_range": {"min":-1.571, "max":1.571}.
-    return (min = valid_range.min, max = valid_range.max, zero = 0.0)
 end
 
 function validate_range(::String, valid_info::ValidationInfo, field_value)
@@ -132,17 +139,30 @@ function validate_range(::String, valid_info::ValidationInfo, field_value)
     return is_valid
 end
 
-function validate_range(::Union{Dict, NamedTuple{(:min,:max)}, NamedTuple{(:max,:min)}, NamedTuple{(:min,:max,:zero)}},
-                        valid_info::ValidationInfo, field_value)
+function validate_range(
+                        ::Union{Dict,
+                                NamedTuple{(:min,:max)},
+                                NamedTuple{(:max,:min)},
+                                NamedTuple{(:min,:max,:zero)}},
+                        valid_info::ValidationInfo, field_value,
+                       )
     return check_limits(valid_info.field_type, valid_info, field_value)
 end
 
-function check_limits(::Type{T}, valid_info::ValidationInfo, field_value) where T <: Union{Nothing, Float64}
+function check_limits(
+                      ::Type{T},
+                      valid_info::ValidationInfo,
+                      field_value,
+                     ) where T <: Union{Nothing, Float64}
     # Validates numbers.
     return check_limits_impl(valid_info, field_value)
 end
 
-function check_limits(::Type{T}, valid_info::ValidationInfo, field_value) where T <: Union{Nothing, NamedTuple}
+function check_limits(
+                      ::Type{T},
+                      valid_info::ValidationInfo,
+                      field_value,
+                     ) where T <: Union{Nothing, NamedTuple}
     # Validates up/down, min/max, from/to named tuples.
     @assert length(field_value) == 2
     result1 = check_limits_impl(valid_info, field_value[1])
@@ -177,26 +197,27 @@ end
 function validation_warning(valid_info::ValidationInfo, field_value)
     valid_range = valid_info.field_descriptor["valid_range"]
     field_name = valid_info.field_descriptor["name"]
-    @warn "Invalid range" valid_info.struct_name field_name field_value valid_range valid_info.ps_struct
+    @warn "Invalid range" valid_info.struct_name field_name field_value valid_range valid_info.ist_struct
     return true
 end
 
 function validation_error(valid_info::ValidationInfo, field_value)
     valid_range = valid_info.field_descriptor["valid_range"]
     field_name = valid_info.field_descriptor["name"]
-    @error "Invalid range" valid_info.struct_name field_name field_value valid_range valid_info.ps_struct
+    @error "Invalid range" valid_info.struct_name field_name field_value valid_range valid_info.ist_struct
     return false
 end
 
 """
     validate_components(components::Components)
 
-Iterates over all components and throws InvalidRange if any of the component's field values are outside of defined valid range.
+Iterates over all components and throws InvalidRange if any of the component's field values
+are outside of defined valid range.
 """
 function validate_components(components::Components)
     error_detected = false
     for component in iterate_components(components)
-        if validate_fields(sys, component)
+        if validate_fields(components, component)
             error_detected = true
         end
     end
@@ -204,4 +225,11 @@ function validate_components(components::Components)
     if error_detected
         throw(InvalidRange("Invalid range detected"))
     end
+end
+
+"""
+Validates a struct.
+"""
+function validate_struct(components::Components, ist::InfrastructureSystemsType)
+    return true
 end

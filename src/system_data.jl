@@ -2,10 +2,18 @@
 struct SystemData
     components::Components
     forecasts::Forecasts
+    validation_descriptors::Vector
 end
 
-function SystemData()
-    return SystemData(Components(), Forecasts())
+function SystemData(; validation_descriptor_file=nothing)
+    if isnothing(validation_descriptor_file)
+        validation_descriptors = Vector()
+    else
+        validation_descriptors = read_validation_descriptor(validation_descriptor_file)
+    end
+
+    components = Components(validation_descriptors)
+    return SystemData(components, Forecasts(), validation_descriptors)
 end
 
 """
