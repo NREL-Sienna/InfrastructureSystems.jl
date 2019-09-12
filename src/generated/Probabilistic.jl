@@ -8,19 +8,19 @@ mutable struct Probabilistic{T <: InfrastructureSystemsType} <: Forecast
     label::String  # label of component parameter forecasted
     resolution::Dates.Period
     initial_time::Dates.DateTime  # forecast availability time
-    probabilities::Vector{Float64}  # Quantiles for the probabilistic forecast
+    percentiles::Vector{Float64}  # Percentiles for the probabilistic forecast
     data::TimeSeries.TimeArray  # timestamp - scalingfactor
     start_index::Int  # starting index of data for this forecast
     horizon::Int  # length of this forecast
     internal::InfrastructureSystemsInternal
 end
 
-function Probabilistic(component, label, resolution, initial_time, probabilities, data, start_index, horizon, )
-    Probabilistic(component, label, resolution, initial_time, probabilities, data, start_index, horizon, InfrastructureSystemsInternal())
+function Probabilistic(component, label, resolution, initial_time, percentiles, data, start_index, horizon, )
+    Probabilistic(component, label, resolution, initial_time, percentiles, data, start_index, horizon, InfrastructureSystemsInternal())
 end
 
-function Probabilistic(; component, label, resolution, initial_time, probabilities, data, start_index, horizon, )
-    Probabilistic(component, label, resolution, initial_time, probabilities, data, start_index, horizon, )
+function Probabilistic(; component, label, resolution, initial_time, percentiles, data, start_index, horizon, )
+    Probabilistic(component, label, resolution, initial_time, percentiles, data, start_index, horizon, )
 end
 
 
@@ -32,8 +32,8 @@ get_label(value::Probabilistic) = value.label
 get_resolution(value::Probabilistic) = value.resolution
 """Get Probabilistic initial_time."""
 get_initial_time(value::Probabilistic) = value.initial_time
-"""Get Probabilistic probabilities."""
-get_probabilities(value::Probabilistic) = value.probabilities
+"""Get Probabilistic percentiles."""
+get_percentiles(value::Probabilistic) = value.percentiles
 """Get Probabilistic data."""
 get_data(value::Probabilistic) = value.data
 """Get Probabilistic start_index."""
