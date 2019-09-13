@@ -1,4 +1,15 @@
 
+function does_forecast_have_component(data::SystemData, component)
+    found = false
+    for forecast in iterate_forecasts(data)
+        if get_uuid(get_component(forecast)) == get_uuid(component)
+            found = true
+        end
+    end
+
+    return found
+end
+
 @testset "Test read_timeseries_metadata" begin
     file = joinpath(FORECASTS_DIR, "ComponentsAsColumnsNoTime.json")
     forecasts = IS.read_timeseries_metadata(file)
@@ -48,6 +59,27 @@ end
     data = create_system_data(; with_forecasts=true)
     clear_forecasts!(data)
     @test length(get_all_forecasts(data)) == 0
+end
+
+@testset "Test forecast-component synchronization remove_component" begin
+    data = create_system_data(; with_forecasts=true)
+    component = collect(iterate_components(data))[1]
+    remove_component!(data, component)
+    @test !does_forecast_have_component(data, component)
+end
+
+@testset "Test forecast-component synchronization remove_component_by_name" begin
+    data = create_system_data(; with_forecasts=true)
+    component = collect(iterate_components(data))[1]
+    remove_component!(TestComponent, data, get_name(component))
+    @test !does_forecast_have_component(data, component)
+end
+
+@testset "Test forecast-component synchronization remove_components" begin
+    data = create_system_data(; with_forecasts=true)
+    component = collect(iterate_components(data))[1]
+    remove_components!(TestComponent, data)
+    @test !does_forecast_have_component(data, component)
 end
 
 @testset "Summarize forecasts" begin

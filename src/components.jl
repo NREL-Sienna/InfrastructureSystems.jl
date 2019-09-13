@@ -75,8 +75,11 @@ function remove_components!(
         throw(ArgumentError("component $T is not stored"))
     end
 
-    pop!(components.data, T)
+    components = pop!(components.data, T)
     @debug "Removed all components of type" T
+    # Return the components because the higher level needs to delete any forecasts with
+    # the components.
+    return components
 end
 
 """
@@ -112,7 +115,7 @@ function remove_component!(
                            components::Components,
                            name::AbstractString,
                           ) where T <: InfrastructureSystemsType
-    _remove_component!(T, components, name)
+    return _remove_component!(T, components, name)
 end
 
 function _remove_component!(
@@ -128,8 +131,11 @@ function _remove_component!(
         throw(ArgumentError("component $T name=$name is not stored"))
     end
 
-    pop!(components.data[T], name)
+    component = pop!(components.data[T], name)
     @debug "Removed component" T name
+    # Return the component because the higher level needs to delete any forecasts with
+    # the component.
+    return component
 end
 
 """
