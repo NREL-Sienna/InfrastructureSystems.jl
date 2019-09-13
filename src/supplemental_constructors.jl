@@ -38,46 +38,46 @@ function Probabilistic(component::InfrastructureSystemsType,
                        label::String,
                        resolution::Dates.Period,
                        initial_time::Dates.DateTime,
-                       quantiles::Vector{Float64},
+                       percentiles::Vector{Float64},
                        time_steps::Int)
 
     data = TimeSeries.TimeArray(
         initial_time : Dates.Hour(1) : initial_time + resolution * (time_steps-1),
-        ones(time_steps, length(quantiles))
+        ones(time_steps, length(percentiles))
     )
 
     return Probabilistic(component, label, Dates.Minute(resolution), initial_time,
-                         quantiles, data)
+                         percentiles, data)
 end
 
 """Constructs Probabilistic Forecast after constructing a TimeArray from initial_time and time_steps.
 """
 function Probabilistic(component::InfrastructureSystemsType,
                        label::String,
-                       quantiles::Vector{Float64},  # Quantiles for the probabilistic forecast
+                       percentiles::Vector{Float64},  # percentiles for the probabilistic forecast
                        data::TimeSeries.TimeArray,
                       )
 
-    if !(length(TimeSeries.colnames(data)) == length(quantiles))
+    if !(length(TimeSeries.colnames(data)) == length(percentiles))
         throw(DataFormatError(
-            "The size of the provided quantiles and data columns is incosistent"))
+            "The size of the provided percentiles and data columns is incosistent"))
     end
     initial_time = TimeSeries.timestamp(data)[1]
     resolution = get_resolution(data)
 
     return Probabilistic(component, label, Dates.Minute(resolution), initial_time,
-                         quantiles, data)
+                         percentiles, data)
 end
 
 function Probabilistic(component::InfrastructureSystemsType,
                        label::String,
                        resolution::Dates.Period,
                        initial_time::Dates.DateTime,
-                       quantiles::Vector{Float64},  # Quantiles for the probabilistic forecast
+                       percentiles::Vector{Float64},  # percentiles for the probabilistic forecast
                        data::TimeSeries.TimeArray)
     start_index = 1
     horizon = length(data)
-    return Probabilistic(component, label, resolution, initial_time, quantiles, data,
+    return Probabilistic(component, label, resolution, initial_time, percentiles, data,
                          start_index, horizon, InfrastructureSystemsInternal())
 end
 
@@ -125,4 +125,3 @@ function ScenarioBased(component::InfrastructureSystemsType,
     return ScenarioBased(component, label, resolution, initial_time, scenario_count, data,
                             start_index, horizon, InfrastructureSystemsInternal())
 end
-
