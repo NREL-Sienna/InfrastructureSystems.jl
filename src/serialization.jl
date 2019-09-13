@@ -1,6 +1,6 @@
 
 """Serializes a InfrastructureSystemsType to a JSON file."""
-function to_json(obj::T, filename::String) where {T <: InfrastructureSystemsType}
+function to_json(obj::T, filename::AbstractString) where {T <: InfrastructureSystemsType}
     return open(filename, "w") do io
         return to_json(io, obj)
     end

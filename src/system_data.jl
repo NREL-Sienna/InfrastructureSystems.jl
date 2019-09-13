@@ -327,12 +327,6 @@ function convert_forecasts!(
     return convert_type!(data.forecasts, raw.forecasts, component_cache)
 end
 
-function Base.summary(io::IO, data::SystemData)
-    Base.summary(io, data.components)
-    println(io, "\n")
-    Base.summary(io, data.forecasts)
-end
-
 function compare_values(x::SystemData, y::SystemData)::Bool
     match = true
     for key in keys(x.components.data)

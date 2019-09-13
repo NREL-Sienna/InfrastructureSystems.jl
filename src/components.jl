@@ -246,7 +246,7 @@ See also: [`get_components`](@ref)
 function iterate_components(components::Components)
     Channel() do channel
         for comp_dict in values(components.data)
-            for component in comp_dict
+            for component in values(comp_dict)
                 put!(channel, component)
             end
         end
@@ -292,26 +292,4 @@ end
 function JSON2.read(io::IO, ::Type{Components})
     raw = JSON2.read(io, NamedTuple)
     parent_module = getfield(Main, Symbol(raw.parent_module))
-end
-
-function Base.summary(io::IO, components::Components)
-    counts = Dict{String, Int}()
-    rows = []
-
-    for (subtype, values) in components.data
-        type_str = strip_module_names(string(subtype))
-        counts[type_str] = length(values)
-        parents = [strip_module_names(string(x)) for x in supertypes(subtype)]
-        row = (ConcreteType=type_str,
-               SuperTypes=join(parents, " <: "),
-               Count=length(values))
-        push!(rows, row)
-    end
-
-    sort!(rows, by = x -> x.ConcreteType)
-
-    df = DataFrames.DataFrame(rows)
-    println(io, "Components")
-    println(io, "==========")
-    Base.show(io, df)
 end

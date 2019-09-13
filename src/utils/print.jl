@@ -1,0 +1,161 @@
+
+function Base.show(io::IO, components::Components)
+    for component in iterate_components(components)
+        show(io, component)
+        println(io)
+    end
+end
+
+function Base.summary(io::IO, components::Components)
+    print(io, "$(typeof(components))")
+end
+
+function create_components_df(components::Components)
+    counts = Dict{String, Int}()
+    rows = []
+
+    for (subtype, values) in components.data
+        type_str = strip_module_names(string(subtype))
+        counts[type_str] = length(values)
+        parents = [strip_module_names(string(x)) for x in supertypes(subtype)]
+        row = (ConcreteType=type_str,
+               SuperTypes=join(parents, " <: "),
+               Count=length(values))
+        push!(rows, row)
+    end
+
+    sort!(rows, by = x -> x.ConcreteType)
+
+    return DataFrames.DataFrame(rows)
+end
+
+function create_forecasts_df(forecasts::Forecasts)
+    initial_times = _get_forecast_initial_times(forecasts.data)
+    dfs = Vector{DataFrames.DataFrame}()
+
+    for initial_time in initial_times
+        counts = Dict{String, Int}()
+        rows = []
+
+        for (key, values) in forecasts.data
+            if key.initial_time != initial_time
+                continue
+            end
+
+            type_str = strip_module_names(string(key.forecast_type))
+            counts[type_str] = length(values)
+            parents = [strip_module_names(string(x)) for x in supertypes(key.forecast_type)]
+            row = (ConcreteType=type_str,
+                   SuperTypes=join(parents, " <: "),
+                   Count=length(values))
+            push!(rows, row)
+        end
+
+        sort!(rows, by = x -> x.ConcreteType)
+
+        df = DataFrames.DataFrame(rows)
+        push!(dfs, df)
+    end
+
+    return initial_times, dfs
+end
+
+function Base.show(io::IO, ::MIME"text/plain", components::Components)
+    df = create_components_df(components)
+    println(io, "Components")
+    println(io, "==========")
+    show(io, df)
+end
+
+function Base.show(io::IO, ::MIME"text/html", components::Components)
+    df = create_components_df(components)
+    println(io, "<h2>Components</h2>")
+    withenv("LINES" => 100, "COLUMNS" => 200) do
+        show(io, MIME"text/html"(), df)
+    end
+end
+
+function Base.summary(io::IO, forecast::Forecast)
+    component = get_component(forecast)
+    component_name = get_name(component)
+    print(io, "$(typeof(forecast)) forecast (component=$component_name)")
+end
+
+function Base.summary(io::IO, forecasts::Forecasts)
+    print(io, "$(typeof(forecasts))")
+end
+
+function Base.show(io::IO, forecasts::Forecasts)
+    for forecast in iterate_forecasts(forecasts)
+        show(io, forecast)
+        println(io)
+    end
+end
+
+function Base.show(io::IO, ::MIME"text/plain", forecasts::Forecasts)
+    println(io, "Forecasts")
+    println(io, "=========")
+    println(io, "Resolution: $(forecasts.resolution)")
+    println(io, "Horizon: $(forecasts.horizon)")
+    println(io, "Interval: $(forecasts.interval)\n")
+    println(io, "---------------------------------")
+    initial_times, dfs = create_forecasts_df(forecasts)
+
+    for (initial_time, df) in zip(initial_times, dfs)
+        println(io, "Initial Time: $initial_time")
+        println(io, "---------------------------------")
+        show(io, df)
+    end
+end
+
+function Base.show(io::IO, ::MIME"text/html", forecasts::Forecasts)
+    println(io, "<h2>Forecasts</h2>")
+    println(io, "<p><b>Resolution</b>: $(forecasts.resolution)</p>")
+    println(io, "<p><b>Horizon</b>: $(forecasts.horizon)</p>")
+    println(io, "<p><b>Interval</b>: $(forecasts.interval)</p>")
+    initial_times, dfs = create_forecasts_df(forecasts)
+
+    for (initial_time, df) in zip(initial_times, dfs)
+        println(io, "<p><b>Initial Time</b>: $initial_time</p>")
+        withenv("LINES" => 100, "COLUMNS" => 200) do
+            show(io, MIME"text/html"(), df)
+        end
+    end
+end
+
+function Base.show(io::IO, data::SystemData)
+    show(io, data.components)
+    println(io, "\n")
+    show(io, data.forecasts)
+end
+
+function Base.show(io::IO, ::MIME"text/plain", data::SystemData)
+    show(io, MIME"text/plain"(), data.components)
+    println(io, "\n")
+    show(io, MIME"text/plain"(), data.forecasts)
+end
+
+function Base.show(io::IO, ::MIME"text/html", data::SystemData)
+    show(io, MIME"text/html"(), data.components)
+    println(io, "\n")
+    show(io, MIME"text/html"(), data.forecasts)
+end
+
+function Base.summary(io::IO, ist::InfrastructureSystemsType)
+    # All InfrastructureSystemsType subtypes are supposed to implement get_name.
+    # Some don't.  They need to override this function.
+    print(io, "$(get_name(ist)) ($(typeof(ist)))")
+end
+
+function Base.show(io::IO, ::MIME"text/plain", ist::InfrastructureSystemsType)
+    print(io, summary(ist), ":")
+    for name in fieldnames(typeof(ist))
+        name == :internal && continue
+        val = getfield(ist, name)
+        # Not allowed to print `nothing`
+        if isnothing(val)
+            val = "nothing"
+        end
+        print(io, "\n   ", name, ": ", val)
+    end
+end
