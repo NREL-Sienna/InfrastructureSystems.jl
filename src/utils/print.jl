@@ -66,13 +66,14 @@ function Base.show(io::IO, forecasts::Forecasts)
 end
 
 function Base.show(io::IO, ::MIME"text/plain", forecasts::Forecasts)
+    initial_times, dfs = create_forecasts_df(forecasts)
     println(io, "Forecasts")
     println(io, "=========")
     println(io, "Resolution: $(forecasts.resolution)")
     println(io, "Horizon: $(forecasts.horizon)")
-    println(io, "Interval: $(forecasts.interval)\n")
+    println(io, "Interval: $(forecasts.interval)")
+    println(io, "Num initial times: $(length(initial_times))\n")
     println(io, "---------------------------------")
-    initial_times, dfs = create_forecasts_df(forecasts)
 
     for (initial_time, df) in zip(initial_times, dfs)
         println(io, "Initial Time: $initial_time")
@@ -87,11 +88,12 @@ function Base.show(io::IO, ::MIME"text/plain", forecasts::Forecasts)
 end
 
 function Base.show(io::IO, ::MIME"text/html", forecasts::Forecasts)
+    initial_times, dfs = create_forecasts_df(forecasts)
     println(io, "<h2>Forecasts</h2>")
     println(io, "<p><b>Resolution</b>: $(forecasts.resolution)</p>")
     println(io, "<p><b>Horizon</b>: $(forecasts.horizon)</p>")
     println(io, "<p><b>Interval</b>: $(forecasts.interval)</p>")
-    initial_times, dfs = create_forecasts_df(forecasts)
+    println(io, "<p><b>Num initial times</b>: $(length(initial_times))</p>")
 
     for (initial_time, df) in zip(initial_times, dfs)
         println(io, "<p><b>Initial Time</b>: $initial_time</p>")
