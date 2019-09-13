@@ -4,8 +4,12 @@ const MAX_SHOW_FORECASTS = 10
 const MAX_SHOW_FORECAST_INITIAL_TIMES = 1
 
 
+function Base.summary(components::Components)
+    return "$(typeof(components))"
+end
+
 function Base.summary(io::IO, components::Components)
-    print(io, "$(typeof(components))")
+    print(io, summary(components))
 end
 
 function Base.show(io::IO, components::Components)
@@ -39,14 +43,22 @@ function Base.show(io::IO, ::MIME"text/html", components::Components)
     end
 end
 
-function Base.summary(io::IO, forecast::Forecast)
+function Base.summary(forecast::Forecast)
     component = get_component(forecast)
     component_name = get_name(component)
-    print(io, "$(typeof(forecast)) forecast (component=$component_name)")
+    return "$(typeof(forecast)) forecast (component=$component_name)"
+end
+
+function Base.summary(io::IO, forecast::Forecast)
+    print(io, summary(forecast))
+end
+
+function Base.summary(forecasts::Forecasts)
+    return "$(typeof(forecasts))"
 end
 
 function Base.summary(io::IO, forecasts::Forecasts)
-    print(io, "$(typeof(forecasts))")
+    print(io, summary(forecasts))
 end
 
 function Base.show(io::IO, forecasts::Forecasts)
@@ -126,10 +138,14 @@ function Base.show(io::IO, ::MIME"text/html", data::SystemData)
     show(io, MIME"text/html"(), data.forecasts)
 end
 
-function Base.summary(io::IO, ist::InfrastructureSystemsType)
+function Base.summary(ist::InfrastructureSystemsType)
     # All InfrastructureSystemsType subtypes are supposed to implement get_name.
     # Some don't.  They need to override this function.
-    print(io, "$(get_name(ist)) ($(typeof(ist)))")
+    return "$(get_name(ist)) ($(typeof(ist)))"
+end
+
+function Base.summary(io::IO, ist::InfrastructureSystemsType)
+    print(io, summary(ist))
 end
 
 function Base.show(io::IO, ::MIME"text/plain", ist::InfrastructureSystemsType)
