@@ -4,7 +4,7 @@
 
 Make a vector of forecasts by incrementing through a forecast by interval and horizon.
 """
-function make_forecasts(forecast::Deterministic, interval::Dates.Period, horizon::Int, silent::Bool=false)
+function make_forecasts(forecast::Deterministic, interval::Dates.Period, horizon::Int)
     resolution = get_resolution(forecast)
 
     if interval < resolution
