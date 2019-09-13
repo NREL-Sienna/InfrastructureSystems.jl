@@ -51,7 +51,10 @@ function read_timeseries_metadata(file_path::AbstractString)::Vector{TimeseriesF
                                                    row.Parameter,
                                                    row[Symbol("Scaling Factor")],
                                                    row[Symbol("Data File")],
-                                                   row[Symbol("Percentiles")],
+                                                   # TODO: update CDM data for the next
+                                                   # two fields.
+                                                   [],
+                                                   "Deterministic",
                                                   )
             )
         end
