@@ -207,7 +207,7 @@ function split_forecasts!(
 
     return
 end
- 
+
 
 function _add_forecast!(
                         data::SystemData,

@@ -4,8 +4,8 @@ const MAX_SHOW_FORECASTS = 10
 const MAX_SHOW_FORECAST_INITIAL_TIMES = 1
 
 
-function Base.summary(io::IO, components::Components)
-    print(io, "$(typeof(components))")
+function Base.summary(components::Components)
+    return "$(typeof(components)): $(get_num_components(components))"
 end
 
 function Base.show(io::IO, components::Components)
@@ -28,25 +28,27 @@ function Base.show(io::IO, ::MIME"text/plain", components::Components)
     df = create_components_df(components)
     println(io, "Components")
     println(io, "==========")
+    println(io, "Num components: $(get_num_components(components))\n")
     show(io, df)
 end
 
 function Base.show(io::IO, ::MIME"text/html", components::Components)
     df = create_components_df(components)
     println(io, "<h2>Components</h2>")
+    println(io, "<p><b>Num components</b>: $(get_num_components(components))</p>")
     withenv("LINES" => 100, "COLUMNS" => 200) do
         show(io, MIME"text/html"(), df)
     end
 end
 
-function Base.summary(io::IO, forecast::Forecast)
+function Base.summary(forecast::Forecast)
     component = get_component(forecast)
     component_name = get_name(component)
-    print(io, "$(typeof(forecast)) forecast (component=$component_name)")
+    return "$(typeof(forecast)) forecast (component=$component_name)"
 end
 
-function Base.summary(io::IO, forecasts::Forecasts)
-    print(io, "$(typeof(forecasts))")
+function Base.summary(forecasts::Forecasts)
+    return "$(typeof(forecasts)): $(get_num_forecasts(forecasts))"
 end
 
 function Base.show(io::IO, forecasts::Forecasts)
@@ -72,7 +74,8 @@ function Base.show(io::IO, ::MIME"text/plain", forecasts::Forecasts)
     println(io, "Resolution: $(forecasts.resolution)")
     println(io, "Horizon: $(forecasts.horizon)")
     println(io, "Interval: $(forecasts.interval)")
-    println(io, "Num initial times: $(length(initial_times))\n")
+    println(io, "Num initial times: $(length(initial_times))")
+    println(io, "Num forecasts: $(get_num_forecasts(forecasts))\n")
     println(io, "---------------------------------")
 
     for (initial_time, df) in zip(initial_times, dfs)
@@ -94,6 +97,7 @@ function Base.show(io::IO, ::MIME"text/html", forecasts::Forecasts)
     println(io, "<p><b>Horizon</b>: $(forecasts.horizon)</p>")
     println(io, "<p><b>Interval</b>: $(forecasts.interval)</p>")
     println(io, "<p><b>Num initial times</b>: $(length(initial_times))</p>")
+    println(io, "<p><b>Num forecasts</b>: $(get_num_forecasts(forecasts))</p>")
 
     for (initial_time, df) in zip(initial_times, dfs)
         println(io, "<p><b>Initial Time</b>: $initial_time</p>")
@@ -126,10 +130,10 @@ function Base.show(io::IO, ::MIME"text/html", data::SystemData)
     show(io, MIME"text/html"(), data.forecasts)
 end
 
-function Base.summary(io::IO, ist::InfrastructureSystemsType)
+function Base.summary(ist::InfrastructureSystemsType)
     # All InfrastructureSystemsType subtypes are supposed to implement get_name.
     # Some don't.  They need to override this function.
-    print(io, "$(get_name(ist)) ($(typeof(ist)))")
+    return "$(get_name(ist)) ($(typeof(ist)))"
 end
 
 function Base.show(io::IO, ::MIME"text/plain", ist::InfrastructureSystemsType)
