@@ -345,6 +345,31 @@ function compare_values(x::SystemData, y::SystemData)::Bool
 end
 
 
+function remove_component!(::Type{T}, data::SystemData, name) where T
+    component = remove_component!(T, data.components, name)
+    remove_forecasts_with_component(data, component)
+end
+
+function remove_component!(data::SystemData, component)
+    remove_component!(data.components, component)
+    remove_forecasts_with_component(data, component)
+end
+
+function remove_components!(::Type{T}, data::SystemData) where T
+    component_dict = remove_components!(T, data.components)
+    for component in values(component_dict)
+        remove_forecasts_with_component(data, component)
+    end
+end
+
+function remove_forecasts_with_component(data::SystemData, component)
+    uuid = get_uuid(component)
+    to_delete = [f for f in iterate_forecasts(data) if get_uuid(get_component(f)) == uuid]
+    for forecast in to_delete
+        remove_forecast!(data, forecast)
+    end
+end
+
 # Redirect functions to Components and Forecasts
 
 
@@ -352,16 +377,6 @@ add_component!(data::SystemData, component; kwargs...) = add_component!(
     data.components, component; kwargs...
 )
 iterate_components(data::SystemData) = iterate_components(data.components)
-
-remove_component!(::Type{T}, data::SystemData, name) where T = remove_component!(
-    T, data.components, name
-)
-remove_component!(data::SystemData, component) = remove_component!(
-    data.components, component
-)
-remove_components!(::Type{T}, data::SystemData) where T = remove_components!(
-    T, data.components
-)
 
 get_component(::Type{T}, data::SystemData, args...) where T = get_component(
     T, data.components, args...
