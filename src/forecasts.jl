@@ -432,40 +432,12 @@ function clear_forecasts!(forecasts::Forecasts)
     return
 end
 
-function Base.summary(io::IO, forecasts::Forecasts)
-    counts = Dict{String, Int}()
-    rows = []
-
-    println(io, "Forecasts")
-    println(io, "=========")
-    println(io, "Resolution: $(forecasts.resolution)")
-    println(io, "Horizon: $(forecasts.horizon)")
-    println(io, "Interval: $(forecasts.interval)\n")
-    println(io, "---------------------------------")
-    initial_times = _get_forecast_initial_times(forecasts.data)
-    for initial_time in initial_times
-        for (key, values) in forecasts.data
-            if key.initial_time != initial_time
-                continue
-            end
-
-            type_str = strip_module_names(string(key.forecast_type))
-            counts[type_str] = length(values)
-            parents = [strip_module_names(string(x)) for x in supertypes(key.forecast_type)]
-            row = (ConcreteType=type_str,
-                   SuperTypes=join(parents, " <: "),
-                   Count=length(values))
-            push!(rows, row)
-        end
-        println(io, "Initial Time: $initial_time")
-        println(io, "---------------------------------")
-
-        sort!(rows, by = x -> x.ConcreteType)
-
-        df = DataFrames.DataFrame(rows)
-        Base.show(io, df)
-        println(io, "\n")
+function get_num_forecasts(forecasts::Forecasts)
+    count = 0
+    for forecasts in values(forecasts.data)
+        count += length(forecasts)
     end
+    return count
 end
 
 function JSON2.write(io::IO, forecasts::Forecasts)
