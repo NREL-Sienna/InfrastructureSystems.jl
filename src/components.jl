@@ -289,6 +289,14 @@ function get_components_raw(
     return getproperty(raw, Symbol(T))  
 end
 
+function get_num_components(components::Components)
+    count = 0
+    for components in values(components.data)
+        count += length(components)
+    end
+    return count
+end
+
 function JSON2.read(io::IO, ::Type{Components})
     raw = JSON2.read(io, NamedTuple)
     parent_module = getfield(Main, Symbol(raw.parent_module))

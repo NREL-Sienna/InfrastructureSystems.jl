@@ -432,6 +432,14 @@ function clear_forecasts!(forecasts::Forecasts)
     return
 end
 
+function get_num_forecasts(forecasts::Forecasts)
+    count = 0
+    for forecasts in values(forecasts.data)
+        count += length(forecasts)
+    end
+    return count
+end
+
 function JSON2.write(io::IO, forecasts::Forecasts)
     return JSON2.write(io, encode_for_json(forecasts))
 end
