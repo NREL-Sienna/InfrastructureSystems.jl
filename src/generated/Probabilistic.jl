@@ -23,6 +23,10 @@ function Probabilistic(; component, label, resolution, initial_time, percentiles
     Probabilistic(component, label, resolution, initial_time, percentiles, data, start_index, horizon, )
 end
 
+function Probabilistic{T}(component, label, resolution, initial_time, percentiles, data, start_index, horizon, ) where T <: InfrastructureSystemsType
+    Probabilistic(component, label, resolution, initial_time, percentiles, data, start_index, horizon, InfrastructureSystemsInternal())
+end
+
 
 """Get Probabilistic component."""
 get_component(value::Probabilistic) = value.component

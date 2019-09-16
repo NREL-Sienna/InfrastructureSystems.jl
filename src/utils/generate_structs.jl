@@ -34,6 +34,14 @@ function {{struct_name}}(; {{#parameters}}{{^internal}}{{name}}, {{/internal}}{{
     {{struct_name}}({{#parameters}}{{^internal}}{{name}}, {{/internal}}{{/parameters}})
 end
 
+{{#parametric}}
+function {{struct_name}}{T}({{#parameters}}{{^internal}}{{name}}, {{/internal}}{{/parameters}}) where T <: InfrastructureSystemsType
+    {{#parameters}}
+    {{/parameters}}
+    {{struct_name}}({{#parameters}}{{^internal}}{{name}}, {{/internal}}{{/parameters}}InfrastructureSystemsInternal())
+end
+{{/parametric}}
+
 {{#has_null_values}}
 # Constructor for demo purposes; non-functional.
 

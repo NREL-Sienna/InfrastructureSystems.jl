@@ -22,6 +22,10 @@ function Deterministic(; component, label, resolution, initial_time, data, start
     Deterministic(component, label, resolution, initial_time, data, start_index, horizon, )
 end
 
+function Deterministic{T}(component, label, resolution, initial_time, data, start_index, horizon, ) where T <: InfrastructureSystemsType
+    Deterministic(component, label, resolution, initial_time, data, start_index, horizon, InfrastructureSystemsInternal())
+end
+
 
 """Get Deterministic component."""
 get_component(value::Deterministic) = value.component

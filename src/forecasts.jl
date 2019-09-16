@@ -530,8 +530,10 @@ function convert_type!(
             throw(DataFormatError("unmatched timeseries UUID: $uuid $forecast"))
         end
         timeseries = forecast_uuid_to_timeseries[uuid]
-        forecast_base_type = getfield(InfrastructureSystems, Symbol(strip_module_names(string(forecast.type))))
-        push!(forecasts_, convert_type(forecast_base_type, forecast, component_cache, timeseries))
+        forecast_base_type = getfield(InfrastructureSystems,
+                                      Symbol(strip_module_names(string(forecast.type))))
+        val = convert_type(forecast_base_type, forecast, component_cache, timeseries)
+        push!(forecasts_, val)
     end
 
     _add_forecasts!(forecasts, forecasts_)
@@ -605,3 +607,142 @@ function get_resolution(ts::TimeSeries.TimeArray)
     return res[1]
 end
 
+"""
+Creates a new forecast from an existing forecast with a split TimeArray.
+
+# Arguments
+- `is_copy::Bool=true`: Reset internal indices because the TimeArray is a fresh copy.
+"""
+function _split_forecast(
+                         forecast::T,
+                         data::TimeSeries.TimeArray;
+                         is_copy=true,
+                        ) where T <: Forecast
+    vals = []
+    for (fname, ftype) in zip(fieldnames(T), fieldtypes(T))
+        if ftype <: TimeSeries.TimeArray
+            val = data
+        elseif ftype <: InfrastructureSystemsInternal
+            # Need to create a new UUID.
+            continue
+        else
+            val = getfield(forecast, fname)
+        end
+
+        push!(vals, val)
+    end
+
+    new_forecast = T(vals...)
+    if is_copy
+        new_forecast.start_index = 1
+        new_forecast.horizon = length(get_data(new_forecast))
+    end
+    return new_forecast
+end
+
+function Base.getindex(forecast::Forecast, args...)
+    return _split_forecast(forecast, getindex(get_timeseries(forecast), args...))
+end
+
+Base.first(forecast::Forecast) = head(forecast, 1)
+
+Base.last(forecast::Forecast) = tail(forecast, 1)
+
+Base.firstindex(forecast::Forecast) = firstindex(get_timeseries(forecast))
+
+Base.lastindex(forecast::Forecast) = lastindex(get_timeseries(forecast))
+
+Base.lastindex(forecast::Forecast, d) = lastindex(get_timeseries(forecast), d)
+
+Base.eachindex(forecast::Forecast) = eachindex(get_timeseries(forecast))
+
+Base.iterate(forecast::Forecast, n = 1) = iterate(get_timeseries(forecast), n)
+
+"""
+    when(forecast::Forecast, period::Function, t::Integer)
+
+Refer to TimeSeries.when(). Underlying data is copied.
+"""
+function when(forecast::Forecast, period::Function, t::Integer)
+    new = _split_forecast(forecast, TimeSeries.when(get_timeseries(forecast), period, t))
+
+end
+
+"""
+    from(forecast::Forecast, timestamp)
+
+Return a forecast truncated starting with timestamp. Underlying data is not copied.
+"""
+function from(forecast::Forecast, timestamp)
+    # Don't use TimeSeries.from because it makes a copy.
+    start_index = get_start_index(forecast)
+    end_index = start_index + get_horizon(forecast)
+    for i in get_start_index(forecast) : end_index
+        if TimeSeries.timestamp(get_data(forecast))[i] >= timestamp
+            fcast = _split_forecast(forecast, get_data(forecast); is_copy=false)
+            fcast.start_index = i
+            fcast.horizon = end_index - i
+            return fcast
+        end
+    end
+
+    # Do whatever TimeSeries does if the timestamp is after the forecast.
+    return _split_forecast(forecast, TimeSeries.from(get_timeseries(forecast), timestamp))
+end
+
+"""
+    to(forecast::Forecast, timestamp)
+
+Return a forecast truncated after timestamp. Underlying data is not copied.
+"""
+function to(forecast::Forecast, timestamp)
+    # Don't use TimeSeries.from because it makes a copy.
+    start_index = get_start_index(forecast)
+    end_index = start_index + get_horizon(forecast)
+    for i in get_start_index(forecast) : end_index
+        tstamp = TimeSeries.timestamp(get_data(forecast))[i]
+        if tstamp < timestamp
+            continue
+        elseif tstamp == timestamp
+            end_index = i
+        else
+            @assert tstamp > timestamp
+            end_index = i - 1
+        end
+
+        fcast = _split_forecast(forecast, get_data(forecast); is_copy=false)
+        fcast.horizon = end_index - start_index + 1
+        return fcast
+    end
+
+    # Do whatever TimeSeries does if the timestamp is after the forecast.
+    return _split_forecast(forecast, TimeSeries.to(get_timeseries(forecast), timestamp))
+end
+
+"""
+    head(forecast::Forecast)
+    head(forecast::Forecast, num)
+
+Return a forecast with only the first num values.
+"""
+function head(forecast::Forecast)
+    return _split_forecast(forecast, TimeSeries.head(get_timeseries(forecast)))
+end
+
+function head(forecast::Forecast, num)
+    return _split_forecast(forecast, TimeSeries.head(get_timeseries(forecast), num))
+end
+
+"""
+    tail(forecast::Forecast)
+    tail(forecast::Forecast, num)
+
+Return a forecast with only the ending num values.
+"""
+function tail(forecast::Forecast)
+    return _split_forecast(forecast, TimeSeries.tail(get_timeseries(forecast)))
+end
+
+function tail(forecast::Forecast, num)
+    return _split_forecast(forecast, TimeSeries.tail(get_timeseries(forecast), num))
+end

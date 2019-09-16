@@ -1,4 +1,7 @@
 
+import Dates
+import TimeSeries
+
 function does_forecast_have_component(data::SystemData, component)
     found = false
     for forecast in iterate_forecasts(data)
@@ -85,4 +88,89 @@ end
 @testset "Summarize forecasts" begin
     data = create_system_data(; with_forecasts=true)
     summary(devnull, data.forecasts)
+end
+
+@testset "Test split_forecast" begin
+    data = create_system_data(; with_forecasts=true)
+    forecast = get_all_forecasts(data)[1]
+
+    forecasts = get_forecasts(IS.Deterministic, data, IS.get_initial_time(forecast))
+    split_forecasts!(data, forecasts, Dates.Hour(6), 12)
+    initial_times = get_forecast_initial_times(data)
+    @test length(initial_times) == 3
+
+    for initial_time in initial_times
+        for fcast in get_forecasts(Deterministic, data, initial_time)
+            # The backing TimeArray must be the same.
+            @test get_data(fcast) === get_data(forecast)
+            @test length(fcast) == 12
+        end
+    end
+end
+
+@testset "Test forecast forwarding methods" begin
+    data = create_system_data(; with_forecasts=true)
+    forecast = get_all_forecasts(data)[1]
+
+    # Iteration
+    size = 24
+    @test length(forecast) == size
+    i = 0
+    for x in forecast
+        i += 1
+    end
+    @test i == size
+
+    # Indexing
+    @test length(forecast[1:16]) == 16
+
+    # when
+    fcast = IS.when(forecast, TimeSeries.hour, 3)
+    @test length(fcast) == 1
+end
+
+@testset "Test forecast head" begin
+    data = create_system_data(; with_forecasts=true)
+    forecast = get_all_forecasts(data)[1]
+    fcast = IS.head(forecast)
+    # head returns a length of 6 by default, but don't hard-code that.
+    @test length(fcast) < length(forecast)
+
+    fcast = IS.head(forecast, 10)
+    @test length(fcast) == 10
+end
+
+@testset "Test forecast tail" begin
+    data = create_system_data(; with_forecasts=true)
+    forecast = get_all_forecasts(data)[1]
+    fcast = IS.tail(forecast)
+    # tail returns a length of 6 by default, but don't hard-code that.
+    @test length(fcast) < length(forecast)
+
+    fcast = IS.head(forecast, 10)
+    @test length(fcast) == 10
+end
+
+@testset "Test forecast from" begin
+    data = create_system_data(; with_forecasts=true)
+    forecast = get_all_forecasts(data)[1]
+    start_time = Dates.DateTime(Dates.today()) + Dates.Hour(3)
+    fcast = IS.from(forecast, start_time)
+    @test get_data(fcast) === get_data(forecast)
+    @test get_start_index(fcast) == 4
+    @test length(fcast) == 21
+    @test TimeSeries.timestamp(IS.get_timeseries(fcast))[1] == start_time
+end
+
+@testset "Test forecast from" begin
+    data = create_system_data(; with_forecasts=true)
+    forecast = get_all_forecasts(data)[1]
+    for end_time in (Dates.DateTime(Dates.today()) + Dates.Hour(15),
+                     Dates.DateTime(Dates.today()) + Dates.Hour(15) + Dates.Minute(5))
+        fcast = IS.to(forecast, end_time)
+        @test get_data(fcast) === get_data(forecast)
+        @test get_start_index(fcast) + get_horizon(fcast) == 17
+        @test length(fcast) == 16
+        @test TimeSeries.timestamp(IS.get_timeseries(fcast))[end] <= end_time
+    end
 end
