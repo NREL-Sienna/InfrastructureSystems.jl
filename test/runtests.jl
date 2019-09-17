@@ -1,8 +1,6 @@
 
 using Test
 using Logging
-
-using InfrastructureSystems
 import InfrastructureSystems
 
 const IS = InfrastructureSystems
@@ -78,19 +76,19 @@ function run_tests()
     console_logger = ConsoleLogger(stderr, console_level)
     file_level = get_logging_level("SYS_LOG_LEVEL", "Info")
 
-    open_file_logger(LOG_FILE, file_level) do file_logger
+    IS.open_file_logger(LOG_FILE, file_level) do file_logger
         levels = (Logging.Info, Logging.Warn, Logging.Error)
-        multi_logger = MultiLogger([console_logger, file_logger],
-                                   LogEventTracker(levels))
+        multi_logger = IS.MultiLogger([console_logger, file_logger],
+                                IS.LogEventTracker(levels))
         global_logger(multi_logger)
 
         @time @testset "Begin Systems tests" begin
             @includetests ARGS
         end
 
-        @test length(get_log_events(multi_logger.tracker, Logging.Error)) == 0
+        @test length(IS.get_log_events(multi_logger.tracker, Logging.Error)) == 0
 
-        @info report_log_summary(multi_logger)
+        @info IS.report_log_summary(multi_logger)
     end
 end
 

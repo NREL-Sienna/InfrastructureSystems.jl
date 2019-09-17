@@ -1,7 +1,7 @@
 
 import JSON2
 
-function validate_serialization(sys::SystemData)
+function validate_serialization(sys::IS.SystemData)
     path, io = mktemp()
     @info "Serializing to $path"
 
@@ -15,7 +15,7 @@ function validate_serialization(sys::SystemData)
     close(io)
 
     try
-        sys2 = SystemData(path)
+        sys2 = IS.SystemData(path)
         return IS.compare_values(sys, sys2)
     finally
         @debug "delete temp file" path
