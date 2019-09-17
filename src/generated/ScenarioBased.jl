@@ -27,7 +27,6 @@ function ScenarioBased{T}(component, label, resolution, initial_time, scenario_c
     ScenarioBased(component, label, resolution, initial_time, scenario_count, data, start_index, horizon, InfrastructureSystemsInternal())
 end
 
-
 """Get ScenarioBased component."""
 get_component(value::ScenarioBased) = value.component
 """Get ScenarioBased label."""

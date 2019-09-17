@@ -27,7 +27,6 @@ function Probabilistic{T}(component, label, resolution, initial_time, percentile
     Probabilistic(component, label, resolution, initial_time, percentiles, data, start_index, horizon, InfrastructureSystemsInternal())
 end
 
-
 """Get Probabilistic component."""
 get_component(value::Probabilistic) = value.component
 """Get Probabilistic label."""

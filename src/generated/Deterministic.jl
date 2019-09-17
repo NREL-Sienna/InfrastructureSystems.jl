@@ -26,7 +26,6 @@ function Deterministic{T}(component, label, resolution, initial_time, data, star
     Deterministic(component, label, resolution, initial_time, data, start_index, horizon, InfrastructureSystemsInternal())
 end
 
-
 """Get Deterministic component."""
 get_component(value::Deterministic) = value.component
 """Get Deterministic label."""
