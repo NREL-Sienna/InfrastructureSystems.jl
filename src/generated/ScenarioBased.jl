@@ -23,6 +23,9 @@ function ScenarioBased(; component, label, resolution, initial_time, scenario_co
     ScenarioBased(component, label, resolution, initial_time, scenario_count, data, start_index, horizon, )
 end
 
+function ScenarioBased{T}(component, label, resolution, initial_time, scenario_count, data, start_index, horizon, ) where T <: InfrastructureSystemsType
+    ScenarioBased(component, label, resolution, initial_time, scenario_count, data, start_index, horizon, InfrastructureSystemsInternal())
+end
 
 """Get ScenarioBased component."""
 get_component(value::ScenarioBased) = value.component
