@@ -1,5 +1,5 @@
 
-struct SystemData
+mutable struct SystemData <: InfrastructureSystemsType
     components::Components
     forecasts::Forecasts
     validation_descriptors::Vector
@@ -14,6 +14,15 @@ function SystemData(; validation_descriptor_file=nothing)
 
     components = Components(validation_descriptors)
     return SystemData(components, Forecasts(), validation_descriptors)
+end
+
+"""
+    SystemData(filename::AbstractString)
+
+Deserialize SystemData from a JSON file.
+"""
+function SystemData(filename::AbstractString)
+    return from_json(SystemData, filename)
 end
 
 """
@@ -208,6 +217,27 @@ function split_forecasts!(
     return
 end
 
+function JSON2.read(io::IO, ::Type{SystemData})
+    # WARNING: This only works for components defined in InfrastructureSystems.
+    sys = SystemData()
+    component_cache = Dict{Base.UUID, InfrastructureSystemsType}()
+
+    raw = JSON2.read(io, NamedTuple)
+    for c_type_sym in get_component_types_raw(SystemData, raw)
+        c_type = getfield(InfrastructureSystems,
+                          Symbol(strip_module_names(string(c_type_sym))))
+        for component in get_components_raw(SystemData, c_type, raw)
+            comp = convert_type(c_type, component)
+            add_component!(sys, comp)
+            component_cache[get_uuid(comp)] = comp
+        end
+    end
+
+    convert_forecasts!(sys, raw, component_cache)
+
+    sys.validation_descriptors = raw.validation_descriptors
+    return sys
+end
 
 function _add_forecast!(
                         data::SystemData,

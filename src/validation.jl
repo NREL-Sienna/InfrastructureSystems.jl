@@ -33,6 +33,7 @@ end
 
 # Get validation info for one struct.
 function get_config_descriptor(config::Vector, name::AbstractString)
+    name = strip_module_names(name)
     for item in config
         if item["struct_name"] == name
             return item
@@ -40,7 +41,7 @@ function get_config_descriptor(config::Vector, name::AbstractString)
     end
 
     throw(DataFormatError(
-        "InfrastructureSystems struct $name does not exist in validation configuration file"
+        "struct $name does not exist in validation configuration file"
     ))
 end
 

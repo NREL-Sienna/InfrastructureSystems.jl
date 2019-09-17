@@ -3,13 +3,13 @@
     data = SystemData()
 
     name = "component1"
-    component = TestComponent(name, 5)
+    component = IS.TestComponent(name, 5)
     add_component!(data, component)
 
-    component = get_component(TestComponent, data, name)
+    component = get_component(IS.TestComponent, data, name)
     @test component.name == name
 
-    components = get_components(TestComponent, data)
+    components = get_components(IS.TestComponent, data)
     @test length(components) == 1
 
     i = 0
@@ -19,7 +19,7 @@
     @test i == 1
 
     remove_component!(data, collect(components)[1])
-    components = get_components(TestComponent, data)
+    components = get_components(IS.TestComponent, data)
     @test length(components) == 0
 
     add_component!(data, component)
@@ -27,8 +27,8 @@
     @test length(components) == 1
     @test components[1].name == name
 
-    remove_components!(TestComponent, data)
-    components = get_components(TestComponent, data)
+    remove_components!(IS.TestComponent, data)
+    components = get_components(IS.TestComponent, data)
     @test length(components) == 0
 end
 

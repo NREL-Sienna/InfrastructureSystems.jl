@@ -27,7 +27,7 @@ end
     data = SystemData()
 
     name = "Component1"
-    component = TestComponent(name, 5)
+    component = IS.TestComponent(name, 5)
     add_component!(data, component)
 
     file = joinpath(FORECASTS_DIR, "ComponentsAsColumnsNoTime.json")
@@ -74,14 +74,14 @@ end
 @testset "Test forecast-component synchronization remove_component_by_name" begin
     data = create_system_data(; with_forecasts=true)
     component = collect(iterate_components(data))[1]
-    remove_component!(TestComponent, data, get_name(component))
+    remove_component!(IS.TestComponent, data, get_name(component))
     @test !does_forecast_have_component(data, component)
 end
 
 @testset "Test forecast-component synchronization remove_components" begin
     data = create_system_data(; with_forecasts=true)
     component = collect(iterate_components(data))[1]
-    remove_components!(TestComponent, data)
+    remove_components!(IS.TestComponent, data)
     @test !does_forecast_have_component(data, component)
 end
 
@@ -173,4 +173,9 @@ end
         @test length(fcast) == 16
         @test TimeSeries.timestamp(IS.get_timeseries(fcast))[end] <= end_time
     end
+end
+
+@testset "Test forecast serialization" begin
+    data = create_system_data(; with_forecasts=true)
+    forecast = get_all_forecasts(data)[1]
 end
