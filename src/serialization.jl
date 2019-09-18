@@ -149,7 +149,7 @@ function encode_for_json(forecast::T) where T <: Forecast
     end
 
     push!(fields, :type)
-    push!(vals, string(T.name))
+    push!(vals, strip_module_names(string(T.name)))
     return NamedTuple{Tuple(fields)}(vals)
 end
 

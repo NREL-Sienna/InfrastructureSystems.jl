@@ -1,19 +1,9 @@
 
-struct TestComponent <: IS.InfrastructureSystemsType
-    name::AbstractString
-    val::Int
-    internal::IS.InfrastructureSystemsInternal
-end
-
-function TestComponent(name, val, internal=IS.InfrastructureSystemsInternal())
-    return TestComponent(name, val, internal)
-end
-
 function create_system_data(; with_forecasts=false)
     data = IS.SystemData()
 
     name = "Component1"
-    component = TestComponent(name, 5)
+    component = IS.TestComponent(name, 5)
     IS.add_component!(data, component)
 
     if with_forecasts

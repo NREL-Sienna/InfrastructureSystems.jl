@@ -269,9 +269,9 @@ end
 
 function encode_for_json(components::Components)
     # Convert each name-to-value component dictionary to arrays.
-    new_components = Dict{DataType, Vector{<:InfrastructureSystemsType}}()
+    new_components = Dict{String, Vector{<:InfrastructureSystemsType}}()
     for (data_type, component_dict) in components.data
-        new_components[data_type] = [x for x in values(component_dict)]
+        new_components[strip_module_names(data_type)] = [x for x in values(component_dict)]
     end
 
     return new_components
@@ -292,7 +292,7 @@ function get_components_raw(
                             ::Type{T},
                             raw::NamedTuple,
                            ) where T <: InfrastructureSystemsType
-    return getproperty(raw, Symbol(T))  
+    return getproperty(raw, Symbol(strip_module_names(string(T))))
 end
 
 function get_num_components(components::Components)
@@ -301,9 +301,4 @@ function get_num_components(components::Components)
         count += length(components)
     end
     return count
-end
-
-function JSON2.read(io::IO, ::Type{Components})
-    raw = JSON2.read(io, NamedTuple)
-    parent_module = getfield(Main, Symbol(raw.parent_module))
 end
