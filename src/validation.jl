@@ -33,7 +33,7 @@ end
 
 # Get validation info for one struct.
 function get_config_descriptor(config::Vector, name::AbstractString)
-    name = strip_module_names(name)
+    name = strip_module_name(name)
     for item in config
         if item["struct_name"] == name
             return item

@@ -68,7 +68,7 @@ end
 
 function encode_for_json(resolution::Dates.Period)
     return (value=resolution.value,
-            unit=strip_module_names(string(typeof(resolution))))
+            unit=strip_module_name(string(typeof(resolution))))
 end
 
 function JSON2.read(io::IO, ::Type{T}) where {T <: Dates.Period}
@@ -149,7 +149,7 @@ function encode_for_json(forecast::T) where T <: Forecast
     end
 
     push!(fields, :type)
-    push!(vals, strip_module_names(string(T.name)))
+    push!(vals, strip_module_name(string(T.name)))
     return NamedTuple{Tuple(fields)}(vals)
 end
 

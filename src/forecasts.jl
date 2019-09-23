@@ -531,7 +531,7 @@ function convert_type!(
         end
         timeseries = forecast_uuid_to_timeseries[uuid]
         forecast_base_type = getfield(InfrastructureSystems,
-                                      Symbol(strip_module_names(string(forecast.type))))
+                                      Symbol(strip_module_name(string(forecast.type))))
         val = convert_type(forecast_base_type, forecast, component_cache, timeseries)
         push!(forecasts_, val)
     end

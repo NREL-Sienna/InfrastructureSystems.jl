@@ -154,9 +154,9 @@ function create_components_df(components::Components)
     rows = []
 
     for (subtype, values) in components.data
-        type_str = strip_module_names(string(subtype))
+        type_str = strip_module_name(string(subtype))
         counts[type_str] = length(values)
-        parents = [strip_module_names(string(x)) for x in supertypes(subtype)]
+        parents = [strip_module_name(string(x)) for x in supertypes(subtype)]
         row = (ConcreteType=type_str,
                SuperTypes=join(parents, " <: "),
                Count=length(values))
@@ -184,9 +184,9 @@ function create_forecasts_df(forecasts::Forecasts)
                 continue
             end
 
-            type_str = strip_module_names(string(key.forecast_type))
+            type_str = strip_module_name(string(key.forecast_type))
             counts[type_str] = length(values)
-            parents = [strip_module_names(string(x)) for x in supertypes(key.forecast_type)]
+            parents = [strip_module_name(string(x)) for x in supertypes(key.forecast_type)]
             row = (ConcreteType=type_str,
                    SuperTypes=join(parents, " <: "),
                    Count=length(values))
