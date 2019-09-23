@@ -225,7 +225,7 @@ function JSON2.read(io::IO, ::Type{SystemData})
     raw = JSON2.read(io, NamedTuple)
     for c_type_sym in get_component_types_raw(SystemData, raw)
         c_type = getfield(InfrastructureSystems,
-                          Symbol(strip_module_names(string(c_type_sym))))
+                          Symbol(strip_module_name(string(c_type_sym))))
         for component in get_components_raw(SystemData, c_type, raw)
             comp = convert_type(c_type, component)
             add_component!(sys, comp)

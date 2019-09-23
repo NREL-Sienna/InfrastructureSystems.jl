@@ -51,12 +51,12 @@ end
 
 """Converts a DataType to a Symbol, stripping off the module name(s)."""
 function type_to_symbol(data_type::DataType)
-    return Symbol(strip_module_names(string(data_type)))
+    return Symbol(strip_module_name(string(data_type)))
 end
 
-"""Strips the module name(s) off of a type."""
-function strip_module_names(name::String)
-    index = findlast(".", name)
+"""Strips the module name off of a type."""
+function strip_module_name(name::String)
+    index = findfirst(".", name)
     if !isnothing(index)
         basename = name[index.start + 1:end]
     else
@@ -66,8 +66,8 @@ function strip_module_names(name::String)
     return basename
 end
 
-function strip_module_names(::Type{T}) where T
-    return strip_module_names(string(T))
+function strip_module_name(::Type{T}) where T
+    return strip_module_name(string(T))
 end
 
 """Converts an object deserialized from JSON into a Julia type, such as NamedTuple,
