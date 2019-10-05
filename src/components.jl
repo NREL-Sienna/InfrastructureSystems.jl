@@ -75,11 +75,11 @@ function remove_components!(
         throw(ArgumentError("component $T is not stored"))
     end
 
-    components = pop!(components.data, T)
+    components_ = pop!(components.data, T)
     @debug "Removed all components of type" T
     # Return the components because the higher level needs to delete any forecasts with
     # the components.
-    return components
+    return values(components_)
 end
 
 """
@@ -259,6 +259,18 @@ function iterate_components(components::Components)
     end
 end
 
+function iterate_components_with_forecasts(components::Components)
+    Channel() do channel
+        for comp_dict in values(components.data)
+            for component in values(comp_dict)
+                if has_forecasts(component)
+                    put!(channel, component)
+                end
+            end
+        end
+    end
+end
+
 function JSON2.write(io::IO, components::Components)
     return JSON2.write(io, encode_for_json(components))
 end
@@ -301,4 +313,51 @@ function get_num_components(components::Components)
         count += length(components)
     end
     return count
+end
+
+function clear_forecasts!(components::Components)
+    for component in iterate_components_with_forecasts(components)
+        clear_forecasts!(component)
+    end
+end
+
+function get_forecast_initial_times(components::Components)::Vector{Dates.DateTime}
+    initial_times = Set{Dates.DateTime}()
+    for component in iterate_components_with_forecasts(components)
+        get_forecast_initial_times!(initial_times, component)
+    end
+
+    return sort!(Vector{Dates.DateTime}(collect(initial_times)))
+end
+
+function get_forecasts_initial_time(components::Components)
+    initial_times = get_forecast_initial_times(components)
+    return isempty(initial_times) ? nothing : initial_times[1]
+end
+
+function get_forecasts_last_initial_time(components::Components)
+    initial_times = get_forecast_initial_times(components)
+    return isempty(initial_times) ? nothing : initial_times[end]
+end
+
+function validate_forecast_consistency(components::Components)
+    # All component initial times must be identical.
+    # We verify resolution and horizon at forecast addition.
+    initial_times = nothing
+    for component in iterate_components_with_forecasts(components)
+        if !validate_forecast_consistency(component)
+            return false
+        end
+        component_initial_times = Set{Dates.DateTime}()
+        get_forecast_initial_times!(component_initial_times, component)
+        if isnothing(initial_times)
+            initial_times = component_initial_times
+        elseif initial_times != component_initial_times
+            @error "initial times don't match" initial_times, component_initial_times
+            return false
+        end
+
+    end
+
+    return true
 end

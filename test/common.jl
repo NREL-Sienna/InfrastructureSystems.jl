@@ -8,7 +8,7 @@ function create_system_data(; with_forecasts=false)
 
     if with_forecasts
         file = joinpath(FORECASTS_DIR, "ComponentsAsColumnsNoTime.json")
-        IS.add_forecasts!(data, IS.make_forecasts(data, file, IS))
+        IS.add_forecasts!(IS.InfrastructureSystemsType, data, file)
 
         forecasts = get_all_forecasts(data)
         @assert length(forecasts) > 0
@@ -20,3 +20,13 @@ end
 function get_all_forecasts(data)
     return collect(IS.iterate_forecasts(data))
 end
+
+function create_time_series_data()
+    dates = collect(Dates.DateTime("1/1/2020 00:00:00", "d/m/y H:M:S") : Dates.Hour(1) :
+                    Dates.DateTime("1/1/2020 23:00:00", "d/m/y H:M:S"))
+    data = collect(1:24)
+    component_name = "gen"
+    ta = TimeSeries.TimeArray(dates, data, [component_name])
+    return IS.TimeSeriesData(ta)
+end
+

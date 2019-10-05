@@ -42,92 +42,94 @@ function Base.show(io::IO, ::MIME"text/html", components::Components)
 end
 
 function Base.summary(forecast::Forecast)
-    component = get_component(forecast)
-    component_name = get_name(component)
-    return "$(typeof(forecast)) forecast (component=$component_name)"
+    return "$(typeof(forecast)) forecast"
 end
 
-function Base.summary(forecasts::Forecasts)
-    return "$(typeof(forecasts)): $(get_num_forecasts(forecasts))"
+function Base.summary(forecast::ForecastInternal)
+    return "$(typeof(forecast)) forecast"
 end
 
-function Base.show(io::IO, forecasts::Forecasts)
-    i = 1
-    for forecast in iterate_forecasts(forecasts)
-        if i <= MAX_SHOW_FORECASTS
-            show(io, forecast)
-            println(io)
-        end
-        i += 1
-    end
+#function Base.summary(forecasts::Forecasts)
+#    return "$(typeof(forecasts)): $(get_num_forecasts(forecasts))"
+#end
+#
+#function Base.show(io::IO, forecasts::Forecasts)
+#    i = 1
+#    for forecast in iterate_forecasts(forecasts)
+#        if i <= MAX_SHOW_FORECASTS
+#            show(io, forecast)
+#            println(io)
+#        end
+#        i += 1
+#    end
+#
+#    if i > MAX_SHOW_FORECASTS
+#        num = i - MAX_SHOW_FORECASTS
+#        println(io, "\n***Omitted $num forecasts***\n")
+#    end
+#end
 
-    if i > MAX_SHOW_FORECASTS
-        num = i - MAX_SHOW_FORECASTS
-        println(io, "\n***Omitted $num forecasts***\n")
-    end
-end
-
-function Base.show(io::IO, ::MIME"text/plain", forecasts::Forecasts)
-    initial_times, dfs = create_forecasts_df(forecasts)
-    println(io, "Forecasts")
-    println(io, "=========")
-    println(io, "Resolution: $(forecasts.resolution)")
-    println(io, "Horizon: $(forecasts.horizon)")
-    println(io, "Interval: $(forecasts.interval)")
-    println(io, "Num initial times: $(length(initial_times))")
-    println(io, "Num forecasts: $(get_num_forecasts(forecasts))\n")
-    println(io, "---------------------------------")
-
-    for (initial_time, df) in zip(initial_times, dfs)
-        println(io, "Initial Time: $initial_time")
-        println(io, "---------------------------------")
-        show(io, df)
-    end
-
-    if length(initial_times) > MAX_SHOW_FORECAST_INITIAL_TIMES
-        num = length(initial_times) - MAX_SHOW_FORECAST_INITIAL_TIMES
-        println(io, "\n\n***Omitted tables for $num initial times***\n")
-    end
-end
-
-function Base.show(io::IO, ::MIME"text/html", forecasts::Forecasts)
-    initial_times, dfs = create_forecasts_df(forecasts)
-    println(io, "<h2>Forecasts</h2>")
-    println(io, "<p><b>Resolution</b>: $(forecasts.resolution)</p>")
-    println(io, "<p><b>Horizon</b>: $(forecasts.horizon)</p>")
-    println(io, "<p><b>Interval</b>: $(forecasts.interval)</p>")
-    println(io, "<p><b>Num initial times</b>: $(length(initial_times))</p>")
-    println(io, "<p><b>Num forecasts</b>: $(get_num_forecasts(forecasts))</p>")
-
-    for (initial_time, df) in zip(initial_times, dfs)
-        println(io, "<p><b>Initial Time</b>: $initial_time</p>")
-        withenv("LINES" => 100, "COLUMNS" => 200) do
-            show(io, MIME"text/html"(), df)
-        end
-    end
-
-    if length(initial_times) > MAX_SHOW_FORECAST_INITIAL_TIMES
-        num = length(initial_times) - MAX_SHOW_FORECAST_INITIAL_TIMES
-        println(io, "<p><b>Omitted tables for $num initial times</b></p>")
-    end
-end
+#function Base.show(io::IO, ::MIME"text/plain", forecasts::Forecasts)
+#    initial_times, dfs = create_forecasts_df(forecasts)
+#    println(io, "Forecasts")
+#    println(io, "=========")
+#    println(io, "Resolution: $(forecasts.resolution)")
+#    println(io, "Horizon: $(forecasts.horizon)")
+#    println(io, "Interval: $(forecasts.interval)")
+#    println(io, "Num initial times: $(length(initial_times))")
+#    println(io, "Num forecasts: $(get_num_forecasts(forecasts))\n")
+#    println(io, "---------------------------------")
+#
+#    for (initial_time, df) in zip(initial_times, dfs)
+#        println(io, "Initial Time: $initial_time")
+#        println(io, "---------------------------------")
+#        show(io, df)
+#    end
+#
+#    if length(initial_times) > MAX_SHOW_FORECAST_INITIAL_TIMES
+#        num = length(initial_times) - MAX_SHOW_FORECAST_INITIAL_TIMES
+#        println(io, "\n\n***Omitted tables for $num initial times***\n")
+#    end
+#end
+#
+#function Base.show(io::IO, ::MIME"text/html", forecasts::Forecasts)
+#    initial_times, dfs = create_forecasts_df(forecasts)
+#    println(io, "<h2>Forecasts</h2>")
+#    println(io, "<p><b>Resolution</b>: $(forecasts.resolution)</p>")
+#    println(io, "<p><b>Horizon</b>: $(forecasts.horizon)</p>")
+#    println(io, "<p><b>Interval</b>: $(forecasts.interval)</p>")
+#    println(io, "<p><b>Num initial times</b>: $(length(initial_times))</p>")
+#    println(io, "<p><b>Num forecasts</b>: $(get_num_forecasts(forecasts))</p>")
+#
+#    for (initial_time, df) in zip(initial_times, dfs)
+#        println(io, "<p><b>Initial Time</b>: $initial_time</p>")
+#        withenv("LINES" => 100, "COLUMNS" => 200) do
+#            show(io, MIME"text/html"(), df)
+#        end
+#    end
+#
+#    if length(initial_times) > MAX_SHOW_FORECAST_INITIAL_TIMES
+#        num = length(initial_times) - MAX_SHOW_FORECAST_INITIAL_TIMES
+#        println(io, "<p><b>Omitted tables for $num initial times</b></p>")
+#    end
+#end
 
 function Base.show(io::IO, data::SystemData)
     show(io, data.components)
     println(io, "\n")
-    show(io, data.forecasts)
+    show(io, data.forecast_metadata)
 end
 
 function Base.show(io::IO, ::MIME"text/plain", data::SystemData)
     show(io, MIME"text/plain"(), data.components)
     println(io, "\n")
-    show(io, MIME"text/plain"(), data.forecasts)
+    show(io, MIME"text/plain"(), data.forecast_metadata)
 end
 
 function Base.show(io::IO, ::MIME"text/html", data::SystemData)
     show(io, MIME"text/html"(), data.components)
     println(io, "\n")
-    show(io, MIME"text/html"(), data.forecasts)
+    show(io, MIME"text/html"(), data.forecast_metadata)
 end
 
 function Base.summary(ist::InfrastructureSystemsType)

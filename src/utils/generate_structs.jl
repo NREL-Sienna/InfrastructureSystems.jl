@@ -24,18 +24,18 @@ mutable struct {{struct_name}}{{#parametric}}{T <: {{parametric}}}{{/parametric}
     {{/inner_constructor_check}}
 end
 
-function {{struct_name}}({{#parameters}}{{^internal}}{{name}}, {{/internal}}{{/parameters}})
+function {{struct_name}}({{#parameters}}{{^internal}}{{name}}{{#default}}={{default}}{{/default}}, {{/internal}}{{/parameters}})
     {{#parameters}}
     {{/parameters}}
     {{struct_name}}({{#parameters}}{{^internal}}{{name}}, {{/internal}}{{/parameters}}InfrastructureSystemsInternal())
 end
 
-function {{struct_name}}(; {{#parameters}}{{^internal}}{{name}}, {{/internal}}{{/parameters}})
+function {{struct_name}}(; {{#parameters}}{{^internal}}{{name}}{{#default}}={{default}}{{/default}}, {{/internal}}{{/parameters}})
     {{struct_name}}({{#parameters}}{{^internal}}{{name}}, {{/internal}}{{/parameters}})
 end
 
 {{#parametric}}
-function {{struct_name}}{T}({{#parameters}}{{^internal}}{{name}}, {{/internal}}{{/parameters}}) where T <: InfrastructureSystemsType
+function {{struct_name}}{T}({{#parameters}}{{^internal}}{{name}}{{#default}}={{default}}{{/default}}, {{/internal}}{{/parameters}}) where T <: InfrastructureSystemsType
     {{#parameters}}
     {{/parameters}}
     {{struct_name}}({{#parameters}}{{^internal}}{{name}}, {{/internal}}{{/parameters}}InfrastructureSystemsInternal())

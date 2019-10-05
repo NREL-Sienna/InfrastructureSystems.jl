@@ -2,8 +2,8 @@
 """Describes how to construct forecasts from raw timeseries data files."""
 mutable struct TimeseriesFileMetadata
     simulation::String  # User description of simulation
-    category::String  # String version of PowerSystems abstract type for forecast component.
-                      # Refer to CATEGORY_STR_TO_COMPONENT.
+    category::String  # String version of abstract type for the forecasted component.
+                      # Calling module should determine the actual type.
     component_name::String  # Name of forecast component
     label::String  # Raw data column for source of timeseries
     scaling_factor::Union{String, Float64}  # Controls normalization of timeseries.
@@ -14,6 +14,15 @@ mutable struct TimeseriesFileMetadata
     data_file::String  # path to the timeseries data file
     percentiles::Vector{Float64}
     forecast_type::String
+    component::Union{Nothing, InfrastructureSystemsType}  # Calling module must set.
+end
+
+function TimeseriesFileMetadata(simulation, category, component_name, label, scaling_factor,
+                                data_file, percentiles, forecast_type)
+    return TimeseriesFileMetadata(
+        simulation, category, component_name, label, scaling_factor, data_file, percentiles,
+        forecast_type, nothing,
+    )
 end
 
 """Reads forecast metadata and fixes relative paths to the data files."""
@@ -36,7 +45,7 @@ function read_timeseries_metadata(file_path::AbstractString)::Vector{TimeseriesF
                     item["data_file"],
                     # Use default values until CDM data is updated.
                     get(item, "percentiles", []),
-                    get(item, "forecast_type", "Deterministic"),
+                    get(item, "forecast_type", "DeterministicInternal"),
                 ))
             end
             return metadata
@@ -54,7 +63,7 @@ function read_timeseries_metadata(file_path::AbstractString)::Vector{TimeseriesF
                                                    # TODO: update CDM data for the next
                                                    # two fields.
                                                    [],
-                                                   "Deterministic",
+                                                   "DeterministicInternal",
                                                   )
             )
         end
@@ -69,6 +78,48 @@ function read_timeseries_metadata(file_path::AbstractString)::Vector{TimeseriesF
     end
 
     return metadata
+end
+
+"""
+    set_component!(
+                   metadata::TimeseriesFileMetadata,
+                   components::Components,
+                   mod::Module,
+                  )
+
+Set the component value in metadata by looking up the category in module.
+This requires that category be a string version of a component's abstract type.
+Modules can override for custom behavior.
+"""
+function set_component!(
+                        metadata::TimeseriesFileMetadata,
+                        components::Components,
+                        mod::Module,
+                       )
+    # TODO: CDM data should change LoadZone to LoadZones.
+    symbol = metadata.category == "LoadZone" ? :LoadZones : Symbol(metadata.category)
+    category = getfield(mod, symbol)
+
+    if isconcretetype(category)
+        metadata.component = get_component(category, components, metadata.component_name)
+        if isnothing(metadata.component)
+            throw(DataFormatError(
+                "no component category=$category name=$(metadata.component_name)"
+            ))
+        end
+    else
+        components = get_components_by_name(category, components, metadata.component_name)
+        if length(components) == 0
+            @warn "no component category=$category name=$(metadata.component_name)"
+            metadata.component = nothing
+        elseif length(components) == 1
+            metadata.component = components[1]
+        else
+            throw(DataFormatError(
+                "duplicate names type=$(category) name=$(metadata.component_name)"
+            ))
+        end
+    end
 end
 
 struct ForecastInfo
@@ -89,9 +140,8 @@ struct ForecastInfo
 end
 
 function ForecastInfo(metadata::TimeseriesFileMetadata,
-                      component::InfrastructureSystemsType,
                       timeseries::TimeSeries.TimeArray)
-    return ForecastInfo(metadata.simulation, component, metadata.label,
+    return ForecastInfo(metadata.simulation, metadata.component, metadata.label,
                         metadata.scaling_factor, timeseries, metadata.percentiles,
                         metadata.data_file, metadata.forecast_type)
 end
@@ -110,8 +160,8 @@ function ForecastInfos()
                          Dict{String, TimeSeries.TimeArray}())
 end
 
-function _handle_scaling_factor(timeseries::TimeSeries.TimeArray,
-                                scaling_factor::Union{String, Float64})
+function handle_scaling_factor(timeseries::TimeSeries.TimeArray,
+                               scaling_factor::Union{String, Float64})
     if scaling_factor isa String
         if lowercase(scaling_factor) == "max"
             max_value = maximum(TimeSeries.values(timeseries))
@@ -128,12 +178,6 @@ function _handle_scaling_factor(timeseries::TimeSeries.TimeArray,
     end
 
     return timeseries
-end
-
-function _get_category(metadata::TimeseriesFileMetadata, mod)
-    # TODO: need to fix CDM data
-    category = metadata.category == "LoadZone" ? :LoadZones : Symbol(metadata.category)
-    return getfield(mod, category)
 end
 
 function _add_forecast_info!(infos::ForecastInfos, data_file::AbstractString,
