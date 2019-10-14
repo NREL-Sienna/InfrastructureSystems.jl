@@ -27,25 +27,25 @@ end
 
 function add_time_series!(
                           storage::InMemoryTimeSeriesStorage,
-                          component::InfrastructureSystemsType,
+                          component_uuid::UUIDs.UUID,
                           label::AbstractString,
                           ts::TimeSeriesData,
                          )
     uuid = get_uuid(ts)
     if !haskey(storage.data, uuid)
-        @debug "Create new time series entry." uuid get_uuid(component) label
-        storage.data[uuid] = _TimeSeriesRecord(get_uuid(component), label, ts)
+        @debug "Create new time series entry." uuid component_uuid label
+        storage.data[uuid] = _TimeSeriesRecord(component_uuid, label, ts)
     else
-        @debug "Add reference to existing time series entry." uuid get_uuid(component) label
+        @debug "Add reference to existing time series entry." uuid component_uuid label
         record = storage.data[uuid]
-        push!(record.component_labels, (get_uuid(component), label))
+        push!(record.component_labels, (component_uuid, label))
     end
 end
 
 function remove_time_series!(
                              storage::InMemoryTimeSeriesStorage,
                              uuid::UUIDs.UUID,
-                             component::InfrastructureSystemsType,
+                             component_uuid::UUIDs.UUID,
                              label::AbstractString,
                             )
     if !haskey(storage.data, uuid)
@@ -53,7 +53,7 @@ function remove_time_series!(
     end
 
     record = storage.data[uuid]
-    component_label = (get_uuid(component), label)
+    component_label = (component_uuid, label)
     if !(component_label in record.component_labels)
         throw(ArgumentError("$component_label wasn't stored for $uuid"))
     end
@@ -95,3 +95,12 @@ function get_num_time_series(storage::InMemoryTimeSeriesStorage)
     return length(storage.data)
 end
 
+function convert_to_hdf5(storage::InMemoryTimeSeriesStorage, filename::AbstractString)
+    hdf5_storage = Hdf5TimeSeriesStorage(; filename=filename)
+    for record in values(storage.data)
+        for pair in record.component_labels
+            @show pair
+            add_time_series!(hdf5_storage, pair[1], pair[2], record.ts)
+        end
+    end
+end

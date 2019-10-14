@@ -11,11 +11,11 @@ All subtypes must implement:
 """
 abstract type TimeSeriesStorage end
 
-function make_time_series_storage(; in_memory = false, filename = nothing)
+function make_time_series_storage(; in_memory=false, filename=nothing)
     if in_memory
         storage = InMemoryTimeSeriesStorage()
     elseif !isnothing(filename)
-        storage = Hdf5TimeSeriesStorage(; filename = filename)
+        storage = Hdf5TimeSeriesStorage(; filename=filename)
     else
         storage = Hdf5TimeSeriesStorage()
     end
@@ -23,6 +23,17 @@ function make_time_series_storage(; in_memory = false, filename = nothing)
     return storage
 end
 
-function make_component_label(component::InfrastructureSystemsType, label::AbstractString)
-    return string(get_uuid(component)) * "_" * label
+function make_component_label(component_uuid::UUIDs.UUID, label::AbstractString)
+    return string(component_uuid) * "_" * label
+end
+
+function serialize(storage::TimeSeriesStorage, file_path::AbstractString)
+    if storage isa Hdf5TimeSeriesStorage
+        # The data is currently in a temp file, so we can just make a copy.
+        cp(get_file_path(storage), file_path; force=true)
+    elseif storage isa InMemoryTimeSeriesStorage
+        convert_to_hdf5(storage, file_path)
+    else
+        error("unsupported type $(typeof(storage))")
+    end
 end

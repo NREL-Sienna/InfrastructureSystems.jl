@@ -9,9 +9,7 @@ mutable struct ScenarioBased <: Forecast
     data::TimeSeries.TimeArray  # timestamp - scalingfactor
 end
 
-function ScenarioBased(label, scenario_count, data, )
-    ScenarioBased(label, scenario_count, data, InfrastructureSystemsInternal())
-end
+
 
 function ScenarioBased(; label, scenario_count, data, )
     ScenarioBased(label, scenario_count, data, )

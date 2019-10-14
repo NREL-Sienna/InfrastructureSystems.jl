@@ -6,40 +6,31 @@ function add_forecast!(
     @debug "Added $forecast to $(typeof(component)) $(component.name) num_forecasts=$(length(component._forecasts.data))."
 end
 
-#function remove_forecast!(
-#                          component::InfrastructureSystemsType,
-#                          forecast::T,
-#                         ) where T <: ForecastInternal
-#    remove_forecast!(_get_forecast_container(component), forecast)
-#    @debug "Removed $forecast from $component."
-#end
+"""
+    remove_forecast_internal!(
+                              ::Type{T},
+                              component::InfrastructureSystemsType,
+                              initial_time::Dates.DateTime,
+                              label::AbstractString,
+                             ) where T <: ForecastInternal
+
+Removes the metadata for a forecast.
+The caller must also remove the actual time series data.
+"""
+function remove_forecast_internal!(
+                                   ::Type{T},
+                                   component::InfrastructureSystemsType,
+                                   initial_time::Dates.DateTime,
+                                   label::AbstractString,
+                                  ) where T <: ForecastInternal
+    remove_forecast!(T, _get_forecast_container(component), initial_time, label)
+    @debug "Removed forecast from $component:  $initial_time $label."
+end
 
 function clear_forecasts!(component::InfrastructureSystemsType)
     clear_forecasts!(_get_forecast_container(component))
     @debug "Cleared forecasts in $component."
 end
-
-"""
-    get_forecasts(::Type{T}, component::InfrastructureSystemsType, initial_time::Dates.DateTime)
-
-Return a vector of forecasts. T can be concrete or abstract.
-
-# Examples
-```julia
-forecasts = PowerSystems.get_forecasts(Deterministic, gen, initial_time)
-forecasts = PowerSystems.get_forecasts(Forecast, gen, initial_time)
-```
-
-See also: [`iterate_forecasts`](@ref)
-"""
-#function get_forecasts(
-#                       ::Type{T},
-#                       component::InfrastructureSystemsType,
-#                       initial_time::Dates.DateTime,
-#                       label::AbstractString,
-#                      ) where T <: ForecastInternal
-#    return get_forecasts(T, _get_forecast_container(component), initial_time, label)
-#end
 
 function get_forecast(
                       ::Type{T},
@@ -75,7 +66,7 @@ function get_forecast(
 end
 
 function _get_forecast_container(component::InfrastructureSystemsType)
-    # TODO DT: need to override IS.get__forecasts in PSY.
+    # TODO: The get__forecasts methods in PowerSystems need to be IS.get__forecasts.
     #container = get__forecasts(component)
     if :_forecasts in fieldnames(typeof(component))
         container = component._forecasts

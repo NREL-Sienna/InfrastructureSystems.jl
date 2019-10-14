@@ -38,12 +38,10 @@ Forecast container for a component.
 """
 mutable struct Forecasts
     data::ForecastsByType
-    resolution::Dates.Period
-    horizon::Int64
 end
 
 function Forecasts()
-    return Forecasts(ForecastsByType(), UNINITIALIZED_PERIOD, UNINITIALIZED_HORIZON)
+    return Forecasts(ForecastsByType())
 end
 
 function add_forecast!(forecasts::Forecasts, forecast::T) where T <: ForecastInternal
@@ -55,18 +53,19 @@ function add_forecast!(forecasts::Forecasts, forecast::T) where T <: ForecastInt
     forecasts.data[key] = forecast
 end
 
-# TODO DT: not sure if this should be Forecast  or ForecastInternal
-# It's possible that a user calls remove_forecast!(sys, forecast::Forecast) when that
-# forecast is a segment of a larger ForecastInternal.
-# Deletes with Forecast should only be allowed on a non-split.
-#function remove_forecast!(forecasts::Forecasts, forecast::T) where T <: ForecastInternal
-#    key = ForecastKey(T, get_initial_time(forecast), get_label(forecast))
-#    if !haskey(forecasts.data, key)
-#        throw(ArgumentError("forecast $key is not stored"))
-#    end
-#
-#    pop!(forecasts.data, key)
-#end
+function remove_forecast!(
+                          ::Type{T},
+                          forecasts::Forecasts,
+                          initial_time::Dates.DateTime,
+                          label::AbstractString,
+                         ) where T <: ForecastInternal
+    key = ForecastKey(T, initial_time, label)
+    if !haskey(forecasts.data, key)
+        throw(ArgumentError("forecast $key is not stored"))
+    end
+
+    pop!(forecasts.data, key)
+end
 
 function clear_forecasts!(forecasts::Forecasts)
     empty!(forecasts.data)
@@ -85,16 +84,6 @@ function get_forecast(
 
     return forecasts.data[key]
 end
-
-#function get_forecasts(
-#                       ::Type{T},
-#                       forecasts::Forecasts,
-#                       initial_time::Dates.DateTime,
-#                       label::AbstractString,
-#                      ) where T <: ForecastInternal
-#    return [forecast for (key, forecast) in forecasts.data
-#            if key.initial_time == initial_time && key.forecast_type <: T]
-#end
 
 function get_forecast_initial_times(forecasts::Forecasts)::Vector{Dates.DateTime}
     initial_times = Set{Dates.DateTime}()
@@ -147,6 +136,46 @@ function get_forecast_labels(::Type{T}, forecasts::Forecasts, initial_time::Date
     return Vector{String}(collect(labels))
 end
 
+struct ForecastSerializationWrapper
+    forecast::ForecastInternal
+    type::DataType
+end
+
+function JSON2.write(io::IO, forecasts::Forecasts)
+    return JSON2.write(io, encode_for_json(forecasts))
+end
+
+function JSON2.write(forecasts::Forecasts)
+    return JSON2.write(encode_for_json(forecasts))
+end
+
+function encode_for_json(forecasts::Forecasts)
+    # Store a flat array of forecasts. Deserialization can unwind it.
+    data = Vector{ForecastSerializationWrapper}()
+    for (key, forecast) in forecasts.data
+        push!(data, ForecastSerializationWrapper(forecast, key.forecast_type))
+    end
+
+    return data
+end
+
+function JSON2.read(io::IO, ::Type{Forecasts})
+    forecasts = Forecasts()
+    for raw_forecast in JSON2.read(io)
+        forecast_type = getfield(InfrastructureSystems,
+                                 Symbol(strip_module_name(string(raw_forecast.type))))
+        forecast = JSON2.read(JSON2.write(raw_forecast.forecast), forecast_type)
+        add_forecast!(forecasts, forecast)
+    end
+
+    return forecasts
+end
+
+
+function Base.length(forecast::Forecast)
+    return get_horizon(forecast)
+end
+
 function Base.getindex(forecast::Forecast, args...)
     return _split_forecast(forecast, getindex(get_data(forecast), args...))
 end
@@ -178,55 +207,19 @@ end
 """
     from(forecast::Forecast, timestamp)
 
-Return a forecast truncated starting with timestamp. Underlying data is not copied.
+Return a forecast truncated starting with timestamp.
 """
 function from(forecast::Forecast, timestamp)
     return TimeSeries.from(get_data(forecast), timestamp)
-    ## Don't use TimeSeries.from because it makes a copy.
-    #start_index = 1
-    #end_index = start_index + get_horizon(forecast)
-    #for i in 1 : end_index
-    #    if TimeSeries.timestamp(get_data(forecast))[i] >= timestamp
-    #        fcast = _split_forecast(forecast, get_data(forecast); is_copy=false)
-    #        fcast.start_index = i
-    #        fcast.horizon = end_index - i
-    #        return fcast
-    #    end
-    #end
-
-    ## Do whatever TimeSeries does if the timestamp is after the forecast.
-    #return _split_forecast(forecast, TimeSeries.from(get_data(forecast), timestamp))
 end
 
 """
     to(forecast::Forecast, timestamp)
 
-Return a forecast truncated after timestamp. Underlying data is not copied.
+Return a forecast truncated after timestamp.
 """
 function to(forecast::Forecast, timestamp)
     return TimeSeries.to(get_data(forecast), timestamp)
-
-    ## Don't use TimeSeries.from because it makes a copy.
-    #start_index = get_start_index(forecast)
-    #end_index = start_index + get_horizon(forecast)
-    #for i in get_start_index(forecast) : end_index
-    #    tstamp = TimeSeries.timestamp(get_data(forecast))[i]
-    #    if tstamp < timestamp
-    #        continue
-    #    elseif tstamp == timestamp
-    #        end_index = i
-    #    else
-    #        @assert tstamp > timestamp
-    #        end_index = i - 1
-    #    end
-
-    #    fcast = _split_forecast(forecast, get_data(forecast); is_copy=false)
-    #    fcast.horizon = end_index - start_index + 1
-    #    return fcast
-    #end
-
-    ## Do whatever TimeSeries does if the timestamp is after the forecast.
-    #return _split_forecast(forecast, TimeSeries.to(get_data(forecast), timestamp))
 end
 
 """
@@ -259,14 +252,10 @@ end
 
 """
 Creates a new forecast from an existing forecast with a split TimeArray.
-
-# Arguments
-- `is_copy::Bool=true`: Reset internal indices because the TimeArray is a fresh copy.
 """
 function _split_forecast(
                          forecast::T,
                          data::TimeSeries.TimeArray;
-                         #is_copy=true,
                         ) where T <: Forecast
     vals = []
     for (fname, ftype) in zip(fieldnames(T), fieldtypes(T))
@@ -282,10 +271,34 @@ function _split_forecast(
         push!(vals, val)
     end
 
-    new_forecast = T(vals...)
-    #if is_copy
-    #    new_forecast.horizon = length(get_data(new_forecast))
-    #end
-    return new_forecast
+    return T(vals...)
 end
 
+function get_resolution(ts::TimeSeries.TimeArray)
+    tstamps = TimeSeries.timestamp(ts)
+    timediffs = unique([tstamps[ix] - tstamps[ix - 1] for ix in 2:length(tstamps)])
+
+    res = []
+
+    for timediff in timediffs
+        if mod(timediff, Dates.Millisecond(Dates.Day(1))) == Dates.Millisecond(0)
+            push!(res, Dates.Day(timediff / Dates.Millisecond(Dates.Day(1))))
+        elseif mod(timediff, Dates.Millisecond(Dates.Hour(1))) == Dates.Millisecond(0)
+            push!(res, Dates.Hour(timediff / Dates.Millisecond(Dates.Hour(1))))
+        elseif mod(timediff, Dates.Millisecond(Dates.Minute(1))) == Dates.Millisecond(0)
+            push!(res, Dates.Minute(timediff / Dates.Millisecond(Dates.Minute(1))))
+        elseif mod(timediff, Dates.Millisecond(Dates.Second(1))) == Dates.Millisecond(0)
+            push!(res, Dates.Second(timediff / Dates.Millisecond(Dates.Second(1))))
+        else
+            throw(DataFormatError("cannot understand the resolution of the timeseries"))
+        end
+    end
+
+    if length(res) > 1
+        throw(DataFormatError(
+            "timeseries has non-uniform resolution: this is currently not supported"
+        ))
+    end
+
+    return res[1]
+end

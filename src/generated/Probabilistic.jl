@@ -9,9 +9,7 @@ mutable struct Probabilistic <: Forecast
     data::TimeSeries.TimeArray  # timestamp - scalingfactor
 end
 
-function Probabilistic(label, percentiles, data, )
-    Probabilistic(label, percentiles, data, InfrastructureSystemsInternal())
-end
+
 
 function Probabilistic(; label, percentiles, data, )
     Probabilistic(label, percentiles, data, )

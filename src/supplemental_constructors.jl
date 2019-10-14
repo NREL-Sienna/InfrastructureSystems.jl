@@ -7,32 +7,24 @@ function make_internal_forecast(forecast::Forecast)
     error("$(typeof(forecast)) must implement make_internal_forecast")
 end
 
-"""Constructs Deterministic after constructing a TimeArray from initial_time and time_steps.
 """
-# TODO DT: if this is still needed then the TimeArray has to be created by SystemData so
-# that it can be stored in TimeSeriesStorage.
-#function Deterministic(label::String,
-#                       resolution::Dates.Period,
-#                       initial_time::Dates.DateTime,
-#                       time_steps::Int)
-#    data = TimeSeries.TimeArray(
-#        initial_time : Dates.Hour(1) : initial_time + resolution * (time_steps-1),
-#        ones(time_steps)
-#    )
-#    return Deterministic(label, Dates.Minute(resolution), initial_time, data)
-#end
+    Deterministic(label::String,
+                  resolution::Dates.Period,
+                  initial_time::Dates.DateTime,
+                  time_steps::Int)
 
-# TODO DT: Call site has to calculate initial_time and resolution.
-#function Deterministic(label::AbstractString,
-#                       resolution::Dates.Period,
-#                       initial_time::Dates.DateTime,
-#                       time_series_uuid::TimeSeries.TimeArray,
-#                      )
-#    start_index = 1
-#    horizon = length(data)
-#    return Deterministic(label, resolution, initial_time, data, start_index,
-#                         horizon, InfrastructureSystemsInternal())
-#end
+Constructs Deterministic after constructing a TimeArray from initial_time and time_steps.
+"""
+function Deterministic(label::String,
+                       resolution::Dates.Period,
+                       initial_time::Dates.DateTime,
+                       time_steps::Int)
+    data = TimeSeries.TimeArray(
+        initial_time : Dates.Hour(1) : initial_time + resolution * (time_steps-1),
+        ones(time_steps)
+    )
+    return Deterministic(label, data)
+end
 
 function make_public_forecast(forecast::DeterministicInternal, data::TimeSeries.TimeArray)
     return Deterministic(get_label(forecast), data)
@@ -50,47 +42,61 @@ function DeterministicInternal(label::AbstractString, data::TimeSeriesData)
                                  get_horizon(data))
 end
 
-"""Constructs Probabilistic after constructing a TimeArray from initial_time and time_steps.
 """
-function ProbabilisticInternal(label::String,
+    Probabilistic(
+                  label::String,
+                  resolution::Dates.Period,
+                  initial_time::Dates.DateTime,
+                  percentiles::Vector{Float64},
+                  time_steps::Int,
+                 )
+Constructs Probabilistic after constructing a TimeArray from initial_time and time_steps.
+"""
+function Probabilistic(
+                       label::String,
                        resolution::Dates.Period,
                        initial_time::Dates.DateTime,
                        percentiles::Vector{Float64},
-                       time_steps::Int)
-
+                       time_steps::Int,
+                      )
     data = TimeSeries.TimeArray(
         initial_time : Dates.Hour(1) : initial_time + resolution * (time_steps-1),
         ones(time_steps, length(percentiles))
     )
 
-    return ProbabilisticInternal(label, Dates.Minute(resolution), initial_time, percentiles, data)
+    return Probabilistic(label, percentiles, data)
 end
 
-"""Constructs Probabilistic Forecast after constructing a TimeArray from initial_time and time_steps.
 """
-function ProbabilisticInternal(label::String,
-                       percentiles::Vector{Float64},  # percentiles for the probabilistic forecast
-                       data::TimeSeries.TimeArray,
-                      )
+    Probabilistic(
+                  label::String,
+                  percentiles::Vector{Float64},  # percentiles for the probabilistic forecast
+                  data::TimeSeries.TimeArray,
+                 )
+Constructs Probabilistic Forecast after constructing a TimeArray from initial_time and time_steps.
+"""
+# TODO DT: do we need this check still?
+#function Probabilistic(
+#                       label::String,
+#                       percentiles::Vector{Float64},  # percentiles for the probabilistic forecast
+#                       data::TimeSeries.TimeArray,
+#                      )
+#    if !(length(TimeSeries.colnames(data)) == length(percentiles))
+#        throw(DataFormatError(
+#            "The size of the provided percentiles and data columns is inconsistent"))
+#    end
+#    initial_time = TimeSeries.timestamp(data)[1]
+#    resolution = get_resolution(data)
+#
+#    return Probabilistic(label, percentiles, data)
+#end
 
-    if !(length(TimeSeries.colnames(data)) == length(percentiles))
-        throw(DataFormatError(
-            "The size of the provided percentiles and data columns is incosistent"))
-    end
-    initial_time = TimeSeries.timestamp(data)[1]
-    resolution = get_resolution(data)
-
-    return ProbabilisticInternal(label, Dates.Minute(resolution), initial_time,
-                         percentiles, data)
-end
-
-function ProbabilisticInternal(label::String,
+function Probabilistic(label::String,
                        resolution::Dates.Period,
                        initial_time::Dates.DateTime,
                        percentiles::Vector{Float64},  # percentiles for the probabilistic forecast
                        data::TimeSeries.TimeArray)
-    horizon = length(data)
-    return ProbabilisticInternal(horizon, InfrastructureSystemsInternal())
+    return Probabilistic(label, percentiles, data)
 end
 
 
@@ -100,7 +106,13 @@ end
 
 
 function make_internal_forecast(forecast::Probabilistic, ts_data::TimeSeriesData)
-    return ProbabilisticInternal(get_label(forecast), get_scenario_count(forecast), ts_data)
+    return ProbabilisticInternal(get_label(forecast),
+                                 get_resolution(forecast),
+                                 get_initial_time(forecast),
+                                 get_percentiles(forecast),
+                                 get_uuid(ts_data),
+                                 get_horizon(forecast),
+                                )
 end
 
 """Constructs ScenarioBased Forecast after constructing a TimeArray from initial_time and time_steps.

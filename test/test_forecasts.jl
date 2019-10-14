@@ -17,7 +17,7 @@ end
     IS.add_component!(data, component)
 
     file = joinpath(FORECASTS_DIR, "ComponentsAsColumnsNoTime.json")
-    IS.add_forecasts!(InfrastructureSystemsType, data, file)
+    IS.add_forecasts!(IS.InfrastructureSystemsType, data, file)
 
     forecasts = get_all_forecasts(data)
     @test length(forecasts) == 1
@@ -33,7 +33,7 @@ end
     IS.get_forecast_initial_times!(unique_its, component) == [it]
     @test collect(unique_its) == [it]
     @test IS.get_forecasts_initial_time(data) == it
-    @test IS.get_forecasts_interval(data) == UNINITIALIZED_PERIOD
+    @test IS.get_forecasts_interval(data) == IS.UNINITIALIZED_PERIOD
     @test IS.get_forecasts_horizon(data) == IS.get_horizon(forecast)
     @test IS.get_forecasts_resolution(data) == IS.get_resolution(forecast)
 end
@@ -70,8 +70,8 @@ end
 
     first_initial_time = dates1[1]
     last_initial_time = dates2[1] + Dates.Hour(1)
-    @test get_forecasts_initial_time(sys) == first_initial_time
-    @test get_forecasts_last_initial_time(sys) == last_initial_time
+    @test IS.get_forecasts_initial_time(sys) == first_initial_time
+    @test IS.get_forecasts_last_initial_time(sys) == last_initial_time
 
     @test_logs((:error, r"initial times don't match"),
         @test !IS.validate_forecast_consistency(sys)
@@ -94,6 +94,27 @@ end
     IS.get_forecasts_interval(sys) == dates2[1] - dates1[1]
 end
 
+@testset "Test remove_forecasts" begin
+    data = create_system_data(; with_forecasts=true)
+    components = collect(IS.iterate_components(data))
+    @test length(components) == 1
+    component = components[1]
+    forecasts = get_all_forecasts(data)
+    @test length(get_all_forecasts(data)) == 1
+
+    forecast = forecasts[1]
+    IS.remove_forecast!(
+        typeof(forecast),
+        data,
+        component,
+        IS.get_initial_time(forecast),
+        IS.get_label(forecast),
+    )
+
+    @test length(get_all_forecasts(data)) == 0
+    @test IS.get_num_time_series(data.time_series_storage) == 0
+end
+
 @testset "Test clear_forecasts" begin
     data = create_system_data(; with_forecasts=true)
     IS.clear_forecasts!(data)
@@ -103,17 +124,17 @@ end
 @testset "Test that remove_component removes forecasts" begin
     data = create_system_data(; with_forecasts=true)
 
-    components = collect(get_components(InfrastructureSystemsType, data))
+    components = collect(IS.get_components(IS.InfrastructureSystemsType, data))
     @test length(components) == 1
     component = components[1]
 
-    forecasts = collect(iterate_forecasts(data))
+    forecasts = collect(IS.iterate_forecasts(data))
     @test length(forecasts) == 1
     forecast = forecasts[1]
     @test IS.get_num_time_series(data.time_series_storage) == 1
 
-    remove_component!(data, component)
-    @test length(collect(get_components(InfrastructureSystemsType, data))) == 0
+    IS.remove_component!(data, component)
+    @test length(collect(IS.get_components(IS.InfrastructureSystemsType, data))) == 0
     @test length(get_all_forecasts(data)) == 0
     @test IS.get_num_time_series(data.time_series_storage) == 0
 end

@@ -8,9 +8,7 @@ mutable struct Deterministic <: Forecast
     data::TimeSeries.TimeArray  # timestamp - scalingfactor
 end
 
-function Deterministic(label, data, )
-    Deterministic(label, data, InfrastructureSystemsInternal())
-end
+
 
 function Deterministic(; label, data, )
     Deterministic(label, data, )

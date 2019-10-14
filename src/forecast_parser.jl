@@ -96,10 +96,10 @@ function set_component!(
                         components::Components,
                         mod::Module,
                        )
+
     # TODO: CDM data should change LoadZone to LoadZones.
     symbol = metadata.category == "LoadZone" ? :LoadZones : Symbol(metadata.category)
     category = getfield(mod, symbol)
-
     if isconcretetype(category)
         metadata.component = get_component(category, components, metadata.component_name)
         if isnothing(metadata.component)
@@ -150,13 +150,13 @@ function get_forecast_type(forecast_info::ForecastInfo)
     return getfield(InfrastructureSystems, Symbol(forecast_info.forecast_type))
 end
 
-struct ForecastInfos
+struct ForecastCache
     forecasts::Vector{ForecastInfo}
     data_files::Dict{String, TimeSeries.TimeArray}
 end
 
-function ForecastInfos()
-    return ForecastInfos(Vector{ForecastInfo}(),
+function ForecastCache()
+    return ForecastCache(Vector{ForecastInfo}(),
                          Dict{String, TimeSeries.TimeArray}())
 end
 
@@ -180,12 +180,12 @@ function handle_scaling_factor(timeseries::TimeSeries.TimeArray,
     return timeseries
 end
 
-function _add_forecast_info!(infos::ForecastInfos, data_file::AbstractString,
+function _add_forecast_info!(forecast_cache::ForecastCache, data_file::AbstractString,
                              component_name::Union{Nothing, String})
-    if !haskey(infos.data_files, data_file)
-        infos.data_files[data_file] = read_timeseries(data_file, component_name)
+    if !haskey(forecast_cache.data_files, data_file)
+        forecast_cache.data_files[data_file] = read_timeseries(data_file, component_name)
         @debug "Added timeseries file" data_file
     end
 
-    return infos.data_files[data_file]
+    return forecast_cache.data_files[data_file]
 end

@@ -1,7 +1,6 @@
 
 import HDF5
 
-const HDF5_TS_FILENAME = "time_series.h5"
 const HDF5_TS_ROOT_PATH = "time_series"
 
 """
@@ -11,29 +10,44 @@ struct Hdf5TimeSeriesStorage <: TimeSeriesStorage
     file_path::String
 end
 
-# TODO DT: should base_path be in /tmp?
-function Hdf5TimeSeriesStorage(; base_path=".", filename=HDF5_TS_FILENAME)
-    storage = Hdf5TimeSeriesStorage(joinpath(base_path, filename))
+"""
+Constructs Hdf5TimeSeriesStorage by creating a new file.
+"""
+function Hdf5TimeSeriesStorage(; filename=nothing)
+    file_path = isnothing(filename) ? tempname() * ".h5" : filename
+    storage = Hdf5TimeSeriesStorage(file_path)
     _make_file(storage)
     @info "Created time series storage file." storage.file_path
     return storage
 end
 
+"""
+Constructs Hdf5TimeSeriesStorage from an existing file.
+"""
+function from_file(::Type{Hdf5TimeSeriesStorage}, filename::AbstractString)
+    file_path = cp(filename, tempname() * ".h5")
+    storage = Hdf5TimeSeriesStorage(file_path)
+    @info "Loaded time series from storage file existing=$filename new=$(storage.file_path)"
+    return storage
+end
+
+get_file_path(storage::Hdf5TimeSeriesStorage) = storage.file_path
+
 function add_time_series!(
                           storage::Hdf5TimeSeriesStorage,
-                          component::InfrastructureSystemsType,
+                          component_uuid::UUIDs.UUID,
                           label::AbstractString,
                           ts::TimeSeriesData,
                          )
     uuid = string(get_uuid(ts))
-    component_label = make_component_label(component, label)
+    component_label = make_component_label(component_uuid, label)
 
     HDF5.h5open(storage.file_path, "r+") do file
         root = _get_root(storage, file)
         if !HDF5.exists(root, uuid)
             HDF5.g_create(root, uuid)
             path = root[uuid]
-            @debug "Create new time series entry." uuid component label
+            @debug "Create new time series entry." uuid component_uuid label
             path["data"] = TimeSeries.values(ts.data)
             timestamps = [Dates.datetime2epochms(x) for x in TimeSeries.timestamp(ts.data)]
             path["timestamps"] = timestamps
@@ -42,7 +56,7 @@ function add_time_series!(
             path["components"] = [component_label]
         else
             path = root[uuid]
-            @debug "Add reference to existing time series entry." uuid component label
+            @debug "Add reference to existing time series entry." uuid component_uuid label
             _append_item!(path, "components", component_label)
         end
     end
@@ -51,13 +65,13 @@ end
 function remove_time_series!(
                              storage::Hdf5TimeSeriesStorage,
                              uuid::UUIDs.UUID,
-                             component::InfrastructureSystemsType,
+                             component_uuid::UUIDs.UUID,
                              label::AbstractString,
                             )
     HDF5.h5open(storage.file_path, "r+") do file
         root = _get_root(storage, file)
         path = _get_time_series_path(root, uuid)
-        if _remove_item!(path, "components", make_component_label(component, label))
+        if _remove_item!(path, "components", make_component_label(component_uuid, label))
             @debug "$path has no more references; delete it."
             HDF5.o_delete(path)
         end
@@ -80,6 +94,7 @@ function get_time_series(
             # performance, especially if the length of the time array is huge. As of now
             # the time arrays are at most 1-year, 5-minute resolution -> 105,120 entries
             # which consumes 821 KiB. Need to profile the latency of reads.
+            # OS buffering may obviate the need to do this.
             @assert len != 0
             end_index = index + len - 1
             data = data[index:end_index]

@@ -16,7 +16,7 @@ end
 
 function JSON2.read(io::IO, ::Type{TestComponent})
     data = JSON2.read(io)
-    return TestComponent(data.name, data.val, Forecasts(), # TODO forecasts
+    return TestComponent(data.name, data.val, convert_type(Forecasts, data._forecasts),
                          JSON2.read(JSON2.write(data.internal),
                                     InfrastructureSystemsInternal))
 end

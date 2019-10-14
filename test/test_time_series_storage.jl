@@ -1,10 +1,10 @@
 
-function test_add_remove(storage::TimeSeriesStorage)
+function test_add_remove(storage::IS.TimeSeriesStorage)
     name = "component1"
     label = "val"
     component = IS.TestComponent(name, 5)
     ts = create_time_series_data()
-    IS.add_time_series!(storage, component, label, ts)
+    IS.add_time_series!(storage, IS.get_uuid(component), label, ts)
 
     ts_data = IS.get_time_series(storage, IS.get_uuid(ts))
 
@@ -12,27 +12,27 @@ function test_add_remove(storage::TimeSeriesStorage)
     @test TimeSeries.values(ts_data) == TimeSeries.values(ts.data)
 
     component2 = IS.TestComponent("component2", 6)
-    IS.add_time_series!(storage, component2, label, ts)
+    IS.add_time_series!(storage, IS.get_uuid(component2), label, ts)
 
     IS.get_num_time_series(storage) == 2
 
-    IS.remove_time_series!(storage, IS.get_uuid(ts), component2, label)
+    IS.remove_time_series!(storage, IS.get_uuid(ts), IS.get_uuid(component2), label)
 
     # There should still be one reference to the data.
     ts_data2 = IS.get_time_series(storage, IS.get_uuid(ts))
     @test ts_data2 isa TimeSeries.TimeArray
 
-    IS.remove_time_series!(storage, IS.get_uuid(ts), component, label)
+    IS.remove_time_series!(storage, IS.get_uuid(ts), IS.get_uuid(component), label)
     @test_throws ArgumentError IS.get_time_series(storage, IS.get_uuid(ts))
     IS.get_num_time_series(storage) == 0
 end
 
-function test_get_subset(storage::TimeSeriesStorage)
+function test_get_subset(storage::IS.TimeSeriesStorage)
     name = "component1"
     label = "val"
     component = IS.TestComponent(name, 1)
     ts = create_time_series_data()
-    IS.add_time_series!(storage, component, label, ts)
+    IS.add_time_series!(storage, IS.get_uuid(component), label, ts)
     ts_data = IS.get_time_series(storage, IS.get_uuid(ts))
 
     @test TimeSeries.timestamp(ts_data) == TimeSeries.timestamp(ts.data)
@@ -43,12 +43,12 @@ function test_get_subset(storage::TimeSeriesStorage)
     @test length(ts_subset) == len
 end
 
-function test_clear(storage::TimeSeriesStorage)
+function test_clear(storage::IS.TimeSeriesStorage)
     name = "component1"
     label = "val"
     component = IS.TestComponent(name, 5)
     ts = create_time_series_data()
-    IS.add_time_series!(storage, component, label, ts)
+    IS.add_time_series!(storage, IS.get_uuid(component), label, ts)
 
     ts_data = IS.get_time_series(storage, IS.get_uuid(ts))
 

@@ -356,7 +356,6 @@ function validate_forecast_consistency(components::Components)
             @error "initial times don't match" initial_times, component_initial_times
             return false
         end
-
     end
 
     return true
