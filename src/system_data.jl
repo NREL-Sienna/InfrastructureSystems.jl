@@ -492,10 +492,14 @@ function get_forecast_initial_times(
     return get_forecast_initial_times(forecast_type, component)
 end
 
+"""
+Return the time delta between the first two stored forecasts.
+if less than two are stored, return Dates.Second(0).
+"""
 function get_forecasts_interval(data::SystemData)
     initial_times = get_forecast_initial_times(data)
     if length(initial_times) <= 1
-        return UNINITIALIZED_PERIOD
+        return Dates.Second(0)
     end
 
     return initial_times[2] - initial_times[1]

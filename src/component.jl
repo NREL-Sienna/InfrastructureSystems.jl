@@ -135,7 +135,7 @@ function get_forecast_value(
                             index::Union{Int, Dates.DateTime},
                            ) where T <: ForecastInternal
     forecast = get_forecast(T, component, initial_time, label)
-    return get_timeseries(forecast)[index]
+    return get_time_series(forecast)[index]
 end
 
 function get_time_series_uuids(component::InfrastructureSystemsType)
