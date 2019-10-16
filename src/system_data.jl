@@ -6,6 +6,7 @@ mutable struct SystemData <: InfrastructureSystemsType
     forecast_metadata::ForecastMetadata
     validation_descriptors::Vector
     time_series_storage::TimeSeriesStorage
+    time_series_storage_file::Union{Nothing, String}  # only valid during serialization
 end
 
 function SystemData(; validation_descriptor_file=nothing, time_series_in_memory=false)
@@ -17,13 +18,14 @@ function SystemData(; validation_descriptor_file=nothing, time_series_in_memory=
 
     components = Components(validation_descriptors)
     ts_storage = make_time_series_storage(; in_memory=time_series_in_memory)
-    return SystemData(components, ForecastMetadata(), validation_descriptors, ts_storage)
+    return SystemData(components, ForecastMetadata(), validation_descriptors, ts_storage,
+                      nothing)
 end
 
 function SystemData(forecast_metadata, validation_descriptors, time_series_storage)
     components = Components(validation_descriptors)
     return SystemData(components, forecast_metadata, validation_descriptors,
-                      time_series_storage)
+                      time_series_storage, nothing)
 end
 
 """
@@ -571,6 +573,18 @@ function get_forecasts_interval(data::SystemData)
     return initial_times[2] - initial_times[1]
 end
 
+"""
+    prepare_for_serialization(data::SystemData, filename::AbstractString)
+
+Parent object should call this prior to serialization so that SystemData can store the
+appropriate path information for the time series data.
+"""
+function prepare_for_serialization(data::SystemData, filename::AbstractString)
+    dir = dirname(filename)
+    base = splitext(basename(filename))[1]
+    data.time_series_storage_file = joinpath(dir, base * "_" * TIME_SERIES_STORAGE_FILE)
+end
+
 function JSON2.write(io::IO, data::SystemData)
     return JSON2.write(io, encode_for_json(data))
 end
@@ -580,14 +594,17 @@ function JSON2.write(data::SystemData)
 end
 
 function encode_for_json(data::SystemData)
+    if isnothing(data.time_series_storage_file)
+        data.time_series_storage_file = TIME_SERIES_STORAGE_FILE
+    end
+
     json_data = Dict()
-    for field in (:components, :forecast_metadata, :validation_descriptors)
+    for field in (:components, :forecast_metadata, :validation_descriptors,
+                  :time_series_storage_file)
         json_data[string(field)] = getfield(data, field)
     end
 
-    serialize(data.time_series_storage, TIME_SERIES_STORAGE_FILE)
-    json_data["time_series_storage"] = TIME_SERIES_STORAGE_FILE
-
+    serialize(data.time_series_storage, data.time_series_storage_file)
     return json_data
 end
 
@@ -607,14 +624,14 @@ function deserialize(
     # the original SystemData. It will always use Hdf5TimeSeriesStorage after
     # deserialization. This could be fixed. Need to build an InMemoryTimeSeriesStorage
     # object by iterating over an Hdf5TimeSeriesStorage file.
-    time_series_storage = Hdf5TimeSeriesStorage(raw.time_series_storage)
+    time_series_storage_file = Hdf5TimeSeriesStorage(raw.time_series_storage_file)
 
     # OPT: This looks odd and is wasteful.
     # JSON2 creates NamedTuples recursively. JSON creates dicts, which is what we need.
     # Could be optimized.
     validation_descriptors = JSON.parse(JSON2.write(raw.validation_descriptors))
 
-    sys = SystemData(forecast_metadata, validation_descriptors, time_series_storage)
+    sys = SystemData(forecast_metadata, validation_descriptors, time_series_storage_file)
     deserialize_components(T, sys, raw)
     return sys
 end

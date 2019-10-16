@@ -36,4 +36,6 @@ function serialize(storage::TimeSeriesStorage, file_path::AbstractString)
     else
         error("unsupported type $(typeof(storage))")
     end
+
+    @info "Serialized time series data to $file_path."
 end

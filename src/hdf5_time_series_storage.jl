@@ -17,7 +17,7 @@ function Hdf5TimeSeriesStorage(; filename=nothing)
     file_path = isnothing(filename) ? tempname() * ".h5" : filename
     storage = Hdf5TimeSeriesStorage(file_path)
     _make_file(storage)
-    @info "Created time series storage file." storage.file_path
+    @debug "Created time series storage file." storage.file_path
     return storage
 end
 
