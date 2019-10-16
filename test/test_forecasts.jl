@@ -139,79 +139,175 @@ end
     @test IS.get_num_time_series(data.time_series_storage) == 0
 end
 
+function validate_generated_initial_times(initial_times, initial_time, interval, exp_length)
+    @test length(initial_times) == exp_length
+    for it in initial_times
+        @test it == initial_time
+        initial_time += interval
+    end
+end
+
+@testset "Test generate_initial_times" begin
+    sys = create_system_data()
+    components = collect(IS.get_components(IS.InfrastructureSystemsType, sys))
+    @test length(components) == 1
+    component = components[1]
+
+    dates = collect(Dates.DateTime("1/1/2020 00:00:00", "d/m/y H:M:S") : Dates.Hour(1) :
+                    Dates.DateTime("1/1/2020 23:00:00", "d/m/y H:M:S"))
+    data = collect(1:24)
+
+    ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
+    IS.add_forecast!(sys, ta, component, "val")
+    initial_times = IS.get_forecast_initial_times(sys)
+    @test length(initial_times) == 1
+
+    interval = Dates.Hour(1)
+    initial_times = IS.generate_initial_times(sys, interval, 24)
+    validate_generated_initial_times(initial_times, dates[1], interval, 1)
+
+    interval = Dates.Hour(1)
+    initial_times = IS.generate_initial_times(sys, interval, 12)
+    validate_generated_initial_times(initial_times, dates[1], interval, 13)
+
+    interval = Dates.Hour(3)
+    initial_times = IS.generate_initial_times(sys, interval, 6)
+    validate_generated_initial_times(initial_times, dates[1], interval, 7)
+
+    interval = Dates.Hour(4)
+    initial_times = IS.generate_initial_times(sys, interval, 6)
+    validate_generated_initial_times(initial_times, dates[1], interval, 5)
+end
+
+@testset "Test generate_initial_times contiguous" begin
+    sys = create_system_data()
+
+    components = collect(IS.get_components(IS.InfrastructureSystemsType, sys))
+    @test length(components) == 1
+    component = components[1]
+
+    dates1 = collect(Dates.DateTime("1/1/2020 00:00:00", "d/m/y H:M:S") : Dates.Hour(1) :
+                     Dates.DateTime("1/1/2020 23:00:00", "d/m/y H:M:S"))
+    dates2 = collect(Dates.DateTime("2/1/2020 00:00:00", "d/m/y H:M:S") : Dates.Hour(1) :
+                     Dates.DateTime("2/1/2020 23:00:00", "d/m/y H:M:S"))
+    data = collect(1:24)
+
+    ta1 = TimeSeries.TimeArray(dates1, data, [IS.get_name(component)])
+    ta2 = TimeSeries.TimeArray(dates2, data, [IS.get_name(component)])
+    IS.add_forecast!(sys, ta1, component, "val")
+    IS.add_forecast!(sys, ta2, component, "val")
+    initial_times = IS.get_forecast_initial_times(sys)
+    @test length(initial_times) == 2
+
+    interval = Dates.Hour(1)
+    initial_times = IS.generate_initial_times(sys, interval, 48)
+    validate_generated_initial_times(initial_times, dates1[1], interval, 1)
+
+    interval = Dates.Hour(1)
+    initial_times = IS.generate_initial_times(sys, interval, 24)
+    validate_generated_initial_times(initial_times, dates1[1], interval, 25)
+
+    interval = Dates.Hour(1)
+    initial_times = IS.generate_initial_times(sys, interval, 12)
+    validate_generated_initial_times(initial_times, dates1[1], interval, 37)
+
+    interval = Dates.Hour(3)
+    initial_times = IS.generate_initial_times(sys, interval, 6)
+    validate_generated_initial_times(initial_times, dates1[1], interval, 15)
+
+    interval = Dates.Hour(4)
+    initial_times = IS.generate_initial_times(sys, interval, 6)
+    validate_generated_initial_times(initial_times, dates1[1], interval, 11)
+end
+
+@testset "Test generate_initial_times overlapping" begin
+    sys = create_system_data()
+
+    @test_throws ArgumentError IS.generate_initial_times(sys, Dates.Hour(3), 6)
+
+    components = collect(IS.get_components(IS.InfrastructureSystemsType, sys))
+    @test length(components) == 1
+    component = components[1]
+
+    dates1 = collect(Dates.DateTime("1/1/2020 00:00:00", "d/m/y H:M:S") : Dates.Hour(1) :
+                     Dates.DateTime("1/1/2020 23:00:00", "d/m/y H:M:S"))
+    dates2 = collect(Dates.DateTime("2/1/2020 01:00:00", "d/m/y H:M:S") : Dates.Hour(1) :
+                     Dates.DateTime("3/1/2020 00:00:00", "d/m/y H:M:S"))
+    data = collect(1:24)
+
+    ta1 = TimeSeries.TimeArray(dates1, data, [IS.get_name(component)])
+    ta2 = TimeSeries.TimeArray(dates2, data, [IS.get_name(component)])
+    IS.add_forecast!(sys, ta1, component, "val")
+    @test_throws ArgumentError IS.generate_initial_times(sys, Dates.Minute(30), 6)
+
+    IS.add_forecast!(sys, ta2, component, "val")
+    @test_throws ArgumentError IS.generate_initial_times(sys, Dates.Hour(3), 6)
+end
+
 @testset "Summarize forecasts" begin
     data = create_system_data(; with_forecasts=true)
     summary(devnull, data.forecast_metadata)
 end
 
-#@testset "Test forecast forwarding methods" begin
-#    data = create_system_data(; with_forecasts=true)
-#    forecast = get_all_forecasts(data)[1]
-#
-#    # Iteration
-#    size = 24
-#    @test length(forecast) == size
-#    i = 0
-#    for x in forecast
-#        i += 1
-#    end
-#    @test i == size
-#
-#    # Indexing
-#    @test length(forecast[1:16]) == 16
-#
-#    # when
-#    fcast = IS.when(forecast, TimeSeries.hour, 3)
-#    @test length(fcast) == 1
-#end
-#
-#@testset "Test forecast head" begin
-#    data = create_system_data(; with_forecasts=true)
-#    forecast = get_all_forecasts(data)[1]
-#    fcast = IS.head(forecast)
-#    # head returns a length of 6 by default, but don't hard-code that.
-#    @test length(fcast) < length(forecast)
-#
-#    fcast = IS.head(forecast, 10)
-#    @test length(fcast) == 10
-#end
-#
-#@testset "Test forecast tail" begin
-#    data = create_system_data(; with_forecasts=true)
-#    forecast = get_all_forecasts(data)[1]
-#    fcast = IS.tail(forecast)
-#    # tail returns a length of 6 by default, but don't hard-code that.
-#    @test length(fcast) < length(forecast)
-#
-#    fcast = IS.head(forecast, 10)
-#    @test length(fcast) == 10
-#end
-#
-#@testset "Test forecast from" begin
-#    data = create_system_data(; with_forecasts=true)
-#    forecast = get_all_forecasts(data)[1]
-#    start_time = Dates.DateTime(Dates.today()) + Dates.Hour(3)
-#    fcast = IS.from(forecast, start_time)
-#    @test IS.get_time_series(data, fcast) === IS.get_time_series(data, forecast)
-#    @test IS.get_start_index(fcast) == 4
-#    @test length(fcast) == 21
-#    @test TimeSeries.timestamp(IS.get_timeseries(fcast))[1] == start_time
-#end
-#
-#@testset "Test forecast from" begin
-#    data = create_system_data(; with_forecasts=true)
-#    forecast = get_all_forecasts(data)[1]
-#    for end_time in (Dates.DateTime(Dates.today()) + Dates.Hour(15),
-#                     Dates.DateTime(Dates.today()) + Dates.Hour(15) + Dates.Minute(5))
-#        fcast = IS.to(forecast, end_time)
-#        @test IS.get_time_series(data, fcast) === IS.get_time_series(data, forecast)
-#        @test IS.get_start_index(fcast) + IS.get_horizon(fcast) == 17
-#        @test length(fcast) == 16
-#        @test TimeSeries.timestamp(IS.get_timeseries(fcast))[end] <= end_time
-#    end
-#end
+@testset "Test forecast forwarding methods" begin
+    data = create_system_data(; with_forecasts=true)
+    forecast = get_all_forecasts(data)[1]
 
-#@testset "Test forecast serialization" begin
-#    data = create_system_data(; with_forecasts=true)
-#    forecast = get_all_forecasts(data)[1]
-#end
+    # Iteration
+    size = 24
+    @test length(forecast) == size
+    i = 0
+    for x in forecast
+        i += 1
+    end
+    @test i == size
+
+    # Indexing
+    @test length(forecast[1:16]) == 16
+
+    # when
+    fcast = IS.when(forecast, TimeSeries.hour, 3)
+    @test length(fcast) == 1
+end
+
+@testset "Test forecast head" begin
+    data = create_system_data(; with_forecasts=true)
+    forecast = get_all_forecasts(data)[1]
+    fcast = IS.head(forecast)
+    # head returns a length of 6 by default, but don't hard-code that.
+    @test length(fcast) < length(forecast)
+
+    fcast = IS.head(forecast, 10)
+    @test length(fcast) == 10
+end
+
+@testset "Test forecast tail" begin
+    data = create_system_data(; with_forecasts=true)
+    forecast = get_all_forecasts(data)[1]
+    fcast = IS.tail(forecast)
+    # tail returns a length of 6 by default, but don't hard-code that.
+    @test length(fcast) < length(forecast)
+
+    fcast = IS.head(forecast, 10)
+    @test length(fcast) == 10
+end
+
+@testset "Test forecast from" begin
+    data = create_system_data(; with_forecasts=true)
+    forecast = get_all_forecasts(data)[1]
+    start_time = Dates.DateTime(Dates.today()) + Dates.Hour(3)
+    fcast = IS.from(forecast, start_time)
+    @test length(fcast) == 21
+    @test TimeSeries.timestamp(IS.get_time_series(fcast))[1] == start_time
+end
+
+@testset "Test forecast from" begin
+    data = create_system_data(; with_forecasts=true)
+    forecast = get_all_forecasts(data)[1]
+    for end_time in (Dates.DateTime(Dates.today()) + Dates.Hour(15),
+                     Dates.DateTime(Dates.today()) + Dates.Hour(15) + Dates.Minute(5))
+        fcast = IS.to(forecast, end_time)
+        @test length(fcast) == 16
+        @test TimeSeries.timestamp(IS.get_time_series(fcast))[end] <= end_time
+    end
+end

@@ -209,8 +209,8 @@ end
 
 Return a forecast truncated starting with timestamp.
 """
-function from(forecast::Forecast, timestamp)
-    return TimeSeries.from(get_data(forecast), timestamp)
+function from(forecast::T, timestamp) where T <: Forecast
+    return T(get_label(forecast), TimeSeries.from(get_data(forecast), timestamp))
 end
 
 """
@@ -218,8 +218,8 @@ end
 
 Return a forecast truncated after timestamp.
 """
-function to(forecast::Forecast, timestamp)
-    return TimeSeries.to(get_data(forecast), timestamp)
+function to(forecast::T, timestamp) where T <: Forecast
+    return T(get_label(forecast), TimeSeries.to(get_data(forecast), timestamp))
 end
 
 """

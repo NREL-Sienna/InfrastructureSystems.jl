@@ -124,7 +124,9 @@ function get_forecast_labels(
                              component::InfrastructureSystemsType,
                              initial_time::Dates.DateTime,
                             ) where T <: Forecast
-    return get_forecast_labels(forecast_external_to_internal(T), _get_forecast_container(component), initial_time)
+    return get_forecast_labels(forecast_external_to_internal(T),
+                               _get_forecast_container(component),
+                               initial_time)
 end
 
 function get_forecast_value(

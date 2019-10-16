@@ -369,6 +369,72 @@ function add_forecast_info!(forecast_cache::ForecastCache, metadata::TimeseriesF
     return forecast_info
 end
 
+
+"""
+    generate_initial_times(data::SystemData, interval::Dates.Period, horizon::Int)
+
+Generates all possible initial times for the stored forecasts. This should be used when
+contiguous forecasts have been stored in chunks, such as a one-year forecast broken up into
+365 one-day forecasts.
+
+Throws ArgumentError if there are no forecasts stored, interval is not a multiple of the
+system's forecast resolution, or if the stored forecasts have overlapping timestamps.
+"""
+function generate_initial_times(data::SystemData, interval::Dates.Period, horizon::Int)
+    existing_initial_times = get_forecast_initial_times(data)
+    if length(existing_initial_times) == 0
+        throw(ArgumentError("no forecasts are stored"))
+    end
+
+    initial_time, total_horizon = check_contiguous_forecasts(data, existing_initial_times)
+    resolution = Dates.Second(get_forecasts_resolution(data))
+    interval = Dates.Second(interval)
+
+    if interval % resolution != Dates.Second(0)
+        throw(ArgumentError(
+            "interval=$interval is not a multiple of resolution=$resolution"
+        ))
+    end
+
+    step_length = Int(interval / resolution)
+    last_initial_time_index = total_horizon - horizon
+    num_initial_times = Int(trunc(last_initial_time_index / step_length)) + 1
+    initial_times = Vector{Dates.DateTime}(undef, num_initial_times)
+
+    index = 1
+    for i in range(0, step=step_length, stop=last_initial_time_index)
+        initial_times[index] = initial_time + i * resolution
+        index += 1
+    end
+
+    @assert index - 1 == num_initial_times
+    return initial_times
+end
+
+"""
+Throws ArgumentError if the forecasts are not in consecutive order.
+"""
+function check_contiguous_forecasts(data::SystemData, _initial_times)
+    first_initial_time = _initial_times[1]
+    resolution = get_forecasts_resolution(data)
+    horizon = get_forecasts_horizon(data)
+    total_horizon = horizon * length(_initial_times)
+
+    if length(_initial_times) == 1
+        return first_initial_time, total_horizon
+    end
+
+    for i in range(2, stop=length(_initial_times))
+        if _initial_times[i] != _initial_times[i - 1] + resolution * horizon
+            throw(ArgumentError(
+                "generate_initial_times is not allowed with overlapping timestamps"
+            ))
+        end
+    end
+
+    return first_initial_time, total_horizon
+end
+
 """
 Checks that the component exists in data and the UUID's match.
 """
