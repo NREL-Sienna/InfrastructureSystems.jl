@@ -41,7 +41,8 @@ end
     add_forecasts!(
                    ::Type{T},
                    data::SystemData,
-                   metadata_file::AbstractString;
+                   metadata_file::AbstractString,
+                   label_mapping::Dict{Tuple{String, String}, String};
                    resolution=nothing,
                   ) where T <: InfrastructureSystemsType
 
@@ -57,10 +58,11 @@ Adds forecasts from a metadata file or metadata descriptors.
 function add_forecasts!(
                         ::Type{T},
                         data::SystemData,
-                        metadata_file::AbstractString;
+                        metadata_file::AbstractString,
+                        label_mapping::Dict{Tuple{String, String}, String};
                         resolution=nothing,
                        ) where T <: InfrastructureSystemsType
-    metadata = read_timeseries_metadata(metadata_file)
+    metadata = read_timeseries_metadata(metadata_file, label_mapping)
     return add_forecasts!(T, data, metadata; resolution=resolution)
 end
 
@@ -108,7 +110,7 @@ function add_forecast!(
                        component::InfrastructureSystemsType,
                        forecast::Forecast,
                       )
-    ts_data = TimeSeriesData(get_data(forecast))
+    ts_data = TimeSeriesData(get_time_series(forecast))
     forecast_internal = make_internal_forecast(forecast, ts_data)
     add_forecast!(data, component, forecast_internal, ts_data)
 end
@@ -119,6 +121,8 @@ function add_forecast!(
                        forecast::ForecastInternal,
                        ts_data::TimeSeriesData,
                       )
+    #val = getfield(component, get_label(forecast))
+    #ts_data = TimeSeriesData(get_time_series(forecast) .* val)
     _validate_component(data, component)
     check_add_forecast!(data.forecast_metadata, forecast)
     add_forecast!(component, forecast)
@@ -257,7 +261,7 @@ function get_forecast(
                      ) where T <: Forecast
     forecast_type = forecast_external_to_internal(T)
     forecast = get_forecast(forecast_type, component, initial_time, label)
-    ts = get_time_series(data.time_series_storage, get_time_series_uuid(forecast))
+    ts = get_time_series(data.time_series_storage, get_time_series_uuid(forecast), colname)
     return make_public_forecast(forecast, ts)
 end
 
@@ -544,7 +548,8 @@ function iterate_forecasts(data::SystemData)
         for component in iterate_components_with_forecasts(data.components)
             for forecast in iterate_forecasts(component)
                 time_series = get_time_series(data.time_series_storage,
-                                              get_time_series_uuid(forecast))
+                                              get_time_series_uuid(forecast),
+                                              get_name(component))
                 put!(channel, make_public_forecast(forecast, time_series))
             end
         end

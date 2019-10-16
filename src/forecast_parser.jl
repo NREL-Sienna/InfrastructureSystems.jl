@@ -26,12 +26,19 @@ function TimeseriesFileMetadata(simulation, category, component_name, label, sca
 end
 
 """Reads forecast metadata and fixes relative paths to the data files."""
-function read_timeseries_metadata(file_path::AbstractString)::Vector{TimeseriesFileMetadata}
+function read_timeseries_metadata(
+                                  file_path::AbstractString,
+                                  label_mapping::Dict{Tuple{String, String}, String},
+                                 )
     if endswith(file_path, ".json")
         metadata = open(file_path) do io
             metadata = Vector{TimeseriesFileMetadata}()
             data = JSON.parse(io)
             for item in data
+                category = _get_category(item["category"])
+                key = (category, item["label"])
+                @assert haskey(label_mapping, key)
+                label = label_mapping[key]
                 scaling_factor = item["scaling_factor"]
                 if !isa(scaling_factor, AbstractString)
                     scaling_factor = Float64(scaling_factor)
@@ -40,7 +47,7 @@ function read_timeseries_metadata(file_path::AbstractString)::Vector{TimeseriesF
                     item["simulation"],
                     item["category"],
                     item["component_name"],
-                    item["label"],
+                    label,
                     scaling_factor,
                     item["data_file"],
                     # Use default values until CDM data is updated.
@@ -54,10 +61,13 @@ function read_timeseries_metadata(file_path::AbstractString)::Vector{TimeseriesF
         csv = CSV.read(file_path)
         metadata = Vector{TimeseriesFileMetadata}()
         for row in eachrow(csv)
+            key = (lowercase(row.Category), row.Parameter)
+            @assert haskey(label_mapping, key)
+            label = label_mapping[key]
             push!(metadata, TimeseriesFileMetadata(row.Simulation,
                                                    row.Category,
                                                    row.Object,
-                                                   row.Parameter,
+                                                   label,
                                                    row[Symbol("Scaling Factor")],
                                                    row[Symbol("Data File")],
                                                    # TODO: update CDM data for the next
@@ -78,6 +88,15 @@ function read_timeseries_metadata(file_path::AbstractString)::Vector{TimeseriesF
     end
 
     return metadata
+end
+
+function _get_category(category::String)
+    # HACK alert because of wackiness in PowerSystems RTS data.
+    if category == "LoadZone"
+        category = "bus"
+    end
+
+    return lowercase(category)
 end
 
 """

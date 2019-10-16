@@ -51,7 +51,7 @@ function add_time_series!(
             path["data"] = TimeSeries.values(ts.data)
             timestamps = [Dates.datetime2epochms(x) for x in TimeSeries.timestamp(ts.data)]
             path["timestamps"] = timestamps
-            # Storing the UUID as an integer would take less space, but HDF5 library says 
+            # Storing the UUID as an integer would take less space, but HDF5 library says
             # arrays of 128-bit integers aren't supported.
             path["components"] = [component_label]
         else
@@ -80,10 +80,14 @@ end
 
 function get_time_series(
                          storage::Hdf5TimeSeriesStorage,
-                         uuid::UUIDs.UUID;
+                         uuid::UUIDs.UUID,
+                         colname::AbstractString;
                          index=0,
                          len=0,
                         )::TimeSeries.TimeArray
+    # The column name could be stored in the file in add_time_series. That would involve a
+    # bit of extra complexity. For now it's easier to supply the name at the call site on
+    # reads.
     return HDF5.h5open(storage.file_path, "r") do file
         root = _get_root(storage, file)
         path = _get_time_series_path(root, uuid)
@@ -101,7 +105,8 @@ function get_time_series(
             timestamps = timestamps[index:end_index]
         end
 
-        return TimeSeries.TimeArray([Dates.epochms2datetime(x) for x in timestamps], data)
+        return TimeSeries.TimeArray([Dates.epochms2datetime(x) for x in timestamps], data,
+                                    [Symbol(colname)])
     end
 end
 

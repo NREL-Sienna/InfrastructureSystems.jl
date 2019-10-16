@@ -18,7 +18,7 @@ abstract type Forecast <: Any end
 
 get_horizon(forecast::Forecast) = length(get_data(forecast))
 get_initial_time(forecast::Forecast) = TimeSeries.timestamp(get_data(forecast))[1]
-get_time_series(forecast::Forecast) = get_data(forecast)
+get_scaling_factors(forecast::Forecast) = get_data(forecast)
 
 function get_resolution(forecast::Forecast)
     data = get_data(forecast)

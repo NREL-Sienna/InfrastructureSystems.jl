@@ -1,7 +1,8 @@
 
 @testset "Test read_timeseries_metadata" begin
     file = joinpath(FORECASTS_DIR, "ComponentsAsColumnsNoTime.json")
-    forecasts = IS.read_timeseries_metadata(file)
+    label_mapping = Dict(("infrastructuresystemstype", "val") => "val")
+    forecasts = IS.read_timeseries_metadata(file, label_mapping)
     @test length(forecasts) == 1
 
     for forecast in forecasts
@@ -17,7 +18,8 @@ end
     IS.add_component!(data, component)
 
     file = joinpath(FORECASTS_DIR, "ComponentsAsColumnsNoTime.json")
-    IS.add_forecasts!(IS.InfrastructureSystemsType, data, file)
+    label_mapping = Dict(("infrastructuresystemstype", "val") => "val")
+    IS.add_forecasts!(IS.InfrastructureSystemsType, data, file, label_mapping)
 
     forecasts = get_all_forecasts(data)
     @test length(forecasts) == 1

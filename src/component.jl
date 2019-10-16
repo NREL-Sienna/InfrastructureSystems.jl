@@ -129,17 +129,6 @@ function get_forecast_labels(
                                initial_time)
 end
 
-function get_forecast_value(
-                            ::Type{T},
-                            component::InfrastructureSystemsType,
-                            initial_time::Dates.DateTime,
-                            label::AbstractString,
-                            index::Union{Int, Dates.DateTime},
-                           ) where T <: ForecastInternal
-    forecast = get_forecast(T, component, initial_time, label)
-    return get_time_series(forecast)[index]
-end
-
 function get_time_series_uuids(component::InfrastructureSystemsType)
     container = _get_forecast_container(component)
 
