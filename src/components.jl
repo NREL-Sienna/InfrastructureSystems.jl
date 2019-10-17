@@ -3,15 +3,16 @@ const ComponentsByType = Dict{DataType, Dict{String, <:InfrastructureSystemsType
 
 struct Components
     data::ComponentsByType
+    time_series_storage::TimeSeriesStorage
     validation_descriptors::Vector
 end
 
-function Components(validation_descriptors=nothing)
+function Components(time_series_storage::TimeSeriesStorage, validation_descriptors=nothing)
     if isnothing(validation_descriptors)
         validation_descriptors = Vector()
     end
 
-    return Components(ComponentsByType(), validation_descriptors)
+    return Components(ComponentsByType(), time_series_storage, validation_descriptors)
 end
 
 """
@@ -53,6 +54,7 @@ function add_component!(
         throw(InvalidValue("Invalid value for $(component)"))
     end
 
+    set_time_series_storage!(component, components.time_series_storage)
     components.data[T][component.name] = component
     return
 end
@@ -76,10 +78,13 @@ function remove_components!(
     end
 
     components_ = pop!(components.data, T)
+    for component in values(components_)
+        clear_time_series!(component)
+        set_time_series_storage!(component, nothing)
+    end
+
     @debug "Removed all components of type" T
-    # Return the components because the higher level needs to delete any forecasts with
-    # the components.
-    return values(components_)
+    return
 end
 
 """
@@ -132,10 +137,9 @@ function _remove_component!(
     end
 
     component = pop!(components.data[T], name)
+    clear_time_series!(component)
+    set_time_series_storage!(component, nothing)
     @debug "Removed component" T name
-    # Return the component because the higher level needs to delete any forecasts with
-    # the component.
-    return component
 end
 
 """

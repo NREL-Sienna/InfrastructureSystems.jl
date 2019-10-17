@@ -16,14 +16,14 @@ function SystemData(; validation_descriptor_file=nothing, time_series_in_memory=
         validation_descriptors = read_validation_descriptor(validation_descriptor_file)
     end
 
-    components = Components(validation_descriptors)
     ts_storage = make_time_series_storage(; in_memory=time_series_in_memory)
+    components = Components(ts_storage, validation_descriptors)
     return SystemData(components, ForecastMetadata(), validation_descriptors, ts_storage,
                       nothing)
 end
 
 function SystemData(forecast_metadata, validation_descriptors, time_series_storage)
-    components = Components(validation_descriptors)
+    components = Components(time_series_storage, validation_descriptors)
     return SystemData(components, forecast_metadata, validation_descriptors,
                       time_series_storage, nothing)
 end
@@ -223,6 +223,32 @@ function add_forecast!(
 end
 
 """
+    remove_forecast!(
+                     ::Type{T},
+                     data::SystemData,
+                     component::InfrastructureSystemsType,
+                     initial_time::Dates.DateTime,
+                     label::String,
+                    ) where T <: Forecast
+
+Remove the time series data for a component.
+"""
+function remove_forecast!(
+                          ::Type{T},
+                          data::SystemData,
+                          component::InfrastructureSystemsType,
+                          initial_time::Dates.DateTime,
+                          label::String,
+                         ) where T <: Forecast
+    type_ = forecast_external_to_internal(T)
+    forecast = get_forecast(type_, component, initial_time, label)
+    uuid = get_time_series_uuid(forecast)
+    # TODO: can this be atomic?
+    remove_forecast_internal!(type_, component, initial_time, label)
+    remove_time_series!(data.time_series_storage, uuid, get_uuid(component), label)
+end
+
+"""
     make_forecast!(timeseries_metadata::TimeseriesFileMetadata;
                    resolution=nothing)
 
@@ -239,71 +265,6 @@ function make_forecast!(
                        )
     forecast_info = add_forecast_info!(forecast_cache, timeseries_metadata)
     return _make_forecast(forecast_info, resolution)
-end
-
-"""
-    get_forecast(
-                 ::Type{T},
-                 data::SystemData,
-                 component::Component,
-                 initial_time::Dates.DateTime,
-                 label::AbstractString,
-                ) where T <: Forecast
-
-Return a forecast for the entire time series range stored for these parameters.
-"""
-function get_forecast(
-                      ::Type{T},
-                      data::SystemData,
-                      component::InfrastructureSystemsType,
-                      initial_time::Dates.DateTime,
-                      label::AbstractString,
-                     ) where T <: Forecast
-    forecast_type = forecast_external_to_internal(T)
-    forecast = get_forecast(forecast_type, component, initial_time, label)
-    ts = get_time_series(data.time_series_storage, get_time_series_uuid(forecast), colname)
-    return make_public_forecast(forecast, ts)
-end
-
-"""
-    get_forecast(
-                 ::Type{T},
-                 data::SystemData,
-                 component::InfrastructureSystemsType,
-                 initial_time::Dates.DateTime,
-                 label::AbstractString,
-                 horizon::Int,
-                ) where T <: Forecast
-
-Return a forecast for a subset of the time series range stored for these parameters.
-"""
-function get_forecast(
-                      ::Type{T},
-                      data::SystemData,
-                      component::InfrastructureSystemsType,
-                      initial_time::Dates.DateTime,
-                      label::AbstractString,
-                      horizon::Int,
-                     ) where T <: Forecast
-    resolution = get_forecasts_resolution(data)
-    forecast = get_forecast(
-        forecast_external_to_internal(T),
-        component,
-        initial_time,
-        resolution,
-        get_forecasts_horizon(data),
-        label,
-        horizon,
-    )
-    index = Int((initial_time - get_initial_time(forecast)) / resolution) + 1
-    ts = get_time_series(
-        data.time_series_storage,
-        get_time_series_uuid(forecast);
-        index=index,
-        len=horizon,
-    )
-
-    return make_public_forecast(forecast, ts)
 end
 
 function forecast_external_to_internal(::Type{T}) where T <: Forecast
@@ -374,7 +335,6 @@ function add_forecast_info!(forecast_cache::ForecastCache, metadata::TimeseriesF
     @debug "Added ForecastInfo" metadata
     return forecast_info
 end
-
 
 """
     generate_initial_times(data::SystemData, interval::Dates.Period, horizon::Int)
@@ -499,43 +459,11 @@ function remove_component!(::Type{T}, data::SystemData, name) where T
 end
 
 function remove_component!(data::SystemData, component)
-    remove_component_time_series!(data, component)
     remove_component!(data.components, component)
 end
 
 function remove_components!(::Type{T}, data::SystemData) where T
-    components = remove_components!(T, data.components)
-    foreach(x -> remove_component_time_series!(data, x), components)
-end
-
-function remove_component_time_series!(data::SystemData, component)
-    for (uuid, label) in get_time_series_uuids(component)
-        remove_time_series!(data.time_series_storage, uuid, get_uuid(component), label)
-    end
-end
-
-"""
-    remove_forecast!(data::SystemData, component, initial_time::Dates.DateTime, label::String)
-
-Remove the time series data for a component.
-"""
-function remove_forecast!(
-                          ::Type{T},
-                          data::SystemData,
-                          component::InfrastructureSystemsType,
-                          initial_time::Dates.DateTime,
-                          label::String,
-                         ) where T <: Forecast
-    type_ = forecast_external_to_internal(T)
-    forecast = get_forecast(type_, component, initial_time, label)
-    uuid = get_time_series_uuid(forecast)
-    # TODO: can this be atomic?
-    remove_forecast_internal!(type_, component, initial_time, label)
-    remove_time_series!(data.time_series_storage, uuid, get_uuid(component), label)
-end
-
-function get_time_series(data::SystemData, forecast::Forecast)
-    return get_time_series(data.time_series_storage, get_time_series_uuid(forecast))
+    remove_components!(T, data.components)
 end
 
 function clear_forecasts!(data::SystemData)
@@ -629,14 +557,14 @@ function deserialize(
     # the original SystemData. It will always use Hdf5TimeSeriesStorage after
     # deserialization. This could be fixed. Need to build an InMemoryTimeSeriesStorage
     # object by iterating over an Hdf5TimeSeriesStorage file.
-    time_series_storage_file = Hdf5TimeSeriesStorage(raw.time_series_storage_file)
+    time_series_storage = from_file(Hdf5TimeSeriesStorage, raw.time_series_storage_file)
 
     # OPT: This looks odd and is wasteful.
     # JSON2 creates NamedTuples recursively. JSON creates dicts, which is what we need.
     # Could be optimized.
     validation_descriptors = JSON.parse(JSON2.write(raw.validation_descriptors))
 
-    sys = SystemData(forecast_metadata, validation_descriptors, time_series_storage_file)
+    sys = SystemData(forecast_metadata, validation_descriptors, time_series_storage)
     deserialize_components(T, sys, raw)
     return sys
 end

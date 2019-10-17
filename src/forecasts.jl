@@ -38,10 +38,21 @@ Forecast container for a component.
 """
 mutable struct Forecasts
     data::ForecastsByType
+    time_series_storage::Union{Nothing, TimeSeriesStorage}
 end
 
 function Forecasts()
-    return Forecasts(ForecastsByType())
+    return Forecasts(ForecastsByType(), nothing)
+end
+
+Base.length(forecasts::Forecasts) = length(forecasts.data)
+Base.isempty(forecasts::Forecasts) = isempty(forecasts.data)
+
+function set_time_series_storage!(
+                                  forecasts::Forecasts,
+                                  storage::Union{Nothing, TimeSeriesStorage},
+                                 )
+    forecasts.time_series_storage = storage
 end
 
 function add_forecast!(forecasts::Forecasts, forecast::T) where T <: ForecastInternal

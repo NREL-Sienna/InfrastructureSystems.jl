@@ -100,7 +100,6 @@ function convert_to_hdf5(storage::InMemoryTimeSeriesStorage, filename::AbstractS
     hdf5_storage = Hdf5TimeSeriesStorage(; filename=filename)
     for record in values(storage.data)
         for pair in record.component_labels
-            @show pair
             add_time_series!(hdf5_storage, pair[1], pair[2], record.ts)
         end
     end

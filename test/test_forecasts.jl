@@ -16,15 +16,24 @@ end
     name = "Component1"
     component = IS.TestComponent(name, 5)
     IS.add_component!(data, component)
+    @test !IS.has_forecasts(component)
 
     file = joinpath(FORECASTS_DIR, "ComponentsAsColumnsNoTime.json")
     label_mapping = Dict(("infrastructuresystemstype", "val") => "val")
     IS.add_forecasts!(IS.InfrastructureSystemsType, data, file, label_mapping)
+    @test IS.has_forecasts(component)
 
     forecasts = get_all_forecasts(data)
     @test length(forecasts) == 1
     forecast = forecasts[1]
     @test forecast isa IS.Deterministic
+
+    forecast2 = get_forecast(
+        typeof(forecast), component, get_initial_time(forecast), get_label(forecast),
+    )
+    @test IS.get_horizon(forecast) == IS.get_horizon(forecast2)
+    @test IS.get_initial_time(forecast) == IS.get_initial_time(forecast2)
+
     it = IS.get_initial_time(forecast)
 
     forecasts = get_all_forecasts(data)
@@ -141,6 +150,27 @@ end
     @test IS.get_num_time_series(data.time_series_storage) == 0
 end
 
+@testset "Test get subset of forecast" begin
+    sys = create_system_data()
+    components = collect(IS.get_components(IS.InfrastructureSystemsType, sys))
+    @test length(components) == 1
+    component = components[1]
+
+    dates = collect(Dates.DateTime("1/1/2020 00:00:00", "d/m/y H:M:S") : Dates.Hour(1) :
+                    Dates.DateTime("1/1/2020 23:00:00", "d/m/y H:M:S"))
+    data = collect(1:24)
+
+    ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
+    IS.add_forecast!(sys, ta, component, "val")
+
+    forecast = get_forecast(IS.Deterministic, component, dates[1], "val")
+    @test TimeSeries.timestamp(get_data(forecast))[1] == dates[1]
+
+    forecast = get_forecast(IS.Deterministic, component, dates[3], "val", 3)
+    @test TimeSeries.timestamp(get_data(forecast))[1] == dates[3]
+    @test length(forecast) == 3
+end
+
 function validate_generated_initial_times(initial_times, initial_time, interval, exp_length)
     @test length(initial_times) == exp_length
     for it in initial_times
@@ -161,23 +191,23 @@ end
 
     ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
     IS.add_forecast!(sys, ta, component, "val")
-    initial_times = IS.get_forecast_initial_times(sys)
+    initial_times = IS.get_forecast_initial_times(component)
     @test length(initial_times) == 1
 
     interval = Dates.Hour(1)
-    initial_times = IS.generate_initial_times(sys, interval, 24)
+    initial_times = IS.generate_initial_times(component, interval, 24)
     validate_generated_initial_times(initial_times, dates[1], interval, 1)
 
     interval = Dates.Hour(1)
-    initial_times = IS.generate_initial_times(sys, interval, 12)
+    initial_times = IS.generate_initial_times(component, interval, 12)
     validate_generated_initial_times(initial_times, dates[1], interval, 13)
 
     interval = Dates.Hour(3)
-    initial_times = IS.generate_initial_times(sys, interval, 6)
+    initial_times = IS.generate_initial_times(component, interval, 6)
     validate_generated_initial_times(initial_times, dates[1], interval, 7)
 
     interval = Dates.Hour(4)
-    initial_times = IS.generate_initial_times(sys, interval, 6)
+    initial_times = IS.generate_initial_times(component, interval, 6)
     validate_generated_initial_times(initial_times, dates[1], interval, 5)
 end
 
@@ -198,27 +228,27 @@ end
     ta2 = TimeSeries.TimeArray(dates2, data, [IS.get_name(component)])
     IS.add_forecast!(sys, ta1, component, "val")
     IS.add_forecast!(sys, ta2, component, "val")
-    initial_times = IS.get_forecast_initial_times(sys)
+    initial_times = IS.get_forecast_initial_times(component)
     @test length(initial_times) == 2
 
     interval = Dates.Hour(1)
-    initial_times = IS.generate_initial_times(sys, interval, 48)
+    initial_times = IS.generate_initial_times(component, interval, 48)
     validate_generated_initial_times(initial_times, dates1[1], interval, 1)
 
     interval = Dates.Hour(1)
-    initial_times = IS.generate_initial_times(sys, interval, 24)
+    initial_times = IS.generate_initial_times(component, interval, 24)
     validate_generated_initial_times(initial_times, dates1[1], interval, 25)
 
     interval = Dates.Hour(1)
-    initial_times = IS.generate_initial_times(sys, interval, 12)
+    initial_times = IS.generate_initial_times(component, interval, 12)
     validate_generated_initial_times(initial_times, dates1[1], interval, 37)
 
     interval = Dates.Hour(3)
-    initial_times = IS.generate_initial_times(sys, interval, 6)
+    initial_times = IS.generate_initial_times(component, interval, 6)
     validate_generated_initial_times(initial_times, dates1[1], interval, 15)
 
     interval = Dates.Hour(4)
-    initial_times = IS.generate_initial_times(sys, interval, 6)
+    initial_times = IS.generate_initial_times(component, interval, 6)
     validate_generated_initial_times(initial_times, dates1[1], interval, 11)
 end
 
@@ -300,7 +330,7 @@ end
     start_time = Dates.DateTime(Dates.today()) + Dates.Hour(3)
     fcast = IS.from(forecast, start_time)
     @test length(fcast) == 21
-    @test TimeSeries.timestamp(IS.get_time_series(fcast))[1] == start_time
+    @test TimeSeries.timestamp(IS.get_data(fcast))[1] == start_time
 end
 
 @testset "Test forecast from" begin
@@ -310,6 +340,6 @@ end
                      Dates.DateTime(Dates.today()) + Dates.Hour(15) + Dates.Minute(5))
         fcast = IS.to(forecast, end_time)
         @test length(fcast) == 16
-        @test TimeSeries.timestamp(IS.get_time_series(fcast))[end] <= end_time
+        @test TimeSeries.timestamp(IS.get_data(fcast))[end] <= end_time
     end
 end

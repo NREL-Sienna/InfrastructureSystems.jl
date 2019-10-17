@@ -1,6 +1,6 @@
 
-function create_system_data(; with_forecasts=false)
-    data = IS.SystemData()
+function create_system_data(; with_forecasts=false, time_series_in_memory=false)
+    data = IS.SystemData(; time_series_in_memory=time_series_in_memory)
 
     name = "Component1"
     component = IS.TestComponent(name, 5)

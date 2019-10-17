@@ -25,7 +25,8 @@ end
 Constructs Hdf5TimeSeriesStorage from an existing file.
 """
 function from_file(::Type{Hdf5TimeSeriesStorage}, filename::AbstractString)
-    file_path = cp(filename, tempname() * ".h5")
+    file_path = tempname() * ".h5"
+    cp(filename, file_path)
     storage = Hdf5TimeSeriesStorage(file_path)
     @info "Loaded time series from storage file existing=$filename new=$(storage.file_path)"
     return storage
@@ -187,4 +188,9 @@ function _remove_item!(path::HDF5.HDF5Group, name::AbstractString, value::Abstra
     @debug "Removed $value from $name" values
 
     return is_empty
+end
+
+function compare_values(x::Hdf5TimeSeriesStorage, y::Hdf5TimeSeriesStorage)::Bool
+    # TODO: ignore the file_path variable but iterate through all data and compare
+    return true
 end
