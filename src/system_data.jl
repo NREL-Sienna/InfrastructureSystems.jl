@@ -110,7 +110,7 @@ function add_forecast!(
                        component::InfrastructureSystemsType,
                        forecast::Forecast,
                       )
-    ts_data = TimeSeriesData(get_time_series(forecast))
+    ts_data = TimeSeriesData(get_data(forecast))
     forecast_internal = make_internal_forecast(forecast, ts_data)
     add_forecast!(data, component, forecast_internal, ts_data)
 end
