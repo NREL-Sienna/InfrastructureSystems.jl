@@ -1,9 +1,15 @@
 function add_forecast!(
-                       component::InfrastructureSystemsType,
-                       forecast::T,
-                      ) where T <: ForecastInternal
+                       component::T,
+                       forecast::ForecastInternal,
+                      ) where T <: InfrastructureSystemsType
+    label = get_label(forecast)
+    if !in(Symbol(label), fieldnames(T))
+        throw(ArgumentError("$label is not a field of $T"))
+    end
+
     add_forecast!(_get_forecast_container(component), forecast)
-    @debug "Added $forecast to $(typeof(component)) $(component.name) num_forecasts=$(length(component._forecasts.data))."
+    @debug "Added $forecast to $(typeof(component)) $(component.name) " *
+           "num_forecasts=$(length(component._forecasts.data))."
 end
 
 """
@@ -134,6 +140,20 @@ function get_forecast(
     end
 
     throw(ArgumentError("did not find a forecast matching the requested parameters"))
+end
+
+"""
+    get_forecast_values(component::InfrastructureSystemsType, forecast::Forecast)
+
+Return a TimeSeries.TimeArray where the forecast data has been multiplied by the forecasted
+component field.
+"""
+function get_forecast_values(component::InfrastructureSystemsType, forecast::Forecast)
+    scaling_factors = get_data(forecast)
+    label = get_label(forecast)
+    value = getfield(component, Symbol(label))
+    data = scaling_factors .* value
+    return data
 end
 
 function has_forecasts(component::InfrastructureSystemsType)

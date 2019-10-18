@@ -52,6 +52,13 @@ function set_time_series_storage!(
                                   forecasts::Forecasts,
                                   storage::Union{Nothing, TimeSeriesStorage},
                                  )
+    if !isnothing(forecasts.time_series_storage) && !isnothing(storage)
+        throw(ArgumentError(
+            "The time_series_storage reference is already set. Is this component being " *
+            "added to multiple systems?"
+        ))
+    end
+
     forecasts.time_series_storage = storage
 end
 

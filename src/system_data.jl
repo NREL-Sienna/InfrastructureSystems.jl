@@ -7,6 +7,7 @@ mutable struct SystemData <: InfrastructureSystemsType
     validation_descriptors::Vector
     time_series_storage::TimeSeriesStorage
     time_series_storage_file::Union{Nothing, String}  # only valid during serialization
+    internal::InfrastructureSystemsInternal
 end
 
 function SystemData(; validation_descriptor_file=nothing, time_series_in_memory=false)
@@ -19,13 +20,14 @@ function SystemData(; validation_descriptor_file=nothing, time_series_in_memory=
     ts_storage = make_time_series_storage(; in_memory=time_series_in_memory)
     components = Components(ts_storage, validation_descriptors)
     return SystemData(components, ForecastMetadata(), validation_descriptors, ts_storage,
-                      nothing)
+                      nothing, InfrastructureSystemsInternal())
 end
 
-function SystemData(forecast_metadata, validation_descriptors, time_series_storage)
+function SystemData(forecast_metadata, validation_descriptors, time_series_storage,
+                    internal)
     components = Components(time_series_storage, validation_descriptors)
     return SystemData(components, forecast_metadata, validation_descriptors,
-                      time_series_storage, nothing)
+                      time_series_storage, nothing, internal)
 end
 
 """
@@ -533,7 +535,7 @@ function encode_for_json(data::SystemData)
 
     json_data = Dict()
     for field in (:components, :forecast_metadata, :validation_descriptors,
-                  :time_series_storage_file)
+                  :time_series_storage_file, :internal)
         json_data[string(field)] = getfield(data, field)
     end
 
@@ -564,7 +566,9 @@ function deserialize(
     # Could be optimized.
     validation_descriptors = JSON.parse(JSON2.write(raw.validation_descriptors))
 
-    sys = SystemData(forecast_metadata, validation_descriptors, time_series_storage)
+    internal = convert_type(InfrastructureSystemsInternal, raw.internal)
+    sys = SystemData(forecast_metadata, validation_descriptors, time_series_storage,
+                     internal)
     deserialize_components(T, sys, raw)
     return sys
 end

@@ -49,6 +49,54 @@ end
     @test IS.get_forecasts_resolution(data) == IS.get_resolution(forecast)
 end
 
+@testset "Test add_forecast" begin
+    sys = IS.SystemData()
+    name = "Component1"
+    component_val = 5
+    component = IS.TestComponent(name, component_val)
+    IS.add_component!(sys, component)
+
+    dates = collect(Dates.DateTime("1/1/2020 00:00:00", "d/m/y H:M:S") : Dates.Hour(1) :
+                    Dates.DateTime("1/1/2020 23:00:00", "d/m/y H:M:S"))
+    data = collect(1:24)
+    ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
+    forecast = Deterministic("val", ta)
+    IS.add_forecast!(sys, component, forecast)
+    forecast = get_forecast(Deterministic, component, dates[1], "val")
+    @test forecast isa Deterministic
+end
+
+@testset "Test add_forecast bad label" begin
+    sys = IS.SystemData()
+    name = "Component1"
+    component_val = 5
+    component = IS.TestComponent(name, component_val)
+    IS.add_component!(sys, component)
+
+    dates = collect(Dates.DateTime("1/1/2020 00:00:00", "d/m/y H:M:S") : Dates.Hour(1) :
+                    Dates.DateTime("1/1/2020 23:00:00", "d/m/y H:M:S"))
+    data = collect(1:24)
+    ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
+    forecast = Deterministic("bad-label", ta)
+    @test_throws ArgumentError IS.add_forecast!(sys, component, forecast)
+end
+
+@testset "Test add_forecast from TimeArray" begin
+    sys = IS.SystemData()
+    name = "Component1"
+    component_val = 5
+    component = IS.TestComponent(name, component_val)
+    IS.add_component!(sys, component)
+
+    dates = collect(Dates.DateTime("1/1/2020 00:00:00", "d/m/y H:M:S") : Dates.Hour(1) :
+                    Dates.DateTime("1/1/2020 23:00:00", "d/m/y H:M:S"))
+    data = collect(1:24)
+    ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
+    IS.add_forecast!(sys, ta, component, "val")
+    forecast = get_forecast(Deterministic, component, dates[1], "val")
+    @test forecast isa Deterministic
+end
+
 @testset "Test forecast initial times" begin
     sys = IS.SystemData()
     dates1 = collect(Dates.DateTime("1/1/2020 00:00:00", "d/m/y H:M:S") : Dates.Hour(1) :
@@ -148,6 +196,24 @@ end
     @test length(collect(IS.get_components(IS.InfrastructureSystemsType, data))) == 0
     @test length(get_all_forecasts(data)) == 0
     @test IS.get_num_time_series(data.time_series_storage) == 0
+end
+
+@testset "Test get_forecast_values" begin
+    sys = IS.SystemData()
+    name = "Component1"
+    component_val = 5
+    component = IS.TestComponent(name, component_val)
+    IS.add_component!(sys, component)
+
+    dates = collect(Dates.DateTime("1/1/2020 00:00:00", "d/m/y H:M:S") : Dates.Hour(1) :
+                    Dates.DateTime("1/1/2020 23:00:00", "d/m/y H:M:S"))
+    data = collect(1:24)
+    ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
+    IS.add_forecast!(sys, ta, component, "val")
+    forecast = get_forecast(Deterministic, component, dates[1], "val")
+
+    vals = IS.get_forecast_values(component, forecast)
+    @test TimeSeries.values(vals) == data .* component_val
 end
 
 @testset "Test get subset of forecast" begin
@@ -274,6 +340,22 @@ end
 
     IS.add_forecast!(sys, ta2, component, "val")
     @test_throws ArgumentError IS.generate_initial_times(sys, Dates.Hour(3), 6)
+end
+
+@testset "Test component-forecast being added to multiple systems" begin
+    sys1 = IS.SystemData()
+    sys2 = IS.SystemData()
+    name = "Component1"
+    component = IS.TestComponent(name, 5)
+    IS.add_component!(sys1, component)
+
+    dates = collect(Dates.DateTime("1/1/2020 00:00:00", "d/m/y H:M:S") : Dates.Hour(1) :
+                    Dates.DateTime("1/1/2020 23:00:00", "d/m/y H:M:S"))
+    data = collect(1:24)
+    ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
+    IS.add_forecast!(sys1, ta, component, "val")
+
+    @test_throws ArgumentError IS.add_component!(sys1, component)
 end
 
 @testset "Summarize forecasts" begin
