@@ -79,8 +79,7 @@ function remove_components!(
 
     components_ = pop!(components.data, T)
     for component in values(components_)
-        clear_time_series!(component)
-        set_time_series_storage!(component, nothing)
+        prepare_for_removal!(component)
     end
 
     @debug "Removed all components of type" T
@@ -137,8 +136,7 @@ function _remove_component!(
     end
 
     component = pop!(components.data[T], name)
-    clear_time_series!(component)
-    set_time_series_storage!(component, nothing)
+    prepare_for_removal!(component)
     @debug "Removed component" T name
 end
 

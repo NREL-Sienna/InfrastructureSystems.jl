@@ -28,8 +28,8 @@ end
     forecast = forecasts[1]
     @test forecast isa IS.Deterministic
 
-    forecast2 = get_forecast(
-        typeof(forecast), component, get_initial_time(forecast), get_label(forecast),
+    forecast2 = IS.get_forecast(
+        typeof(forecast), component, IS.get_initial_time(forecast), IS.get_label(forecast),
     )
     @test IS.get_horizon(forecast) == IS.get_horizon(forecast2)
     @test IS.get_initial_time(forecast) == IS.get_initial_time(forecast2)
@@ -60,10 +60,10 @@ end
                     Dates.DateTime("1/1/2020 23:00:00", "d/m/y H:M:S"))
     data = collect(1:24)
     ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
-    forecast = Deterministic("val", ta)
+    forecast = IS.Deterministic("val", ta)
     IS.add_forecast!(sys, component, forecast)
-    forecast = get_forecast(Deterministic, component, dates[1], "val")
-    @test forecast isa Deterministic
+    forecast = IS.get_forecast(IS.Deterministic, component, dates[1], "val")
+    @test forecast isa IS.Deterministic
 end
 
 @testset "Test add_forecast bad label" begin
@@ -77,7 +77,7 @@ end
                     Dates.DateTime("1/1/2020 23:00:00", "d/m/y H:M:S"))
     data = collect(1:24)
     ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
-    forecast = Deterministic("bad-label", ta)
+    forecast = IS.Deterministic("bad-label", ta)
     @test_throws ArgumentError IS.add_forecast!(sys, component, forecast)
 end
 
@@ -93,8 +93,8 @@ end
     data = collect(1:24)
     ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
     IS.add_forecast!(sys, ta, component, "val")
-    forecast = get_forecast(Deterministic, component, dates[1], "val")
-    @test forecast isa Deterministic
+    forecast = IS.get_forecast(IS.Deterministic, component, dates[1], "val")
+    @test forecast isa IS.Deterministic
 end
 
 @testset "Test forecast initial times" begin
@@ -193,6 +193,7 @@ end
     @test IS.get_num_time_series(data.time_series_storage) == 1
 
     IS.remove_component!(data, component)
+    @test length(collect(IS.iterate_forecasts(component))) == 0
     @test length(collect(IS.get_components(IS.InfrastructureSystemsType, data))) == 0
     @test length(get_all_forecasts(data)) == 0
     @test IS.get_num_time_series(data.time_series_storage) == 0
@@ -210,7 +211,7 @@ end
     data = collect(1:24)
     ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
     IS.add_forecast!(sys, ta, component, "val")
-    forecast = get_forecast(Deterministic, component, dates[1], "val")
+    forecast = IS.get_forecast(IS.Deterministic, component, dates[1], "val")
 
     vals = IS.get_forecast_values(component, forecast)
     @test TimeSeries.values(vals) == data .* component_val
@@ -229,11 +230,11 @@ end
     ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
     IS.add_forecast!(sys, ta, component, "val")
 
-    forecast = get_forecast(IS.Deterministic, component, dates[1], "val")
-    @test TimeSeries.timestamp(get_data(forecast))[1] == dates[1]
+    forecast = IS.get_forecast(IS.Deterministic, component, dates[1], "val")
+    @test TimeSeries.timestamp(IS.get_data(forecast))[1] == dates[1]
 
-    forecast = get_forecast(IS.Deterministic, component, dates[3], "val", 3)
-    @test TimeSeries.timestamp(get_data(forecast))[1] == dates[3]
+    forecast = IS.get_forecast(IS.Deterministic, component, dates[3], "val", 3)
+    @test TimeSeries.timestamp(IS.get_data(forecast))[1] == dates[3]
     @test length(forecast) == 3
 end
 

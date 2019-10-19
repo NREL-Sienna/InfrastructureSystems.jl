@@ -312,6 +312,17 @@ function get_time_series_uuids(component::InfrastructureSystemsType)
              for key in get_forecast_keys(component)]
 end
 
+"""
+This function must be called when a component is removed from a system.
+"""
+function prepare_for_removal!(component::InfrastructureSystemsType)
+    # Forecasts can only be part of a component when that component is part of a system.
+    clear_time_series!(component)
+    set_time_series_storage!(component, nothing)
+    clear_forecasts!(component)
+    @debug "cleared all forecast data from" component
+end
+
 function iterate_forecasts(component::InfrastructureSystemsType)
     container = _get_forecast_container(component)
     forecast_keys = sort!(collect(keys(container.data)), by = x -> x.initial_time)

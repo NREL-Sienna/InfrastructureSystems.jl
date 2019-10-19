@@ -1,6 +1,6 @@
 
 @testset "Test add_component" begin
-    container = IS.Components(InMemoryTimeSeriesStorage())
+    container = IS.Components(IS.InMemoryTimeSeriesStorage())
 
     component = IS.TestComponent("component1", 5)
     IS.add_component!(container, component)
@@ -14,13 +14,13 @@
         val::Int
     end
 
-    container = IS.Components(InMemoryTimeSeriesStorage())
+    container = IS.Components(IS.InMemoryTimeSeriesStorage())
     component = BadComponent("component1", 5)
     @test_throws MethodError IS.add_component!(container, component)
 end
 
 @testset "Test remove_component" begin
-    container = IS.Components(InMemoryTimeSeriesStorage())
+    container = IS.Components(IS.InMemoryTimeSeriesStorage())
 
     component = IS.TestComponent("component1", 5)
     IS.add_component!(container, component)
@@ -33,7 +33,7 @@ end
 end
 
 @testset "Test IS.get_components" begin
-    container = IS.Components(InMemoryTimeSeriesStorage())
+    container = IS.Components(IS.InMemoryTimeSeriesStorage())
 
     # empty
     components = IS.get_components(IS.TestComponent, container)
@@ -53,7 +53,7 @@ end
 end
 
 @testset "Test IS.get_component" begin
-    container = IS.Components(InMemoryTimeSeriesStorage())
+    container = IS.Components(IS.InMemoryTimeSeriesStorage())
 
     component = IS.TestComponent("component1", 5)
     IS.add_component!(container, component)
@@ -66,7 +66,7 @@ end
 end
 
 @testset "Test IS.get_components_by_name" begin
-    container = IS.Components(InMemoryTimeSeriesStorage())
+    container = IS.Components(IS.InMemoryTimeSeriesStorage())
 
     component = IS.TestComponent("component1", 5)
     IS.add_component!(container, component)
@@ -78,7 +78,7 @@ end
 end
 
 @testset "Test IS.iterate_components" begin
-    container = IS.Components(InMemoryTimeSeriesStorage())
+    container = IS.Components(IS.InMemoryTimeSeriesStorage())
     component = IS.TestComponent("component1", 5)
     IS.add_component!(container, component)
 
@@ -90,7 +90,7 @@ end
 end
 
 @testset "Summarize components" begin
-    container = IS.Components(InMemoryTimeSeriesStorage())
+    container = IS.Components(IS.InMemoryTimeSeriesStorage())
     component = IS.TestComponent("component1", 5)
     IS.add_component!(container, component)
     summary(devnull, container)

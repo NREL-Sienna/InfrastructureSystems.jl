@@ -122,14 +122,12 @@ function ScenarioBased(label::String,
                        initial_time::Dates.DateTime,
                        scenario_count::Int64,
                        time_steps::Int)
-
     data = TimeSeries.TimeArray(
         initial_time : Dates.Hour(1) : initial_time + resolution * (time_steps-1),
         ones(time_steps, scenario_count)
     )
 
-
-    return ScenarioBased(label, Dates.Minute(resolution), initial_time, data)
+    return ScenarioBased(label, data)
 end
 
 """Constructs ScenarioBased Forecast after constructing a TimeArray from initial_time and time_steps.
