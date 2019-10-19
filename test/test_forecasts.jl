@@ -446,8 +446,8 @@ end
     @test TimeSeries.values(ta) == TimeSeries.values(fdata)
 
     IS.add_forecast!(sys, component, forecast)
-    forecast2 = IS.get_forecast(ScenarioBased, component, dates[1], label)
-    @test forecast2 isa ScenarioBased
+    forecast2 = IS.get_forecast(IS.ScenarioBased, component, dates[1], label)
+    @test forecast2 isa IS.ScenarioBased
     fdata2 = IS.get_data(forecast2)
     @test length(TimeSeries.colnames(fdata2)) == 2
     @test TimeSeries.timestamp(ta) == TimeSeries.timestamp(fdata2)

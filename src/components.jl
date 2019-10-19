@@ -54,9 +54,23 @@ function add_component!(
         throw(InvalidValue("Invalid value for $(component)"))
     end
 
+    # TODO: this check doesn't work during deserialization.
+    #if has_forecasts(component)
+    #    throw(ArgumentError("cannot add a component with forecasts: $component"))
+    #end
+
     set_time_series_storage!(component, components.time_series_storage)
     components.data[T][component.name] = component
     return
+end
+
+"""
+Removes all components from the system.
+"""
+function clear_components!(components::Components)
+    for type_ in collect(keys(components.data))
+        remove_components!(type_, components)
+    end
 end
 
 """

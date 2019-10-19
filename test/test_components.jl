@@ -19,6 +19,19 @@
     @test_throws MethodError IS.add_component!(container, component)
 end
 
+@testset "Test clear_components" begin
+    container = IS.Components(IS.InMemoryTimeSeriesStorage())
+
+    component = IS.TestComponent("component1", 5)
+    IS.add_component!(container, component)
+    components = IS.get_components(IS.TestComponent, container)
+    @test length(components) == 1
+
+    IS.clear_components!(container)
+    components = IS.get_components(IS.TestComponent, container)
+    @test length(components) == 0
+end
+
 @testset "Test remove_component" begin
     container = IS.Components(IS.InMemoryTimeSeriesStorage())
 

@@ -452,10 +452,8 @@ function compare_values(x::SystemData, y::SystemData)::Bool
     return match
 end
 
-
 function remove_component!(::Type{T}, data::SystemData, name) where T
     component = remove_component!(T, data.components, name)
-    remove_component_time_series!(data, component)
 end
 
 function remove_component!(data::SystemData, component)
@@ -616,6 +614,7 @@ get_forecasts_initial_time(data::SystemData) = get_forecasts_initial_time(data.c
 get_forecasts_last_initial_time(data::SystemData) = get_forecasts_last_initial_time(data.components)
 get_forecasts_horizon(data::SystemData) = get_forecasts_horizon(data.forecast_metadata)
 get_forecasts_resolution(data::SystemData) = get_forecasts_resolution(data.forecast_metadata)
+clear_components!(data::SystemData) = clear_components!(data.components)
 set_component!(metadata::TimeseriesFileMetadata, data::SystemData, mod::Module) =
     set_component!(metadata, data.components, mod)
 validate_forecast_consistency(data::SystemData) = validate_forecast_consistency(data.components)

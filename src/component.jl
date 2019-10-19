@@ -5,7 +5,7 @@ function add_forecast!(
     label = get_label(forecast)
     if !in(Symbol(label), fieldnames(T))
         #throw(ArgumentError("$label is not a field of $T"))
-        @error "$label is not a field of $T; get_forecast_values will not work" forecast
+        @warn "$label is not a field of $T; get_forecast_values will not work" forecast
     end
 
     add_forecast!(_get_forecast_container(component), forecast)
@@ -35,8 +35,11 @@ function remove_forecast_internal!(
 end
 
 function clear_forecasts!(component::InfrastructureSystemsType)
-    clear_forecasts!(_get_forecast_container(component))
-    @debug "Cleared forecasts in $component."
+    container = _get_forecast_container(component)
+    if !isnothing(container)
+        clear_forecasts!(container)
+        @debug "Cleared forecasts in $component."
+    end
 end
 
 """
@@ -337,8 +340,10 @@ end
 
 function clear_time_series!(component::InfrastructureSystemsType)
     storage = _get_time_series_storage(component)
-    for (uuid, label) in get_time_series_uuids(component)
-        remove_time_series!(storage, uuid, get_uuid(component), label)
+    if !isnothing(storage)
+        for (uuid, label) in get_time_series_uuids(component)
+            remove_time_series!(storage, uuid, get_uuid(component), label)
+        end
     end
 end
 
@@ -393,5 +398,10 @@ function _get_forecast_container(component::InfrastructureSystemsType)
 end
 
 function _get_time_series_storage(component::InfrastructureSystemsType)
-    return _get_forecast_container(component).time_series_storage
+    container = _get_forecast_container(component)
+    if isnothing(container)
+        return nothing
+    end
+
+    return container.time_series_storage
 end
