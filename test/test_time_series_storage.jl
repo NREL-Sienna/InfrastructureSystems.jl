@@ -6,7 +6,7 @@ function test_add_remove(storage::IS.TimeSeriesStorage)
     ts = create_time_series_data()
     IS.add_time_series!(storage, IS.get_uuid(component), label, ts)
 
-    ts_data = IS.get_time_series(storage, IS.get_uuid(ts), name)
+    ts_data = IS.get_time_series(storage, IS.get_uuid(ts))
 
     @test TimeSeries.timestamp(ts_data) == TimeSeries.timestamp(ts.data)
     @test TimeSeries.values(ts_data) == TimeSeries.values(ts.data)
@@ -19,11 +19,11 @@ function test_add_remove(storage::IS.TimeSeriesStorage)
     IS.remove_time_series!(storage, IS.get_uuid(ts), IS.get_uuid(component2), label)
 
     # There should still be one reference to the data.
-    ts_data2 = IS.get_time_series(storage, IS.get_uuid(ts), name)
+    ts_data2 = IS.get_time_series(storage, IS.get_uuid(ts))
     @test ts_data2 isa TimeSeries.TimeArray
 
     IS.remove_time_series!(storage, IS.get_uuid(ts), IS.get_uuid(component), label)
-    @test_throws ArgumentError IS.get_time_series(storage, IS.get_uuid(ts), name)
+    @test_throws ArgumentError IS.get_time_series(storage, IS.get_uuid(ts))
     IS.get_num_time_series(storage) == 0
 end
 
@@ -33,12 +33,12 @@ function test_get_subset(storage::IS.TimeSeriesStorage)
     component = IS.TestComponent(name, 1)
     ts = create_time_series_data()
     IS.add_time_series!(storage, IS.get_uuid(component), label, ts)
-    ts_data = IS.get_time_series(storage, IS.get_uuid(ts), name)
+    ts_data = IS.get_time_series(storage, IS.get_uuid(ts))
 
     @test TimeSeries.timestamp(ts_data) == TimeSeries.timestamp(ts.data)
     index = 3
     len = 5
-    ts_subset = IS.get_time_series(storage, IS.get_uuid(ts), name; index=index, len=len)
+    ts_subset = IS.get_time_series(storage, IS.get_uuid(ts); index=index, len=len)
     @test ts_subset[1] == ts_data[index]
     @test length(ts_subset) == len
 end
@@ -50,13 +50,13 @@ function test_clear(storage::IS.TimeSeriesStorage)
     ts = create_time_series_data()
     IS.add_time_series!(storage, IS.get_uuid(component), label, ts)
 
-    ts_data = IS.get_time_series(storage, IS.get_uuid(ts), name)
+    ts_data = IS.get_time_series(storage, IS.get_uuid(ts))
 
     @test TimeSeries.timestamp(ts_data) == TimeSeries.timestamp(ts.data)
     @test TimeSeries.values(ts_data) == TimeSeries.values(ts.data)
 
     IS.clear_time_series!(storage)
-    @test_throws ArgumentError IS.get_time_series(storage, IS.get_uuid(ts), name)
+    @test_throws ArgumentError IS.get_time_series(storage, IS.get_uuid(ts))
 end
 
 @testset "Test time series storage implementations" begin

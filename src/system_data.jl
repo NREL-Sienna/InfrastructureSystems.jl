@@ -474,8 +474,7 @@ function iterate_forecasts(data::SystemData)
         for component in iterate_components_with_forecasts(data.components)
             for forecast in iterate_forecasts(component)
                 time_series = get_time_series(data.time_series_storage,
-                                              get_time_series_uuid(forecast),
-                                              get_name(component))
+                                              get_time_series_uuid(forecast))
                 put!(channel, make_public_forecast(forecast, time_series))
             end
         end

@@ -61,7 +61,7 @@ function get_forecast(
     forecast_type = forecast_external_to_internal(T)
     forecast = get_forecast(forecast_type, component, initial_time, label)
     storage = _get_time_series_storage(component)
-    ts = get_time_series(storage, get_time_series_uuid(forecast), get_name(component))
+    ts = get_time_series(storage, get_time_series_uuid(forecast))
     return make_public_forecast(forecast, ts)
 end
 
@@ -104,8 +104,7 @@ function get_forecast(
     index = Int((initial_time - get_initial_time(forecast)) / resolution) + 1
     ts = get_time_series(
         _get_time_series_storage(component),
-        get_time_series_uuid(forecast),
-        get_name(component);
+        get_time_series_uuid(forecast);
         index=index,
         len=horizon,
     )

@@ -69,8 +69,7 @@ end
 
 function get_time_series(
                          storage::InMemoryTimeSeriesStorage,
-                         uuid::UUIDs.UUID,
-                         colname::AbstractString;
+                         uuid::UUIDs.UUID;
                          index=0,
                          len=0,
                         )::TimeSeries.TimeArray

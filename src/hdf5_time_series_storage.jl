@@ -81,14 +81,10 @@ end
 
 function get_time_series(
                          storage::Hdf5TimeSeriesStorage,
-                         uuid::UUIDs.UUID,
-                         colname::AbstractString;
+                         uuid::UUIDs.UUID;
                          index=0,
                          len=0,
                         )::TimeSeries.TimeArray
-    # The column name could be stored in the file in add_time_series. That would involve a
-    # bit of extra complexity. For now it's easier to supply the name at the call site on
-    # reads.
     return HDF5.h5open(storage.file_path, "r") do file
         root = _get_root(storage, file)
         path = _get_time_series_path(root, uuid)
@@ -106,8 +102,8 @@ function get_time_series(
             timestamps = timestamps[index:end_index]
         end
 
+        # Note: we don't care what column names get returned. TimeArray creates :A, :B, ...
         return TimeSeries.TimeArray([Dates.epochms2datetime(x) for x in timestamps], data)
-                                    #[Symbol(colname)])
     end
 end
 
