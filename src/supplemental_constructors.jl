@@ -75,7 +75,7 @@ end
                  )
 Constructs Probabilistic Forecast after constructing a TimeArray from initial_time and time_steps.
 """
-# TODO DT: do we need this check still?
+# TODO: do we need this check still?
 #function Probabilistic(
 #                       label::String,
 #                       percentiles::Vector{Float64},  # percentiles for the probabilistic forecast
@@ -115,12 +115,21 @@ function make_internal_forecast(forecast::Probabilistic, ts_data::TimeSeriesData
                                 )
 end
 
-"""Constructs ScenarioBased Forecast after constructing a TimeArray from initial_time and time_steps.
+function ScenarioBased(label::String, data::TimeSeries.TimeArray)
+    initial_time = TimeSeries.timestamp(data)[1]
+    resolution = get_resolution(data)
+    scenario_count = length(TimeSeries.colnames(data))
+    return ScenarioBased(label, scenario_count, data)
+end
+
+"""
+Constructs ScenarioBased Forecast after constructing a TimeArray from initial_time and
+time_steps.
 """
 function ScenarioBased(label::String,
                        resolution::Dates.Period,
                        initial_time::Dates.DateTime,
-                       scenario_count::Int64,
+                       scenario_count::Int,
                        time_steps::Int)
     data = TimeSeries.TimeArray(
         initial_time : Dates.Hour(1) : initial_time + resolution * (time_steps-1),
@@ -130,30 +139,16 @@ function ScenarioBased(label::String,
     return ScenarioBased(label, data)
 end
 
-"""Constructs ScenarioBased Forecast after constructing a TimeArray from initial_time and time_steps.
-"""
-function ScenarioBased(label::String, data::TimeSeries.TimeArray)
-
-    initial_time = TimeSeries.timestamp(data)[1]
-    resolution = get_resolution(data)
-
-    return ScenarioBased(label, Dates.Minute(resolution), initial_time, data)
-end
-
-function ScenarioBased(label::String,
-                       resolution::Dates.Period,
-                       initial_time::Dates.DateTime,
-                       data::TimeSeries.TimeArray)
-    scenario_count = length(TimeSeries.colnames(data))
-    horizon = length(data)
-    return ScenarioBased(label, resolution, initial_time, scenario_count, data,
-                         horizon, InfrastructureSystemsInternal())
-end
-
 function make_public_forecast(forecast::ScenarioBasedInternal, data::TimeSeries.TimeArray)
     return ScenarioBased(get_label(forecast), data)
 end
 
 function make_internal_forecast(forecast::ScenarioBased, ts_data::TimeSeriesData)
-    return ScenarioBasedInternal(get_label(forecast), get_scenario_count(forecast), ts_data)
+    return ScenarioBasedInternal(get_label(forecast),
+                                 get_resolution(forecast),
+                                 get_initial_time(forecast),
+                                 get_scenario_count(forecast),
+                                 get_uuid(ts_data),
+                                 get_horizon(forecast),
+                                )
 end

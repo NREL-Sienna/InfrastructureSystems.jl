@@ -8,17 +8,17 @@ mutable struct ScenarioBasedInternal <: ForecastInternal
     resolution::Dates.Period
     initial_time::Dates.DateTime  # forecast availability time
     scenario_count::Int64  # Number of scenarios
-    data::UUIDs.UUID  # reference to time series data; timestamp - scalingfactor
+    time_series_uuid::UUIDs.UUID  # reference to time series data; timestamp - scalingfactor
     horizon::Int  # length of this forecast
     internal::InfrastructureSystemsInternal
 end
 
-function ScenarioBasedInternal(label, resolution, initial_time, scenario_count, data, horizon, )
-    ScenarioBasedInternal(label, resolution, initial_time, scenario_count, data, horizon, InfrastructureSystemsInternal())
+function ScenarioBasedInternal(label, resolution, initial_time, scenario_count, time_series_uuid, horizon, )
+    ScenarioBasedInternal(label, resolution, initial_time, scenario_count, time_series_uuid, horizon, InfrastructureSystemsInternal())
 end
 
-function ScenarioBasedInternal(; label, resolution, initial_time, scenario_count, data, horizon, )
-    ScenarioBasedInternal(label, resolution, initial_time, scenario_count, data, horizon, )
+function ScenarioBasedInternal(; label, resolution, initial_time, scenario_count, time_series_uuid, horizon, )
+    ScenarioBasedInternal(label, resolution, initial_time, scenario_count, time_series_uuid, horizon, )
 end
 
 
@@ -30,8 +30,8 @@ get_resolution(value::ScenarioBasedInternal) = value.resolution
 get_initial_time(value::ScenarioBasedInternal) = value.initial_time
 """Get ScenarioBasedInternal scenario_count."""
 get_scenario_count(value::ScenarioBasedInternal) = value.scenario_count
-"""Get ScenarioBasedInternal data."""
-get_data(value::ScenarioBasedInternal) = value.data
+"""Get ScenarioBasedInternal time_series_uuid."""
+get_time_series_uuid(value::ScenarioBasedInternal) = value.time_series_uuid
 """Get ScenarioBasedInternal horizon."""
 get_horizon(value::ScenarioBasedInternal) = value.horizon
 """Get ScenarioBasedInternal internal."""

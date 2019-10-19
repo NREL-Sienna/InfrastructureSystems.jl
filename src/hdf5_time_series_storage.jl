@@ -106,8 +106,8 @@ function get_time_series(
             timestamps = timestamps[index:end_index]
         end
 
-        return TimeSeries.TimeArray([Dates.epochms2datetime(x) for x in timestamps], data,
-                                    [Symbol(colname)])
+        return TimeSeries.TimeArray([Dates.epochms2datetime(x) for x in timestamps], data)
+                                    #[Symbol(colname)])
     end
 end
 

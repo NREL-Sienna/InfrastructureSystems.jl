@@ -137,7 +137,7 @@
         "comment": "Number of scenarios"
       },
       {
-        "name": "data",
+        "name": "time_series_uuid",
         "data_type": "UUIDs.UUID",
         "comment": "reference to time series data; timestamp - scalingfactor"
       },

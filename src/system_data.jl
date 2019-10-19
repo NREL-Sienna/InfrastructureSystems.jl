@@ -123,12 +123,10 @@ function add_forecast!(
                        forecast::ForecastInternal,
                        ts_data::TimeSeriesData,
                       )
-    #val = getfield(component, get_label(forecast))
-    #ts_data = TimeSeriesData(get_time_series(forecast) .* val)
     _validate_component(data, component)
     check_add_forecast!(data.forecast_metadata, forecast)
     add_forecast!(component, forecast)
-    # TODO DT: can this be atomic with forecast addition?
+    # TODO: can this be atomic with forecast addition?
     add_time_series!(data.time_series_storage, get_uuid(component), get_label(forecast),
                      ts_data)
 end
