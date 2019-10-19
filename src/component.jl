@@ -4,7 +4,8 @@ function add_forecast!(
                       ) where T <: InfrastructureSystemsType
     label = get_label(forecast)
     if !in(Symbol(label), fieldnames(T))
-        throw(ArgumentError("$label is not a field of $T"))
+        #throw(ArgumentError("$label is not a field of $T"))
+        @error "$label is not a field of $T; get_forecast_values will not work" forecast
     end
 
     add_forecast!(_get_forecast_container(component), forecast)
