@@ -8,13 +8,13 @@ abstract type TimeseriesFormatYMDPeriodAsHeader <: TimeseriesFormatPeriodAsHeade
 abstract type TimeseriesFormatComponentsAsColumnsNoTime <: TimeseriesFileFormat end
 
 """
-    read_timeseries(file_path::AbstractString, component_name=nothing)
+    read_time_series(file_path::AbstractString, component_name=nothing)
 
 Return a TimeArray from a CSV file.
 
 Pass component_name when the file does not have the component name in a column header.
 """
-function read_timeseries(file_path::AbstractString, component_name=nothing; kwargs...)
+function read_time_series(file_path::AbstractString, component_name=nothing; kwargs...)
     if !isfile(file_path)
         msg = "Timeseries file doesn't exist : $file_path"
         throw(DataFormatError(msg))
@@ -23,7 +23,7 @@ function read_timeseries(file_path::AbstractString, component_name=nothing; kwar
     file = CSV.File(file_path)
     @debug "Read CSV data from $file_path."
 
-    return read_timeseries(get_timeseries_format(file), file, component_name; kwargs...)
+    return read_time_series(get_timeseries_format(file), file, component_name; kwargs...)
 end
 
 """Return the timeseries format used in the CSV file."""
@@ -131,12 +131,12 @@ end
 
 This version of the function only has component_name to match the interface. It is unused.
 """
-function read_timeseries(
-                         ::Type{T},
-                         file::CSV.File,
-                         component_name=nothing;
-                         kwargs...
-                        ) where T <: TimeseriesFormatPeriodAsColumn
+function read_time_series(
+                          ::Type{T},
+                          file::CSV.File,
+                          component_name=nothing;
+                          kwargs...
+                         ) where T <: TimeseriesFormatPeriodAsColumn
     timestamps = Vector{Dates.DateTime}()
     step = get_step_time(T, file, file.Period)
 
@@ -159,12 +159,12 @@ end
 """This version of the function supports the format where there is no column header for
 a component, so the component_name must be passed in.
 """
-function read_timeseries(
-                         ::Type{T},
-                         file::CSV.File,
-                         component_name::AbstractString;
-                         kwargs...
-                        ) where T <: TimeseriesFormatPeriodAsHeader
+function read_time_series(
+                          ::Type{T},
+                          file::CSV.File,
+                          component_name::AbstractString;
+                          kwargs...
+                         ) where T <: TimeseriesFormatPeriodAsHeader
     timestamps = Vector{Dates.DateTime}()
 
     period_cols_as_symbols = get_period_columns(T, file)
@@ -205,12 +205,12 @@ It is unused.
 Set start_datetime as a keyword argument for the starting timestamp, otherwise the current
 day is used.
 """
-function read_timeseries(
-                         ::Type{T},
-                         file::CSV.File,
-                         component_name=nothing;
-                         kwargs...
-                        ) where T <: TimeseriesFormatComponentsAsColumnsNoTime
+function read_time_series(
+                          ::Type{T},
+                          file::CSV.File,
+                          component_name=nothing;
+                          kwargs...
+                         ) where T <: TimeseriesFormatComponentsAsColumnsNoTime
     timestamps = Vector{Dates.DateTime}()
     step = get_step_time(T, file)
 

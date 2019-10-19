@@ -35,7 +35,7 @@ get_resolution(ts::TimeSeriesData) = TimeSeries.timestamp(ts.data)[2] -
 #        return data[Symbol(data.component_name)]
 #    end
 #
-#    ta = read_timeseries(data.file_path)
+#    ta = read_time_series(data.file_path)
 #    return ta[Symbol(data.component_name)]
 #end
 

@@ -25,7 +25,7 @@ import TimeSeries
         file = CSV.File(filename)
         @test format == IS.get_timeseries_format(file)
 
-        data = IS.read_timeseries(filename, component_name)
+        data = IS.read_time_series(filename, component_name)
         @test data isa TimeSeries.TimeArray
     end
 end

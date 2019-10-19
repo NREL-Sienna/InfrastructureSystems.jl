@@ -1,8 +1,8 @@
 
-@testset "Test read_timeseries_metadata" begin
+@testset "Test read_time_series_metadata" begin
     file = joinpath(FORECASTS_DIR, "ComponentsAsColumnsNoTime.json")
     label_mapping = Dict(("infrastructuresystemstype", "val") => "val")
-    forecasts = IS.read_timeseries_metadata(file, label_mapping)
+    forecasts = IS.read_time_series_metadata(file, label_mapping)
     @test length(forecasts) == 1
 
     for forecast in forecasts

@@ -64,7 +64,7 @@ function add_forecasts!(
                         label_mapping::Dict{Tuple{String, String}, String};
                         resolution=nothing,
                        ) where T <: InfrastructureSystemsType
-    metadata = read_timeseries_metadata(metadata_file, label_mapping)
+    metadata = read_time_series_metadata(metadata_file, label_mapping)
     return add_forecasts!(T, data, metadata; resolution=resolution)
 end
 
@@ -152,7 +152,7 @@ function add_forecast!(
                        scaling_factor::Union{String, Float64}=1.0,
                       )
     component_name = get_name(component)
-    ts = read_timeseries(filename, component_name)
+    ts = read_time_series(filename, component_name)
     timeseries = ts[Symbol(component_name)]
     _add_forecast!(data, component, label, timeseries, scaling_factor)
 end

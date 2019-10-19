@@ -26,10 +26,10 @@ function TimeseriesFileMetadata(simulation, category, component_name, label, sca
 end
 
 """Reads forecast metadata and fixes relative paths to the data files."""
-function read_timeseries_metadata(
-                                  file_path::AbstractString,
-                                  label_mapping::Dict{Tuple{String, String}, String},
-                                 )
+function read_time_series_metadata(
+                                   file_path::AbstractString,
+                                   label_mapping::Dict{Tuple{String, String}, String},
+                                  )
     if endswith(file_path, ".json")
         metadata = open(file_path) do io
             metadata = Vector{TimeseriesFileMetadata}()
@@ -202,7 +202,7 @@ end
 function _add_forecast_info!(forecast_cache::ForecastCache, data_file::AbstractString,
                              component_name::Union{Nothing, String})
     if !haskey(forecast_cache.data_files, data_file)
-        forecast_cache.data_files[data_file] = read_timeseries(data_file, component_name)
+        forecast_cache.data_files[data_file] = read_time_series(data_file, component_name)
         @debug "Added timeseries file" data_file
     end
 
