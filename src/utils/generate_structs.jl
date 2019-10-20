@@ -24,18 +24,18 @@ mutable struct {{struct_name}}{{#parametric}}{T <: {{parametric}}}{{/parametric}
     {{/inner_constructor_check}}
 end
 
-function {{struct_name}}({{#parameters}}{{^internal}}{{name}}, {{/internal}}{{/parameters}})
+{{#needs_positional_constructor}}function {{struct_name}}({{#parameters}}{{^internal}}{{name}}{{#default}}={{default}}{{/default}}, {{/internal}}{{/parameters}})
     {{#parameters}}
     {{/parameters}}
     {{struct_name}}({{#parameters}}{{^internal}}{{name}}, {{/internal}}{{/parameters}}InfrastructureSystemsInternal())
-end
+end{{/needs_positional_constructor}}
 
-function {{struct_name}}(; {{#parameters}}{{^internal}}{{name}}, {{/internal}}{{/parameters}})
+function {{struct_name}}(; {{#parameters}}{{^internal}}{{name}}{{#default}}={{default}}{{/default}}, {{/internal}}{{/parameters}})
     {{struct_name}}({{#parameters}}{{^internal}}{{name}}, {{/internal}}{{/parameters}})
 end
 
 {{#parametric}}
-function {{struct_name}}{T}({{#parameters}}{{^internal}}{{name}}, {{/internal}}{{/parameters}}) where T <: InfrastructureSystemsType
+function {{struct_name}}{T}({{#parameters}}{{^internal}}{{name}}{{#default}}={{default}}{{/default}}, {{/internal}}{{/parameters}}) where T <: InfrastructureSystemsType
     {{#parameters}}
     {{/parameters}}
     {{struct_name}}({{#parameters}}{{^internal}}{{name}}, {{/internal}}{{/parameters}}InfrastructureSystemsInternal())
@@ -72,6 +72,7 @@ function generate_structs(directory, data::Vector; print_results=true)
     unique_accessor_functions = Set{String}()
 
     for item in data
+        has_internal = false
         accessors = Vector{Dict}()
         item["has_null_values"] = true
         parameters = Vector{Dict}()
@@ -87,6 +88,7 @@ function generate_structs(directory, data::Vector; print_results=true)
 
             if param["name"] == "internal"
                 param["internal"] = true
+                has_internal = true
                 continue
             end
 
@@ -103,6 +105,7 @@ function generate_structs(directory, data::Vector; print_results=true)
 
         item["parameters"] = parameters
         item["accessors"] = accessors
+        item["needs_positional_constructor"] = has_internal
 
         filename = joinpath(directory, item["struct_name"] * ".jl")
         open(filename, "w") do io

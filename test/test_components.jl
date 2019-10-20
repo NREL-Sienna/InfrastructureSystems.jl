@@ -1,11 +1,12 @@
 
 @testset "Test add_component" begin
-    container = IS.Components()
+    container = IS.Components(IS.InMemoryTimeSeriesStorage())
 
     component = IS.TestComponent("component1", 5)
     IS.add_component!(container, component)
     @test length(container.data) == 1
     @test length(container.data[IS.TestComponent]) == 1
+    @test IS.get_num_components(container) == 1
 
     @test_throws ArgumentError IS.add_component!(container, component)
 
@@ -14,13 +15,26 @@
         val::Int
     end
 
-    container = IS.Components()
+    container = IS.Components(IS.InMemoryTimeSeriesStorage())
     component = BadComponent("component1", 5)
     @test_throws MethodError IS.add_component!(container, component)
 end
 
+@testset "Test clear_components" begin
+    container = IS.Components(IS.InMemoryTimeSeriesStorage())
+
+    component = IS.TestComponent("component1", 5)
+    IS.add_component!(container, component)
+    components = IS.get_components(IS.TestComponent, container)
+    @test length(components) == 1
+
+    IS.clear_components!(container)
+    components = IS.get_components(IS.TestComponent, container)
+    @test length(components) == 0
+end
+
 @testset "Test remove_component" begin
-    container = IS.Components()
+    container = IS.Components(IS.InMemoryTimeSeriesStorage())
 
     component = IS.TestComponent("component1", 5)
     IS.add_component!(container, component)
@@ -32,8 +46,36 @@ end
     @test length(components) == 0
 end
 
-@testset "Test IS.get_components" begin
-    container = IS.Components()
+@testset "Test remove_component by name" begin
+    container = IS.Components(IS.InMemoryTimeSeriesStorage())
+
+    name = "component1"
+    component = IS.TestComponent(name, 5)
+    IS.add_component!(container, component)
+    components = IS.get_components(IS.TestComponent, container)
+    @test length(components) == 1
+
+    IS.remove_component!(IS.TestComponent, container, name)
+    components = IS.get_components(IS.TestComponent, container)
+    @test length(components) == 0
+
+    @test_throws ArgumentError IS.remove_component!(IS.TestComponent, container, name)
+
+    IS.add_component!(container, component)
+    name2 = "component2"
+    component2 = IS.TestComponent(name2, 6)
+    IS.add_component!(container, component2)
+    components = IS.get_components(IS.TestComponent, container)
+    @test length(components) == 2
+
+    IS.remove_component!(IS.TestComponent, container, name)
+    components = IS.get_components(IS.TestComponent, container)
+    @test length(components) == 1
+    @test_throws ArgumentError IS.remove_component!(IS.TestComponent, container, name)
+end
+
+@testset "Test get_components" begin
+    container = IS.Components(IS.InMemoryTimeSeriesStorage())
 
     # empty
     components = IS.get_components(IS.TestComponent, container)
@@ -52,8 +94,8 @@ end
 
 end
 
-@testset "Test IS.get_component" begin
-    container = IS.Components()
+@testset "Test get_component" begin
+    container = IS.Components(IS.InMemoryTimeSeriesStorage())
 
     component = IS.TestComponent("component1", 5)
     IS.add_component!(container, component)
@@ -65,8 +107,8 @@ end
     @test_throws ArgumentError IS.get_component(IS.InfrastructureSystemsType, container, "component1")
 end
 
-@testset "Test IS.get_components_by_name" begin
-    container = IS.Components()
+@testset "Test get_components_by_name" begin
+    container = IS.Components(IS.InMemoryTimeSeriesStorage())
 
     component = IS.TestComponent("component1", 5)
     IS.add_component!(container, component)
@@ -77,8 +119,8 @@ end
     @test component.val == 5
 end
 
-@testset "Test IS.iterate_components" begin
-    container = IS.Components()
+@testset "Test iterate_components" begin
+    container = IS.Components(IS.InMemoryTimeSeriesStorage())
     component = IS.TestComponent("component1", 5)
     IS.add_component!(container, component)
 
@@ -89,8 +131,15 @@ end
     @test i == 1
 end
 
+@testset "Test components serialization" begin
+    container = IS.Components(IS.InMemoryTimeSeriesStorage())
+    component = IS.TestComponent("component1", 5)
+    IS.add_component!(container, component)
+    @test length(JSON2.write(container)) > 0
+end
+
 @testset "Summarize components" begin
-    container = IS.Components()
+    container = IS.Components(IS.InMemoryTimeSeriesStorage())
     component = IS.TestComponent("component1", 5)
     IS.add_component!(container, component)
     summary(devnull, container)

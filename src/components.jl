@@ -3,15 +3,16 @@ const ComponentsByType = Dict{DataType, Dict{String, <:InfrastructureSystemsType
 
 struct Components
     data::ComponentsByType
+    time_series_storage::TimeSeriesStorage
     validation_descriptors::Vector
 end
 
-function Components(validation_descriptors=nothing)
+function Components(time_series_storage::TimeSeriesStorage, validation_descriptors=nothing)
     if isnothing(validation_descriptors)
         validation_descriptors = Vector()
     end
 
-    return Components(ComponentsByType(), validation_descriptors)
+    return Components(ComponentsByType(), time_series_storage, validation_descriptors)
 end
 
 """
@@ -53,8 +54,23 @@ function add_component!(
         throw(InvalidValue("Invalid value for $(component)"))
     end
 
+    # TODO: this check doesn't work during deserialization.
+    #if has_forecasts(component)
+    #    throw(ArgumentError("cannot add a component with forecasts: $component"))
+    #end
+
+    set_time_series_storage!(component, components.time_series_storage)
     components.data[T][component.name] = component
     return
+end
+
+"""
+Removes all components from the system.
+"""
+function clear_components!(components::Components)
+    for type_ in collect(keys(components.data))
+        remove_components!(type_, components)
+    end
 end
 
 """
@@ -75,11 +91,13 @@ function remove_components!(
         throw(ArgumentError("component $T is not stored"))
     end
 
-    components = pop!(components.data, T)
+    components_ = pop!(components.data, T)
+    for component in values(components_)
+        prepare_for_removal!(component)
+    end
+
     @debug "Removed all components of type" T
-    # Return the components because the higher level needs to delete any forecasts with
-    # the components.
-    return components
+    return
 end
 
 """
@@ -132,10 +150,8 @@ function _remove_component!(
     end
 
     component = pop!(components.data[T], name)
+    prepare_for_removal!(component)
     @debug "Removed component" T name
-    # Return the component because the higher level needs to delete any forecasts with
-    # the component.
-    return component
 end
 
 """
@@ -259,6 +275,18 @@ function iterate_components(components::Components)
     end
 end
 
+function iterate_components_with_forecasts(components::Components)
+    Channel() do channel
+        for comp_dict in values(components.data)
+            for component in values(comp_dict)
+                if has_forecasts(component)
+                    put!(channel, component)
+                end
+            end
+        end
+    end
+end
+
 function JSON2.write(io::IO, components::Components)
     return JSON2.write(io, encode_for_json(components))
 end
@@ -301,4 +329,69 @@ function get_num_components(components::Components)
         count += length(components)
     end
     return count
+end
+
+function clear_forecasts!(components::Components)
+    for component in iterate_components_with_forecasts(components)
+        clear_forecasts!(component)
+    end
+end
+
+function get_forecast_initial_times(components::Components)::Vector{Dates.DateTime}
+    initial_times = Set{Dates.DateTime}()
+    for component in iterate_components_with_forecasts(components)
+        get_forecast_initial_times!(initial_times, component)
+    end
+
+    return sort!(Vector{Dates.DateTime}(collect(initial_times)))
+end
+
+function get_forecasts_initial_time(components::Components)
+    initial_times = get_forecast_initial_times(components)
+    if isempty(initial_times)
+        throw(ArgumentError("no forecasts are stored"))
+    end
+
+    return initial_times[1]
+end
+
+function get_forecasts_last_initial_time(components::Components)
+    initial_times = get_forecast_initial_times(components)
+    if isempty(initial_times)
+        throw(ArgumentError("no forecasts are stored"))
+    end
+
+    return initial_times[end]
+end
+
+"""
+    check_forecast_consistency(components::Components)
+
+Throws DataFormatError if forecasts have inconsistent parameters.
+"""
+function check_forecast_consistency(components::Components)
+    if !validate_forecast_consistency(components)
+        throw(DataFormatError("forecasts have inconsistent parameters"))
+    end
+end
+
+function validate_forecast_consistency(components::Components)
+    # All component initial times must be identical.
+    # We verify resolution and horizon at forecast addition.
+    initial_times = nothing
+    for component in iterate_components_with_forecasts(components)
+        if !validate_forecast_consistency(component)
+            return false
+        end
+        component_initial_times = Set{Dates.DateTime}()
+        get_forecast_initial_times!(component_initial_times, component)
+        if isnothing(initial_times)
+            initial_times = component_initial_times
+        elseif initial_times != component_initial_times
+            @error "initial times don't match" initial_times, component_initial_times
+            return false
+        end
+    end
+
+    return true
 end

@@ -2,8 +2,8 @@
 """Describes how to construct forecasts from raw timeseries data files."""
 mutable struct TimeseriesFileMetadata
     simulation::String  # User description of simulation
-    category::String  # String version of PowerSystems abstract type for forecast component.
-                      # Refer to CATEGORY_STR_TO_COMPONENT.
+    category::String  # String version of abstract type for the forecasted component.
+                      # Calling module should determine the actual type.
     component_name::String  # Name of forecast component
     label::String  # Raw data column for source of timeseries
     scaling_factor::Union{String, Float64}  # Controls normalization of timeseries.
@@ -14,15 +14,31 @@ mutable struct TimeseriesFileMetadata
     data_file::String  # path to the timeseries data file
     percentiles::Vector{Float64}
     forecast_type::String
+    component::Union{Nothing, InfrastructureSystemsType}  # Calling module must set.
+end
+
+function TimeseriesFileMetadata(simulation, category, component_name, label, scaling_factor,
+                                data_file, percentiles, forecast_type)
+    return TimeseriesFileMetadata(
+        simulation, category, component_name, label, scaling_factor, data_file, percentiles,
+        forecast_type, nothing,
+    )
 end
 
 """Reads forecast metadata and fixes relative paths to the data files."""
-function read_timeseries_metadata(file_path::AbstractString)::Vector{TimeseriesFileMetadata}
+function read_time_series_metadata(
+                                   file_path::AbstractString,
+                                   label_mapping::Dict{Tuple{String, String}, String},
+                                  )
     if endswith(file_path, ".json")
         metadata = open(file_path) do io
             metadata = Vector{TimeseriesFileMetadata}()
             data = JSON.parse(io)
             for item in data
+                category = _get_category(item["category"])
+                key = (category, item["label"])
+                @assert haskey(label_mapping, key)
+                label = label_mapping[key]
                 scaling_factor = item["scaling_factor"]
                 if !isa(scaling_factor, AbstractString)
                     scaling_factor = Float64(scaling_factor)
@@ -31,12 +47,12 @@ function read_timeseries_metadata(file_path::AbstractString)::Vector{TimeseriesF
                     item["simulation"],
                     item["category"],
                     item["component_name"],
-                    item["label"],
+                    label,
                     scaling_factor,
                     item["data_file"],
                     # Use default values until CDM data is updated.
                     get(item, "percentiles", []),
-                    get(item, "forecast_type", "Deterministic"),
+                    get(item, "forecast_type", "DeterministicInternal"),
                 ))
             end
             return metadata
@@ -45,16 +61,19 @@ function read_timeseries_metadata(file_path::AbstractString)::Vector{TimeseriesF
         csv = CSV.read(file_path)
         metadata = Vector{TimeseriesFileMetadata}()
         for row in eachrow(csv)
+            key = (lowercase(row.Category), row.Parameter)
+            @assert haskey(label_mapping, key)
+            label = label_mapping[key]
             push!(metadata, TimeseriesFileMetadata(row.Simulation,
                                                    row.Category,
                                                    row.Object,
-                                                   row.Parameter,
+                                                   label,
                                                    row[Symbol("Scaling Factor")],
                                                    row[Symbol("Data File")],
                                                    # TODO: update CDM data for the next
                                                    # two fields.
                                                    [],
-                                                   "Deterministic",
+                                                   "DeterministicInternal",
                                                   )
             )
         end
@@ -69,6 +88,57 @@ function read_timeseries_metadata(file_path::AbstractString)::Vector{TimeseriesF
     end
 
     return metadata
+end
+
+function _get_category(category::String)
+    # HACK alert because of wackiness in PowerSystems RTS data.
+    if category == "LoadZone"
+        category = "bus"
+    end
+
+    return lowercase(category)
+end
+
+"""
+    set_component!(
+                   metadata::TimeseriesFileMetadata,
+                   components::Components,
+                   mod::Module,
+                  )
+
+Set the component value in metadata by looking up the category in module.
+This requires that category be a string version of a component's abstract type.
+Modules can override for custom behavior.
+"""
+function set_component!(
+                        metadata::TimeseriesFileMetadata,
+                        components::Components,
+                        mod::Module,
+                       )
+
+    # TODO: CDM data should change LoadZone to LoadZones.
+    symbol = metadata.category == "LoadZone" ? :LoadZones : Symbol(metadata.category)
+    category = getfield(mod, symbol)
+    if isconcretetype(category)
+        metadata.component = get_component(category, components, metadata.component_name)
+        if isnothing(metadata.component)
+            throw(DataFormatError(
+                "no component category=$category name=$(metadata.component_name)"
+            ))
+        end
+    else
+        components = get_components_by_name(category, components, metadata.component_name)
+        if length(components) == 0
+            @warn "no component category=$category name=$(metadata.component_name)"
+            metadata.component = nothing
+        elseif length(components) == 1
+            metadata.component = components[1]
+        else
+            throw(DataFormatError(
+                "duplicate names type=$(category) name=$(metadata.component_name)"
+            ))
+        end
+    end
 end
 
 struct ForecastInfo
@@ -89,9 +159,8 @@ struct ForecastInfo
 end
 
 function ForecastInfo(metadata::TimeseriesFileMetadata,
-                      component::InfrastructureSystemsType,
                       timeseries::TimeSeries.TimeArray)
-    return ForecastInfo(metadata.simulation, component, metadata.label,
+    return ForecastInfo(metadata.simulation, metadata.component, metadata.label,
                         metadata.scaling_factor, timeseries, metadata.percentiles,
                         metadata.data_file, metadata.forecast_type)
 end
@@ -100,18 +169,18 @@ function get_forecast_type(forecast_info::ForecastInfo)
     return getfield(InfrastructureSystems, Symbol(forecast_info.forecast_type))
 end
 
-struct ForecastInfos
+struct ForecastCache
     forecasts::Vector{ForecastInfo}
     data_files::Dict{String, TimeSeries.TimeArray}
 end
 
-function ForecastInfos()
-    return ForecastInfos(Vector{ForecastInfo}(),
+function ForecastCache()
+    return ForecastCache(Vector{ForecastInfo}(),
                          Dict{String, TimeSeries.TimeArray}())
 end
 
-function _handle_scaling_factor(timeseries::TimeSeries.TimeArray,
-                                scaling_factor::Union{String, Float64})
+function handle_scaling_factor(timeseries::TimeSeries.TimeArray,
+                               scaling_factor::Union{String, Float64})
     if scaling_factor isa String
         if lowercase(scaling_factor) == "max"
             max_value = maximum(TimeSeries.values(timeseries))
@@ -130,18 +199,12 @@ function _handle_scaling_factor(timeseries::TimeSeries.TimeArray,
     return timeseries
 end
 
-function _get_category(metadata::TimeseriesFileMetadata, mod)
-    # TODO: need to fix CDM data
-    category = metadata.category == "LoadZone" ? :LoadZones : Symbol(metadata.category)
-    return getfield(mod, category)
-end
-
-function _add_forecast_info!(infos::ForecastInfos, data_file::AbstractString,
+function _add_forecast_info!(forecast_cache::ForecastCache, data_file::AbstractString,
                              component_name::Union{Nothing, String})
-    if !haskey(infos.data_files, data_file)
-        infos.data_files[data_file] = read_timeseries(data_file, component_name)
+    if !haskey(forecast_cache.data_files, data_file)
+        forecast_cache.data_files[data_file] = read_time_series(data_file, component_name)
         @debug "Added timeseries file" data_file
     end
 
-    return infos.data_files[data_file]
+    return forecast_cache.data_files[data_file]
 end

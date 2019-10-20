@@ -1,8 +1,12 @@
 
 using Test
 using Logging
-import InfrastructureSystems
+import Dates
+import JSON2
+import TimeSeries
+import UUIDs
 
+import InfrastructureSystems
 const IS = InfrastructureSystems
 const BASE_DIR = abspath(joinpath(dirname(Base.find_package("InfrastructureSystems")), ".."))
 const DATA_DIR = joinpath(BASE_DIR, "test", "data")

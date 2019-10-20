@@ -1,19 +1,33 @@
 
+const TIME_SERIES_STORAGE_FILE = "time_series_storage.h5"
+
 mutable struct SystemData <: InfrastructureSystemsType
     components::Components
-    forecasts::Forecasts
+    forecast_metadata::ForecastMetadata
     validation_descriptors::Vector
+    time_series_storage::TimeSeriesStorage
+    time_series_storage_file::Union{Nothing, String}  # only valid during serialization
+    internal::InfrastructureSystemsInternal
 end
 
-function SystemData(; validation_descriptor_file=nothing)
+function SystemData(; validation_descriptor_file=nothing, time_series_in_memory=false)
     if isnothing(validation_descriptor_file)
         validation_descriptors = Vector()
     else
         validation_descriptors = read_validation_descriptor(validation_descriptor_file)
     end
 
-    components = Components(validation_descriptors)
-    return SystemData(components, Forecasts(), validation_descriptors)
+    ts_storage = make_time_series_storage(; in_memory=time_series_in_memory)
+    components = Components(ts_storage, validation_descriptors)
+    return SystemData(components, ForecastMetadata(), validation_descriptors, ts_storage,
+                      nothing, InfrastructureSystemsInternal())
+end
+
+function SystemData(forecast_metadata, validation_descriptors, time_series_storage,
+                    internal)
+    components = Components(time_series_storage, validation_descriptors)
+    return SystemData(components, forecast_metadata, validation_descriptors,
+                      time_series_storage, nothing, internal)
 end
 
 """
@@ -26,38 +40,65 @@ function SystemData(filename::AbstractString)
 end
 
 """
-    add_forecasts!(data::SystemData, forecasts)
+    add_forecasts!(
+                   ::Type{T},
+                   data::SystemData,
+                   metadata_file::AbstractString,
+                   label_mapping::Dict{Tuple{String, String}, String};
+                   resolution=nothing,
+                  ) where T <: InfrastructureSystemsType
 
-Add forecasts.
+Adds forecasts from a metadata file or metadata descriptors.
 
 # Arguments
+- `::Type{T}`: forecasted component type; may be abstract
 - `data::SystemData`: system
-- `forecasts`: iterable (array, iterator, etc.) of Forecast values
-
-Throws DataFormatError if
-- A component-label pair is not unique within a forecast array.
-- A forecast has a different resolution than others.
-- A forecast has a different horizon than others.
-
-Throws ArgumentError if the forecast's component is not stored in the system.
-
+- `metadata_file::AbstractString`: metadata file for timeseries
+  that includes an array of TimeseriesFileMetadata instances or a vector.
+- `resolution::DateTime.Period=nothing`: skip forecast that don't match this resolution.
 """
-function add_forecasts!(data::SystemData, forecasts)
-    if length(forecasts) == 0
-        return
-    end
-
-    for forecast in forecasts
-        _validate_forecast(data, forecast)
-    end
-
-    _add_forecasts!(data.forecasts, forecasts)
+function add_forecasts!(
+                        ::Type{T},
+                        data::SystemData,
+                        metadata_file::AbstractString,
+                        label_mapping::Dict{Tuple{String, String}, String};
+                        resolution=nothing,
+                       ) where T <: InfrastructureSystemsType
+    metadata = read_time_series_metadata(metadata_file, label_mapping)
+    return add_forecasts!(T, data, metadata; resolution=resolution)
 end
 
 """
-    add_forecast!(data::SystemData, forecasts)
+    add_forecasts!(
+                   data::SystemData,
+                   timeseries_metadata::Vector{TimeseriesFileMetadata};
+                   resolution=nothing,
+                  )
 
-Add forecasts.
+Adds forecasts from a metadata file or metadata descriptors.
+
+# Arguments
+- `data::SystemData`: system
+- `timeseries_metadata::Vector{TimeseriesFileMetadata}`: metadata for timeseries
+- `resolution::DateTime.Period=nothing`: skip forecast that don't match this resolution.
+"""
+function add_forecasts!(
+                        ::Type{T},
+                        data::SystemData,
+                        timeseries_metadata::Vector{TimeseriesFileMetadata};
+                        resolution=nothing
+                       ) where T <: InfrastructureSystemsType
+    forecast_cache = ForecastCache()
+
+    for metadata in timeseries_metadata
+        add_forecast!(T, data, forecast_cache, metadata; resolution=resolution)
+    end
+end
+
+"""
+    add_forecast!(data::SystemData, forecast)
+
+Add a forecast.
 
 # Arguments
 - `data::SystemData`: infrastructure
@@ -66,9 +107,28 @@ Add forecasts.
 Throws ArgumentError if the forecast's component is not stored in the system.
 
 """
-function add_forecast!(data::SystemData, forecast::T) where T <: Forecast
-    _validate_forecast(data, forecast)
-    _add_forecasts!(data.forecasts, [forecast])
+function add_forecast!(
+                       data::SystemData,
+                       component::InfrastructureSystemsType,
+                       forecast::Forecast,
+                      )
+    ts_data = TimeSeriesData(get_data(forecast))
+    forecast_internal = make_internal_forecast(forecast, ts_data)
+    add_forecast!(data, component, forecast_internal, ts_data)
+end
+
+function add_forecast!(
+                       data::SystemData,
+                       component::InfrastructureSystemsType,
+                       forecast::ForecastInternal,
+                       ts_data::TimeSeriesData,
+                      )
+    _validate_component(data, component)
+    check_add_forecast!(data.forecast_metadata, forecast)
+    add_forecast!(component, forecast)
+    # TODO: can this be atomic with forecast addition?
+    add_time_series!(data.time_series_storage, get_uuid(component), get_label(forecast),
+                     ts_data)
 end
 
 """
@@ -92,7 +152,7 @@ function add_forecast!(
                        scaling_factor::Union{String, Float64}=1.0,
                       )
     component_name = get_name(component)
-    ts = read_timeseries(filename, component_name)
+    ts = read_time_series(filename, component_name)
     timeseries = ts[Symbol(component_name)]
     _add_forecast!(data, component, label, timeseries, scaling_factor)
 end
@@ -147,96 +207,78 @@ function add_forecast!(
     add_forecast!(data, timeseries, component, label, scaling_factor)
 end
 
-"""
-    make_forecasts(data::SystemData, metadata_file::AbstractString; resolution=nothing)
-
-Makes forecasts from a metadata file.
-
-# Arguments
-- `data::SystemData`: system
-- `metadata_file::AbstractString`: path to metadata file
-- `mod::Module`: calling module
-- `resolution::{Nothing, Dates.Period}`: skip any forecasts that don't match this resolution
-
-See [`TimeseriesFileMetadata`](@ref) for description of what the file should contain.
-"""
-function make_forecasts(data::SystemData, metadata_file::AbstractString, mod::Module;
-                        resolution=nothing)
-    return make_forecasts(data, read_timeseries_metadata(metadata_file), mod;
-                          resolution=resolution)
+function add_forecast!(
+                       ::Type{T},
+                       data::SystemData,
+                       forecast_cache::ForecastCache,
+                       metadata::TimeseriesFileMetadata;
+                       resolution=nothing,
+                      ) where T <: InfrastructureSystemsType
+    set_component!(metadata, data, InfrastructureSystems)
+    component = metadata.component
+    forecast, ts_data = make_forecast!(forecast_cache, metadata; resolution=resolution)
+    if !isnothing(forecast)
+        add_forecast!(data, component, forecast, ts_data)
+    end
 end
 
 """
-    make_forecasts(data::SystemData, timeseries_metadata::Vector{TimeseriesFileMetadata};
+    remove_forecast!(
+                     ::Type{T},
+                     data::SystemData,
+                     component::InfrastructureSystemsType,
+                     initial_time::Dates.DateTime,
+                     label::String,
+                    ) where T <: Forecast
+
+Remove the time series data for a component.
+"""
+function remove_forecast!(
+                          ::Type{T},
+                          data::SystemData,
+                          component::InfrastructureSystemsType,
+                          initial_time::Dates.DateTime,
+                          label::String,
+                         ) where T <: Forecast
+    type_ = forecast_external_to_internal(T)
+    forecast = get_forecast(type_, component, initial_time, label)
+    uuid = get_time_series_uuid(forecast)
+    # TODO: can this be atomic?
+    remove_forecast_internal!(type_, component, initial_time, label)
+    remove_time_series!(data.time_series_storage, uuid, get_uuid(component), label)
+end
+
+"""
+    make_forecast!(timeseries_metadata::TimeseriesFileMetadata;
                    resolution=nothing)
 
-Return a vector of forecasts from a vector of TimeseriesFileMetadata values.
+Return a vector of forecasts from TimeseriesFileMetadata.
 
 # Arguments
-- `data::SystemData`: system
-- `timeseries_metadata::Vector{TimeseriesFileMetadata}`: metadata values
+- `timeseries_metadata::TimeseriesFileMetadata`: metadata
 - `resolution::{Nothing, Dates.Period}`: skip any forecasts that don't match this resolution
 """
-function make_forecasts(
-                        data::SystemData,
-                        timeseries_metadata::Vector{TimeseriesFileMetadata},
-                        mod::Module;
+function make_forecast!(
+                        forecast_cache::ForecastCache,
+                        timeseries_metadata::TimeseriesFileMetadata;
                         resolution=nothing,
                        )
-    forecast_infos = ForecastInfos()
-    for ts_metadata in timeseries_metadata
-        add_forecast_info!(forecast_infos, data, ts_metadata, mod)
-    end
-
-    return _make_forecasts(forecast_infos, resolution)
+    forecast_info = add_forecast_info!(forecast_cache, timeseries_metadata)
+    return _make_forecast(forecast_info, resolution)
 end
 
-"""
-    split_forecasts!(data::SystemData,
-                     forecasts,
-                     interval::Dates.Period,
-                     horizon::Int) where T <: Forecast
-
-Replaces system forecasts with a set of forecasts by incrementing through an iterable
-set of forecasts by interval and horizon.
-
-"""
-function split_forecasts!(
-                          data::SystemData,
-                          forecasts::FlattenIteratorWrapper{T}, # must be an iterable
-                          interval::Dates.Period,
-                          horizon::Int,
-                         ) where T <: Forecast
-    isempty(forecasts) && throw(ArgumentError("Forecasts is empty"))
-    split_forecasts = make_forecasts(forecasts, interval, horizon)
-
-    clear_forecasts!(data.forecasts)
-
-    add_forecasts!(data, split_forecasts)
-
-    return
-end
-
-function JSON2.read(io::IO, ::Type{SystemData})
-    # WARNING: This only works for components defined in InfrastructureSystems.
-    sys = SystemData()
-    component_cache = Dict{Base.UUID, InfrastructureSystemsType}()
-
-    raw = JSON2.read(io, NamedTuple)
-    for c_type_sym in get_component_types_raw(SystemData, raw)
-        c_type = getfield(InfrastructureSystems,
-                          Symbol(strip_module_name(string(c_type_sym))))
-        for component in get_components_raw(SystemData, c_type, raw)
-            comp = convert_type(c_type, component)
-            add_component!(sys, comp)
-            component_cache[get_uuid(comp)] = comp
-        end
+function forecast_external_to_internal(::Type{T}) where T <: Forecast
+    if T <: Deterministic
+        forecast_type = DeterministicInternal
+    elseif T <: Probabilistic
+        forecast_type = ProbabilisticInternal
+    elseif T <: ScenarioBased
+        forecast_type = ScenarioBasedInternal
+    else
+        @assert false
     end
 
-    convert_forecasts!(sys, raw, component_cache)
-
-    sys.validation_descriptors = raw.validation_descriptors
-    return sys
+    return forecast_type
 end
 
 function _add_forecast!(
@@ -246,93 +288,92 @@ function _add_forecast!(
                         timeseries::TimeSeries.TimeArray,
                         scaling_factor,
                        )
-    timeseries = _handle_scaling_factor(timeseries, scaling_factor)
+    timeseries = handle_scaling_factor(timeseries, scaling_factor)
     # TODO: This code path needs to accept a metdata file or parameters telling it which
     # type of forecast to create.
-    forecast = Deterministic(component, label, timeseries)
-    add_forecast!(data, forecast)
+    ts_data = TimeSeriesData(timeseries)
+    forecast = DeterministicInternal(label, ts_data)
+    add_forecast!(data, component, forecast, ts_data)
 end
 
-function _make_forecasts(forecast_infos::ForecastInfos, resolution)
+function _make_forecasts(forecast_cache::ForecastCache, resolution)
     forecasts = Vector{Forecast}()
 
-    for forecast_info in forecast_infos.forecasts
-        len = length(forecast_info.data)
-        @assert len >= 2
-        timestamps = TimeSeries.timestamp(forecast_info.data)
-        res = timestamps[2] - timestamps[1]
-        if !isnothing(resolution) && res != resolution
-            @debug "Skip forecast with resolution=$res; doesn't match user=$resolution"
-            continue
+    for forecast_info in forecast_cache.forecasts
+        forecast = _make_forecast(forecast_info)
+        if !isnothing(forecast)
+            push!(forecasts, forecast)
         end
-
-        timeseries = forecast_info.data[Symbol(get_name(forecast_info.component))]
-        timeseries = _handle_scaling_factor(timeseries, forecast_info.scaling_factor)
-        forecast_type = get_forecast_type(forecast_info)
-        forecast = forecast_type(forecast_info.component, forecast_info.label, timeseries)
-        push!(forecasts, forecast)
     end
 
     return forecasts
 end
 
-function add_forecast_info!(infos::ForecastInfos, data::SystemData,
-                            metadata::TimeseriesFileMetadata, mod::Module)
-    timeseries = _add_forecast_info!(infos, metadata.data_file, metadata.component_name)
-
-    category = _get_category(metadata, mod)
-    component = _get_forecast_component(data, category, metadata.component_name)
-    if isnothing(component)
-        return
+function _make_forecast(forecast_info::ForecastInfo, resolution)
+    len = length(forecast_info.data)
+    @assert len >= 2
+    timestamps = TimeSeries.timestamp(forecast_info.data)
+    res = timestamps[2] - timestamps[1]
+    if !isnothing(resolution) && res != resolution
+        @debug "Skip forecast with resolution=$res; doesn't match user=$resolution"
+        return nothing, nothing
     end
 
-    forecast_info = ForecastInfo(metadata, component, timeseries)
-    push!(infos.forecasts, forecast_info)
-    @debug "Added ForecastInfo" metadata
+    timeseries = forecast_info.data[Symbol(get_name(forecast_info.component))]
+    timeseries = handle_scaling_factor(timeseries, forecast_info.scaling_factor)
+    forecast_type = get_forecast_type(forecast_info)
+    ts_data = TimeSeriesData(timeseries)
+    forecast = forecast_type(forecast_info.label, ts_data)
+    @debug "Created $forecast"
+    return forecast, ts_data
 end
 
-function _get_forecast_component(data::SystemData, category, name)
-    if isconcretetype(category)
-        component = get_component(category, data, name)
-        if isnothing(component)
-            throw(DataFormatError(
-                "Did not find component for forecast category=$category name=$name"
-            ))
-        end
-    else
-        components = get_components_by_name(category, data, name)
-        if length(components) == 0
-            @warn "Did not find component for forecast category=$category name=$name"
-            component = nothing
-        elseif length(components) == 1
-            component = components[1]
-        else
-            msg = "Found duplicate names type=$(category) name=$(name)"
-            throw(DataFormatError(msg))
+function add_forecast_info!(forecast_cache::ForecastCache, metadata::TimeseriesFileMetadata)
+    timeseries = _add_forecast_info!(forecast_cache, metadata.data_file,
+                                     metadata.component_name)
+    forecast_info = ForecastInfo(metadata, timeseries)
+    @debug "Added ForecastInfo" metadata
+    return forecast_info
+end
+
+"""
+    generate_initial_times(data::SystemData, interval::Dates.Period, horizon::Int)
+
+Generates all possible initial times for the stored forecasts. This should be used when
+contiguous forecasts have been stored in chunks, such as a one-year forecast broken up into
+365 one-day forecasts.
+
+Throws ArgumentError if there are no forecasts stored, interval is not a multiple of the
+system's forecast resolution, or if the stored forecasts have overlapping timestamps.
+"""
+function generate_initial_times(data::SystemData, interval::Dates.Period, horizon::Int)
+    for component in iterate_components_with_forecasts(data.components)
+        if has_forecasts(component)
+            return generate_initial_times(component, interval, horizon)
         end
     end
 
-    return component
+    throw(ArgumentError("no forecasts are stored"))
 end
 
 """
 Checks that the component exists in data and the UUID's match.
 """
-function _validate_forecast(data::SystemData, forecast::Forecast)
-    # Validate that each forecast's component is stored in the system.
-    comp = forecast.component
-    ctype = typeof(comp)
-    component = get_component(ctype, data.components, get_name(comp))
-    if isnothing(component)
-        throw(ArgumentError("no $ctype with name=$(get_name(comp)) is stored"))
+function _validate_component(
+                             data::SystemData,
+                             component::T,
+                            ) where T <: InfrastructureSystemsType
+    comp = get_component(T, data.components, get_name(component))
+    if isnothing(comp)
+        throw(ArgumentError("no $T with name=$(get_name(component)) is stored"))
     end
 
-    user_uuid = get_uuid(comp)
-    ps_uuid = get_uuid(component)
+    user_uuid = get_uuid(component)
+    ps_uuid = get_uuid(comp)
     if user_uuid != ps_uuid
         throw(ArgumentError(
-            "forecast component UUID doesn't match, perhaps it was copied?; " *
-            "$ctype name=$(get_name(comp)) user=$user_uuid system=$ps_uuid"
+            "comp UUID doesn't match, perhaps it was copied?; " *
+            "$T name=$(get_name(component)) user=$user_uuid system=$ps_uuid"
         ))
     end
 end
@@ -349,14 +390,6 @@ function get_components_raw(
     return get_components_raw(Components, T, raw.components)
 end
 
-function convert_forecasts!(
-                            data::SystemData,
-                            raw::NamedTuple,
-                            component_cache::Dict,
-                           ) where T <: Forecast
-    return convert_type!(data.forecasts, raw.forecasts, component_cache)
-end
-
 function compare_values(x::SystemData, y::SystemData)::Bool
     match = true
     for key in keys(x.components.data)
@@ -366,7 +399,7 @@ function compare_values(x::SystemData, y::SystemData)::Bool
         end
     end
 
-    if !compare_values(x.forecasts.data, y.forecasts.data)
+    if !compare_values(x.forecast_metadata, y.forecast_metadata)
         @debug "System forecasts do not match"
         match = false
     end
@@ -374,34 +407,135 @@ function compare_values(x::SystemData, y::SystemData)::Bool
     return match
 end
 
-
 function remove_component!(::Type{T}, data::SystemData, name) where T
     component = remove_component!(T, data.components, name)
-    remove_forecasts_with_component(data, component)
 end
 
 function remove_component!(data::SystemData, component)
     remove_component!(data.components, component)
-    remove_forecasts_with_component(data, component)
 end
 
 function remove_components!(::Type{T}, data::SystemData) where T
-    component_dict = remove_components!(T, data.components)
-    for component in values(component_dict)
-        remove_forecasts_with_component(data, component)
+    remove_components!(T, data.components)
+end
+
+function clear_forecasts!(data::SystemData)
+    clear_forecasts!(data.components)
+    clear_time_series!(data.time_series_storage)
+end
+
+function iterate_forecasts(data::SystemData)
+    Channel() do channel
+        for component in iterate_components_with_forecasts(data.components)
+            for forecast in iterate_forecasts(component)
+                time_series = get_time_series(data.time_series_storage,
+                                              get_time_series_uuid(forecast))
+                put!(channel, make_public_forecast(forecast, time_series))
+            end
+        end
     end
 end
 
-function remove_forecasts_with_component(data::SystemData, component)
-    uuid = get_uuid(component)
-    to_delete = [f for f in iterate_forecasts(data) if get_uuid(get_component(f)) == uuid]
-    for forecast in to_delete
-        remove_forecast!(data, forecast)
+"""
+Return the time delta between the first two stored forecasts.
+if less than two are stored, return Dates.Second(0).
+"""
+function get_forecasts_interval(data::SystemData)
+    initial_times = get_forecast_initial_times(data)
+    if length(initial_times) <= 1
+        return Dates.Second(0)
     end
+
+    return initial_times[2] - initial_times[1]
+end
+
+"""
+    prepare_for_serialization!(data::SystemData, filename::AbstractString)
+
+Parent object should call this prior to serialization so that SystemData can store the
+appropriate path information for the time series data.
+"""
+function prepare_for_serialization!(data::SystemData, filename::AbstractString)
+    dir = dirname(filename)
+    base = splitext(basename(filename))[1]
+    data.time_series_storage_file = joinpath(dir, base * "_" * TIME_SERIES_STORAGE_FILE)
+end
+
+function JSON2.write(io::IO, data::SystemData)
+    return JSON2.write(io, encode_for_json(data))
+end
+
+function JSON2.write(data::SystemData)
+    return JSON2.write(encode_for_json(data))
+end
+
+function encode_for_json(data::SystemData)
+    if isnothing(data.time_series_storage_file)
+        data.time_series_storage_file = TIME_SERIES_STORAGE_FILE
+    end
+
+    json_data = Dict()
+    for field in (:components, :forecast_metadata, :validation_descriptors,
+                  :time_series_storage_file, :internal)
+        json_data[string(field)] = getfield(data, field)
+    end
+
+    serialize(data.time_series_storage, data.time_series_storage_file)
+    return json_data
+end
+
+function JSON2.read(io::IO, ::Type{SystemData})
+    raw = JSON2.read(io, NamedTuple)
+    sys = deserialize(SystemData, InfrastructureSystemsType, raw)
+    return sys
+end
+
+function deserialize(
+                     ::Type{SystemData},
+                     ::Type{T},
+                     raw::NamedTuple,
+                    ) where T <: InfrastructureSystemsType
+    forecast_metadata = convert_type(ForecastMetadata, raw.forecast_metadata)
+    # TODO: This code doesn't allow for remembering the type of TimeSeriesStorage used by
+    # the original SystemData. It will always use Hdf5TimeSeriesStorage after
+    # deserialization. This could be fixed. Need to build an InMemoryTimeSeriesStorage
+    # object by iterating over an Hdf5TimeSeriesStorage file.
+    time_series_storage = from_file(Hdf5TimeSeriesStorage, raw.time_series_storage_file)
+
+    # OPT: This looks odd and is wasteful.
+    # JSON2 creates NamedTuples recursively. JSON creates dicts, which is what we need.
+    # Could be optimized.
+    validation_descriptors = JSON.parse(JSON2.write(raw.validation_descriptors))
+
+    internal = convert_type(InfrastructureSystemsInternal, raw.internal)
+    sys = SystemData(forecast_metadata, validation_descriptors, time_series_storage,
+                     internal)
+    deserialize_components(T, sys, raw)
+    return sys
+end
+
+"""
+Deserializes components defined in InfrastructureSystems. Parent modules should override
+this by changing the component type and module.
+"""
+function deserialize_components(
+                                ::Type{InfrastructureSystemsType},
+                                sys::SystemData,
+                                raw::NamedTuple,
+                               )
+    for c_type_sym in get_component_types_raw(SystemData, raw)
+        c_type = getfield(InfrastructureSystems,
+                          Symbol(strip_module_name(string(c_type_sym))))
+        for component in get_components_raw(SystemData, c_type, raw)
+            comp = convert_type(c_type, component)
+            add_component!(sys, comp)
+        end
+    end
+
+    return
 end
 
 # Redirect functions to Components and Forecasts
-
 
 add_component!(data::SystemData, component; kwargs...) = add_component!(
     data.components, component; kwargs...
@@ -415,17 +549,18 @@ get_components(::Type{T}, data::SystemData) where T = get_components(T, data.com
 get_components_by_name(::Type{T}, data::SystemData, args...) where T =
     get_components_by_name(T, data.components, args...)
 
-clear_forecasts!(data::SystemData) = clear_forecasts!(data.forecasts)
-get_component_forecasts(::Type{T}, data::SystemData, args...) where T =
-    get_component_forecasts(T, data.forecasts, args...)
-get_forecasts(::Type{T}, data::SystemData, args...) where T = get_forecasts(
-    T, data.forecasts, args...
-)
-iterate_forecasts(data::SystemData) = iterate_forecasts(data.forecasts)
-remove_forecast!(data::SystemData, args...) = remove_forecast!(data.forecasts, args...)
-
-get_forecast_initial_times(data::SystemData) = get_forecast_initial_times(data.forecasts)
-get_forecasts_horizon(data::SystemData) = get_forecasts_horizon(data.forecasts)
-get_forecasts_initial_time(data::SystemData) = get_forecasts_initial_time(data.forecasts)
-get_forecasts_interval(data::SystemData) = get_forecasts_interval(data.forecasts)
-get_forecasts_resolution(data::SystemData) = get_forecasts_resolution(data.forecasts)
+#get_component_forecasts(::Type{T}, data::SystemData, args...) where T =
+#    get_component_forecasts(T, data.forecasts, args...)
+#get_forecasts(::Type{T}, data::SystemData, component, args...) where T = get_forecasts(
+#    T, component, args...
+#)
+get_forecast_initial_times(data::SystemData) = get_forecast_initial_times(data.components)
+get_forecasts_initial_time(data::SystemData) = get_forecasts_initial_time(data.components)
+get_forecasts_last_initial_time(data::SystemData) = get_forecasts_last_initial_time(data.components)
+get_forecasts_horizon(data::SystemData) = get_forecasts_horizon(data.forecast_metadata)
+get_forecasts_resolution(data::SystemData) = get_forecasts_resolution(data.forecast_metadata)
+clear_components!(data::SystemData) = clear_components!(data.components)
+set_component!(metadata::TimeseriesFileMetadata, data::SystemData, mod::Module) =
+    set_component!(metadata, data.components, mod)
+check_forecast_consistency(data::SystemData) = check_forecast_consistency(data.components)
+validate_forecast_consistency(data::SystemData) = validate_forecast_consistency(data.components)
