@@ -1,4 +1,8 @@
 # InfrastructureSystems
+
+### 0.2.0
+- Update use of forecasts to store them in disk
+
 ### 0.1.4
 - Bugfix: Changed the use of get_data to get_time series in get_forecast_value 577f5e2
 
