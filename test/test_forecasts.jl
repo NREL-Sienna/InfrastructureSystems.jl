@@ -64,6 +64,14 @@ end
     IS.add_forecast!(sys, component, forecast)
     forecast = IS.get_forecast(IS.Deterministic, component, dates[1], "val")
     @test forecast isa IS.Deterministic
+
+    name = "Component2"
+    component2 = IS.TestComponent(name, component_val)
+    @test_throws ArgumentError IS.add_forecast!(sys, component2, forecast)
+
+    # The component name will exist but not the component.
+    component3 = IS.TestComponent(name, component_val)
+    @test_throws ArgumentError IS.add_forecast!(sys, component3, forecast)
 end
 
 # TODO: this is disabled because PowerSystems currently does not set labels correctly.

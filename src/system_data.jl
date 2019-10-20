@@ -436,15 +436,6 @@ function iterate_forecasts(data::SystemData)
     end
 end
 
-function get_forecast_initial_times(
-                                    ::Type{T},
-                                    data::SystemData,
-                                    component::InfrastructureSystemsType
-                                   ) where T <: Forecast
-    forecast_type = forecast_external_to_internal(T)
-    return get_forecast_initial_times(forecast_type, component)
-end
-
 """
 Return the time delta between the first two stored forecasts.
 if less than two are stored, return Dates.Second(0).
@@ -459,12 +450,12 @@ function get_forecasts_interval(data::SystemData)
 end
 
 """
-    prepare_for_serialization(data::SystemData, filename::AbstractString)
+    prepare_for_serialization!(data::SystemData, filename::AbstractString)
 
 Parent object should call this prior to serialization so that SystemData can store the
 appropriate path information for the time series data.
 """
-function prepare_for_serialization(data::SystemData, filename::AbstractString)
+function prepare_for_serialization!(data::SystemData, filename::AbstractString)
     dir = dirname(filename)
     base = splitext(basename(filename))[1]
     data.time_series_storage_file = joinpath(dir, base * "_" * TIME_SERIES_STORAGE_FILE)
