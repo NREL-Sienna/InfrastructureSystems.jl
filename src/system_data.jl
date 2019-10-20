@@ -616,4 +616,5 @@ get_forecasts_resolution(data::SystemData) = get_forecasts_resolution(data.forec
 clear_components!(data::SystemData) = clear_components!(data.components)
 set_component!(metadata::TimeseriesFileMetadata, data::SystemData, mod::Module) =
     set_component!(metadata, data.components, mod)
+check_forecast_consistency(data::SystemData) = check_forecast_consistency(data.components)
 validate_forecast_consistency(data::SystemData) = validate_forecast_consistency(data.components)

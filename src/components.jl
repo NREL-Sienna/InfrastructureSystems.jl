@@ -364,6 +364,17 @@ function get_forecasts_last_initial_time(components::Components)
     return initial_times[end]
 end
 
+"""
+    check_forecast_consistency(components::Components)
+
+Throws DataFormatError if forecasts have inconsistent parameters.
+"""
+function check_forecast_consistency(components::Components)
+    if !validate_forecast_consistency(components)
+        throw(DataFormatError("forecasts have inconsistent parameters"))
+    end
+end
+
 function validate_forecast_consistency(components::Components)
     # All component initial times must be identical.
     # We verify resolution and horizon at forecast addition.

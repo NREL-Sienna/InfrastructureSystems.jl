@@ -136,6 +136,9 @@ end
     @test_logs((:error, r"initial times don't match"),
         @test !IS.validate_forecast_consistency(sys)
     )
+    @test_logs((:error, r"initial times don't match"),
+        @test_throws IS.DataFormatError !IS.check_forecast_consistency(sys)
+    )
 
     IS.clear_forecasts!(sys)
     for component in components
