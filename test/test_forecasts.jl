@@ -290,6 +290,12 @@ end
     interval = Dates.Hour(4)
     initial_times = IS.generate_initial_times(component, interval, 6)
     validate_generated_initial_times(initial_times, dates[1], interval, 5)
+
+    # Test through the system.
+    initial_times = IS.generate_initial_times(sys, interval, 6)
+    validate_generated_initial_times(initial_times, dates[1], interval, 5)
+    IS.clear_forecasts!(sys)
+    @test_throws ArgumentError IS.generate_initial_times(sys, interval, 6)
 end
 
 @testset "Test generate_initial_times contiguous" begin
