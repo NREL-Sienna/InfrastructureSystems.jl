@@ -146,11 +146,26 @@ function get_forecast(
 end
 
 """
-    get_forecast_values(component::InfrastructureSystemsType, forecast::Forecast)
+    get_forecast_values(
+                        ::Type{T},
+                        component::InfrastructureSystemsType,
+                        initial_time::Dates.DateTime,
+                        label::AbstractString,
+                       ) where T <: Forecast
 
 Return a TimeSeries.TimeArray where the forecast data has been multiplied by the forecasted
 component field.
 """
+function get_forecast_values(
+                             ::Type{T},
+                             component::InfrastructureSystemsType,
+                             initial_time::Dates.DateTime,
+                             label::AbstractString,
+                            ) where T <: Forecast
+    forecast = get_forecast(T, component, initial_time, label)
+    return get_forecast_values(component, forecast)
+end
+
 function get_forecast_values(component::InfrastructureSystemsType, forecast::Forecast)
     scaling_factors = get_data(forecast)
     label = get_label(forecast)

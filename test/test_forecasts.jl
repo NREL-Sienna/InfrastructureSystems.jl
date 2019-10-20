@@ -214,8 +214,14 @@ end
     IS.add_forecast!(sys, ta, component, "val")
     forecast = IS.get_forecast(IS.Deterministic, component, dates[1], "val")
 
+    # Test both versions of the function.
     vals = IS.get_forecast_values(component, forecast)
+    @test TimeSeries.timestamp(vals) == dates
     @test TimeSeries.values(vals) == data .* component_val
+
+    vals2 = IS.get_forecast_values(IS.Deterministic, component, dates[1], "val")
+    @test TimeSeries.timestamp(vals2) == dates
+    @test TimeSeries.values(vals2) == data .* component_val
 end
 
 @testset "Test get subset of forecast" begin
