@@ -100,6 +100,10 @@ end
 
 @testset "Test forecast initial times" begin
     sys = IS.SystemData()
+
+    @test_throws ArgumentError IS.get_forecasts_initial_time(sys)
+    @test_throws ArgumentError IS.get_forecasts_last_initial_time(sys)
+
     dates1 = collect(Dates.DateTime("1/1/2020 00:00:00", "d/m/y H:M:S") : Dates.Hour(1) :
                      Dates.DateTime("1/1/2020 23:00:00", "d/m/y H:M:S"))
     dates2 = collect(Dates.DateTime("1/2/2020 00:00:00", "d/m/y H:M:S") : Dates.Hour(1) :

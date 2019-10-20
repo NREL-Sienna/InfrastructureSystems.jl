@@ -349,7 +349,7 @@ end
 function get_forecasts_initial_time(components::Components)
     initial_times = get_forecast_initial_times(components)
     if isempty(initial_times)
-        raise(ArgumentError("no forecasts are stored"))
+        throw(ArgumentError("no forecasts are stored"))
     end
 
     return initial_times[1]
@@ -358,7 +358,7 @@ end
 function get_forecasts_last_initial_time(components::Components)
     initial_times = get_forecast_initial_times(components)
     if isempty(initial_times)
-        raise(ArgumentError("no forecasts are stored"))
+        throw(ArgumentError("no forecasts are stored"))
     end
 
     return initial_times[end]

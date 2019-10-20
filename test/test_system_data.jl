@@ -30,6 +30,8 @@
     IS.remove_components!(IS.TestComponent, data)
     components = IS.get_components(IS.TestComponent, data)
     @test length(components) == 0
+
+    @test_throws ArgumentError IS.remove_components!(IS.TestComponent, data)
 end
 
 @testset "Test forecasts" begin
