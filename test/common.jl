@@ -23,11 +23,9 @@ function get_all_forecasts(data)
 end
 
 function create_time_series_data()
-    dates = collect(Dates.DateTime("1/1/2020 00:00:00", "d/m/y H:M:S") : Dates.Hour(1) :
-                    Dates.DateTime("1/1/2020 23:00:00", "d/m/y H:M:S"))
+    dates = collect(Dates.DateTime("1/1/2020 00:00:00", "d/m/y H:M:S") : Dates.Hour(1):Dates.DateTime("1/1/2020 23:00:00", "d/m/y H:M:S"))
     data = collect(1:24)
     component_name = "gen"
     ta = TimeSeries.TimeArray(dates, data, [component_name])
     return IS.TimeSeriesData(ta)
 end
-

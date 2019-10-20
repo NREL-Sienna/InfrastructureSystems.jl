@@ -56,8 +56,7 @@ end
     component = IS.TestComponent(name, component_val)
     IS.add_component!(sys, component)
 
-    dates = collect(Dates.DateTime("1/1/2020 00:00:00", "d/m/y H:M:S") : Dates.Hour(1) :
-                    Dates.DateTime("1/1/2020 23:00:00", "d/m/y H:M:S"))
+    dates = collect(Dates.DateTime("1/1/2020 00:00:00", "d/m/y H:M:S") : Dates.Hour(1) : Dates.DateTime("1/1/2020 23:00:00", "d/m/y H:M:S"))
     data = collect(1:24)
     ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
     forecast = IS.Deterministic("val", ta)
@@ -97,8 +96,7 @@ end
     component = IS.TestComponent(name, component_val)
     IS.add_component!(sys, component)
 
-    dates = collect(Dates.DateTime("1/1/2020 00:00:00", "d/m/y H:M:S") : Dates.Hour(1) :
-                    Dates.DateTime("1/1/2020 23:00:00", "d/m/y H:M:S"))
+    dates = collect(Dates.DateTime("1/1/2020 00:00:00", "d/m/y H:M:S") : Dates.Hour(1) : Dates.DateTime("1/1/2020 23:00:00", "d/m/y H:M:S"))
     data = collect(1:24)
     ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
     IS.add_forecast!(sys, ta, component, "val")
@@ -112,10 +110,8 @@ end
     @test_throws ArgumentError IS.get_forecasts_initial_time(sys)
     @test_throws ArgumentError IS.get_forecasts_last_initial_time(sys)
 
-    dates1 = collect(Dates.DateTime("1/1/2020 00:00:00", "d/m/y H:M:S") : Dates.Hour(1) :
-                     Dates.DateTime("1/1/2020 23:00:00", "d/m/y H:M:S"))
-    dates2 = collect(Dates.DateTime("1/2/2020 00:00:00", "d/m/y H:M:S") : Dates.Hour(1) :
-                     Dates.DateTime("1/2/2020 23:00:00", "d/m/y H:M:S"))
+    dates1 = collect(Dates.DateTime("1/1/2020 00:00:00", "d/m/y H:M:S") : Dates.Hour(1) : Dates.DateTime("1/1/2020 23:00:00", "d/m/y H:M:S"))
+    dates2 = collect(Dates.DateTime("1/2/2020 00:00:00", "d/m/y H:M:S") : Dates.Hour(1) : Dates.DateTime("1/2/2020 23:00:00", "d/m/y H:M:S"))
     data = collect(1:24)
     components = []
 
@@ -222,8 +218,7 @@ end
     component = IS.TestComponent(name, component_val)
     IS.add_component!(sys, component)
 
-    dates = collect(Dates.DateTime("1/1/2020 00:00:00", "d/m/y H:M:S") : Dates.Hour(1) :
-                    Dates.DateTime("1/1/2020 23:00:00", "d/m/y H:M:S"))
+    dates = collect(Dates.DateTime("1/1/2020 00:00:00", "d/m/y H:M:S") : Dates.Hour(1) : Dates.DateTime("1/1/2020 23:00:00", "d/m/y H:M:S"))
     data = collect(1:24)
     ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
     IS.add_forecast!(sys, ta, component, "val")
@@ -245,8 +240,7 @@ end
     @test length(components) == 1
     component = components[1]
 
-    dates = collect(Dates.DateTime("1/1/2020 00:00:00", "d/m/y H:M:S") : Dates.Hour(1) :
-                    Dates.DateTime("1/1/2020 23:00:00", "d/m/y H:M:S"))
+    dates = collect(Dates.DateTime("1/1/2020 00:00:00", "d/m/y H:M:S") : Dates.Hour(1) : Dates.DateTime("1/1/2020 23:00:00", "d/m/y H:M:S"))
     data = collect(1:24)
 
     ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
@@ -274,8 +268,7 @@ end
     @test length(components) == 1
     component = components[1]
 
-    dates = collect(Dates.DateTime("1/1/2020 00:00:00", "d/m/y H:M:S") : Dates.Hour(1) :
-                    Dates.DateTime("1/1/2020 23:00:00", "d/m/y H:M:S"))
+    dates = collect(Dates.DateTime("1/1/2020 00:00:00", "d/m/y H:M:S") : Dates.Hour(1) : Dates.DateTime("1/1/2020 23:00:00", "d/m/y H:M:S"))
     data = collect(1:24)
 
     ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
@@ -313,10 +306,8 @@ end
     @test length(components) == 1
     component = components[1]
 
-    dates1 = collect(Dates.DateTime("1/1/2020 00:00:00", "d/m/y H:M:S") : Dates.Hour(1) :
-                     Dates.DateTime("1/1/2020 23:00:00", "d/m/y H:M:S"))
-    dates2 = collect(Dates.DateTime("2/1/2020 00:00:00", "d/m/y H:M:S") : Dates.Hour(1) :
-                     Dates.DateTime("2/1/2020 23:00:00", "d/m/y H:M:S"))
+    dates1 = collect(Dates.DateTime("1/1/2020 00:00:00", "d/m/y H:M:S") : Dates.Hour(1) : Dates.DateTime("1/1/2020 23:00:00", "d/m/y H:M:S"))
+    dates2 = collect(Dates.DateTime("2/1/2020 00:00:00", "d/m/y H:M:S") : Dates.Hour(1) : Dates.DateTime("2/1/2020 23:00:00", "d/m/y H:M:S"))
     data = collect(1:24)
 
     ta1 = TimeSeries.TimeArray(dates1, data, [IS.get_name(component)])
@@ -356,10 +347,8 @@ end
     @test length(components) == 1
     component = components[1]
 
-    dates1 = collect(Dates.DateTime("1/1/2020 00:00:00", "d/m/y H:M:S") : Dates.Hour(1) :
-                     Dates.DateTime("1/1/2020 23:00:00", "d/m/y H:M:S"))
-    dates2 = collect(Dates.DateTime("2/1/2020 01:00:00", "d/m/y H:M:S") : Dates.Hour(1) :
-                     Dates.DateTime("3/1/2020 00:00:00", "d/m/y H:M:S"))
+    dates1 = collect(Dates.DateTime("1/1/2020 00:00:00", "d/m/y H:M:S") : Dates.Hour(1) : Dates.DateTime("1/1/2020 23:00:00", "d/m/y H:M:S"))
+    dates2 = collect(Dates.DateTime("2/1/2020 01:00:00", "d/m/y H:M:S") : Dates.Hour(1) : Dates.DateTime("3/1/2020 00:00:00", "d/m/y H:M:S"))
     data = collect(1:24)
 
     ta1 = TimeSeries.TimeArray(dates1, data, [IS.get_name(component)])
@@ -378,8 +367,7 @@ end
     component = IS.TestComponent(name, 5)
     IS.add_component!(sys1, component)
 
-    dates = collect(Dates.DateTime("1/1/2020 00:00:00", "d/m/y H:M:S") : Dates.Hour(1) :
-                    Dates.DateTime("1/1/2020 23:00:00", "d/m/y H:M:S"))
+    dates = collect(Dates.DateTime("1/1/2020 00:00:00", "d/m/y H:M:S") : Dates.Hour(1) : Dates.DateTime("1/1/2020 23:00:00", "d/m/y H:M:S"))
     data = collect(1:24)
     ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
     IS.add_forecast!(sys1, ta, component, "val")
@@ -462,8 +450,7 @@ end
     component = IS.TestComponent(name, 5)
     IS.add_component!(sys, component)
 
-    dates = collect(Dates.DateTime("1/1/2020 00:00:00", "d/m/y H:M:S") : Dates.Hour(1) :
-                    Dates.DateTime("1/1/2020 23:00:00", "d/m/y H:M:S"))
+    dates = collect(Dates.DateTime("1/1/2020 00:00:00", "d/m/y H:M:S") : Dates.Hour(1) : Dates.DateTime("1/1/2020 23:00:00", "d/m/y H:M:S"))
     data = ones(24, 2)
     ta = TimeSeries.TimeArray(dates, data)
     forecast = IS.ScenarioBased(label, ta)
