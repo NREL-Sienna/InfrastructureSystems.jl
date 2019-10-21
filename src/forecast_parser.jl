@@ -36,9 +36,7 @@ function read_time_series_metadata(
             data = JSON.parse(io)
             for item in data
                 category = _get_category(item["category"])
-                key = (category, item["label"])
-                @assert haskey(label_mapping, key)
-                label = label_mapping[key]
+                label = _get_label(label_mapping, category, item["label"])
                 scaling_factor = item["scaling_factor"]
                 if !isa(scaling_factor, AbstractString)
                     scaling_factor = Float64(scaling_factor)
@@ -61,9 +59,8 @@ function read_time_series_metadata(
         csv = CSV.read(file_path)
         metadata = Vector{TimeseriesFileMetadata}()
         for row in eachrow(csv)
-            key = (lowercase(row.Category), row.Parameter)
-            @assert haskey(label_mapping, key)
-            label = label_mapping[key]
+            category = _get_category(row.Category)
+            label = _get_label(label_mapping, category, row.Parameter)
             push!(metadata, TimeseriesFileMetadata(row.Simulation,
                                                    row.Category,
                                                    row.Object,
@@ -97,6 +94,18 @@ function _get_category(category::String)
     end
 
     return lowercase(category)
+end
+
+function _get_label(label_mapping, category, custom_label)
+    key = (category, custom_label)
+    if haskey(label_mapping, key)
+        label = label_mapping[key]
+    else
+        @warn "no label mapping for" key
+        label = custom_label
+    end
+
+    return label
 end
 
 """
