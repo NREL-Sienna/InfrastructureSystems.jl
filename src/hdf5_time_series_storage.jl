@@ -5,20 +5,33 @@ const HDF5_TS_ROOT_PATH = "time_series"
 
 """
 Stores all time series data in an HDF5 file.
+
+The file used is assumed to be temporary and will be automatically deleted when there are
+no more references to the storage object.
 """
-struct Hdf5TimeSeriesStorage <: TimeSeriesStorage
+mutable struct Hdf5TimeSeriesStorage <: TimeSeriesStorage
     file_path::String
+
+    function Hdf5TimeSeriesStorage(file_path)
+        storage = new(file_path)
+        finalizer(_cleanup, storage)
+        return storage
+    end
 end
 
 """
 Constructs Hdf5TimeSeriesStorage by creating a new file.
 """
-function Hdf5TimeSeriesStorage(; filename=nothing)
-    file_path = isnothing(filename) ? tempname() * ".h5" : filename
-    storage = Hdf5TimeSeriesStorage(file_path)
+function Hdf5TimeSeriesStorage()
+    storage = Hdf5TimeSeriesStorage(tempname() * ".h5")
     _make_file(storage)
-    @debug "Created time series storage file." storage.file_path
     return storage
+end
+
+function _cleanup(storage::Hdf5TimeSeriesStorage)
+    if isfile(storage.file_path)
+        rm(storage.file_path)
+    end
 end
 
 """
