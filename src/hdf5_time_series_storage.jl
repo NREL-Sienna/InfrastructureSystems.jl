@@ -23,7 +23,9 @@ end
 Constructs Hdf5TimeSeriesStorage by creating a new file.
 """
 function Hdf5TimeSeriesStorage()
-    storage = Hdf5TimeSeriesStorage(tempname() * ".h5")
+    filename, io = mktemp()
+    close(io)
+    storage = Hdf5TimeSeriesStorage(filename)
     _make_file(storage)
     return storage
 end
