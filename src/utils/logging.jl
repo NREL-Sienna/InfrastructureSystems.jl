@@ -105,7 +105,13 @@ mutable struct LogEvent
     suppressed::Int
 end
 
-LogEvent(file, line, id, message, level) = LogEvent(file, line, id, message, level, 1, 0)
+function LogEvent(file, line, id, message, level)
+    if isnothing(file)
+        file = "None"
+    end
+
+    LogEvent(file, line, id, message, level, 1, 0)
+end
 
 struct LogEventTracker
     events::Dict{Logging.LogLevel, Dict{Symbol, LogEvent}}
