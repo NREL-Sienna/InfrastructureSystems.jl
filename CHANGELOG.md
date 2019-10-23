@@ -1,5 +1,9 @@
 # InfrastructureSystems
 
+## 0.2.2
+
+- Automatic deletition of the temporary files
+
 ## 0.2.1
 
 - Remove assertion when component label is not present
