@@ -49,71 +49,6 @@ function Base.summary(forecast::ForecastInternal)
     return "$(typeof(forecast)) forecast"
 end
 
-#function Base.summary(forecasts::Forecasts)
-#    return "$(typeof(forecasts)): $(get_num_forecasts(forecasts))"
-#end
-#
-#function Base.show(io::IO, forecasts::Forecasts)
-#    i = 1
-#    for forecast in iterate_forecasts(forecasts)
-#        if i <= MAX_SHOW_FORECASTS
-#            show(io, forecast)
-#            println(io)
-#        end
-#        i += 1
-#    end
-#
-#    if i > MAX_SHOW_FORECASTS
-#        num = i - MAX_SHOW_FORECASTS
-#        println(io, "\n***Omitted $num forecasts***\n")
-#    end
-#end
-
-#function Base.show(io::IO, ::MIME"text/plain", forecasts::Forecasts)
-#    initial_times, dfs = create_forecasts_df(forecasts)
-#    println(io, "Forecasts")
-#    println(io, "=========")
-#    println(io, "Resolution: $(forecasts.resolution)")
-#    println(io, "Horizon: $(forecasts.horizon)")
-#    println(io, "Interval: $(forecasts.interval)")
-#    println(io, "Num initial times: $(length(initial_times))")
-#    println(io, "Num forecasts: $(get_num_forecasts(forecasts))\n")
-#    println(io, "---------------------------------")
-#
-#    for (initial_time, df) in zip(initial_times, dfs)
-#        println(io, "Initial Time: $initial_time")
-#        println(io, "---------------------------------")
-#        show(io, df)
-#    end
-#
-#    if length(initial_times) > MAX_SHOW_FORECAST_INITIAL_TIMES
-#        num = length(initial_times) - MAX_SHOW_FORECAST_INITIAL_TIMES
-#        println(io, "\n\n***Omitted tables for $num initial times***\n")
-#    end
-#end
-#
-#function Base.show(io::IO, ::MIME"text/html", forecasts::Forecasts)
-#    initial_times, dfs = create_forecasts_df(forecasts)
-#    println(io, "<h2>Forecasts</h2>")
-#    println(io, "<p><b>Resolution</b>: $(forecasts.resolution)</p>")
-#    println(io, "<p><b>Horizon</b>: $(forecasts.horizon)</p>")
-#    println(io, "<p><b>Interval</b>: $(forecasts.interval)</p>")
-#    println(io, "<p><b>Num initial times</b>: $(length(initial_times))</p>")
-#    println(io, "<p><b>Num forecasts</b>: $(get_num_forecasts(forecasts))</p>")
-#
-#    for (initial_time, df) in zip(initial_times, dfs)
-#        println(io, "<p><b>Initial Time</b>: $initial_time</p>")
-#        withenv("LINES" => 100, "COLUMNS" => 200) do
-#            show(io, MIME"text/html"(), df)
-#        end
-#    end
-#
-#    if length(initial_times) > MAX_SHOW_FORECAST_INITIAL_TIMES
-#        num = length(initial_times) - MAX_SHOW_FORECAST_INITIAL_TIMES
-#        println(io, "<p><b>Omitted tables for $num initial times</b></p>")
-#    end
-#end
-
 function Base.show(io::IO, data::SystemData)
     show(io, data.components)
     println(io, "\n")
@@ -123,13 +58,32 @@ end
 function Base.show(io::IO, ::MIME"text/plain", data::SystemData)
     show(io, MIME"text/plain"(), data.components)
     println(io, "\n")
-    show(io, MIME"text/plain"(), data.forecast_metadata)
+
+    println(io, "Forecasts")
+    println(io, "=========")
+    println(io, "Resolution: $(Dates.Minute(get_forecasts_resolution(data)))")
+    println(io, "Horizon: $(get_forecasts_horizon(data))")
+    initial_times = [string(x) for x in get_forecast_initial_times(data)]
+    println(io, "Initial Times: $(join(initial_times, ", "))")
+    println(io, "Interval: $(get_forecasts_interval(data))")
+    component_count, forecast_count = get_forecast_counts(data)
+    println(io, "Components with Forecasts: $component_count")
+    println(io, "Total Forecasts: $forecast_count")
 end
 
 function Base.show(io::IO, ::MIME"text/html", data::SystemData)
     show(io, MIME"text/html"(), data.components)
     println(io, "\n")
-    show(io, MIME"text/html"(), data.forecast_metadata)
+
+    println(io, "<h2>Forecasts</h2>")
+    println(io, "<p><b>Resolution</b>: $(Dates.Minute(get_forecasts_resolution(data)))</p>")
+    println(io, "<p><b>Horizon</b>: $(get_forecasts_horizon(data))</p>")
+    initial_times = [string(x) for x in get_forecast_initial_times(data)]
+    println(io, "<p><b>Initial Times</b>: $(join(initial_times, ", "))</p>")
+    println(io, "<p><b>Interval</b>: $(get_forecasts_interval(data))</p>")
+    component_count, forecast_count = get_forecast_counts(data)
+    println(io, "<p><b>Components with Forecasts</b>: $component_count</p>")
+    println(io, "<p><b>Total Forecasts</b>: $forecast_count</p>")
 end
 
 function Base.summary(ist::InfrastructureSystemsType)

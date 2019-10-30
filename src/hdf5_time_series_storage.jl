@@ -103,18 +103,19 @@ function get_time_series(
     return HDF5.h5open(storage.file_path, "r") do file
         root = _get_root(storage, file)
         path = _get_time_series_path(root, uuid)
-        data = HDF5.read(path["data"])
-        timestamps = HDF5.read(path["timestamps"])
-        if index != 0
-            # PERF: HDF5 allows reading a subset of a dataset. Implementing it would improve
-            # performance, especially if the length of the time array is huge. As of now
-            # the time arrays are at most 1-year, 5-minute resolution -> 105,120 entries
-            # which consumes 821 KiB. Need to profile the latency of reads.
-            # OS buffering may obviate the need to do this.
+
+        if index == 0
+            data = HDF5.read(path["data"])
+            timestamps = HDF5.read(path["timestamps"])
+        else
             @assert len != 0
             end_index = index + len - 1
-            data = data[index:end_index]
-            timestamps = timestamps[index:end_index]
+            # HDF5.readmmap could be faster in many cases than this. However, experiments
+            # resulted in various crashes if we tried to close the file before references
+            # to the array data were garbage collected. May need to consult with the
+            # Julia HDF5 library maintainers about that.
+            data = path["data"][index:end_index]
+            timestamps = path["timestamps"][index:end_index]
         end
 
         # Note: we don't care what column names get returned. TimeArray creates :A, :B, ...

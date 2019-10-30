@@ -318,6 +318,15 @@ function get_forecast_labels(
                                initial_time)
 end
 
+function get_num_forecasts(component::InfrastructureSystemsType)
+    container = _get_forecast_container(component)
+    if isnothing(container)
+        return 0
+    end
+
+    return length(container.data)
+end
+
 function get_time_series(component::InfrastructureSystemsType, forecast::Forecast)
     storage = _get_time_series_storage(component)
     return get_time_series(storage, get_time_series_uuid(forecast))

@@ -450,6 +450,22 @@ function get_forecasts_interval(data::SystemData)
 end
 
 """
+    get_forecast_counts(data::SystemData)
+
+Return a tuple of counts of components with forecasts and total forecasts.
+"""
+function get_forecast_counts(data::SystemData)
+    component_count = 0
+    forecast_count = 0
+    for component in iterate_components_with_forecasts(data.components)
+        component_count += 1
+        forecast_count += get_num_forecasts(component)
+    end
+
+    return component_count, forecast_count
+end
+
+"""
     prepare_for_serialization!(data::SystemData, filename::AbstractString)
 
 Parent object should call this prior to serialization so that SystemData can store the
