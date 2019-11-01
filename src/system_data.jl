@@ -339,9 +339,9 @@ end
 """
     generate_initial_times(data::SystemData, interval::Dates.Period, horizon::Int)
 
-Generates all possible initial times for the stored forecasts. This should be used when
-contiguous forecasts have been stored in chunks, such as a one-year forecast broken up into
-365 one-day forecasts.
+Generates all possible initial times for the stored forecasts. This should return the same
+result regardless of whether the forecasts have been stored as one contiguous array or
+chunks of contiguous arrays, such as one 365-day forecast vs 365 one-day forecasts.
 
 Throws ArgumentError if there are no forecasts stored, interval is not a multiple of the
 system's forecast resolution, or if the stored forecasts have overlapping timestamps.
@@ -408,7 +408,7 @@ function compare_values(x::SystemData, y::SystemData)::Bool
 end
 
 function remove_component!(::Type{T}, data::SystemData, name) where T
-    component = remove_component!(T, data.components, name)
+    return remove_component!(T, data.components, name)
 end
 
 function remove_component!(data::SystemData, component)
@@ -416,7 +416,7 @@ function remove_component!(data::SystemData, component)
 end
 
 function remove_components!(::Type{T}, data::SystemData) where T
-    remove_components!(T, data.components)
+    return remove_components!(T, data.components)
 end
 
 function clear_forecasts!(data::SystemData)
