@@ -36,8 +36,6 @@ jobs:
     - stage: "Cross Package Testing"
       env:
         PACKAGE=PowerSystems
-      julia: 1.2
-      os: linux
       script:
         - cd $HOME
         - julia -e 'const PKG_FOLDER = ENV["TRAVIS_BUILD_DIR"]; using Pkg; Pkg.develop(PackageSpec(path=PKG_FOLDER))'
