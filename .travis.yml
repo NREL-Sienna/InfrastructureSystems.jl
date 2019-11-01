@@ -8,7 +8,6 @@ julia:
   - 1.3
   - nightly
 
-
 codecov: true
 
 notifications:
@@ -30,8 +29,20 @@ matrix:
 #  - if [ $TRAVIS_OS_NAME = osx ]; then brew install gcc; fi
 
 ## uncomment the following lines to override the default test script
+
 jobs:
   include:
+    - stage: "Test"
+    - stage: "Cross Package Testing"
+      env:
+        PACKAGE=PowerSystems
+      julia: 1.2
+      os: linux
+      script:
+        - cd $HOME
+        - julia -e 'const PKG_FOLDER = ENV["TRAVIS_BUILD_DIR"]; using Pkg; Pkg.develop(PackageSpec(path=PKG_FOLDER))'
+        - julia -e 'const PACKAGE = ENV["PACKAGE"]; using Pkg; Pkg.develop(PACKAGE); Pkg.instantiate(); Pkg.test(PACKAGE)'
+      after_success: skip
     - stage: "Documentation"
       julia: 1.1
       os: linux
