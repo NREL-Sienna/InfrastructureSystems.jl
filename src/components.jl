@@ -97,7 +97,7 @@ function remove_components!(
     end
 
     @debug "Removed all components of type" T
-    return
+    return values(components_)
 end
 
 """
@@ -114,7 +114,7 @@ function remove_component!(
                            components::Components,
                            component::T,
                           ) where T <: InfrastructureSystemsType
-    _remove_component!(T, components, get_name(component))
+    return _remove_component!(T, components, get_name(component))
 end
 
 """
@@ -152,6 +152,7 @@ function _remove_component!(
     component = pop!(components.data[T], name)
     prepare_for_removal!(component)
     @debug "Removed component" T name
+    return component
 end
 
 """
