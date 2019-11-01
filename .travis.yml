@@ -32,7 +32,6 @@ matrix:
 
 jobs:
   include:
-    - stage: "Test"
     - stage: "Cross Package Testing"
       env:
         PACKAGE=PowerSystems
