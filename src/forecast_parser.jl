@@ -5,7 +5,7 @@ mutable struct TimeseriesFileMetadata
     category::String  # String version of abstract type for the forecasted component.
                       # Calling module should determine the actual type.
     component_name::String  # Name of forecast component
-    label::String  # Raw data column for source of timeseries
+    label::String  # Accessor function on component for source of timeseries
     scaling_factor::Union{String, Float64}  # Controls normalization of timeseries.
                                             # Use 1.0 for pre-normalized data.
                                             # Use 'Max' to divide the timeseries by the max
@@ -26,17 +26,13 @@ function TimeseriesFileMetadata(simulation, category, component_name, label, sca
 end
 
 """Reads forecast metadata and fixes relative paths to the data files."""
-function read_time_series_metadata(
-                                   file_path::AbstractString,
-                                   label_mapping::Dict{Tuple{String, String}, String},
-                                  )
+function read_time_series_metadata(file_path::AbstractString)
     if endswith(file_path, ".json")
         metadata = open(file_path) do io
             metadata = Vector{TimeseriesFileMetadata}()
             data = JSON.parse(io)
             for item in data
                 category = _get_category(item["category"])
-                label = _get_label(label_mapping, category, item["label"])
                 scaling_factor = item["scaling_factor"]
                 if !isa(scaling_factor, AbstractString)
                     scaling_factor = Float64(scaling_factor)
@@ -45,7 +41,7 @@ function read_time_series_metadata(
                     item["simulation"],
                     item["category"],
                     item["component_name"],
-                    label,
+                    item["label"],
                     scaling_factor,
                     item["data_file"],
                     # Use default values until CDM data is updated.
@@ -60,11 +56,10 @@ function read_time_series_metadata(
         metadata = Vector{TimeseriesFileMetadata}()
         for row in eachrow(csv)
             category = _get_category(row.Category)
-            label = _get_label(label_mapping, category, row.Parameter)
             push!(metadata, TimeseriesFileMetadata(row.Simulation,
                                                    row.Category,
                                                    row.Object,
-                                                   label,
+                                                   item["label"],
                                                    row[Symbol("Scaling Factor")],
                                                    row[Symbol("Data File")],
                                                    # TODO: update CDM data for the next
@@ -94,18 +89,6 @@ function _get_category(category::String)
     end
 
     return lowercase(category)
-end
-
-function _get_label(label_mapping, category, custom_label)
-    key = (category, custom_label)
-    if haskey(label_mapping, key)
-        label = label_mapping[key]
-    else
-        @warn "no label mapping for" key
-        label = custom_label
-    end
-
-    return label
 end
 
 """

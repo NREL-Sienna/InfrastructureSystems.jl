@@ -1,8 +1,7 @@
 
 @testset "Test read_time_series_metadata" begin
     file = joinpath(FORECASTS_DIR, "ComponentsAsColumnsNoTime.json")
-    label_mapping = Dict(("infrastructuresystemstype", "val") => "val")
-    forecasts = IS.read_time_series_metadata(file, label_mapping)
+    forecasts = IS.read_time_series_metadata(file)
     @test length(forecasts) == 1
 
     for forecast in forecasts
@@ -19,8 +18,7 @@ end
     @test !IS.has_forecasts(component)
 
     file = joinpath(FORECASTS_DIR, "ComponentsAsColumnsNoTime.json")
-    label_mapping = Dict(("infrastructuresystemstype", "val") => "val")
-    IS.add_forecasts!(IS.InfrastructureSystemsType, data, file, label_mapping)
+    IS.add_forecasts!(IS.InfrastructureSystemsType, data, file)
     @test IS.has_forecasts(component)
 
     forecasts = get_all_forecasts(data)
@@ -60,9 +58,9 @@ end
                     Dates.DateTime("1/1/2020 23:00:00", "d/m/y H:M:S"))
     data = collect(1:24)
     ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
-    forecast = IS.Deterministic("val", ta)
+    forecast = IS.Deterministic("get_val", ta)
     IS.add_forecast!(sys, component, forecast)
-    forecast = IS.get_forecast(IS.Deterministic, component, dates[1], "val")
+    forecast = IS.get_forecast(IS.Deterministic, component, dates[1], "get_val")
     @test forecast isa IS.Deterministic
 
     name = "Component2"
@@ -101,8 +99,8 @@ end
                     Dates.DateTime("1/1/2020 23:00:00", "d/m/y H:M:S"))
     data = collect(1:24)
     ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
-    IS.add_forecast!(sys, ta, component, "val")
-    forecast = IS.get_forecast(IS.Deterministic, component, dates[1], "val")
+    IS.add_forecast!(sys, ta, component, "get_val")
+    forecast = IS.get_forecast(IS.Deterministic, component, dates[1], "get_val")
     @test forecast isa IS.Deterministic
 end
 
@@ -133,8 +131,8 @@ end
         end
         ta1 = TimeSeries.TimeArray(dates1_, data, [IS.get_name(component)])
         ta2 = TimeSeries.TimeArray(dates2_, data, [IS.get_name(component)])
-        IS.add_forecast!(sys, ta1, component, "val")
-        IS.add_forecast!(sys, ta2, component, "val")
+        IS.add_forecast!(sys, ta1, component, "get_val")
+        IS.add_forecast!(sys, ta2, component, "get_val")
     end
 
     initial_times = IS.get_forecast_initial_times(sys)
@@ -158,8 +156,8 @@ end
     for component in components
         ta1 = TimeSeries.TimeArray(dates1, data, [IS.get_name(component)])
         ta2 = TimeSeries.TimeArray(dates2, data, [IS.get_name(component)])
-        IS.add_forecast!(sys, ta1, component, "val")
-        IS.add_forecast!(sys, ta2, component, "val")
+        IS.add_forecast!(sys, ta1, component, "get_val")
+        IS.add_forecast!(sys, ta2, component, "get_val")
     end
 
     expected = [dates1[1], dates2[1]]
@@ -228,15 +226,15 @@ end
                     Dates.DateTime("1/1/2020 23:00:00", "d/m/y H:M:S"))
     data = collect(1:24)
     ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
-    IS.add_forecast!(sys, ta, component, "val")
-    forecast = IS.get_forecast(IS.Deterministic, component, dates[1], "val")
+    IS.add_forecast!(sys, ta, component, "get_val")
+    forecast = IS.get_forecast(IS.Deterministic, component, dates[1], "get_val")
 
     # Test both versions of the function.
-    vals = IS.get_forecast_values(component, forecast)
+    vals = IS.get_forecast_values(IS, component, forecast)
     @test TimeSeries.timestamp(vals) == dates
     @test TimeSeries.values(vals) == data .* component_val
 
-    vals2 = IS.get_forecast_values(IS.Deterministic, component, dates[1], "val")
+    vals2 = IS.get_forecast_values(IS.Deterministic, IS, component, dates[1], "get_val")
     @test TimeSeries.timestamp(vals2) == dates
     @test TimeSeries.values(vals2) == data .* component_val
 end
@@ -252,12 +250,12 @@ end
     data = collect(1:24)
 
     ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
-    IS.add_forecast!(sys, ta, component, "val")
+    IS.add_forecast!(sys, ta, component, "get_val")
 
-    forecast = IS.get_forecast(IS.Deterministic, component, dates[1], "val")
+    forecast = IS.get_forecast(IS.Deterministic, component, dates[1], "get_val")
     @test TimeSeries.timestamp(IS.get_data(forecast))[1] == dates[1]
 
-    forecast = IS.get_forecast(IS.Deterministic, component, dates[3], "val", 3)
+    forecast = IS.get_forecast(IS.Deterministic, component, dates[3], "get_val", 3)
     @test TimeSeries.timestamp(IS.get_data(forecast))[1] == dates[3]
     @test length(forecast) == 3
 end
@@ -281,7 +279,7 @@ end
     data = collect(1:24)
 
     ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
-    IS.add_forecast!(sys, ta, component, "val")
+    IS.add_forecast!(sys, ta, component, "get_val")
     initial_times = IS.get_forecast_initial_times(component)
     @test length(initial_times) == 1
 
@@ -323,8 +321,8 @@ end
 
     ta1 = TimeSeries.TimeArray(dates1, data, [IS.get_name(component)])
     ta2 = TimeSeries.TimeArray(dates2, data, [IS.get_name(component)])
-    IS.add_forecast!(sys, ta1, component, "val")
-    IS.add_forecast!(sys, ta2, component, "val")
+    IS.add_forecast!(sys, ta1, component, "get_val")
+    IS.add_forecast!(sys, ta2, component, "get_val")
     initial_times = IS.get_forecast_initial_times(component)
     @test length(initial_times) == 2
 
@@ -366,10 +364,10 @@ end
 
     ta1 = TimeSeries.TimeArray(dates1, data, [IS.get_name(component)])
     ta2 = TimeSeries.TimeArray(dates2, data, [IS.get_name(component)])
-    IS.add_forecast!(sys, ta1, component, "val")
+    IS.add_forecast!(sys, ta1, component, "get_val")
     @test_throws ArgumentError IS.generate_initial_times(sys, Dates.Minute(30), 6)
 
-    IS.add_forecast!(sys, ta2, component, "val")
+    IS.add_forecast!(sys, ta2, component, "get_val")
     @test_throws ArgumentError IS.generate_initial_times(sys, Dates.Hour(3), 6)
 end
 
@@ -384,7 +382,7 @@ end
                     Dates.DateTime("1/1/2020 23:00:00", "d/m/y H:M:S"))
     data = collect(1:24)
     ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
-    IS.add_forecast!(sys1, ta, component, "val")
+    IS.add_forecast!(sys1, ta, component, "get_val")
 
     @test_throws ArgumentError IS.add_component!(sys1, component)
 end
@@ -460,7 +458,7 @@ end
 @testset "Test ScenarioBased forecasts" begin
     sys = IS.SystemData()
     name = "Component1"
-    label = "val"
+    label = "get_val"
     component = IS.TestComponent(name, 5)
     IS.add_component!(sys, component)
 

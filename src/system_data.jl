@@ -44,7 +44,6 @@ end
                    ::Type{T},
                    data::SystemData,
                    metadata_file::AbstractString,
-                   label_mapping::Dict{Tuple{String, String}, String};
                    resolution=nothing,
                   ) where T <: InfrastructureSystemsType
 
@@ -60,11 +59,10 @@ Adds forecasts from a metadata file or metadata descriptors.
 function add_forecasts!(
                         ::Type{T},
                         data::SystemData,
-                        metadata_file::AbstractString,
-                        label_mapping::Dict{Tuple{String, String}, String};
+                        metadata_file::AbstractString;
                         resolution=nothing,
                        ) where T <: InfrastructureSystemsType
-    metadata = read_time_series_metadata(metadata_file, label_mapping)
+    metadata = read_time_series_metadata(metadata_file)
     return add_forecasts!(T, data, metadata; resolution=resolution)
 end
 
@@ -216,6 +214,7 @@ function add_forecast!(
                       ) where T <: InfrastructureSystemsType
     set_component!(metadata, data, InfrastructureSystems)
     component = metadata.component
+
     forecast, ts_data = make_forecast!(forecast_cache, metadata; resolution=resolution)
     if !isnothing(forecast)
         add_forecast!(data, component, forecast, ts_data)

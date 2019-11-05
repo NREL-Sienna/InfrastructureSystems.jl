@@ -2,12 +2,6 @@ function add_forecast!(
                        component::T,
                        forecast::ForecastInternal,
                       ) where T <: InfrastructureSystemsType
-    label = get_label(forecast)
-    if !in(Symbol(label), fieldnames(T))
-        #throw(ArgumentError("$label is not a field of $T"))
-        @warn "$label is not a field of $T; get_forecast_values will not work" forecast
-    end
-
     add_forecast!(_get_forecast_container(component), forecast)
     @debug "Added $forecast to $(typeof(component)) $(component.name) " *
            "num_forecasts=$(length(component._forecasts.data))."
@@ -158,19 +152,23 @@ component field.
 """
 function get_forecast_values(
                              ::Type{T},
+                             mod::Module,
                              component::InfrastructureSystemsType,
                              initial_time::Dates.DateTime,
                              label::AbstractString,
                             ) where T <: Forecast
     forecast = get_forecast(T, component, initial_time, label)
-    return get_forecast_values(component, forecast)
+    return get_forecast_values(mod, component, forecast)
 end
 
-function get_forecast_values(component::InfrastructureSystemsType, forecast::Forecast)
+function get_forecast_values(
+                             mod::Module,
+                             component::InfrastructureSystemsType,
+                             forecast::Forecast)
     scaling_factors = get_data(forecast)
     label = get_label(forecast)
-    value = getfield(component, Symbol(label))
-    data = scaling_factors .* value
+    accessor_func = getfield(mod, Symbol(label))
+    data = scaling_factors .* accessor_func(component)
     return data
 end
 

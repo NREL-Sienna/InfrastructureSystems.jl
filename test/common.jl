@@ -8,8 +8,7 @@ function create_system_data(; with_forecasts=false, time_series_in_memory=false)
 
     if with_forecasts
         file = joinpath(FORECASTS_DIR, "ComponentsAsColumnsNoTime.json")
-        label_mapping = Dict(("infrastructuresystemstype", "val") => "val")
-        IS.add_forecasts!(IS.InfrastructureSystemsType, data, file, label_mapping)
+        IS.add_forecasts!(IS.InfrastructureSystemsType, data, file)
 
         forecasts = get_all_forecasts(data)
         @assert length(forecasts) > 0
