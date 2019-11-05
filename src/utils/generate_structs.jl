@@ -6,7 +6,7 @@ template = """
 This file is auto-generated. Do not edit.
 =#
 
-{{#docstring}}\"\"\"{{docstring}}\"\"\"{{/docstring}}
+{{#docstring}}\"\"\"{{{docstring}}}\"\"\"{{/docstring}}
 mutable struct {{struct_name}}{{#parametric}}{T <: {{parametric}}}{{/parametric}} <: {{supertype}}
     {{#parameters}}
     {{name}}::{{data_type}}{{#comment}}  # {{{comment}}}{{/comment}}
