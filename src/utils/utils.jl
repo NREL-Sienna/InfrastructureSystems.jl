@@ -107,6 +107,10 @@ function compare_values(x::T, y::T)::Bool where T
         match = x == y
     else
         for fieldname in fields
+            if T <: Forecasts && fieldname == :time_series_storage
+                # This gets validated at SystemData. Don't repeat for each component.
+                continue
+            end
             val1 = getfield(x, fieldname)
             val2 = getfield(y, fieldname)
             if !isempty(fieldnames(typeof(val1)))

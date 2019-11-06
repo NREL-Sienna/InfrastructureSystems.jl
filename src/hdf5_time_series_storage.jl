@@ -11,27 +11,48 @@ no more references to the storage object.
 """
 mutable struct Hdf5TimeSeriesStorage <: TimeSeriesStorage
     file_path::String
-
-    function Hdf5TimeSeriesStorage(file_path)
-        storage = new(file_path)
-        finalizer(_cleanup, storage)
-        return storage
-    end
 end
 
 """
-Constructs Hdf5TimeSeriesStorage by creating a new file.
+Constructs Hdf5TimeSeriesStorage by creating a temp file.
 """
 function Hdf5TimeSeriesStorage()
-    filename, io = mktemp()
-    close(io)
-    storage = Hdf5TimeSeriesStorage(filename)
-    _make_file(storage)
+    return Hdf5TimeSeriesStorage(true, false)
+end 
+
+"""
+Constructs Hdf5TimeSeriesStorage.
+
+# Arguments
+- `create_file::Bool`: create new file
+- `preserve_file::Bool`: if false, delete the file when the instance is GC'd.
+- `filename=nothing`: if nothing, create a temp file, else use this name.
+"""
+function Hdf5TimeSeriesStorage(create_file::Bool, preserve_file::Bool; filename=nothing)
+    if create_file
+        if isnothing(filename)
+            filename, io = mktemp()
+            close(io)
+        end
+
+        storage = Hdf5TimeSeriesStorage(filename)
+        _make_file(storage)
+    else
+        storage = Hdf5TimeSeriesStorage(filename)
+    end
+
+    @debug "Constructed new Hdf5TimeSeriesStorage" storage.file_path
+
+    if !preserve_file
+        finalizer(_cleanup, storage)
+    end
+
     return storage
 end
 
 function _cleanup(storage::Hdf5TimeSeriesStorage)
     if isfile(storage.file_path)
+        @debug "Delete Hdf5TimeSeriesStorage" storage.file_path
         rm(storage.file_path)
     end
 end
@@ -42,7 +63,7 @@ Constructs Hdf5TimeSeriesStorage from an existing file.
 function from_file(::Type{Hdf5TimeSeriesStorage}, filename::AbstractString)
     file_path = tempname() * ".h5"
     cp(filename, file_path; force=true)
-    storage = Hdf5TimeSeriesStorage(file_path)
+    storage = Hdf5TimeSeriesStorage(false, false; filename=file_path)
     @info "Loaded time series from storage file existing=$filename new=$(storage.file_path)"
     return storage
 end
@@ -74,6 +95,26 @@ function add_time_series!(
             path = root[uuid]
             @debug "Add reference to existing time series entry." uuid component_uuid label
             _append_item!(path, "components", component_label)
+        end
+    end
+end
+
+function iterate_time_series(storage::Hdf5TimeSeriesStorage)
+    Channel() do channel
+        HDF5.h5open(storage.file_path, "r") do file
+            root = _get_root(storage, file)
+            for uuid_group in root
+                uuid_path = HDF5.name(uuid_group)
+                range = findlast("/", uuid_path)
+                uuid_str = uuid_path[range.start + 1:end]
+                uuid = UUIDs.UUID(uuid_str)
+                internal = InfrastructureSystemsInternal(uuid)
+                time_series = TimeSeriesData(get_time_series(storage, uuid), internal)
+                for item in HDF5.read(uuid_group["components"])
+                    component, label = deserialize_component_label(item)
+                    put!(channel, (component, label, time_series))
+                end
+            end
         end
     end
 end
@@ -203,6 +244,31 @@ function _remove_item!(path::HDF5.HDF5Group, name::AbstractString, value::Abstra
 end
 
 function compare_values(x::Hdf5TimeSeriesStorage, y::Hdf5TimeSeriesStorage)::Bool
-    # TODO: ignore the file_path variable but iterate through all data and compare
+    data_x = sort!(collect(iterate_time_series(x)), by = z -> z[1])
+    data_y = sort!(collect(iterate_time_series(y)), by = z -> z[1])
+    if length(data_x) != length(data_y)
+        @error "lengths don't match" length(data_x) length(data_y)
+        return false
+    end
+
+    for ((uuid_x, label_x, ts_x), (uuid_y, label_y, ts_y)) in zip(data_x, data_y)
+        if uuid_x != uuid_y
+            @error "component UUIDs don't match" uuid_x uuid_y
+            return false
+        end
+        if label_x != label_y
+            @error "labels don't match" label_x label_y
+            return false
+        end
+        if TimeSeries.timestamp(ts_x.data) != TimeSeries.timestamp(ts_y.data)
+            @error "timestamps don't match" ts_x.data ts_y.data
+            return false
+        end
+        if TimeSeries.values(ts_x.data) != TimeSeries.values(ts_y.data)
+            @error "values don't match" ts_x.data ts_y.data
+            return false
+        end
+    end
+
     return true
 end

@@ -27,6 +27,13 @@ function make_component_label(component_uuid::UUIDs.UUID, label::AbstractString)
     return string(component_uuid) * "_" * label
 end
 
+function deserialize_component_label(component_label::AbstractString)
+    data = split(component_label, "_")
+    component = UUIDs.UUID(data[1])
+    label = data[2]
+    return component, label
+end
+
 function serialize(storage::TimeSeriesStorage, file_path::AbstractString)
     if storage isa Hdf5TimeSeriesStorage
         # The data is currently in a temp file, so we can just make a copy.

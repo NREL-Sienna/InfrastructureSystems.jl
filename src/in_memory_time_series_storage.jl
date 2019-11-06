@@ -25,6 +25,18 @@ function InMemoryTimeSeriesStorage()
     return storage
 end
 
+"""
+Constructs InMemoryTimeSeriesStorage from an instance of Hdf5TimeSeriesStorage.
+"""
+function InMemoryTimeSeriesStorage(hdf5_storage::Hdf5TimeSeriesStorage)
+    storage = InMemoryTimeSeriesStorage()
+    for (component, label, time_series) in iterate_time_series(hdf5_storage)
+        add_time_series!(storage, component, label, time_series)
+    end
+
+    return storage
+end
+
 function add_time_series!(
                           storage::InMemoryTimeSeriesStorage,
                           component_uuid::UUIDs.UUID,
@@ -96,10 +108,40 @@ function get_num_time_series(storage::InMemoryTimeSeriesStorage)
 end
 
 function convert_to_hdf5(storage::InMemoryTimeSeriesStorage, filename::AbstractString)
-    hdf5_storage = Hdf5TimeSeriesStorage(; filename=filename)
+    create_file = true
+    preserve_file = true
+    hdf5_storage = Hdf5TimeSeriesStorage(create_file, preserve_file; filename=filename)
     for record in values(storage.data)
         for pair in record.component_labels
             add_time_series!(hdf5_storage, pair[1], pair[2], record.ts)
         end
     end
+end
+
+function compare_values(x::InMemoryTimeSeriesStorage, y::InMemoryTimeSeriesStorage)::Bool
+    keys_x = sort!(collect(keys(x.data)))
+    keys_y = sort!(collect(keys(y.data)))
+    if keys_x != keys_y
+        @error "keys don't match" keys_x keys_y
+        return false
+    end
+
+    for key in keys_x
+        record_x = x.data[key]
+        record_y = y.data[key]
+        if record_x.component_labels != record_y.component_labels
+            @error "component_labels don't match" record_x record_y
+            return false
+        end
+        if TimeSeries.timestamp(record_x.ts.data) != TimeSeries.timestamp(record_y.ts.data)
+            @error "timestamps don't match" record_x record_y
+            return false
+        end
+        if TimeSeries.values(record_x.ts.data) != TimeSeries.values(record_y.ts.data)
+            @error "values don't match" record_x record_y
+            return false
+        end
+    end
+
+    return true
 end

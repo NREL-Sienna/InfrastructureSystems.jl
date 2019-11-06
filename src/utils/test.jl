@@ -10,6 +10,8 @@ function TestComponent(name, val)
     return TestComponent(name, val, Forecasts(), InfrastructureSystemsInternal())
 end
 
+get_val(component::TestComponent) = component.val
+
 function get__forecasts(component::TestComponent)
     return component._forecasts
 end

@@ -44,7 +44,6 @@ end
                    ::Type{T},
                    data::SystemData,
                    metadata_file::AbstractString,
-                   label_mapping::Dict{Tuple{String, String}, String};
                    resolution=nothing,
                   ) where T <: InfrastructureSystemsType
 
@@ -60,11 +59,10 @@ Adds forecasts from a metadata file or metadata descriptors.
 function add_forecasts!(
                         ::Type{T},
                         data::SystemData,
-                        metadata_file::AbstractString,
-                        label_mapping::Dict{Tuple{String, String}, String};
+                        metadata_file::AbstractString;
                         resolution=nothing,
                        ) where T <: InfrastructureSystemsType
-    metadata = read_time_series_metadata(metadata_file, label_mapping)
+    metadata = read_time_series_metadata(metadata_file)
     return add_forecasts!(T, data, metadata; resolution=resolution)
 end
 
@@ -216,6 +214,7 @@ function add_forecast!(
                       ) where T <: InfrastructureSystemsType
     set_component!(metadata, data, InfrastructureSystems)
     component = metadata.component
+
     forecast, ts_data = make_forecast!(forecast_cache, metadata; resolution=resolution)
     if !isnothing(forecast)
         add_forecast!(data, component, forecast, ts_data)
@@ -497,6 +496,7 @@ function encode_for_json(data::SystemData)
     end
 
     serialize(data.time_series_storage, data.time_series_storage_file)
+    json_data["time_series_storage_type"] = string(typeof(data.time_series_storage))
     return json_data
 end
 
@@ -512,11 +512,13 @@ function deserialize(
                      raw::NamedTuple,
                     ) where T <: InfrastructureSystemsType
     forecast_metadata = convert_type(ForecastMetadata, raw.forecast_metadata)
-    # TODO: This code doesn't allow for remembering the type of TimeSeriesStorage used by
-    # the original SystemData. It will always use Hdf5TimeSeriesStorage after
-    # deserialization. This could be fixed. Need to build an InMemoryTimeSeriesStorage
-    # object by iterating over an Hdf5TimeSeriesStorage file.
-    time_series_storage = from_file(Hdf5TimeSeriesStorage, raw.time_series_storage_file)
+
+    if strip_module_name(raw.time_series_storage_type) == "InMemoryTimeSeriesStorage"
+        hdf5_storage = Hdf5TimeSeriesStorage(raw.time_series_storage_file)
+        time_series_storage = InMemoryTimeSeriesStorage(hdf5_storage)
+    else
+        time_series_storage = from_file(Hdf5TimeSeriesStorage, raw.time_series_storage_file)
+    end 
 
     # OPT: This looks odd and is wasteful.
     # JSON2 creates NamedTuples recursively. JSON creates dicts, which is what we need.
