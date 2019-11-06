@@ -1,5 +1,9 @@
 # InfrastructureSystems
 
+## 0.3.0
+
+- Use accessor functions to retrieve forecasts instead of labels
+
 ## 0.2.4
 
 - Return components from remove_component functions
