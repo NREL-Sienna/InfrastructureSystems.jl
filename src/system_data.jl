@@ -496,6 +496,7 @@ function encode_for_json(data::SystemData)
     end
 
     serialize(data.time_series_storage, data.time_series_storage_file)
+    json_data["time_series_storage_type"] = string(typeof(data.time_series_storage))
     return json_data
 end
 
@@ -511,11 +512,13 @@ function deserialize(
                      raw::NamedTuple,
                     ) where T <: InfrastructureSystemsType
     forecast_metadata = convert_type(ForecastMetadata, raw.forecast_metadata)
-    # TODO: This code doesn't allow for remembering the type of TimeSeriesStorage used by
-    # the original SystemData. It will always use Hdf5TimeSeriesStorage after
-    # deserialization. This could be fixed. Need to build an InMemoryTimeSeriesStorage
-    # object by iterating over an Hdf5TimeSeriesStorage file.
-    time_series_storage = from_file(Hdf5TimeSeriesStorage, raw.time_series_storage_file)
+
+    if strip_module_name(raw.time_series_storage_type) == "InMemoryTimeSeriesStorage"
+        hdf5_storage = Hdf5TimeSeriesStorage(raw.time_series_storage_file)
+        time_series_storage = InMemoryTimeSeriesStorage(hdf5_storage)
+    else
+        time_series_storage = from_file(Hdf5TimeSeriesStorage, raw.time_series_storage_file)
+    end 
 
     # OPT: This looks odd and is wasteful.
     # JSON2 creates NamedTuples recursively. JSON creates dicts, which is what we need.
