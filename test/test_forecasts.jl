@@ -371,6 +371,35 @@ end
     @test_throws ArgumentError IS.generate_initial_times(sys, Dates.Hour(3), 6)
 end
 
+@testset "Test generate_initial_times offset from first initial_time" begin
+    sys = create_system_data()
+
+    components = collect(IS.get_components(IS.InfrastructureSystemsType, sys))
+    @test length(components) == 1
+    component = components[1]
+
+    dates = collect(Dates.DateTime("2020-01-01T00:00:00") : Dates.Hour(1) :
+                    Dates.DateTime("2020-01-01T23:00:00"))
+    data = collect(1:24)
+
+    ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
+    IS.add_forecast!(sys, ta, component, "get_val")
+    resolution = IS.get_forecasts_resolution(sys)
+    initial_times = IS.get_forecast_initial_times(component)
+    @test length(initial_times) == 1
+
+    horizon = 6
+    offset = 1
+    interval = resolution * 2
+    initial_time = initial_times[1] + offset * resolution
+
+    expected = collect(Dates.DateTime("2020-01-01T01:00:00") : interval :
+                       Dates.DateTime("2020-01-01T17:00:00"))
+
+    actual = IS.generate_initial_times(component, interval, horizon; initial_time=initial_time)
+    @test actual == expected
+end
+
 @testset "Test component-forecast being added to multiple systems" begin
     sys1 = IS.SystemData()
     sys2 = IS.SystemData()
