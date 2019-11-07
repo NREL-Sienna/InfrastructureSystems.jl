@@ -336,6 +336,23 @@ function add_forecast_info!(forecast_cache::ForecastCache, metadata::TimeseriesF
 end
 
 """
+    are_forecasts_contiguous(data::SystemData)
+
+Return true if forecasts are stored contiguously.
+
+Throws ArgumentError if there are no forecasts stored.
+"""
+function are_forecasts_contiguous(data::SystemData)
+    for component in iterate_components_with_forecasts(data.components)
+        if has_forecasts(component)
+            return are_forecasts_contiguous(component)
+        end
+    end
+
+    throw(ArgumentError("no forecasts are stored"))
+end
+
+"""
     generate_initial_times(
                            data::SystemData,
                            interval::Dates.Period,
