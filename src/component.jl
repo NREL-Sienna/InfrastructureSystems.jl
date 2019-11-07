@@ -285,6 +285,35 @@ function generate_initial_times(
 end
 
 """
+    are_forecasts_contiguous(component::InfrastructureSystemsType)
+"""
+function are_forecasts_contiguous(component::InfrastructureSystemsType)
+    existing_initial_times = get_forecast_initial_times(component)
+    first_initial_time = existing_initial_times[1]
+
+    first_forecast = iterate(iterate_forecasts(component))[1]
+    resolution = Dates.Second(get_resolution(first_forecast))
+    horizon = get_horizon(first_forecast)
+    total_horizon = horizon * length(existing_initial_times)
+
+    return _are_forecasts_contiguous(existing_initial_times, resolution, horizon)
+end
+
+function _are_forecasts_contiguous(initial_times, resolution, horizon)
+    if length(initial_times) == 1
+        return true
+    end
+
+    for i in range(2, stop=length(initial_times))
+        if initial_times[i] != initial_times[i - 1] + resolution * horizon
+            return false
+        end
+    end
+
+    return true
+end
+
+"""
 Throws ArgumentError if the forecasts are not in consecutive order.
 """
 function check_contiguous_forecasts(
@@ -293,21 +322,14 @@ function check_contiguous_forecasts(
                                     resolution::Dates.Period,
                                     horizon::Int
                                    )
+    if !_are_forecasts_contiguous(existing_initial_times, resolution, horizon)
+        throw(ArgumentError(
+            "generate_initial_times is not allowed with overlapping timestamps"
+        ))
+    end
+
     first_initial_time = existing_initial_times[1]
     total_horizon = horizon * length(existing_initial_times)
-
-    if length(existing_initial_times) == 1
-        return first_initial_time, total_horizon
-    end
-
-    for i in range(2, stop=length(existing_initial_times))
-        if existing_initial_times[i] != existing_initial_times[i - 1] + resolution * horizon
-            throw(ArgumentError(
-                "generate_initial_times is not allowed with overlapping timestamps"
-            ))
-        end
-    end
-
     return first_initial_time, total_horizon
 end
 
