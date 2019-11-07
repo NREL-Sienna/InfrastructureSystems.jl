@@ -313,6 +313,9 @@ end
     @test length(components) == 1
     component = components[1]
 
+    @test_throws ArgumentError IS.are_forecasts_contiguous(component)
+    @test_throws ArgumentError IS.are_forecasts_contiguous(sys)
+
     dates1 = collect(Dates.DateTime("2020-01-01T00:00:00") : Dates.Hour(1) :
                      Dates.DateTime("2020-01-01T23:00:00"))
     dates2 = collect(Dates.DateTime("2020-01-02T00:00:00") : Dates.Hour(1) :
