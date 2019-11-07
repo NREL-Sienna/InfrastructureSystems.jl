@@ -59,7 +59,7 @@ function read_time_series_metadata(file_path::AbstractString)
             push!(metadata, TimeseriesFileMetadata(row.Simulation,
                                                    row.Category,
                                                    row.Object,
-                                                   item["label"],
+                                                   row.Parameter,
                                                    row[Symbol("Scaling Factor")],
                                                    row[Symbol("Data File")],
                                                    # TODO: update CDM data for the next

@@ -227,7 +227,8 @@ end
     generate_initial_times(
                            component::InfrastructureSystemsType,
                            interval::Dates.Period,
-                           horizon::Int,
+                           horizon::Int;
+                           initial_time::Union{Nothing, Dates.DateTime}=nothing,
                           )
 
 Generates all possible initial times for the stored forecasts. This should return the same
@@ -236,11 +237,19 @@ chunks of contiguous arrays, such as one 365-day forecast vs 365 one-day forecas
 
 Throws ArgumentError if there are no forecasts stored, interval is not a multiple of the
 system's forecast resolution, or if the stored forecasts have overlapping timestamps.
+
+# Arguments
+- `component::InfrastructureSystemsType`: Component containing forecasts.
+- `interval::Dates.Period`: Amount of time in between each initial time.
+- `horizon::Int`: Length of each forecast array.
+- `initial_time::Union{Nothing, Dates.DateTime}=nothing`: Start with this time. If nothing,
+  use the first initial time.
 """
 function generate_initial_times(
                                 component::InfrastructureSystemsType,
                                 interval::Dates.Period,
-                                horizon::Int,
+                                horizon::Int;
+                                initial_time::Union{Nothing, Dates.DateTime}=nothing,
                                )
     # This throws if no forecasts.
     existing_initial_times = get_forecast_initial_times(component)
@@ -249,9 +258,14 @@ function generate_initial_times(
     resolution = Dates.Second(get_resolution(first_forecast))
     sys_horizon = get_horizon(first_forecast)
 
-    initial_time, total_horizon = check_contiguous_forecasts(
+    first_initial_time, total_horizon = check_contiguous_forecasts(
         component, existing_initial_times, resolution, sys_horizon,
     )
+
+    if isnothing(initial_time)
+        initial_time = first_initial_time
+    end
+
     interval = Dates.Second(interval)
 
     if interval % resolution != Dates.Second(0)
@@ -260,18 +274,13 @@ function generate_initial_times(
         ))
     end
 
-    step_length = Int(interval / resolution)
-    last_initial_time_index = total_horizon - horizon
-    num_initial_times = Int(trunc(last_initial_time_index / step_length)) + 1
-    initial_times = Vector{Dates.DateTime}(undef, num_initial_times)
-
-    index = 1
-    for i in range(0, step=step_length, stop=last_initial_time_index)
-        initial_times[index] = initial_time + i * resolution
-        index += 1
+    last_initial_time = first_initial_time + total_horizon * resolution -
+                        horizon * resolution
+    initial_times = Vector{Dates.DateTime}()
+    for it in range(initial_time, step=interval, stop=last_initial_time)
+        push!(initial_times, it)
     end
 
-    @assert index - 1 == num_initial_times
     return initial_times
 end
 
