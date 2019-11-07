@@ -11,3 +11,7 @@ end
         "InfrastructureSystems.Deterministic{PowerSystems.HydroDispatch}") ==
         "Deterministic{PowerSystems.HydroDispatch}"
 end
+
+@testset "Test exported names" begin
+    @test IS.validate_exported_names(IS)
+end
