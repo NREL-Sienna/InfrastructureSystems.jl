@@ -86,6 +86,23 @@ function convert_type(::Type{T}, data::Any) where T
 end
 
 """
+    validate_exported_names(mod::Module)
+
+Return true if all publicly exported names in mod are defined.
+"""
+function validate_exported_names(mod::Module)
+    is_valid = true
+    for name in names(mod)
+        if !isdefined(mod, name)
+            is_valid = false
+            @error "module $mod exports $name but does not define it"
+        end
+    end
+
+    return is_valid
+end
+
+"""
 Recursively compares immutable struct values by performing == on each field in the struct.
 When performing == on values of immutable structs Julia will perform === on
 each field.  This will return false if any field is mutable even if the
