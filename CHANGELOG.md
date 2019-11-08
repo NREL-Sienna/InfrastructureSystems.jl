@@ -1,5 +1,10 @@
 # InfrastructureSystems
 
+## 0.4.0
+
+- Add validation for contigous forecasts
+- Bug fix in table data parsing
+
 ## 0.3.0
 
 - Use accessor functions to retrieve forecasts instead of labels
