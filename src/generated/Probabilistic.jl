@@ -1,12 +1,27 @@
 #=
 This file is auto-generated. Do not edit.
 =#
+"""
+    mutable struct Probabilistic <: Forecast
+        label::String
+        percentiles::Vector{Float64}
+        data::TimeSeries.TimeArray
+    end
 
-"""A Probabilistic forecast for a particular data field in a Component."""
+A Probabilistic forecast for a particular data field in a Component.
+
+# Arguments
+-`label::String`: label of component parameter forecasted
+-`percentiles::Vector{Float64}`: Percentiles for the probabilistic forecast
+-`data::TimeSeries.TimeArray`: timestamp - scalingfactor
+"""
 mutable struct Probabilistic <: Forecast
-    label::String  # label of component parameter forecasted
-    percentiles::Vector{Float64}  # Percentiles for the probabilistic forecast
-    data::TimeSeries.TimeArray  # timestamp - scalingfactor
+    "label of component parameter forecasted"
+    label::String
+    "Percentiles for the probabilistic forecast"
+    percentiles::Vector{Float64}
+    "timestamp - scalingfactor"
+    data::TimeSeries.TimeArray
 end
 
 

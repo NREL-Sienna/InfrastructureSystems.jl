@@ -1,14 +1,36 @@
 #=
 This file is auto-generated. Do not edit.
 =#
+"""
+    mutable struct DeterministicInternal <: ForecastInternal
+        label::String
+        resolution::Dates.Period
+        initial_time::Dates.DateTime
+        time_series_uuid::UUIDs.UUID
+        horizon::Int
+        internal::InfrastructureSystemsInternal
+    end
 
-"""A deterministic forecast for a particular data field in a Component."""
+A deterministic forecast for a particular data field in a Component.
+
+# Arguments
+-`label::String`: label of component parameter forecasted
+-`resolution::Dates.Period`
+-`initial_time::Dates.DateTime`: forecast availability time
+-`time_series_uuid::UUIDs.UUID`: reference to time series data; timestamp - scalingfactor
+-`horizon::Int`: length of this forecast
+-`internal::InfrastructureSystemsInternal`
+"""
 mutable struct DeterministicInternal <: ForecastInternal
-    label::String  # label of component parameter forecasted
+    "label of component parameter forecasted"
+    label::String
     resolution::Dates.Period
-    initial_time::Dates.DateTime  # forecast availability time
-    time_series_uuid::UUIDs.UUID  # reference to time series data; timestamp - scalingfactor
-    horizon::Int  # length of this forecast
+    "forecast availability time"
+    initial_time::Dates.DateTime
+    "reference to time series data; timestamp - scalingfactor"
+    time_series_uuid::UUIDs.UUID
+    "length of this forecast"
+    horizon::Int
     internal::InfrastructureSystemsInternal
 end
 

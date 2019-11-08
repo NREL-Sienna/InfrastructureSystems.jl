@@ -1,12 +1,27 @@
 #=
 This file is auto-generated. Do not edit.
 =#
+"""
+    mutable struct ScenarioBased <: Forecast
+        label::String
+        scenario_count::Int64
+        data::TimeSeries.TimeArray
+    end
 
-"""A Discrete Scenario Based forecast for a particular data field in a Component."""
+A Discrete Scenario Based forecast for a particular data field in a Component.
+
+# Arguments
+-`label::String`: label of component parameter forecasted
+-`scenario_count::Int64`: Number of scenarios
+-`data::TimeSeries.TimeArray`: timestamp - scalingfactor
+"""
 mutable struct ScenarioBased <: Forecast
-    label::String  # label of component parameter forecasted
-    scenario_count::Int64  # Number of scenarios
-    data::TimeSeries.TimeArray  # timestamp - scalingfactor
+    "label of component parameter forecasted"
+    label::String
+    "Number of scenarios"
+    scenario_count::Int64
+    "timestamp - scalingfactor"
+    data::TimeSeries.TimeArray
 end
 
 
