@@ -16,13 +16,12 @@ This file is auto-generated. Do not edit.
 
 # Arguments
 {{#parameters}}
-    {{#comment}}"{{{comment}}}"\n    {{/comment}}{{name}}::{{data_type}}
+-`{{name}}::{{data_type}}`{{#comment}}: {{{comment}}}{{/comment}}
 {{/parameters}}
 \"\"\"
 mutable struct {{struct_name}}{{#parametric}}{T <: {{parametric}}}{{/parametric}} <: {{supertype}}
     {{#parameters}}
-    {{#comment}}"{{{comment}}}{{/comment}}"
-    {{name}}::{{data_type}}
+    {{#comment}}"{{{comment}}}"\n    {{/comment}}{{name}}::{{data_type}}
     {{/parameters}}
     {{#inner_constructor_check}}
 
