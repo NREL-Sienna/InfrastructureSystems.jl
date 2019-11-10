@@ -1,11 +1,23 @@
 #=
 This file is auto-generated. Do not edit.
 =#
+"""
+    mutable struct Deterministic <: Forecast
+        label::String
+        data::TimeSeries.TimeArray
+    end
 
-"""A deterministic forecast for a particular data field in a Component."""
+A deterministic forecast for a particular data field in a Component.
+
+# Arguments
+-`label::String`: label of component parameter forecasted
+-`data::TimeSeries.TimeArray`: timestamp - scalingfactor
+"""
 mutable struct Deterministic <: Forecast
-    label::String  # label of component parameter forecasted
-    data::TimeSeries.TimeArray  # timestamp - scalingfactor
+    "label of component parameter forecasted"
+    label::String
+    "timestamp - scalingfactor"
+    data::TimeSeries.TimeArray
 end
 
 

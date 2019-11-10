@@ -1,15 +1,40 @@
 #=
 This file is auto-generated. Do not edit.
 =#
+"""
+    mutable struct ScenarioBasedInternal <: ForecastInternal
+        label::String
+        resolution::Dates.Period
+        initial_time::Dates.DateTime
+        scenario_count::Int64
+        time_series_uuid::UUIDs.UUID
+        horizon::Int
+        internal::InfrastructureSystemsInternal
+    end
 
-"""A Discrete Scenario Based forecast for a particular data field in a Component."""
+A Discrete Scenario Based forecast for a particular data field in a Component.
+
+# Arguments
+-`label::String`: label of component parameter forecasted
+-`resolution::Dates.Period`
+-`initial_time::Dates.DateTime`: forecast availability time
+-`scenario_count::Int64`: Number of scenarios
+-`time_series_uuid::UUIDs.UUID`: reference to time series data; timestamp - scalingfactor
+-`horizon::Int`: length of this forecast
+-`internal::InfrastructureSystemsInternal`
+"""
 mutable struct ScenarioBasedInternal <: ForecastInternal
-    label::String  # label of component parameter forecasted
+    "label of component parameter forecasted"
+    label::String
     resolution::Dates.Period
-    initial_time::Dates.DateTime  # forecast availability time
-    scenario_count::Int64  # Number of scenarios
-    time_series_uuid::UUIDs.UUID  # reference to time series data; timestamp - scalingfactor
-    horizon::Int  # length of this forecast
+    "forecast availability time"
+    initial_time::Dates.DateTime
+    "Number of scenarios"
+    scenario_count::Int64
+    "reference to time series data; timestamp - scalingfactor"
+    time_series_uuid::UUIDs.UUID
+    "length of this forecast"
+    horizon::Int
     internal::InfrastructureSystemsInternal
 end
 
