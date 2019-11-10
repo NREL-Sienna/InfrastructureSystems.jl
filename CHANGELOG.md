@@ -1,5 +1,9 @@
 # InfrastructureSystems
 
+## 0.4.1
+
+- Update docstring printing in auto generation code
+
 ## 0.4.0
 
 - Add validation for contigous forecasts
