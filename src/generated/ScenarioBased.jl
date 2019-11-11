@@ -11,9 +11,9 @@ This file is auto-generated. Do not edit.
 A Discrete Scenario Based forecast for a particular data field in a Component.
 
 # Arguments
--`label::String`: label of component parameter forecasted
--`scenario_count::Int64`: Number of scenarios
--`data::TimeSeries.TimeArray`: timestamp - scalingfactor
+- `label::String`: label of component parameter forecasted
+- `scenario_count::Int64`: Number of scenarios
+- `data::TimeSeries.TimeArray`: timestamp - scalingfactor
 """
 mutable struct ScenarioBased <: Forecast
     "label of component parameter forecasted"

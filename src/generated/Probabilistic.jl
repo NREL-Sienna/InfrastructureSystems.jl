@@ -11,9 +11,9 @@ This file is auto-generated. Do not edit.
 A Probabilistic forecast for a particular data field in a Component.
 
 # Arguments
--`label::String`: label of component parameter forecasted
--`percentiles::Vector{Float64}`: Percentiles for the probabilistic forecast
--`data::TimeSeries.TimeArray`: timestamp - scalingfactor
+- `label::String`: label of component parameter forecasted
+- `percentiles::Vector{Float64}`: Percentiles for the probabilistic forecast
+- `data::TimeSeries.TimeArray`: timestamp - scalingfactor
 """
 mutable struct Probabilistic <: Forecast
     "label of component parameter forecasted"

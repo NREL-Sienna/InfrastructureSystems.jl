@@ -10,8 +10,8 @@ This file is auto-generated. Do not edit.
 A deterministic forecast for a particular data field in a Component.
 
 # Arguments
--`label::String`: label of component parameter forecasted
--`data::TimeSeries.TimeArray`: timestamp - scalingfactor
+- `label::String`: label of component parameter forecasted
+- `data::TimeSeries.TimeArray`: timestamp - scalingfactor
 """
 mutable struct Deterministic <: Forecast
     "label of component parameter forecasted"

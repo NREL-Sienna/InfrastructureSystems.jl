@@ -15,13 +15,13 @@ This file is auto-generated. Do not edit.
 A Probabilistic forecast for a particular data field in a Component.
 
 # Arguments
--`label::String`: label of component parameter forecasted
--`resolution::Dates.Period`
--`initial_time::Dates.DateTime`: forecast availability time
--`percentiles::Vector{Float64}`: Percentiles for the probabilistic forecast
--`time_series_uuid::UUIDs.UUID`: reference to time series data; timestamp - scalingfactor
--`horizon::Int`: length of this forecast
--`internal::InfrastructureSystemsInternal`
+- `label::String`: label of component parameter forecasted
+- `resolution::Dates.Period`
+- `initial_time::Dates.DateTime`: forecast availability time
+- `percentiles::Vector{Float64}`: Percentiles for the probabilistic forecast
+- `time_series_uuid::UUIDs.UUID`: reference to time series data; timestamp - scalingfactor
+- `horizon::Int`: length of this forecast
+- `internal::InfrastructureSystemsInternal`
 """
 mutable struct ProbabilisticInternal <: ForecastInternal
     "label of component parameter forecasted"

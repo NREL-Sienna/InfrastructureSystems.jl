@@ -14,12 +14,12 @@ This file is auto-generated. Do not edit.
 A deterministic forecast for a particular data field in a Component.
 
 # Arguments
--`label::String`: label of component parameter forecasted
--`resolution::Dates.Period`
--`initial_time::Dates.DateTime`: forecast availability time
--`time_series_uuid::UUIDs.UUID`: reference to time series data; timestamp - scalingfactor
--`horizon::Int`: length of this forecast
--`internal::InfrastructureSystemsInternal`
+- `label::String`: label of component parameter forecasted
+- `resolution::Dates.Period`
+- `initial_time::Dates.DateTime`: forecast availability time
+- `time_series_uuid::UUIDs.UUID`: reference to time series data; timestamp - scalingfactor
+- `horizon::Int`: length of this forecast
+- `internal::InfrastructureSystemsInternal`
 """
 mutable struct DeterministicInternal <: ForecastInternal
     "label of component parameter forecasted"
