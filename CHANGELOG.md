@@ -1,6 +1,6 @@
 # InfrastructureSystems
 
-## 0.4.1
+## 0.4.2
 
 - Fix docstring creation in struct generation code
 
