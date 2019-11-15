@@ -319,6 +319,8 @@ end
         IS.Deterministic, component, label, horizon, initial_times, dates1[1], interval, 18
     )
 
+    invalid_it = Dates.DateTime("2020-01-20T00:00:00")
+    @test_throws ArgumentError IS.get_forecast(IS.Deterministic, component, invalid_it, label, horizon)
 end
 
 @testset "Test generate_initial_times" begin
