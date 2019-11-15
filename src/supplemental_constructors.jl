@@ -26,6 +26,20 @@ function Deterministic(label::String,
     return Deterministic(label, data)
 end
 
+function Deterministic(forecasts::Vector{Deterministic})
+    @assert !isempty(forecasts)
+    timestamps = collect(Iterators.flatten((TimeSeries.timestamp(get_data(x))
+                                            for x in forecasts)))
+    data = collect(Iterators.flatten((TimeSeries.values(get_data(x)) for x in forecasts)))
+    ta = TimeSeries.TimeArray(timestamps, data)
+
+    forecast = Deterministic(get_label(forecasts[1]), ta)
+    @debug "concatenated forecasts" forecast
+    return forecast
+end
+
+# TODO: need to make concatenation constructors for Probabilistic and ScenarioBased.
+
 function make_public_forecast(forecast::DeterministicInternal, data::TimeSeries.TimeArray)
     return Deterministic(get_label(forecast), data)
 end
@@ -152,3 +166,32 @@ function make_internal_forecast(forecast::ScenarioBased, ts_data::TimeSeriesData
                                  get_horizon(forecast),
                                 )
 end
+
+function forecast_external_to_internal(::Type{T}) where T <: Forecast
+    if T <: Deterministic
+        forecast_type = DeterministicInternal
+    elseif T <: Probabilistic
+        forecast_type = ProbabilisticInternal
+    elseif T <: ScenarioBased
+        forecast_type = ScenarioBasedInternal
+    else
+        @assert false
+    end
+
+    return forecast_type
+end
+
+function forecast_internal_to_external(::Type{T}) where T <: ForecastInternal
+    if T <: DeterministicInternal
+        forecast_type = Deterministic
+    elseif T <: ProbabilisticInternal
+        forecast_type = Probabilistic
+    elseif T <: ScenarioBasedInternal
+        forecast_type = ScenarioBased
+    else
+        @assert false
+    end
+
+    return forecast_type
+end
+
