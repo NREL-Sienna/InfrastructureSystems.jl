@@ -260,12 +260,67 @@ end
     @test length(forecast) == 3
 end
 
-function validate_generated_initial_times(initial_times, initial_time, interval, exp_length)
+function validate_generated_initial_times(
+                                          forecast_type::Type{<:IS.Forecast},
+                                          component::IS.InfrastructureSystemsType,
+                                          label::AbstractString,
+                                          horizon::Int,
+                                          initial_times::Vector{Dates.DateTime},
+                                          initial_time::Dates.DateTime,
+                                          interval::Dates.Period,
+                                          exp_length::Int
+                                         )
     @test length(initial_times) == exp_length
     for it in initial_times
         @test it == initial_time
+        # Verify all possible forecast ranges.
+        for i in 2:horizon
+            forecast = IS.get_forecast(forecast_type, component, it, label, i)
+            @test IS.get_horizon(forecast) == i
+            @test IS.get_initial_time(forecast) == it
+            # This will throw if the resolution isn't consistent throughout.
+            IS.get_resolution(IS.get_data(forecast))
+        end
         initial_time += interval
     end
+end
+
+@testset "Test subset from contiguous forecasts" begin
+    sys = create_system_data()
+
+    components = collect(IS.get_components(IS.InfrastructureSystemsType, sys))
+    @test length(components) == 1
+    component = components[1]
+
+    dates1 = collect(Dates.DateTime("2020-01-01T00:00:00") : Dates.Hour(1) :
+                     Dates.DateTime("2020-01-01T23:00:00"))
+    dates2 = collect(Dates.DateTime("2020-01-02T00:00:00") : Dates.Hour(1) :
+                     Dates.DateTime("2020-01-02T23:00:00"))
+    dates3 = collect(Dates.DateTime("2020-01-03T00:00:00") : Dates.Hour(1) :
+                     Dates.DateTime("2020-01-03T23:00:00"))
+    data = collect(1:24)
+
+    label = "get_val"
+    ta1 = TimeSeries.TimeArray(dates1, data, [IS.get_name(component)])
+    ta2 = TimeSeries.TimeArray(dates2, data, [IS.get_name(component)])
+    ta3 = TimeSeries.TimeArray(dates3, data, [IS.get_name(component)])
+    IS.add_forecast!(sys, ta1, component, label)
+    IS.add_forecast!(sys, ta2, component, label)
+    IS.add_forecast!(sys, ta3, component, label)
+    initial_times = IS.get_forecast_initial_times(component)
+    @test length(initial_times) == 3
+    @test IS.are_forecasts_contiguous(component)
+    @test IS.are_forecasts_contiguous(sys)
+
+    interval = Dates.Hour(1)
+    horizon = 55
+    initial_times = IS.generate_initial_times(component, interval, horizon)
+    validate_generated_initial_times(
+        IS.Deterministic, component, label, horizon, initial_times, dates1[1], interval, 18
+    )
+
+    invalid_it = Dates.DateTime("2020-01-20T00:00:00")
+    @test_throws ArgumentError IS.get_forecast(IS.Deterministic, component, invalid_it, label, horizon)
 end
 
 @testset "Test generate_initial_times" begin
@@ -279,29 +334,45 @@ end
     data = collect(1:24)
 
     ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
-    IS.add_forecast!(sys, ta, component, "get_val")
+    label = "get_val"
+    IS.add_forecast!(sys, ta, component, label)
     initial_times = IS.get_forecast_initial_times(component)
     @test length(initial_times) == 1
 
+    horizon = 24
     interval = Dates.Hour(1)
-    initial_times = IS.generate_initial_times(component, interval, 24)
-    validate_generated_initial_times(initial_times, dates[1], interval, 1)
+    initial_times = IS.generate_initial_times(component, interval, horizon)
+    validate_generated_initial_times(
+        IS.Deterministic, component, label, horizon, initial_times, dates[1], interval, 1
+    )
 
+    horizon = 12
     interval = Dates.Hour(1)
-    initial_times = IS.generate_initial_times(component, interval, 12)
-    validate_generated_initial_times(initial_times, dates[1], interval, 13)
+    initial_times = IS.generate_initial_times(component, interval, horizon)
+    validate_generated_initial_times(
+        IS.Deterministic, component, label, horizon, initial_times, dates[1], interval, 13
+    )
 
+    horizon = 6
     interval = Dates.Hour(3)
-    initial_times = IS.generate_initial_times(component, interval, 6)
-    validate_generated_initial_times(initial_times, dates[1], interval, 7)
+    initial_times = IS.generate_initial_times(component, interval, horizon)
+    validate_generated_initial_times(
+        IS.Deterministic, component, label, horizon, initial_times, dates[1], interval, 7
+    )
 
+    horizon = 6
     interval = Dates.Hour(4)
-    initial_times = IS.generate_initial_times(component, interval, 6)
-    validate_generated_initial_times(initial_times, dates[1], interval, 5)
+    initial_times = IS.generate_initial_times(component, interval, horizon)
+    validate_generated_initial_times(
+        IS.Deterministic, component, label, horizon, initial_times, dates[1], interval, 5
+    )
 
     # Test through the system.
-    initial_times = IS.generate_initial_times(sys, interval, 6)
-    validate_generated_initial_times(initial_times, dates[1], interval, 5)
+    horizon = 6
+    initial_times = IS.generate_initial_times(sys, interval, horizon)
+    validate_generated_initial_times(
+        IS.Deterministic, component, label, horizon, initial_times, dates[1], interval, 5
+    )
     IS.clear_forecasts!(sys)
     @test_throws ArgumentError IS.generate_initial_times(sys, interval, 6)
 end
@@ -322,38 +393,51 @@ end
                      Dates.DateTime("2020-01-02T23:00:00"))
     data = collect(1:24)
 
+    label = "get_val"
     ta1 = TimeSeries.TimeArray(dates1, data, [IS.get_name(component)])
     ta2 = TimeSeries.TimeArray(dates2, data, [IS.get_name(component)])
-    IS.add_forecast!(sys, ta1, component, "get_val")
-    IS.add_forecast!(sys, ta2, component, "get_val")
+    IS.add_forecast!(sys, ta1, component, label)
+    IS.add_forecast!(sys, ta2, component, label)
     initial_times = IS.get_forecast_initial_times(component)
     @test length(initial_times) == 2
     @test IS.are_forecasts_contiguous(component)
     @test IS.are_forecasts_contiguous(sys)
 
     interval = Dates.Hour(1)
-    initial_times = IS.generate_initial_times(component, interval, 48)
-    validate_generated_initial_times(initial_times, dates1[1], interval, 1)
+    horizon = 48
+    initial_times = IS.generate_initial_times(component, interval, horizon)
+    validate_generated_initial_times(
+        IS.Deterministic, component, label, horizon, initial_times, dates1[1], interval, 1)
 
+    horizon = 24
     interval = Dates.Hour(1)
-    initial_times = IS.generate_initial_times(component, interval, 24)
-    validate_generated_initial_times(initial_times, dates1[1], interval, 25)
+    initial_times = IS.generate_initial_times(component, interval, horizon)
+    validate_generated_initial_times(
+        IS.Deterministic, component, label, horizon, initial_times, dates1[1], interval, 25)
 
+    horizon = 12
     interval = Dates.Hour(1)
-    initial_times = IS.generate_initial_times(component, interval, 12)
-    validate_generated_initial_times(initial_times, dates1[1], interval, 37)
+    initial_times = IS.generate_initial_times(component, interval, horizon)
+    validate_generated_initial_times(
+        IS.Deterministic, component, label, horizon, initial_times, dates1[1], interval, 37)
 
+    horizon = 6
     interval = Dates.Hour(3)
-    initial_times = IS.generate_initial_times(component, interval, 6)
-    validate_generated_initial_times(initial_times, dates1[1], interval, 15)
+    initial_times = IS.generate_initial_times(component, interval, horizon)
+    validate_generated_initial_times(
+        IS.Deterministic, component, label, horizon, initial_times, dates1[1], interval, 15)
 
+    horizon = 6
     interval = Dates.Hour(4)
-    initial_times = IS.generate_initial_times(component, interval, 6)
-    validate_generated_initial_times(initial_times, dates1[1], interval, 11)
+    initial_times = IS.generate_initial_times(component, interval, horizon)
+    validate_generated_initial_times(
+        IS.Deterministic, component, label, horizon, initial_times, dates1[1], interval, 11)
 
     # Run once on the system.
-    initial_times = IS.generate_initial_times(sys, interval, 6)
-    validate_generated_initial_times(initial_times, dates1[1], interval, 11)
+    horizon = 6
+    initial_times = IS.generate_initial_times(sys, interval, horizon)
+    validate_generated_initial_times(
+        IS.Deterministic, component, label, horizon, initial_times, dates1[1], interval, 11)
 end
 
 @testset "Test generate_initial_times overlapping" begin

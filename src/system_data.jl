@@ -266,20 +266,6 @@ function make_forecast!(
     return _make_forecast(forecast_info, resolution)
 end
 
-function forecast_external_to_internal(::Type{T}) where T <: Forecast
-    if T <: Deterministic
-        forecast_type = DeterministicInternal
-    elseif T <: Probabilistic
-        forecast_type = ProbabilisticInternal
-    elseif T <: ScenarioBased
-        forecast_type = ScenarioBasedInternal
-    else
-        @assert false
-    end
-
-    return forecast_type
-end
-
 function _add_forecast!(
                         data::SystemData,
                         component::InfrastructureSystemsType,

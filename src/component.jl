@@ -69,6 +69,7 @@ end
                 ) where T <: Forecast
 
 Return a forecast for a subset of the time series range stored for these parameters.
+The range may span time series arrays as long as those timestamps are contiguous.
 """
 function get_forecast(
                       ::Type{T},
@@ -95,15 +96,7 @@ function get_forecast(
         horizon,
     )
 
-    index = Int((initial_time - get_initial_time(forecast)) / resolution) + 1
-    ts = get_time_series(
-        _get_time_series_storage(component),
-        get_time_series_uuid(forecast);
-        index=index,
-        len=horizon,
-    )
-
-    return make_public_forecast(forecast, ts)
+    return forecast
 end
 
 function get_forecast(
@@ -124,19 +117,73 @@ function get_forecast(
                       label::AbstractString,
                       horizon::Int,
                      ) where T <: ForecastInternal
+    forecast_type = forecast_internal_to_external(T)
+    @debug "Requested forecast" get_name(component) forecast_type label initial_time horizon
+    forecasts = Vector{forecast_type}()
     end_time = initial_time + sys_resolution * horizon
-    @debug "Requested forecast" initial_time horizon
     initial_times = get_forecast_initial_times(T, _get_forecast_container(component), label)
+
+    times_remaining = horizon
+    found_start = false
+
+    # This code concatenates ranges of contiguous forecasts.
+    # Each initial_time represents one time series array that is stored.
+    # Each array has a length equal to the system horizon.
     for it in initial_times
-        # Return the forecast for this time array if it encompasses the requested range and
-        # one of its data points is the requested initial_time.
-        if it <= initial_time && (end_time <= (it + sys_resolution * sys_horizon)) &&
-                ((initial_time - it) % Dates.Millisecond(sys_resolution) == Dates.Second(0))
-            return get_forecast(T, _get_forecast_container(component), it, label)
+        len = 0
+        if !found_start
+            end_chunk = it + sys_resolution * sys_horizon
+            if it <= initial_time && end_chunk > initial_time
+                start_index = Int((initial_time - it) / sys_resolution) + 1
+                found_start = true
+            else
+                # Keep looking for the start.
+                continue
+            end
+            if end_chunk >= end_time
+                end_index = sys_horizon - Int((end_chunk - end_time) / sys_resolution)
+                len = end_index - start_index + 1
+            else
+                len = sys_horizon - start_index + 1
+            end
+        else
+            start_index = 1
+            len = times_remaining > sys_horizon ? sys_horizon : times_remaining
+        end
+
+        push!(forecasts, _make_forecast(T, component, start_index, len, it, label))
+        times_remaining -= len
+        if times_remaining == 0
+            break
         end
     end
 
-    throw(ArgumentError("did not find a forecast matching the requested parameters"))
+    if isempty(forecasts)
+        throw(ArgumentError("did not find a forecast matching the requested parameters"))
+    end
+
+    @assert times_remaining == 0
+
+    # Run the type-specificc constructor that concatenates forecasts.
+    return forecast_type(forecasts)
+end
+
+function _make_forecast(
+                        ::Type{T},
+                        component::InfrastructureSystemsType,
+                        start_index::Int,
+                        len::Int,
+                        initial_time::Dates.DateTime,
+                        label::AbstractString
+                       ) where T <: ForecastInternal
+    forecast = get_forecast(T, _get_forecast_container(component), initial_time, label)
+    ts = get_time_series(
+        _get_time_series_storage(component),
+        get_time_series_uuid(forecast);
+        index=start_index,
+        len=len,
+    )
+    return make_public_forecast(forecast, ts)
 end
 
 """
