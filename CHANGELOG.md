@@ -2,6 +2,10 @@
 
 ## 0.4.3
 
+- Fix printing of < in generated structs
+
+## 0.4.3
+
 - Fix inital time generation from contiguous forecasts 
 
 ## 0.4.2
