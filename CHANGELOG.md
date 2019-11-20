@@ -1,6 +1,6 @@
 # InfrastructureSystems
 
-## 0.4.3
+## 0.4.4
 
 - Fix printing of < in generated structs
 
