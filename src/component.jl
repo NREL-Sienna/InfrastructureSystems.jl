@@ -4,7 +4,7 @@ function add_forecast!(
                       ) where T <: InfrastructureSystemsType
     container = _get_forecast_container(component)
     if isnothing(container)
-        throw(ArgumentError("type $T does not contain forecasts"))
+        throw(ArgumentError("type $T does not support storing forecasts"))
     end
 
     add_forecast!(container, forecast)
