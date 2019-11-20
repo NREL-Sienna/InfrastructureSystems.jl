@@ -638,3 +638,25 @@ end
     @test TimeSeries.timestamp(ta) == TimeSeries.timestamp(fdata2)
     @test TimeSeries.values(ta) == TimeSeries.values(fdata2)
 end
+
+@testset "Add forecast to unsupported struct" begin
+    struct TestComponentNoForecasts <: IS.InfrastructureSystemsType
+        name::AbstractString
+        internal::IS.InfrastructureSystemsInternal
+    end
+
+    function TestComponentNoForecasts(name)
+        return TestComponentNoForecasts(name, IS.InfrastructureSystemsInternal())
+    end
+
+    sys = IS.SystemData()
+    name = "component"
+    component = TestComponentNoForecasts(name)
+    IS.add_component!(sys, component)
+    dates = collect(Dates.DateTime("2020-01-01T00:00:00") : Dates.Hour(1) :
+                    Dates.DateTime("2020-01-01T23:00:00"))
+    data = collect(1:24)
+    ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
+    forecast = IS.Deterministic("get_val", ta)
+    @test_throws ArgumentError IS.add_forecast!(sys, component, forecast)
+end
