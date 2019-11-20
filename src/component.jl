@@ -7,7 +7,7 @@ function add_forecast!(
         throw(ArgumentError("type $T does not contain forecasts"))
     end
 
-    add_forecast!(_get_forecast_container(component), forecast)
+    add_forecast!(container, forecast)
     @debug "Added $forecast to $(typeof(component)) $(component.name) " *
            "num_forecasts=$(length(component._forecasts.data))."
 end
