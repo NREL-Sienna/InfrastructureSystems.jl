@@ -6,6 +6,7 @@ include("ScenarioBasedInternal.jl")
 include("ScenarioBased.jl")
 
 export get_data
+export get_ext
 export get_horizon
 export get_initial_time
 export get_internal
