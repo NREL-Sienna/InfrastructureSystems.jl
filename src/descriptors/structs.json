@@ -47,11 +47,6 @@
         "name": "data",
         "data_type": "TimeSeries.TimeArray",
         "comment": "timestamp - scalingfactor"
-      },
-      {
-        "name": "ext",
-        "data_type": "Union{Nothing, Dict{String, Any}}",
-        "null_value": "nothing"
       }
     ],
     "supertype": "Forecast"
@@ -114,11 +109,6 @@
         "name": "data",
         "data_type": "TimeSeries.TimeArray",
         "comment": "timestamp - scalingfactor"
-      },
-      {
-        "name": "ext",
-        "data_type": "Union{Nothing, Dict{String, Any}}",
-        "null_value": "nothing"
       }
     ],
     "supertype": "Forecast"
@@ -181,11 +171,6 @@
         "name": "data",
         "data_type": "TimeSeries.TimeArray",
         "comment": "timestamp - scalingfactor"
-      },
-      {
-        "name": "ext",
-        "data_type": "Union{Nothing, Dict{String, Any}}",
-        "null_value": "nothing"
       }
     ],
     "supertype": "Forecast"

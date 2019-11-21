@@ -6,7 +6,6 @@ This file is auto-generated. Do not edit.
         label::String
         scenario_count::Int64
         data::TimeSeries.TimeArray
-        ext::Union{Nothing, Dict{String, Any}}
     end
 
 A Discrete Scenario Based forecast for a particular data field in a Component.
@@ -15,7 +14,6 @@ A Discrete Scenario Based forecast for a particular data field in a Component.
 - `label::String`: label of component parameter forecasted
 - `scenario_count::Int64`: Number of scenarios
 - `data::TimeSeries.TimeArray`: timestamp - scalingfactor
-- `ext::Union{Nothing, Dict{String, Any}}`
 """
 mutable struct ScenarioBased <: Forecast
     "label of component parameter forecasted"
@@ -24,13 +22,12 @@ mutable struct ScenarioBased <: Forecast
     scenario_count::Int64
     "timestamp - scalingfactor"
     data::TimeSeries.TimeArray
-    ext::Union{Nothing, Dict{String, Any}}
 end
 
 
 
-function ScenarioBased(; label, scenario_count, data, ext, )
-    ScenarioBased(label, scenario_count, data, ext, )
+function ScenarioBased(; label, scenario_count, data, )
+    ScenarioBased(label, scenario_count, data, )
 end
 
 
@@ -40,5 +37,3 @@ get_label(value::ScenarioBased) = value.label
 get_scenario_count(value::ScenarioBased) = value.scenario_count
 """Get ScenarioBased data."""
 get_data(value::ScenarioBased) = value.data
-"""Get ScenarioBased ext."""
-get_ext(value::ScenarioBased) = value.ext
