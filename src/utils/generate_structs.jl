@@ -37,8 +37,6 @@ mutable struct {{struct_name}}{{#parametric}}{T <: {{parametric}}}{{/parametric}
 end
 
 {{#needs_positional_constructor}}function {{struct_name}}({{#parameters}}{{^internal}}{{name}}{{#default}}={{default}}{{/default}}, {{/internal}}{{/parameters}})
-    {{#parameters}}
-    {{/parameters}}
     {{struct_name}}({{#parameters}}{{^internal}}{{name}}, {{/internal}}{{/parameters}}InfrastructureSystemsInternal())
 end{{/needs_positional_constructor}}
 
@@ -48,16 +46,12 @@ end
 
 {{#parametric}}
 function {{struct_name}}{T}({{#parameters}}{{^internal}}{{name}}{{#default}}={{default}}{{/default}}, {{/internal}}{{/parameters}}) where T <: InfrastructureSystemsType
-    {{#parameters}}
-    {{/parameters}}
     {{struct_name}}({{#parameters}}{{^internal}}{{name}}, {{/internal}}{{/parameters}}InfrastructureSystemsInternal())
 end
 {{/parametric}}
 
 {{#defines_ext}}
 function {{struct_name}}({{#parameters}}{{^internal}}{{^ext}}{{^_forecasts}}{{name}}, {{/_forecasts}}{{/ext}}{{/internal}}{{/parameters}}; ext={{#parameters}}{{#ext}}{{default}}{{/ext}}{{/parameters}})
-    {{#parameters}}
-    {{/parameters}}
     {{#parameters}}{{#_forecasts}}_forecasts={{default}}{{/_forecasts}}{{/parameters}}
     {{struct_name}}({{#parameters}}{{^internal}}{{name}}, {{/internal}}{{/parameters}}InfrastructureSystemsInternal())
 end
