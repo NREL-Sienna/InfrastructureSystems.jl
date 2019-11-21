@@ -35,28 +35,17 @@ mutable struct {{struct_name}}{{#parametric}}{T <: {{parametric}}}{{/parametric}
     end
     {{/inner_constructor_check}}
 end
-
 {{#needs_positional_constructor}}function {{struct_name}}({{#parameters}}{{^internal}}{{name}}{{#default}}={{default}}{{/default}}, {{/internal}}{{/parameters}})
     {{struct_name}}({{#parameters}}{{^internal}}{{name}}, {{/internal}}{{/parameters}}InfrastructureSystemsInternal())
 end{{/needs_positional_constructor}}
-
 function {{struct_name}}(; {{#parameters}}{{^internal}}{{name}}{{#default}}={{default}}{{/default}}, {{/internal}}{{/parameters}})
     {{struct_name}}({{#parameters}}{{^internal}}{{name}}, {{/internal}}{{/parameters}})
 end
-
 {{#parametric}}
 function {{struct_name}}{T}({{#parameters}}{{^internal}}{{name}}{{#default}}={{default}}{{/default}}, {{/internal}}{{/parameters}}) where T <: InfrastructureSystemsType
     {{struct_name}}({{#parameters}}{{^internal}}{{name}}, {{/internal}}{{/parameters}}InfrastructureSystemsInternal())
 end
 {{/parametric}}
-
-{{#defines_ext}}
-function {{struct_name}}({{#parameters}}{{^internal}}{{^ext}}{{^_forecasts}}{{name}}, {{/_forecasts}}{{/ext}}{{/internal}}{{/parameters}}; ext={{#parameters}}{{#ext}}{{default}}{{/ext}}{{/parameters}})
-    {{#parameters}}{{#_forecasts}}_forecasts={{default}}{{/_forecasts}}{{/parameters}}
-    {{struct_name}}({{#parameters}}{{^internal}}{{name}}, {{/internal}}{{/parameters}}InfrastructureSystemsInternal())
-end
-{{/defines_ext}}
-
 {{#has_null_values}}
 # Constructor for demo purposes; non-functional.
 
@@ -89,7 +78,6 @@ function generate_structs(directory, data::Vector; print_results=true)
 
     for item in data
         has_internal = false
-        defines_ext = false
         accessors = Vector{Dict}()
         item["has_null_values"] = true
         parameters = Vector{Dict}()
@@ -110,7 +98,6 @@ function generate_structs(directory, data::Vector; print_results=true)
 
             if param["name"] == "ext"
                 param["ext"] = true
-                defines_ext = true
                 continue
             end
 
@@ -132,7 +119,6 @@ function generate_structs(directory, data::Vector; print_results=true)
         item["parameters"] = parameters
         item["accessors"] = accessors
         item["needs_positional_constructor"] = has_internal
-        item["defines_ext"] = defines_ext
 
         filename = joinpath(directory, item["struct_name"] * ".jl")
         open(filename, "w") do io
