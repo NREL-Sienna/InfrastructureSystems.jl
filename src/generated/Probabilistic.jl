@@ -24,14 +24,9 @@ mutable struct Probabilistic <: Forecast
     data::TimeSeries.TimeArray
 end
 
-
-
 function Probabilistic(; label, percentiles, data, )
     Probabilistic(label, percentiles, data, )
 end
-
-
-
 
 """Get Probabilistic label."""
 get_label(value::Probabilistic) = value.label
