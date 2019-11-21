@@ -53,6 +53,16 @@ function {{struct_name}}{T}({{#parameters}}{{^internal}}{{name}}{{#default}}={{d
     {{struct_name}}({{#parameters}}{{^internal}}{{name}}, {{/internal}}{{/parameters}}InfrastructureSystemsInternal())
 end
 {{/parametric}}
+
+{{#defines_ext}}
+function {{struct_name}}({{#parameters}}{{^internal}}{{^ext}}{{^_forecasts}}{{name}}, {{/_forecasts}}{{/ext}}{{/internal}}{{/parameters}}; ext={{#parameters}}{{#ext}}{{default}}{{/ext}}{{/parameters}})
+    {{#parameters}}
+    {{/parameters}}
+    _forecasts{{#parameters}}{{#_forecasts}}={{default}}{{/_forecasts}}{{/parameters}}
+    {{struct_name}}({{#parameters}}{{^internal}}{{name}}, {{/internal}}{{/parameters}}InfrastructureSystemsInternal())
+end
+{{/defines_ext}}
+
 {{#has_null_values}}
 # Constructor for demo purposes; non-functional.
 
@@ -85,13 +95,13 @@ function generate_structs(directory, data::Vector; print_results=true)
 
     for item in data
         has_internal = false
+        defines_ext = false
         accessors = Vector{Dict}()
         item["has_null_values"] = true
         parameters = Vector{Dict}()
         for field in item["fields"]
             param = namedtuple_to_dict(field)
             push!(parameters, param)
-
             accessor_name = "get_" * param["name"]
             push!(accessors, Dict("name" => param["name"], "accessor" => accessor_name))
             if accessor_name != "internal"
@@ -102,6 +112,16 @@ function generate_structs(directory, data::Vector; print_results=true)
                 param["internal"] = true
                 has_internal = true
                 continue
+            end
+
+            if param["name"] == "ext"
+                param["ext"] = true
+                defines_ext = true
+                continue
+            end
+
+            if param["name"] == "_forecasts"
+                param["_forecasts"] = true
             end
 
             # This controls whether a kwargs constructor will be generated.
@@ -118,6 +138,7 @@ function generate_structs(directory, data::Vector; print_results=true)
         item["parameters"] = parameters
         item["accessors"] = accessors
         item["needs_positional_constructor"] = has_internal
+        item["defines_ext"] = defines_ext
 
         filename = joinpath(directory, item["struct_name"] * ".jl")
         open(filename, "w") do io
