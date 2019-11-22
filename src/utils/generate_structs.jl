@@ -57,14 +57,13 @@ end
 function {{struct_name}}(::Nothing)
     {{struct_name}}(;
         {{#parameters}}
-        {{^internal}}
+        {{^internal_default}}
         {{name}}={{#quotes}}"{{null_value}}"{{/quotes}}{{^quotes}}{{null_value}}{{/quotes}},
-        {{/internal}}
+        {{/internal_default}}
         {{/parameters}}
     )
 end
 {{/has_null_values}}
-
 {{#accessors}}
 \"\"\"Get {{struct_name}} {{name}}.\"\"\"
 {{accessor}}(value::{{struct_name}}) = value.{{name}}
@@ -95,19 +94,9 @@ function generate_structs(directory, data::Vector; print_results=true)
                 push!(unique_accessor_functions, accessor_name)
             end
 
-            if param["name"] == "internal"
-                param["internal"] = true
+            if haskey(param, "internal_default")
                 has_internal = true
                 continue
-            end
-
-            if param["name"] == "ext"
-                param["ext"] = true
-                continue
-            end
-
-            if param["name"] == "_forecasts"
-                param["_forecasts"] = true
             end
 
             # This controls whether a kwargs constructor will be generated.
