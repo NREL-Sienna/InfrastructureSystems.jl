@@ -37,18 +37,18 @@ mutable struct {{struct_name}}{{#parametric}}{T <: {{parametric}}}{{/parametric}
 end
 
 {{#needs_positional_constructor}}
-function {{struct_name}}({{#parameters}}{{^internal}}{{name}}{{#default}}={{default}}{{/default}}, {{/internal}}{{/parameters}})
-    {{struct_name}}({{#parameters}}{{^internal}}{{name}}, {{/internal}}{{/parameters}}InfrastructureSystemsInternal())
+function {{struct_name}}({{#parameters}}{{^internal_default}}{{name}}{{#default}}={{default}}{{/default}}, {{/internal_default}}{{/parameters}})
+    {{struct_name}}({{#parameters}}{{^internal_default}}{{name}}, {{/internal_default}}{{/parameters}}{{#parameters}}{{#internal_default}}{{internal_default}}, {{/internal_default}}{{/parameters}})
 end
 {{/needs_positional_constructor}}
 
-function {{struct_name}}(; {{#parameters}}{{^internal}}{{name}}{{#default}}={{default}}{{/default}}, {{/internal}}{{/parameters}})
-    {{struct_name}}({{#parameters}}{{^internal}}{{name}}, {{/internal}}{{/parameters}})
+function {{struct_name}}(; {{#parameters}}{{^internal_default}}{{name}}{{#default}}={{default}}{{/default}}, {{/internal_default}}{{/parameters}})
+    {{struct_name}}({{#parameters}}{{^internal_default}}{{name}}, {{/internal_default}}{{/parameters}})
 end
 
 {{#parametric}}
-function {{struct_name}}{T}({{#parameters}}{{^internal}}{{name}}{{#default}}={{default}}{{/default}}, {{/internal}}{{/parameters}}) where T <: InfrastructureSystemsType
-    {{struct_name}}({{#parameters}}{{^internal}}{{name}}, {{/internal}}{{/parameters}}InfrastructureSystemsInternal())
+function {{struct_name}}{T}({{#parameters}}{{^internal_default}}{{name}}{{#default}}={{default}}{{/default}}, {{/internal_default}}{{/parameters}}) where T <: InfrastructureSystemsType
+    {{struct_name}}({{#parameters}}{{^internal_default}}{{name}}, {{/internal_default}}{{/parameters}})
 end
 {{/parametric}}
 

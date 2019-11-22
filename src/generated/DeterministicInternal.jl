@@ -35,7 +35,7 @@ mutable struct DeterministicInternal <: ForecastInternal
 end
 
 function DeterministicInternal(label, resolution, initial_time, time_series_uuid, horizon, )
-    DeterministicInternal(label, resolution, initial_time, time_series_uuid, horizon, InfrastructureSystemsInternal())
+    DeterministicInternal(label, resolution, initial_time, time_series_uuid, horizon, InfrastructureSystemsInternal(), )
 end
 
 function DeterministicInternal(; label, resolution, initial_time, time_series_uuid, horizon, )
