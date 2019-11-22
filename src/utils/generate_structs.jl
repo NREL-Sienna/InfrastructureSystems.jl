@@ -36,37 +36,34 @@ mutable struct {{struct_name}}{{#parametric}}{T <: {{parametric}}}{{/parametric}
     {{/inner_constructor_check}}
 end
 
-{{#needs_positional_constructor}}function {{struct_name}}({{#parameters}}{{^internal}}{{name}}{{#default}}={{default}}{{/default}}, {{/internal}}{{/parameters}})
-    {{#parameters}}
-    {{/parameters}}
-    {{struct_name}}({{#parameters}}{{^internal}}{{name}}, {{/internal}}{{/parameters}}InfrastructureSystemsInternal())
-end{{/needs_positional_constructor}}
+{{#needs_positional_constructor}}
+function {{struct_name}}({{#parameters}}{{^internal_default}}{{name}}{{#default}}={{default}}{{/default}}, {{/internal_default}}{{/parameters}})
+    {{struct_name}}({{#parameters}}{{^internal_default}}{{name}}, {{/internal_default}}{{/parameters}}{{#parameters}}{{#internal_default}}{{internal_default}}, {{/internal_default}}{{/parameters}})
+end
+{{/needs_positional_constructor}}
 
-function {{struct_name}}(; {{#parameters}}{{^internal}}{{name}}{{#default}}={{default}}{{/default}}, {{/internal}}{{/parameters}})
-    {{struct_name}}({{#parameters}}{{^internal}}{{name}}, {{/internal}}{{/parameters}})
+function {{struct_name}}(; {{#parameters}}{{^internal_default}}{{name}}{{#default}}={{default}}{{/default}}, {{/internal_default}}{{/parameters}})
+    {{struct_name}}({{#parameters}}{{^internal_default}}{{name}}, {{/internal_default}}{{/parameters}})
 end
 
 {{#parametric}}
-function {{struct_name}}{T}({{#parameters}}{{^internal}}{{name}}{{#default}}={{default}}{{/default}}, {{/internal}}{{/parameters}}) where T <: InfrastructureSystemsType
-    {{#parameters}}
-    {{/parameters}}
-    {{struct_name}}({{#parameters}}{{^internal}}{{name}}, {{/internal}}{{/parameters}}InfrastructureSystemsInternal())
+function {{struct_name}}{T}({{#parameters}}{{^internal_default}}{{name}}{{#default}}={{default}}{{/default}}, {{/internal_default}}{{/parameters}}) where T <: InfrastructureSystemsType
+    {{struct_name}}({{#parameters}}{{^internal_default}}{{name}}, {{/internal_default}}{{/parameters}})
 end
 {{/parametric}}
 {{#has_null_values}}
 # Constructor for demo purposes; non-functional.
-
 function {{struct_name}}(::Nothing)
     {{struct_name}}(;
         {{#parameters}}
-        {{^internal}}
+        {{^internal_default}}
         {{name}}={{#quotes}}"{{null_value}}"{{/quotes}}{{^quotes}}{{null_value}}{{/quotes}},
-        {{/internal}}
+        {{/internal_default}}
         {{/parameters}}
     )
 end
-{{/has_null_values}}
 
+{{/has_null_values}}
 {{#accessors}}
 \"\"\"Get {{struct_name}} {{name}}.\"\"\"
 {{accessor}}(value::{{struct_name}}) = value.{{name}}
@@ -91,15 +88,13 @@ function generate_structs(directory, data::Vector; print_results=true)
         for field in item["fields"]
             param = namedtuple_to_dict(field)
             push!(parameters, param)
-
             accessor_name = "get_" * param["name"]
             push!(accessors, Dict("name" => param["name"], "accessor" => accessor_name))
             if accessor_name != "internal"
                 push!(unique_accessor_functions, accessor_name)
             end
 
-            if param["name"] == "internal"
-                param["internal"] = true
+            if haskey(param, "internal_default")
                 has_internal = true
                 continue
             end

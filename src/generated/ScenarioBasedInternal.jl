@@ -39,13 +39,12 @@ mutable struct ScenarioBasedInternal <: ForecastInternal
 end
 
 function ScenarioBasedInternal(label, resolution, initial_time, scenario_count, time_series_uuid, horizon, )
-    ScenarioBasedInternal(label, resolution, initial_time, scenario_count, time_series_uuid, horizon, InfrastructureSystemsInternal())
+    ScenarioBasedInternal(label, resolution, initial_time, scenario_count, time_series_uuid, horizon, InfrastructureSystemsInternal(), )
 end
 
 function ScenarioBasedInternal(; label, resolution, initial_time, scenario_count, time_series_uuid, horizon, )
     ScenarioBasedInternal(label, resolution, initial_time, scenario_count, time_series_uuid, horizon, )
 end
-
 
 """Get ScenarioBasedInternal label."""
 get_label(value::ScenarioBasedInternal) = value.label

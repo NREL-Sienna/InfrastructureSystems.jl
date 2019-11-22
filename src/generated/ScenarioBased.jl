@@ -25,11 +25,9 @@ mutable struct ScenarioBased <: Forecast
 end
 
 
-
 function ScenarioBased(; label, scenario_count, data, )
     ScenarioBased(label, scenario_count, data, )
 end
-
 
 """Get ScenarioBased label."""
 get_label(value::ScenarioBased) = value.label

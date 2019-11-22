@@ -39,13 +39,12 @@ mutable struct ProbabilisticInternal <: ForecastInternal
 end
 
 function ProbabilisticInternal(label, resolution, initial_time, percentiles, time_series_uuid, horizon, )
-    ProbabilisticInternal(label, resolution, initial_time, percentiles, time_series_uuid, horizon, InfrastructureSystemsInternal())
+    ProbabilisticInternal(label, resolution, initial_time, percentiles, time_series_uuid, horizon, InfrastructureSystemsInternal(), )
 end
 
 function ProbabilisticInternal(; label, resolution, initial_time, percentiles, time_series_uuid, horizon, )
     ProbabilisticInternal(label, resolution, initial_time, percentiles, time_series_uuid, horizon, )
 end
-
 
 """Get ProbabilisticInternal label."""
 get_label(value::ProbabilisticInternal) = value.label

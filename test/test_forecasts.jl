@@ -1,4 +1,3 @@
-
 @testset "Test read_time_series_metadata" begin
     file = joinpath(FORECASTS_DIR, "ComponentsAsColumnsNoTime.json")
     forecasts = IS.read_time_series_metadata(file)
