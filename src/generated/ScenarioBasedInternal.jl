@@ -47,7 +47,6 @@ function ScenarioBasedInternal(; label, resolution, initial_time, scenario_count
 end
 
 
-
 """Get ScenarioBasedInternal label."""
 get_label(value::ScenarioBasedInternal) = value.label
 """Get ScenarioBasedInternal resolution."""

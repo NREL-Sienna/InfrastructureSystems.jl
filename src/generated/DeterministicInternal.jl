@@ -43,7 +43,6 @@ function DeterministicInternal(; label, resolution, initial_time, time_series_uu
 end
 
 
-
 """Get DeterministicInternal label."""
 get_label(value::DeterministicInternal) = value.label
 """Get DeterministicInternal resolution."""

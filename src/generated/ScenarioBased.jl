@@ -30,7 +30,6 @@ function ScenarioBased(; label, scenario_count, data, )
 end
 
 
-
 """Get ScenarioBased label."""
 get_label(value::ScenarioBased) = value.label
 """Get ScenarioBased scenario_count."""

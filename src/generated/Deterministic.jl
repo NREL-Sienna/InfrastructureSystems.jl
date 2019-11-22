@@ -26,7 +26,6 @@ function Deterministic(; label, data, )
 end
 
 
-
 """Get Deterministic label."""
 get_label(value::Deterministic) = value.label
 """Get Deterministic data."""
