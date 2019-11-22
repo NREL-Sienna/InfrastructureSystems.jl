@@ -24,9 +24,12 @@ mutable struct ScenarioBased <: Forecast
     data::TimeSeries.TimeArray
 end
 
+
 function ScenarioBased(; label, scenario_count, data, )
     ScenarioBased(label, scenario_count, data, )
 end
+
+
 
 """Get ScenarioBased label."""
 get_label(value::ScenarioBased) = value.label

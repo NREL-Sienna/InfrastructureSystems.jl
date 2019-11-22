@@ -20,9 +20,12 @@ mutable struct Deterministic <: Forecast
     data::TimeSeries.TimeArray
 end
 
+
 function Deterministic(; label, data, )
     Deterministic(label, data, )
 end
+
+
 
 """Get Deterministic label."""
 get_label(value::Deterministic) = value.label

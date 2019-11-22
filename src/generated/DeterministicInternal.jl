@@ -33,12 +33,16 @@ mutable struct DeterministicInternal <: ForecastInternal
     horizon::Int
     internal::InfrastructureSystemsInternal
 end
+
 function DeterministicInternal(label, resolution, initial_time, time_series_uuid, horizon, )
     DeterministicInternal(label, resolution, initial_time, time_series_uuid, horizon, InfrastructureSystemsInternal())
 end
+
 function DeterministicInternal(; label, resolution, initial_time, time_series_uuid, horizon, )
     DeterministicInternal(label, resolution, initial_time, time_series_uuid, horizon, )
 end
+
+
 
 """Get DeterministicInternal label."""
 get_label(value::DeterministicInternal) = value.label
