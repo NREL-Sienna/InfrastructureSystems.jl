@@ -38,7 +38,7 @@ end
 
 {{#needs_positional_constructor}}
 function {{struct_name}}({{#parameters}}{{^internal_default}}{{name}}{{#default}}={{default}}{{/default}}, {{/internal_default}}{{/parameters}})
-    {{struct_name}}({{#parameters}}{{^internal_default}}{{name}}, {{/internal_default}}{{/parameters}}{{#parameters}}{{#internal_default}}{{internal_default}}, {{/internal_default}}{{/parameters}})
+    {{struct_name}}({{#parameters}}{{^internal_default}}{{name}}, {{/internal_default}}{{/parameters}}{{#parameters}}{{#internal_default}}{{{internal_default}}}, {{/internal_default}}{{/parameters}})
 end
 {{/needs_positional_constructor}}
 
