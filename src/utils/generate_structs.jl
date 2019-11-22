@@ -35,20 +35,25 @@ mutable struct {{struct_name}}{{#parametric}}{T <: {{parametric}}}{{/parametric}
     end
     {{/inner_constructor_check}}
 end
-{{#needs_positional_constructor}}function {{struct_name}}({{#parameters}}{{^internal}}{{name}}{{#default}}={{default}}{{/default}}, {{/internal}}{{/parameters}})
+
+{{#needs_positional_constructor}}
+function {{struct_name}}({{#parameters}}{{^internal}}{{name}}{{#default}}={{default}}{{/default}}, {{/internal}}{{/parameters}})
     {{struct_name}}({{#parameters}}{{^internal}}{{name}}, {{/internal}}{{/parameters}}InfrastructureSystemsInternal())
-end{{/needs_positional_constructor}}
+end
+{{/needs_positional_constructor}}
+
 function {{struct_name}}(; {{#parameters}}{{^internal}}{{name}}{{#default}}={{default}}{{/default}}, {{/internal}}{{/parameters}})
     {{struct_name}}({{#parameters}}{{^internal}}{{name}}, {{/internal}}{{/parameters}})
 end
+
 {{#parametric}}
 function {{struct_name}}{T}({{#parameters}}{{^internal}}{{name}}{{#default}}={{default}}{{/default}}, {{/internal}}{{/parameters}}) where T <: InfrastructureSystemsType
     {{struct_name}}({{#parameters}}{{^internal}}{{name}}, {{/internal}}{{/parameters}}InfrastructureSystemsInternal())
 end
 {{/parametric}}
+
 {{#has_null_values}}
 # Constructor for demo purposes; non-functional.
-
 function {{struct_name}}(::Nothing)
     {{struct_name}}(;
         {{#parameters}}
