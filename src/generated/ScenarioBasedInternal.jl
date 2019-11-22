@@ -46,7 +46,6 @@ function ScenarioBasedInternal(; label, resolution, initial_time, scenario_count
     ScenarioBasedInternal(label, resolution, initial_time, scenario_count, time_series_uuid, horizon, )
 end
 
-
 """Get ScenarioBasedInternal label."""
 get_label(value::ScenarioBasedInternal) = value.label
 """Get ScenarioBasedInternal resolution."""

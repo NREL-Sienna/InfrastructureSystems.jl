@@ -46,7 +46,6 @@ function ProbabilisticInternal(; label, resolution, initial_time, percentiles, t
     ProbabilisticInternal(label, resolution, initial_time, percentiles, time_series_uuid, horizon, )
 end
 
-
 """Get ProbabilisticInternal label."""
 get_label(value::ProbabilisticInternal) = value.label
 """Get ProbabilisticInternal resolution."""

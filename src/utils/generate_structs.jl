@@ -51,7 +51,6 @@ function {{struct_name}}{T}({{#parameters}}{{^internal_default}}{{name}}{{#defau
     {{struct_name}}({{#parameters}}{{^internal_default}}{{name}}, {{/internal_default}}{{/parameters}})
 end
 {{/parametric}}
-
 {{#has_null_values}}
 # Constructor for demo purposes; non-functional.
 function {{struct_name}}(::Nothing)
@@ -63,6 +62,7 @@ function {{struct_name}}(::Nothing)
         {{/parameters}}
     )
 end
+
 {{/has_null_values}}
 {{#accessors}}
 \"\"\"Get {{struct_name}} {{name}}.\"\"\"
