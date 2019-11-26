@@ -8,4 +8,7 @@
     internal2 = JSON2.read(JSON2.write(internal), IS.InfrastructureSystemsInternal)
     @test internal.uuid == internal2.uuid
     @test internal.ext == internal2.ext
+
+    IS.clear_ext(internal)
+    @test isnothing(internal.ext)
 end
