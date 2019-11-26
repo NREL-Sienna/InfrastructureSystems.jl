@@ -33,6 +33,3 @@
 
     @test_throws ArgumentError IS.remove_components!(IS.TestComponent, data)
 end
-
-@testset "Test forecasts" begin
-end
