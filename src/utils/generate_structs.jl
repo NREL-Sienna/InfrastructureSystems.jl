@@ -37,24 +37,19 @@ mutable struct {{struct_name}}{{#parametric}}{T <: {{parametric}}}{{/parametric}
 end
 
 {{#needs_positional_constructor}}
-function {{struct_name}}({{#parameters}}{{^internal_default}}{{name}}{{#default}}={{default}}{{/default}}, {{/internal_default}}{{/parameters}})
-    {{struct_name}}({{#parameters}}{{^internal_default}}{{name}}, {{/internal_default}}{{/parameters}}{{#parameters}}{{#internal_default}}{{{internal_default}}}, {{/internal_default}}{{/parameters}})
+function {{constructor_func}}({{#parameters}}{{^internal_default}}{{name}}{{#default}}={{default}}{{/default}}, {{/internal_default}}{{/parameters}}){{{closing_constructor_text}}}
+    {{constructor_func}}({{#parameters}}{{^internal_default}}{{name}}, {{/internal_default}}{{/parameters}}{{#parameters}}{{#internal_default}}{{{internal_default}}}, {{/internal_default}}{{/parameters}})
 end
 {{/needs_positional_constructor}}
 
-function {{struct_name}}(; {{#parameters}}{{^internal_default}}{{name}}{{#default}}={{default}}{{/default}}, {{/internal_default}}{{/parameters}})
-    {{struct_name}}({{#parameters}}{{^internal_default}}{{name}}, {{/internal_default}}{{/parameters}})
+function {{constructor_func}}(; {{#parameters}}{{^internal_default}}{{name}}{{#default}}={{default}}{{/default}}, {{/internal_default}}{{/parameters}}){{{closing_constructor_text}}}
+    {{constructor_func}}({{#parameters}}{{^internal_default}}{{name}}, {{/internal_default}}{{/parameters}})
 end
 
-{{#parametric}}
-function {{struct_name}}{T}({{#parameters}}{{^internal_default}}{{name}}{{#default}}={{default}}{{/default}}, {{/internal_default}}{{/parameters}}) where T <: InfrastructureSystemsType
-    {{struct_name}}({{#parameters}}{{^internal_default}}{{name}}, {{/internal_default}}{{/parameters}})
-end
-{{/parametric}}
 {{#has_null_values}}
 # Constructor for demo purposes; non-functional.
-function {{struct_name}}(::Nothing)
-    {{struct_name}}(;
+function {{constructor_func}}(::Nothing){{{closing_constructor_text}}}
+    {{constructor_func}}(;
         {{#parameters}}
         {{^internal_default}}
         {{name}}={{#quotes}}"{{null_value}}"{{/quotes}}{{^quotes}}{{null_value}}{{/quotes}},
@@ -84,6 +79,14 @@ function generate_structs(directory, data::Vector; print_results=true)
         has_internal = false
         accessors = Vector{Dict}()
         item["has_null_values"] = true
+
+        item["constructor_func"] = item["struct_name"]
+        item["closing_constructor_text"] = ""
+        if haskey(item, "parametric")
+            item["constructor_func"] *= "{T}"
+            item["closing_constructor_text"] = " where T <: $(item["parametric"])"
+        end
+
         parameters = Vector{Dict}()
         for field in item["fields"]
             param = namedtuple_to_dict(field)
