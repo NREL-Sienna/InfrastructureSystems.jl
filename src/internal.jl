@@ -8,9 +8,14 @@ mutable struct InfrastructureSystemsInternal
 end
 
 """
-Creates PowerSystemInternal with a UUID.
+Creates PowerSystemInternal with a new UUID.
 """
 InfrastructureSystemsInternal() = InfrastructureSystemsInternal(UUIDs.uuid4(), nothing)
+
+"""
+Creates PowerSystemInternal with an existing UUID.
+"""
+InfrastructureSystemsInternal(u::UUIDs.UUID) = InfrastructureSystemsInternal(u, nothing)
 
 """
 Return a user-modifiable dictionary to store extra information.
@@ -21,6 +26,13 @@ function get_ext(obj::InfrastructureSystemsInternal)
     end
 
     return obj.ext
+end
+
+"""
+Clear any value stored in ext.
+"""
+function clear_ext(obj::InfrastructureSystemsInternal)
+    obj.ext = nothing
 end
 
 """
