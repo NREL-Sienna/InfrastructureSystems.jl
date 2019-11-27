@@ -3,7 +3,10 @@ import InteractiveUtils: subtypes
 
 g_cached_subtypes = Dict{DataType, Vector{DataType}}()
 
-"""Returns an array of all concrete subtypes of T."""
+"""
+Returns an array of all concrete subtypes of T.
+Note that this does not find parameterized types.
+"""
 function get_all_concrete_subtypes(::Type{T}) where T
     if haskey(g_cached_subtypes, T)
         return g_cached_subtypes[T]
@@ -57,10 +60,14 @@ end
 """Strips the module name off of a type."""
 function strip_module_name(name::String)
     index = findfirst(".", name)
-    if !isnothing(index)
-        basename = name[index.start + 1:end]
-    else
+    # Account for the period being part of a parametric type.
+    parametric_index = findfirst("{", name)
+
+    if isnothing(index) ||
+       (!isnothing(parametric_index) && index.start > parametric_index.start)
         basename = name
+    else
+        basename = name[index.start + 1:end]
     end
 
     return basename
@@ -68,6 +75,37 @@ end
 
 function strip_module_name(::Type{T}) where T
     return strip_module_name(string(T))
+end
+
+function strip_parametric_type(name::AbstractString)
+    index = findfirst("{", name)
+    if !isnothing(index)
+        # Ignore the parametric type.
+        name = name[1:index.start - 1]
+    end
+
+    return name
+end
+
+"""
+Return a Tuple of type and parameter types for cases where a parametric type has been
+encoded as a string. If the type is not parameterized then just return the type.
+"""
+function separate_type_and_parameter_types(name::String)
+    parameters = Vector{String}()
+    index_start_brace = findfirst("{", name)
+    if isnothing(index_start_brace)
+        type_str = name
+    else
+        type_str = name[1: index_start_brace.start - 1]
+        index_close_brace = findfirst("}", name)
+        @assert index_start_brace.start < index_close_brace.start
+        for x in split(name[index_start_brace.start + 1: index_close_brace.start - 1], ",")
+            push!(parameters, strip(x))
+        end
+    end
+
+    return (type_str, parameters)
 end
 
 """Converts an object deserialized from JSON into a Julia type, such as NamedTuple,

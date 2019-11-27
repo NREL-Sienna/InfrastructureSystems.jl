@@ -10,6 +10,31 @@ end
     @test IS.strip_module_name(
         "InfrastructureSystems.Deterministic{PowerSystems.HydroDispatch}") ==
         "Deterministic{PowerSystems.HydroDispatch}"
+
+    @test IS.strip_module_name(
+        "Deterministic{PowerSystems.HydroDispatch}") ==
+        "Deterministic{PowerSystems.HydroDispatch}"
+end
+
+@testset "Test strip_parametric_type" begin
+    @test IS.strip_parametric_type(
+        "Deterministic{PowerSystems.HydroDispatch}") == "Deterministic"
+
+    @test IS.strip_parametric_type(
+        "InfrastructureSystems.Deterministic{PowerSystems.HydroDispatch}") ==
+        "InfrastructureSystems.Deterministic"
+end
+
+@testset "Test serialization utility functions" begin
+    text = "SomeType{ParameterType1, ParameterType2}"
+    type_str, parameters = IS.separate_type_and_parameter_types(text)
+    @test type_str == "SomeType"
+    @test parameters == ["ParameterType1", "ParameterType2"]
+
+    text = "SomeType"
+    type_str, parameters = IS.separate_type_and_parameter_types(text)
+    @test type_str == "SomeType"
+    @test parameters == []
 end
 
 @testset "Test exported names" begin
