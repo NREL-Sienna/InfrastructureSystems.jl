@@ -1,12 +1,18 @@
 # InfrastructureSystems
 
+## 0.5.0
+
+- Update template for autogeneration of structs to consider internal_default values
+- Add Code to support parametrized structs in seralization and de-serialization
+- Add the ext field in internal for extensions of structs.
+
 ## 0.4.4
 
 - Fix printing of < in generated structs
 
 ## 0.4.3
 
-- Fix inital time generation from contiguous forecasts 
+- Fix inital time generation from contiguous forecasts
 
 ## 0.4.2
 

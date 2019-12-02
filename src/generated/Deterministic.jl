@@ -21,11 +21,9 @@ mutable struct Deterministic <: Forecast
 end
 
 
-
 function Deterministic(; label, data, )
     Deterministic(label, data, )
 end
-
 
 """Get Deterministic label."""
 get_label(value::Deterministic) = value.label

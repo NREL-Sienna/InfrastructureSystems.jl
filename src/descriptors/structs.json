@@ -29,7 +29,8 @@
       },
       {
         "name": "internal",
-        "data_type": "InfrastructureSystemsInternal"
+        "data_type": "InfrastructureSystemsInternal",
+        "internal_default": "InfrastructureSystemsInternal()"
       }
     ],
     "supertype": "ForecastInternal"
@@ -86,7 +87,8 @@
       },
       {
         "name": "internal",
-        "data_type": "InfrastructureSystemsInternal"
+        "data_type": "InfrastructureSystemsInternal",
+        "internal_default": "InfrastructureSystemsInternal()"
       }
     ],
     "supertype": "ForecastInternal"
@@ -148,7 +150,8 @@
       },
       {
         "name": "internal",
-        "data_type": "InfrastructureSystemsInternal"
+        "data_type": "InfrastructureSystemsInternal",
+        "internal_default": "InfrastructureSystemsInternal()"
       }
     ],
     "supertype": "ForecastInternal"

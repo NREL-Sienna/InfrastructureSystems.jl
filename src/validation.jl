@@ -33,7 +33,6 @@ end
 
 # Get validation info for one struct.
 function get_config_descriptor(config::Vector, name::AbstractString)
-    name = strip_module_name(name)
     for item in config
         if item["struct_name"] == name
             return item
@@ -62,7 +61,9 @@ function validate_fields(
                          components::Components,
                          ist_struct::T,
                         ) where T <: InfrastructureSystemsType
-    struct_descriptor = get_config_descriptor(components.validation_descriptors, repr(T))
+    name = repr(T)
+    type_name = strip_parametric_type(strip_module_name(repr(T)))
+    struct_descriptor = get_config_descriptor(components.validation_descriptors, type_name)
     is_valid = true
 
     for (name, fieldtype) in zip(fieldnames(T), fieldtypes(T))

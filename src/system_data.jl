@@ -486,6 +486,49 @@ function get_forecast_counts(data::SystemData)
 end
 
 """
+    set_component!(
+                   metadata::TimeseriesFileMetadata,
+                   data::SystemData,
+                   mod::Module,
+                  )
+
+Set the component value in metadata by looking up the category in module.
+This requires that category be a string version of a component's abstract type.
+Modules can override for custom behavior.
+"""
+function set_component!(
+                        metadata::TimeseriesFileMetadata,
+                        data::SystemData,
+                        mod::Module,
+                       )
+
+    # TODO: CDM data should change LoadZone to LoadZones.
+    symbol = metadata.category == "LoadZone" ? :LoadZones : Symbol(metadata.category)
+    category = getfield(mod, symbol)
+    if isconcretetype(category)
+        metadata.component = get_component(category, data.components, metadata.component_name)
+        if isnothing(metadata.component)
+            throw(DataFormatError(
+                "no component category=$category name=$(metadata.component_name)"
+            ))
+        end
+    else
+        # Note: this could dispatch to higher-level modules that reimplement it.
+        components = get_components_by_name(category, data, metadata.component_name)
+        if length(components) == 0
+            @warn "no component category=$category name=$(metadata.component_name)"
+            metadata.component = nothing
+        elseif length(components) == 1
+            metadata.component = components[1]
+        else
+            throw(DataFormatError(
+                "duplicate names type=$(category) name=$(metadata.component_name)"
+            ))
+        end
+    end
+end
+
+"""
     prepare_for_serialization!(data::SystemData, filename::AbstractString)
 
 Parent object should call this prior to serialization so that SystemData can store the
@@ -599,7 +642,5 @@ get_forecasts_last_initial_time(data::SystemData) = get_forecasts_last_initial_t
 get_forecasts_horizon(data::SystemData) = get_forecasts_horizon(data.forecast_metadata)
 get_forecasts_resolution(data::SystemData) = get_forecasts_resolution(data.forecast_metadata)
 clear_components!(data::SystemData) = clear_components!(data.components)
-set_component!(metadata::TimeseriesFileMetadata, data::SystemData, mod::Module) =
-    set_component!(metadata, data.components, mod)
 check_forecast_consistency(data::SystemData) = check_forecast_consistency(data.components)
 validate_forecast_consistency(data::SystemData) = validate_forecast_consistency(data.components)

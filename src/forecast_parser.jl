@@ -91,48 +91,6 @@ function _get_category(category::String)
     return lowercase(category)
 end
 
-"""
-    set_component!(
-                   metadata::TimeseriesFileMetadata,
-                   components::Components,
-                   mod::Module,
-                  )
-
-Set the component value in metadata by looking up the category in module.
-This requires that category be a string version of a component's abstract type.
-Modules can override for custom behavior.
-"""
-function set_component!(
-                        metadata::TimeseriesFileMetadata,
-                        components::Components,
-                        mod::Module,
-                       )
-
-    # TODO: CDM data should change LoadZone to LoadZones.
-    symbol = metadata.category == "LoadZone" ? :LoadZones : Symbol(metadata.category)
-    category = getfield(mod, symbol)
-    if isconcretetype(category)
-        metadata.component = get_component(category, components, metadata.component_name)
-        if isnothing(metadata.component)
-            throw(DataFormatError(
-                "no component category=$category name=$(metadata.component_name)"
-            ))
-        end
-    else
-        components = get_components_by_name(category, components, metadata.component_name)
-        if length(components) == 0
-            @warn "no component category=$category name=$(metadata.component_name)"
-            metadata.component = nothing
-        elseif length(components) == 1
-            metadata.component = components[1]
-        else
-            throw(DataFormatError(
-                "duplicate names type=$(category) name=$(metadata.component_name)"
-            ))
-        end
-    end
-end
-
 struct ForecastInfo
     simulation::String
     component::InfrastructureSystemsType
