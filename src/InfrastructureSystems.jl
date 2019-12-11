@@ -3,6 +3,7 @@ isdefined(Base, :__precompile__) && __precompile__()
 module InfrastructureSystems
 
 import Base./
+import Base.+
 import CSV
 import DataFrames
 import Dates
