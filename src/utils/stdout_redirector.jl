@@ -4,6 +4,34 @@
 Redirect all data written to stdout by a function to log events.
 """
 function redirect_stdout_to_log(func::Function)
+    path, io = mktemp()
+    close(io)
+
+    try
+        open(path, "w") do out
+            redirect_stdout(out) do
+                func()
+            end
+        end
+    finally
+        try
+            for line in eachline(path)
+                if !isempty(line)
+                    @info line
+                end
+            end
+        finally
+            rm(path)
+        end
+    end
+end
+
+# The code below is better than the above function because it will output log events as
+# they occur instead of when the function completes.  It can be enabled whenever we stop
+# supporting Julia 1.2.  Threads.@spawn requires Julia 1.3.
+
+#=
+function redirect_stdout_to_log(func::Function)
     orig_stdout = Base.stdout
     (read_pipe, write_pipe) = redirect_stdout()
     redirector = StdoutRedirector(read_pipe, write_pipe, true)
@@ -51,3 +79,4 @@ function _log_line(data)
         @info line
     end
 end
+=#
