@@ -72,6 +72,52 @@ function configure_logging(;
 end
 
 """
+Specializes the behavior of SimpleLogger by adding timestamps and process and thread IDs.
+"""
+struct FileLogger <: Logging.AbstractLogger
+    logger::Logging.SimpleLogger
+end
+
+function FileLogger(stream::IO, level::Base.CoreLogging.LogLevel)
+    return FileLogger(Logging.SimpleLogger(stream, level))
+end
+
+function Logging.handle_message(
+    file_logger::FileLogger,
+    level,
+    message,
+    _module,
+    group,
+    id,
+    file,
+    line;
+    maxlog=nothing,
+    kwargs...
+)
+    Logging.handle_message(
+        file_logger.logger,
+        level,
+        "$(Dates.now()) [$(getpid()):$(Base.Threads.threadid())]: $message",
+        _module,
+        group,
+        id,
+        file,
+        line;
+        maxlog=maxlog,
+        kwargs...
+    )
+end
+
+function Logging.shouldlog(logger::FileLogger, level, _module, group, id)
+    return Logging.shouldlog(logger.logger, level, _module, group, id)
+end
+
+Logging.min_enabled_level(logger::FileLogger) = Logging.min_enabled_level(logger.logger)
+Logging.catch_exceptions(logger::FileLogger) = false
+Base.flush(logger::FileLogger) = flush(logger.logger)
+Base.close(logger::FileLogger) = close(logger.logger)
+
+"""
     open_file_logger(func, filename[, level, mode])
 
 Opens a file logger using Logging.SimpleLogger.
@@ -87,7 +133,7 @@ end
 function open_file_logger(func::Function, filename::String, level=Logging.Info, mode="w+")
     stream = open(filename, mode)
     try
-        logger = Logging.SimpleLogger(stream, level)
+        logger = FileLogger(stream, level)
         func(logger)
     finally
         close(stream)
