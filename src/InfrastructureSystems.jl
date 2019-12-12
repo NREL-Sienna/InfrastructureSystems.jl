@@ -18,7 +18,6 @@ abstract type InfrastructureSystemsType end
 get_name(value::InfrastructureSystemsType) = value.name
 
 include("common.jl")
-include("division.jl")
 include("internal.jl")
 include("utils/flatten_iterator_wrapper.jl")
 include("utils/generate_structs.jl")
