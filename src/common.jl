@@ -12,10 +12,10 @@ struct InvalidValue <: Exception
     msg::AbstractString
 end
 
-struct ConflictingInputs <: Exception
+struct ConflictingInputsError <: Exception
     msg::AbstractString
 end
 
-struct HashMismatch <: Exception
+struct HashMismatchError <: Exception
     msg::AbstractString
 end
