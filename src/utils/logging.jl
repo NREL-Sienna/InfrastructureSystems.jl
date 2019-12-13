@@ -72,6 +72,52 @@ function configure_logging(;
 end
 
 """
+Specializes the behavior of SimpleLogger by adding timestamps and process and thread IDs.
+"""
+struct FileLogger <: Logging.AbstractLogger
+    logger::Logging.SimpleLogger
+end
+
+function FileLogger(stream::IO, level::Base.CoreLogging.LogLevel)
+    return FileLogger(Logging.SimpleLogger(stream, level))
+end
+
+function Logging.handle_message(
+    file_logger::FileLogger,
+    level,
+    message,
+    _module,
+    group,
+    id,
+    file,
+    line;
+    maxlog=nothing,
+    kwargs...
+)
+    Logging.handle_message(
+        file_logger.logger,
+        level,
+        "$(Dates.now()) [$(getpid()):$(Base.Threads.threadid())]: $message",
+        _module,
+        group,
+        id,
+        file,
+        line;
+        maxlog=maxlog,
+        kwargs...
+    )
+end
+
+function Logging.shouldlog(logger::FileLogger, level, _module, group, id)
+    return Logging.shouldlog(logger.logger, level, _module, group, id)
+end
+
+Logging.min_enabled_level(logger::FileLogger) = Logging.min_enabled_level(logger.logger)
+Logging.catch_exceptions(logger::FileLogger) = false
+Base.flush(logger::FileLogger) = flush(logger.logger)
+Base.close(logger::FileLogger) = close(logger.logger)
+
+"""
     open_file_logger(func, filename[, level, mode])
 
 Opens a file logger using Logging.SimpleLogger.
@@ -87,7 +133,7 @@ end
 function open_file_logger(func::Function, filename::String, level=Logging.Info, mode="w+")
     stream = open(filename, mode)
     try
-        logger = Logging.SimpleLogger(stream, level)
+        logger = FileLogger(stream, level)
         func(logger)
     finally
         close(stream)
@@ -230,10 +276,10 @@ function Logging.handle_message(logger::MultiLogger,
                                 maxlog=nothing,
                                 kwargs...)
     suppressed = false
-    for logger_ in logger.loggers
-        if level >= Logging.min_enabled_level(logger_)
-            if Logging.shouldlog(logger_, level, _module, group, id)
-                Logging.handle_message(logger_, level, message, _module, group, id, file,
+    for _logger in logger.loggers
+        if level >= Logging.min_enabled_level(_logger)
+            if Logging.shouldlog(_logger, level, _module, group, id)
+                Logging.handle_message(_logger, level, message, _module, group, id, file,
                                        line; maxlog=maxlog, kwargs...)
             else
                 suppressed = true
@@ -241,7 +287,7 @@ function Logging.handle_message(logger::MultiLogger,
         end
     end
 
-    if logger.tracker != nothing
+    if !isnothing(logger.tracker)
         id = isa(id, Symbol) ? id : :empty
         event = LogEvent(file, line, id, string(message), level)
         increment_count(logger.tracker, event, suppressed)
@@ -252,7 +298,7 @@ end
 
 """Returns a summary of log event counts by level."""
 function report_log_summary(logger::MultiLogger)::String
-    if logger.tracker == nothing
+    if isnothing(logger.tracker)
         error("log event tracking is not enabled")
     end
 
@@ -261,18 +307,18 @@ end
 
 """Flush any file streams."""
 function Base.flush(logger::MultiLogger)
-    for logger_ in logger.loggers
-        if isa(logger_, Logging.SimpleLogger)
-           flush(logger_.stream)
+    for _logger in logger.loggers
+        if isa(_logger, Logging.SimpleLogger)
+           flush(_logger.stream)
         end
     end
 end
 
 """Ensures that any file streams are flushed and closed."""
 function Base.close(logger::MultiLogger)
-    for logger_ in logger.loggers
-        if isa(logger_, Logging.SimpleLogger)
-            close(logger_.stream)
+    for _logger in logger.loggers
+        if isa(_logger, Logging.SimpleLogger)
+            close(_logger.stream)
         end
     end
 end

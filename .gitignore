@@ -20,3 +20,4 @@ data
 *.vscode
 Manifest.toml
 *.h5
+tags
