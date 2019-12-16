@@ -125,7 +125,7 @@ function create_components_df(components::Components)
 end
 
 
-function Base.show(io::IO, ::MIME"text/plain", period::Dates.TimePeriod)
+function Base.show(io::IO, ::MIME"text/plain", period::Union{Dates.TimePeriod, Dates.DatePeriod})
     period = time_period_conversion(period)
 
     milli_weeks = period - (period % Dates.Millisecond(604800000))
@@ -151,7 +151,7 @@ function Base.show(io::IO, ::MIME"text/plain", period::Dates.TimePeriod)
 
 end
 
-function Base.show(io::IO, ::MIME"text/html", period::Dates.TimePeriod)
+function Base.show(io::IO, ::MIME"text/html", period::Union{Dates.TimePeriod, Dates.DatePeriod})
     period = time_period_conversion(period)
 
     milli_weeks = period - (period % Dates.Millisecond(604800000))
