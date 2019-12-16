@@ -124,34 +124,18 @@ function create_components_df(components::Components)
     return DataFrames.DataFrame(rows)
 end
 
-
 function Base.show(io::IO, ::MIME"text/plain", period::Union{Dates.TimePeriod, Dates.DatePeriod})
-    period = time_period_conversion(period)
-
-    milli_weeks = period - (period % Dates.Millisecond(604800000))
-    weeks = convert(Dates.Week, milli_weeks)
-    period = period - milli_weeks
-
-    milli_days = period - (period % Dates.Millisecond(86400000))
-    days = convert(Dates.Day, milli_days)
-    period = period - milli_days
-
-    milli_hours = period - (period % Dates.Millisecond(3600000))
-    hours = convert(Dates.Hour, milli_hours)
-    period = period - milli_hours
-
-    milli_minutes = period - (period % Dates.Millisecond(60000))
-    minutes = convert(Dates.Minute, milli_minutes)
-    period = period - milli_minutes
-
-    seconds = period - (period % Dates.Millisecond(1000)) # finding the seconds
-    seconds = convert(Dates.Second, seconds)
-    remainder = period % Dates.Millisecond(1000) #finding the remainding milliseconds
-    println(io, "$(weeks + days + hours + minutes + seconds + remainder)")
-
+    total = convert_compound_period(period)
+    println(io, "$total")
 end
 
 function Base.show(io::IO, ::MIME"text/html", period::Union{Dates.TimePeriod, Dates.DatePeriod})
+    total = convert_compound_period(period)
+    println(io, "<p>$total</p>")
+end
+
+## This function takes in a time period or date period and returns a compound period
+function convert_compound_period(period::Union{Dates.TimePeriod, Dates.DatePeriod})
     period = time_period_conversion(period)
 
     milli_weeks = period - (period % Dates.Millisecond(604800000))
@@ -173,8 +157,8 @@ function Base.show(io::IO, ::MIME"text/html", period::Union{Dates.TimePeriod, Da
     seconds = period - (period % Dates.Millisecond(1000)) # finding the seconds
     seconds = convert(Dates.Second, seconds)
     remainder = period % Dates.Millisecond(1000) #finding the remainding milliseconds
-    println(io, "<p>$(weeks + days + hours + minutes + seconds + remainder)</p>")
-
+    total = weeks + days + hours + minutes + seconds + remainder
+    return total
 end
 
 function create_forecasts_df(forecasts::Forecasts)
