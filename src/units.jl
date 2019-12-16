@@ -1,0 +1,1 @@
+timeperiod_conversion(time_period::Dates.TimePeriod) = convert(Dates.Millisecond, time_period)
