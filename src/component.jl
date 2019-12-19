@@ -321,8 +321,8 @@ function generate_initial_times(
     interval = Dates.Second(interval)
 
     if interval % resolution != Dates.Second(0)
-        throw(ArgumentError(
-            "interval=$interval is not a multiple of resolution=$resolution"
+        throw(ConflictingInputsError(
+            "interval = $interval is not a multiple of resolution = $resolution"
         ))
     end
 

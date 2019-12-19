@@ -457,7 +457,7 @@ end
     ta1 = TimeSeries.TimeArray(dates1, data, [IS.get_name(component)])
     ta2 = TimeSeries.TimeArray(dates2, data, [IS.get_name(component)])
     IS.add_forecast!(sys, ta1, component, "get_val")
-    @test_throws ArgumentError IS.generate_initial_times(sys, Dates.Minute(30), 6)
+    @test_throws IS.ConflictingInputsError IS.generate_initial_times(sys, Dates.Minute(30), 6)
 
     IS.add_forecast!(sys, ta2, component, "get_val")
     @test_throws ArgumentError IS.generate_initial_times(sys, Dates.Hour(3), 6)
@@ -485,7 +485,7 @@ end
     ta1 = TimeSeries.TimeArray(dates1, data, [IS.get_name(component)])
     ta2 = TimeSeries.TimeArray(dates2, data, [IS.get_name(component)])
     IS.add_forecast!(sys, ta1, component, "get_val")
-    @test_throws ArgumentError IS.generate_initial_times(sys, Dates.Minute(30), 6)
+    @test_throws IS.ConflictingInputsError IS.generate_initial_times(sys, Dates.Minute(30), 6)
 
     IS.add_forecast!(sys, ta2, component, "get_val")
     @test_throws ArgumentError IS.generate_initial_times(sys, Dates.Hour(3), 6)

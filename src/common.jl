@@ -11,3 +11,11 @@ end
 struct InvalidValue <: Exception
     msg::AbstractString
 end
+
+struct ConflictingInputsError <: Exception
+    msg::AbstractString
+end
+
+struct HashMismatchError <: Exception
+    msg::AbstractString
+end
