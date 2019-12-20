@@ -140,19 +140,19 @@ function convert_compound_period(period::Union{Dates.TimePeriod, Dates.DatePerio
 
     milli_weeks = period - (period % Dates.Millisecond(604800000))
     weeks = convert(Dates.Week, milli_weeks)
-    period = period - milli_weeks
+    period -= milli_weeks
 
     milli_days = period - (period % Dates.Millisecond(86400000))
     days = convert(Dates.Day, milli_days)
-    period = period - milli_days
+    period -= milli_days
 
     milli_hours = period - (period % Dates.Millisecond(3600000))
     hours = convert(Dates.Hour, milli_hours)
-    period = period - milli_hours
+    period -= milli_hours
 
     milli_minutes = period - (period % Dates.Millisecond(60000))
     minutes = convert(Dates.Minute, milli_minutes)
-    period = period - milli_minutes
+    period -= milli_minutes
 
     seconds = period - (period % Dates.Millisecond(1000)) # finding the seconds
     seconds = convert(Dates.Second, seconds)
