@@ -1,5 +1,11 @@
 # InfrastructureSystems
 
+## 0.5.1
+
+- Add time periods operations and print methods. 
+- Add redirection of stdout to log events during external function execution 
+- Add new exceptios for PowerSimulations
+
 ## 0.5.0
 
 - Update template for autogeneration of structs to consider internal_default values
