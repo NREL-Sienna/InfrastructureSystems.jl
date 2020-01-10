@@ -59,7 +59,7 @@ function configure_logging(;
 
     if file
         io = open(filename, file_mode)
-        file_logger = Logging.SimpleLogger(io, file_level)
+        file_logger = FileLogger(io, file_level)
         push!(loggers, file_logger)
     end
 
@@ -114,8 +114,8 @@ end
 
 Logging.min_enabled_level(logger::FileLogger) = Logging.min_enabled_level(logger.logger)
 Logging.catch_exceptions(logger::FileLogger) = false
-Base.flush(logger::FileLogger) = flush(logger.logger)
-Base.close(logger::FileLogger) = close(logger.logger)
+Base.flush(logger::FileLogger) = flush(logger.logger.stream)
+Base.close(logger::FileLogger) = close(logger.logger.stream)
 
 """
     open_file_logger(func, filename[, level, mode])
@@ -307,18 +307,20 @@ end
 
 """Flush any file streams."""
 function Base.flush(logger::MultiLogger)
-    for _logger in logger.loggers
-        if isa(_logger, Logging.SimpleLogger)
-           flush(_logger.stream)
-        end
-    end
+    _handle_log_func(logger, Base.flush)
 end
 
 """Ensures that any file streams are flushed and closed."""
 function Base.close(logger::MultiLogger)
+    _handle_log_func(logger, Base.close)
+end
+
+function _handle_log_func(logger::MultiLogger, func::Function)
     for _logger in logger.loggers
         if isa(_logger, Logging.SimpleLogger)
-            close(_logger.stream)
+           func(_logger.stream)
+        elseif isa(_logger, FileLogger)
+           func(_logger)
         end
     end
 end
