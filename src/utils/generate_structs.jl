@@ -16,7 +16,7 @@ This file is auto-generated. Do not edit.
 
 # Arguments
 {{#parameters}}
-- `{{name}}::{{{data_type}}}`{{#comment}}: {{{comment}}}{{/comment}}
+- `{{name}}::{{{data_type}}}`{{#comment}}: {{{comment}}}{{/comment}}{{#valid_range}}, validation range: {{valid_range}}{{/valid_range}}{{#validation_action}}, action if invalid: {{validation_action}}{{/validation_action}}
 {{/parameters}}
 \"\"\"
 mutable struct {{struct_name}}{{#parametric}}{T <: {{parametric}}}{{/parametric}} <: {{supertype}}
@@ -67,7 +67,7 @@ end
 
 function read_json_data(filename::String)
     return open(filename) do io
-        data = JSON2.read(io, Vector{Dict})
+        data = JSON.parse(io)
     end
 end
 
@@ -89,7 +89,14 @@ function generate_structs(directory, data::Vector; print_results=true)
 
         parameters = Vector{Dict}()
         for field in item["fields"]
-            param = namedtuple_to_dict(field)
+            param = field
+            if haskey(param, "valid_range")
+                if typeof(param["valid_range"]) == Dict{String, Any}
+                    param["valid_range"] = param["valid_range"]["min"], param["valid_range"]["max"]
+                elseif typeof(param["valid_range"]) == String
+                    param["valid_range"] = param["valid_range"]
+                end
+            end
             push!(parameters, param)
             accessor_name = "get_" * param["name"]
             push!(accessors, Dict("name" => param["name"], "accessor" => accessor_name))
