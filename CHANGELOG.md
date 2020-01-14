@@ -1,5 +1,9 @@
 # InfrastructureSystems
 
+## 0.5.2
+
+- Improvements in logging
+
 ## 0.5.1
 
 - Add time periods operations and print methods. 
