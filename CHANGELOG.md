@@ -3,6 +3,7 @@
 ## 0.5.2
 
 - Improvements in logging
+- Add range to docstrings
 
 ## 0.5.1
 
