@@ -4,7 +4,7 @@
 [![Build status](https://ci.appveyor.com/api/projects/status/i632i3xfv6ppqh9q?svg=true)](https://ci.appveyor.com/project/jd-lara/infrastructuresystems-jl)
 [![codecov](https://codecov.io/gh/NREL/InfrastructureSystems.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/NREL/InfrastructureSystems.jl)
 
-The `InfrastructureSystems.jl` package provides utilities to support data models for infrastructure modeling data using Julia. The `InfrastructureSystems.jl` package is used as the foundational data container for the [PowerSystems.jl](https://github.com/NREL/PowerSystems.jl).
+The `InfrastructureSystems.jl` package provides utilities to support data models for infrastructure modeling data using Julia. The `InfrastructureSystems.jl` package is used as the foundational data container for the [PowerSystems.jl](https://github.com/NREL/PowerSystems.jl). This package is only compatible with Julia 1.2 or higher.
 
 ## Development
 
