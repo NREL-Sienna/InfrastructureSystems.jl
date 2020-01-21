@@ -63,7 +63,7 @@ function validate_fields(
     name = repr(T)
     type_name = strip_parametric_type(strip_module_name(repr(T)))
     struct_descriptor = get_config_descriptor(components.validation_descriptors, type_name)
-    isnothing(struct_descriptor) && return
+    isnothing(struct_descriptor) && return true
     is_valid = true
 
     for (name, fieldtype) in zip(fieldnames(T), fieldtypes(T))
