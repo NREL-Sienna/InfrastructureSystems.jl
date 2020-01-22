@@ -244,7 +244,7 @@ function get_components(
                                           Vector{Base.ValueIterator}([values(components_)]))
         end
     else
-        types = [x for x in get_all_concrete_subtypes(T) if haskey(components.data, x)]
+        types = [x for x in keys(components.data) if x <: T]
         iter = FlattenIteratorWrapper(T, [values(components.data[x]) for x in types])
     end
 
