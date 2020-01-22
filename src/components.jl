@@ -210,10 +210,12 @@ function get_components_by_name(
     end
 
     components_ = Vector{T}()
-    for subtype in get_all_concrete_subtypes(T)
-        component = get_component(subtype, components, name)
-        if !isnothing(component)
-            push!(components_, component)
+    for key in keys(components.data)
+        if key <: T
+            component = get_component(key, components, name)
+            if !isnothing(component)
+                push!(components_, component)
+            end
         end
     end
 
