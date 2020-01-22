@@ -39,9 +39,8 @@ function get_config_descriptor(config::Vector, name::AbstractString)
         end
     end
 
-    throw(DataFormatError(
-        "struct $name does not exist in validation configuration file"
-    ))
+   @warn("struct $name does not exist in validation configuration file, validation skipped")
+   return nothing
 end
 
 # Get validation info for one field of one struct.
@@ -64,6 +63,7 @@ function validate_fields(
     name = repr(T)
     type_name = strip_parametric_type(strip_module_name(repr(T)))
     struct_descriptor = get_config_descriptor(components.validation_descriptors, type_name)
+    isnothing(struct_descriptor) && return true
     is_valid = true
 
     for (name, fieldtype) in zip(fieldnames(T), fieldtypes(T))

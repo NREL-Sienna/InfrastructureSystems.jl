@@ -210,10 +210,12 @@ function get_components_by_name(
     end
 
     components_ = Vector{T}()
-    for subtype in get_all_concrete_subtypes(T)
-        component = get_component(subtype, components, name)
-        if !isnothing(component)
-            push!(components_, component)
+    for key in keys(components.data)
+        if key <: T
+            component = get_component(key, components, name)
+            if !isnothing(component)
+                push!(components_, component)
+            end
         end
     end
 
@@ -244,7 +246,7 @@ function get_components(
                                           Vector{Base.ValueIterator}([values(components_)]))
         end
     else
-        types = [x for x in get_all_concrete_subtypes(T) if haskey(components.data, x)]
+        types = [x for x in keys(components.data) if x <: T]
         iter = FlattenIteratorWrapper(T, [values(components.data[x]) for x in types])
     end
 
