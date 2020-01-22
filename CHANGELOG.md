@@ -1,5 +1,9 @@
 # InfrastructureSystems
 
+## 0.5.3
+
+- Update get_components to work with parametrized structs
+
 ## 0.5.2
 
 - Improvements in logging
@@ -7,8 +11,8 @@
 
 ## 0.5.1
 
-- Add time periods operations and print methods. 
-- Add redirection of stdout to log events during external function execution 
+- Add time periods operations and print methods.
+- Add redirection of stdout to log events during external function execution
 - Add new exceptios for PowerSimulations
 
 ## 0.5.0
