@@ -33,6 +33,7 @@ jobs:
 jobs:
   include:
     - stage: "Cross Package Testing"
+      julia: 1.3
       env:
         PACKAGE=PowerSystems
       script:
