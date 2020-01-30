@@ -16,7 +16,7 @@ function ForecastMetadata()
 end
 
 function reset_info!(forecasts::ForecastMetadata)
-    forecasts.resolution = UNINITIALIZED_PERIOD
+                            forecasts.resolution = UNINITIALIZED_PERIOD
     forecasts.horizon = UNINITIALIZED_HORIZON
     @info "Reset system forecast information."
 end
@@ -27,14 +27,14 @@ function is_uninitialized(forecasts::ForecastMetadata)
 end
 
 function _verify_forecast(metadata::ForecastMetadata, forecast::ForecastInternal)
-    if forecast.resolution != metadata.resolution
+                             if forecast.resolution != metadata.resolution
         throw(DataFormatError(
             "Forecast resolution $(forecast.resolution) does not match system " *
             "resolution $(metadata.resolution)",
         ))
     end
 
-    if get_horizon(forecast) != metadata.horizon
+    if get_horizon(forecast)!=metadata.horizon
         throw(DataFormatError(
             "Forecast horizon $(get_horizon(forecast)) does not match system horizon " *
             "$(metadata.horizon)",
