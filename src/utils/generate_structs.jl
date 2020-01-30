@@ -71,7 +71,7 @@ function read_json_data(filename::String)
     end
 end
 
-function generate_structs(directory, data::Vector; print_results=true)
+function generate_structs(directory, data::Vector; print_results = true)
     struct_names = Vector{String}()
     unique_accessor_functions = Set{String}()
 
@@ -91,8 +91,9 @@ function generate_structs(directory, data::Vector; print_results=true)
         for field in item["fields"]
             param = field
             if haskey(param, "valid_range")
-                if typeof(param["valid_range"]) == Dict{String, Any}
-                    param["valid_range"] = param["valid_range"]["min"], param["valid_range"]["max"]
+                if typeof(param["valid_range"]) == Dict{String,Any}
+                    param["valid_range"] =
+                        param["valid_range"]["min"], param["valid_range"]["max"]
                 elseif typeof(param["valid_range"]) == String
                     param["valid_range"] = param["valid_range"]
                 end
@@ -163,13 +164,16 @@ function namedtuple_to_dict(tuple)
     return parameters
 end
 
-function generate_structs(input_file::AbstractString, output_directory::AbstractString;
-                          print_results=true)
+function generate_structs(
+    input_file::AbstractString,
+    output_directory::AbstractString;
+    print_results = true,
+)
     # Include each generated file.
     if !isdir(output_directory)
         mkdir(output_directory)
     end
 
     data = read_json_data(input_file)
-    generate_structs(output_directory, data, print_results=print_results)
+    generate_structs(output_directory, data, print_results = print_results)
 end

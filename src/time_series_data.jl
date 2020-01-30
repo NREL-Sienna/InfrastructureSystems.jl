@@ -27,8 +27,8 @@ end
 Base.length(ts::TimeSeriesData) = length(ts.data)
 get_initial_time(ts::TimeSeriesData) = TimeSeries.timestamp(ts.data)[1]
 get_horizon(ts::TimeSeriesData) = length(ts.data)
-get_resolution(ts::TimeSeriesData) = TimeSeries.timestamp(ts.data)[2] -
-                                     TimeSeries.timestamp(ts.data)[1]
+get_resolution(ts::TimeSeriesData) =
+    TimeSeries.timestamp(ts.data)[2] - TimeSeries.timestamp(ts.data)[1]
 
 #function get_time_series(data::TimeSeriesData)
 #    if !isnothing(data)
@@ -38,4 +38,3 @@ get_resolution(ts::TimeSeriesData) = TimeSeries.timestamp(ts.data)[2] -
 #    ta = read_time_series(data.file_path)
 #    return ta[Symbol(data.component_name)]
 #end
-

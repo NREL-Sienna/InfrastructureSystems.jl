@@ -34,7 +34,7 @@ end
 
 @testset "Test JSON serialization of system data" begin
     for in_memory in (true, false)
-        sys = create_system_data(; with_forecasts=true, time_series_in_memory=in_memory)
+        sys = create_system_data(; with_forecasts = true, time_series_in_memory = in_memory)
         @test validate_serialization(sys)
         text = JSON2.write(sys)
         @test length(text) > 0
@@ -42,8 +42,8 @@ end
 end
 
 @testset "Test prepare_for_serialization" begin
-    sys = create_system_data(; with_forecasts=true)
+    sys = create_system_data(; with_forecasts = true)
     IS.prepare_for_serialization!(sys, joinpath("dir1", "dir2", "sys.json"))
-    @test sys.time_series_storage_file == joinpath("dir1", "dir2",
-                                                   "sys_" * IS.TIME_SERIES_STORAGE_FILE)
+    @test sys.time_series_storage_file ==
+          joinpath("dir1", "dir2", "sys_" * IS.TIME_SERIES_STORAGE_FILE)
 end

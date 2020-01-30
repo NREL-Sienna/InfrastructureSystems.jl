@@ -8,16 +8,16 @@ function get_field(item::TestItem)
 end
 
 @testset "Test LazyDictFromIterator" begin
-    first = [TestItem(x) for x in 1:5]
-    second = [TestItem(x) for x in 6:10]
+    first = [TestItem(x) for x = 1:5]
+    second = [TestItem(x) for x = 6:10]
     items = [first, second]
     iter = Iterators.flatten(items)
 
     container = IS.LazyDictFromIterator(Int, TestItem, iter, get_field)
 
     # Run through twice because the items must persist in the dict.
-    for i in range(1, length=2)
-        for x in 1:10
+    for i in range(1, length = 2)
+        for x = 1:10
             @test get(container, x) isa TestItem
         end
     end
@@ -29,11 +29,11 @@ end
 
     @test isnothing(get(container, 25))
 
-    third = [TestItem(x) for x in 11:15]
+    third = [TestItem(x) for x = 11:15]
     items = [third]
     @test isnothing(get(container, 12))
     IS.replace_iterator(container, Iterators.flatten(items))
     @test get(container, 12) isa TestItem
-     # The old values should still be there.
+    # The old values should still be there.
     @test get(container, 5) isa TestItem
 end

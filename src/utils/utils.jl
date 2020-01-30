@@ -1,13 +1,12 @@
 import InteractiveUtils: subtypes
 
-
-g_cached_subtypes = Dict{DataType, Vector{DataType}}()
+g_cached_subtypes = Dict{DataType,Vector{DataType}}()
 
 """
 Returns an array of all concrete subtypes of T.
 Note that this does not find parameterized types.
 """
-function get_all_concrete_subtypes(::Type{T}) where T
+function get_all_concrete_subtypes(::Type{T}) where {T}
     if haskey(g_cached_subtypes, T)
         return g_cached_subtypes[T]
     end
@@ -19,7 +18,7 @@ function get_all_concrete_subtypes(::Type{T}) where T
 end
 
 """Recursively builds a vector of subtypes."""
-function _get_all_concrete_subtypes(::Type{T}, sub_types::Vector{DataType}) where T
+function _get_all_concrete_subtypes(::Type{T}, sub_types::Vector{DataType}) where {T}
     for sub_type in subtypes(T)
         if isconcretetype(sub_type)
             push!(sub_types, sub_type)
@@ -32,17 +31,17 @@ function _get_all_concrete_subtypes(::Type{T}, sub_types::Vector{DataType}) wher
 end
 
 """Returns an array of concrete types that are direct subtypes of T."""
-function get_concrete_subtypes(::Type{T}) where T
+function get_concrete_subtypes(::Type{T}) where {T}
     return [x for x in subtypes(T) if isconcretetype(x)]
 end
 
 """Returns an array of abstract types that are direct subtypes of T."""
-function get_abstract_subtypes(::Type{T}) where T
+function get_abstract_subtypes(::Type{T}) where {T}
     return [x for x in subtypes(T) if isabstracttype(x)]
 end
 
 """Returns an array of all super types of T."""
-function supertypes(::Type{T}, types=[]) where T
+function supertypes(::Type{T}, types = []) where {T}
     super = supertype(T)
     push!(types, super)
     if super == Any
@@ -67,13 +66,13 @@ function strip_module_name(name::String)
        (!isnothing(parametric_index) && index.start > parametric_index.start)
         basename = name
     else
-        basename = name[index.start + 1:end]
+        basename = name[(index.start + 1):end]
     end
 
     return basename
 end
 
-function strip_module_name(::Type{T}) where T
+function strip_module_name(::Type{T}) where {T}
     return strip_module_name(string(T))
 end
 
@@ -81,7 +80,7 @@ function strip_parametric_type(name::AbstractString)
     index = findfirst("{", name)
     if !isnothing(index)
         # Ignore the parametric type.
-        name = name[1:index.start - 1]
+        name = name[1:(index.start - 1)]
     end
 
     return name
@@ -97,10 +96,11 @@ function separate_type_and_parameter_types(name::String)
     if isnothing(index_start_brace)
         type_str = name
     else
-        type_str = name[1: index_start_brace.start - 1]
+        type_str = name[1:(index_start_brace.start - 1)]
         index_close_brace = findfirst("}", name)
         @assert index_start_brace.start < index_close_brace.start
-        for x in split(name[index_start_brace.start + 1: index_close_brace.start - 1], ",")
+        for x in
+            split(name[(index_start_brace.start + 1):(index_close_brace.start - 1)], ",")
             push!(parameters, strip(x))
         end
     end
@@ -111,7 +111,7 @@ end
 """Converts an object deserialized from JSON into a Julia type, such as NamedTuple,
 to an instance of T. Similar to Base.convert, but not a viable replacement.
 """
-function convert_type(::Type{T}, data::Any) where T
+function convert_type(::Type{T}, data::Any) where {T}
     # Improvement: implement the conversion logic. Need to recursively convert fieldnames
     # to fieldtypes, collect the values, and pass them to T(). Also handle literals.
     # The JSON2 library already handles almost all of the cases.
@@ -155,7 +155,7 @@ appropriate in all cases. Until the Julia developers decide on a solution, this
 function is provided for convenience for specific comparisons.
 
 """
-function compare_values(x::T, y::T)::Bool where T
+function compare_values(x::T, y::T)::Bool where {T}
     match = true
     fields = fieldnames(T)
     if isempty(fields)
@@ -191,13 +191,13 @@ function compare_values(x::T, y::T)::Bool where T
     return match
 end
 
-function compare_values(x::Vector{T}, y::Vector{T})::Bool where T
+function compare_values(x::Vector{T}, y::Vector{T})::Bool where {T}
     if length(x) != length(y)
         @debug "lengths do not match" T length(x) length(y)
         return false
     end
 
-    for i in range(1, length=length(x))
+    for i in range(1, length = length(x))
         if !compare_values(x[i], y[i])
             @debug "values do not match" typeof(x[i]) i x[i] y[i]
             return false
@@ -225,7 +225,7 @@ function compare_values(x::Dict, y::Dict)::Bool
     return true
 end
 
-function compare_values(x::T, y::U)::Bool where {T, U}
+function compare_values(x::T, y::U)::Bool where {T,U}
     # This is a catch-all for where where the types may not be identical but are close
     # enough.
     return x == y

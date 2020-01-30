@@ -14,7 +14,7 @@ Return a TimeArray from a CSV file.
 
 Pass component_name when the file does not have the component name in a column header.
 """
-function read_time_series(file_path::AbstractString, component_name=nothing; kwargs...)
+function read_time_series(file_path::AbstractString, component_name = nothing; kwargs...)
     if !isfile(file_path)
         msg = "Timeseries file doesn't exist : $file_path"
         throw(DataFormatError(msg))
@@ -57,39 +57,37 @@ function get_timeseries_format(file::CSV.File)
 end
 
 """Return the column names with values (components)."""
-function get_value_columns(::Type{TimeseriesFormatYMDPeriodAsColumn},
-                           file::CSV.File)
+function get_value_columns(::Type{TimeseriesFormatYMDPeriodAsColumn}, file::CSV.File)
     return [x for x in propertynames(file) if !in(x, (:Year, :Month, :Day, :Period))]
 end
 
-function get_value_columns(::Type{TimeseriesFormatDateTimePeriodAsColumn},
-                           file::CSV.File)
+function get_value_columns(::Type{TimeseriesFormatDateTimePeriodAsColumn}, file::CSV.File)
     return [x for x in propertynames(file) if !in(x, (:DateTime, :Period))]
 end
 
 """Return the column names with values."""
-function get_value_columns(::Type{TimeseriesFormatComponentsAsColumnsNoTime},
-                           file::CSV.File)
+function get_value_columns(
+    ::Type{TimeseriesFormatComponentsAsColumnsNoTime},
+    file::CSV.File,
+)
     return propertynames(file)
 end
 
 """Return the column names that specify the Period."""
-function get_period_columns(::Type{TimeseriesFormatPeriodAsColumn},
-                            file::CSV.File)
+function get_period_columns(::Type{TimeseriesFormatPeriodAsColumn}, file::CSV.File)
     return [:Period]
 end
 
-function get_period_columns(::Type{TimeseriesFormatYMDPeriodAsHeader},
-                            file::CSV.File)
+function get_period_columns(::Type{TimeseriesFormatYMDPeriodAsHeader}, file::CSV.File)
     return [x for x in propertynames(file) if !in(x, (:Year, :Month, :Day))]
 end
 
 """Return a vector of dicts of unique timestamps and their counts."""
-function get_unique_timestamps(::Type{T}, file::CSV.File) where T <: TimeseriesFileFormat
-    timestamps = Vector{Dict{String, Any}}()
+function get_unique_timestamps(::Type{T}, file::CSV.File) where {T<:TimeseriesFileFormat}
+    timestamps = Vector{Dict{String,Any}}()
     new_timestamp = x -> Dict("timestamp" => x, "count" => 1)
 
-    for i in 1:length(file)
+    for i = 1:length(file)
         timestamp = get_timestamp(T, file, i)
         if i == 1
             push!(timestamps, new_timestamp(timestamp))
@@ -111,32 +109,40 @@ function get_unique_timestamps(::Type{T}, file::CSV.File) where T <: TimeseriesF
 end
 
 """Return a Dates.DateTime for the row in the CSV file."""
-function get_timestamp(::Type{TimeseriesFormatYMDPeriodAsColumn}, file::CSV.File,
-                       row_index::Int)
+function get_timestamp(
+    ::Type{TimeseriesFormatYMDPeriodAsColumn},
+    file::CSV.File,
+    row_index::Int,
+)
     return Dates.DateTime(file.Year[row_index], file.Month[row_index], file.Day[row_index])
 end
 
-function get_timestamp(::Type{TimeseriesFormatDateTimePeriodAsColumn}, file::CSV.File,
-                       row_index::Int)
+function get_timestamp(
+    ::Type{TimeseriesFormatDateTimePeriodAsColumn},
+    file::CSV.File,
+    row_index::Int,
+)
     return Dates.DateTime(file.DateTime[row_index])
 end
 
-function get_timestamp(::Type{TimeseriesFormatYMDPeriodAsHeader}, file::CSV.File,
-                       row_index::Int)
+function get_timestamp(
+    ::Type{TimeseriesFormatYMDPeriodAsHeader},
+    file::CSV.File,
+    row_index::Int,
+)
     return get_timestamp(TimeseriesFormatYMDPeriodAsColumn, file, row_index)
 end
-
 
 """Return a TimeSeries.TimeArray representing the CSV file.
 
 This version of the function only has component_name to match the interface. It is unused.
 """
 function read_time_series(
-                          ::Type{T},
-                          file::CSV.File,
-                          component_name=nothing;
-                          kwargs...
-                         ) where T <: TimeseriesFormatPeriodAsColumn
+    ::Type{T},
+    file::CSV.File,
+    component_name = nothing;
+    kwargs...,
+) where {T<:TimeseriesFormatPeriodAsColumn}
     timestamps = Vector{Dates.DateTime}()
     step = get_step_time(T, file, file.Period)
 
@@ -145,7 +151,7 @@ function read_time_series(
     # They were validated in get_step_time.
     first = get_timestamp(T, file, 1)
     push!(timestamps, first)
-    for i in 2:length(file)
+    for i = 2:length(file)
         timestamp = first + step * (i - 1)
         push!(timestamps, timestamp)
     end
@@ -160,11 +166,11 @@ end
 a component, so the component_name must be passed in.
 """
 function read_time_series(
-                          ::Type{T},
-                          file::CSV.File,
-                          component_name::AbstractString;
-                          kwargs...
-                         ) where T <: TimeseriesFormatPeriodAsHeader
+    ::Type{T},
+    file::CSV.File,
+    component_name::AbstractString;
+    kwargs...,
+) where {T<:TimeseriesFormatPeriodAsHeader}
     timestamps = Vector{Dates.DateTime}()
 
     period_cols_as_symbols = get_period_columns(T, file)
@@ -177,11 +183,11 @@ function read_time_series(
 
     first = Dates.DateTime(Dates.today())
     count = 0
-    for i in 1:length(file)
+    for i = 1:length(file)
         if i == 1
             first = get_timestamp(T, file, 1)
         end
-        for j in 1:length(period)
+        for j = 1:length(period)
             timestamp = first + step * count
             count += 1
             push!(timestamps, timestamp)
@@ -189,7 +195,7 @@ function read_time_series(
     end
 
     vals = Vector{Float64}()
-    for i in 1:length(file)
+    for i = 1:length(file)
         for period in period_cols_as_symbols
             val = getproperty(file, period)[i]
             push!(vals, val)
@@ -206,16 +212,16 @@ Set start_datetime as a keyword argument for the starting timestamp, otherwise t
 day is used.
 """
 function read_time_series(
-                          ::Type{T},
-                          file::CSV.File,
-                          component_name=nothing;
-                          kwargs...
-                         ) where T <: TimeseriesFormatComponentsAsColumnsNoTime
+    ::Type{T},
+    file::CSV.File,
+    component_name = nothing;
+    kwargs...,
+) where {T<:TimeseriesFormatComponentsAsColumnsNoTime}
     timestamps = Vector{Dates.DateTime}()
     step = get_step_time(T, file)
 
     start = get(kwargs, :start_datetime, Dates.DateTime(Dates.today()))
-    for i in 1:length(file)
+    for i = 1:length(file)
         timestamp = start + step * (i - 1)
         push!(timestamps, timestamp)
     end
@@ -228,10 +234,10 @@ end
 
 """Return a DateTime for the step between values as specified by the period in the file."""
 function get_step_time(
-                       ::Type{T},
-                       file::CSV.File,
-                       period::AbstractArray,
-                      ) where T <: TimeseriesFileFormat
+    ::Type{T},
+    file::CSV.File,
+    period::AbstractArray,
+) where {T<:TimeseriesFileFormat}
     timestamps = get_unique_timestamps(T, file)
     if T <: TimeseriesFormatPeriodAsColumn
         num_steps = timestamps[1]["count"]
@@ -250,7 +256,7 @@ function get_step_time(
     else
         resolution = timestamps[2]["timestamp"] - timestamps[1]["timestamp"]
         if length(timestamps) > 2
-            for i in 3:length(timestamps)
+            for i = 3:length(timestamps)
                 diff = timestamps[i]["timestamp"] - timestamps[i - 1]["timestamp"]
                 if diff != resolution
                     msg = "conflicting resolution=$resolution i=$i diff=$diff"
@@ -264,9 +270,9 @@ function get_step_time(
 end
 
 function get_step_time(
-                       ::Type{T},
-                       file::CSV.File,
-                      ) where T <: TimeseriesFormatComponentsAsColumnsNoTime
+    ::Type{T},
+    file::CSV.File,
+) where {T<:TimeseriesFormatComponentsAsColumnsNoTime}
     resolution = Dates.Day(1)
     num_steps = length(file)
     return calculate_step_time(resolution, num_steps)

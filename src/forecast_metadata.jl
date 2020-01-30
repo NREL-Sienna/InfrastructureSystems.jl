@@ -2,7 +2,6 @@ const UNINITIALIZED_DATETIME = Dates.DateTime(Dates.Minute(0))
 const UNINITIALIZED_PERIOD = Dates.Period(Dates.Minute(0))
 const UNINITIALIZED_HORIZON = 0
 
-
 """Container for forecasts and their metadata.."""
 mutable struct ForecastMetadata
     resolution::Dates.Period
@@ -31,14 +30,14 @@ function _verify_forecast(metadata::ForecastMetadata, forecast::ForecastInternal
     if forecast.resolution != metadata.resolution
         throw(DataFormatError(
             "Forecast resolution $(forecast.resolution) does not match system " *
-            "resolution $(metadata.resolution)"
+            "resolution $(metadata.resolution)",
         ))
     end
 
     if get_horizon(forecast) != metadata.horizon
         throw(DataFormatError(
             "Forecast horizon $(get_horizon(forecast)) does not match system horizon " *
-            "$(metadata.horizon)"
+            "$(metadata.horizon)",
         ))
     end
 end

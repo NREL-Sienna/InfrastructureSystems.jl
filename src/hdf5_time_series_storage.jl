@@ -18,7 +18,7 @@ Constructs Hdf5TimeSeriesStorage by creating a temp file.
 """
 function Hdf5TimeSeriesStorage()
     return Hdf5TimeSeriesStorage(true, false)
-end 
+end
 
 """
 Constructs Hdf5TimeSeriesStorage.
@@ -28,7 +28,7 @@ Constructs Hdf5TimeSeriesStorage.
 - `preserve_file::Bool`: if false, delete the file when the instance is GC'd.
 - `filename=nothing`: if nothing, create a temp file, else use this name.
 """
-function Hdf5TimeSeriesStorage(create_file::Bool, preserve_file::Bool; filename=nothing)
+function Hdf5TimeSeriesStorage(create_file::Bool, preserve_file::Bool; filename = nothing)
     if create_file
         if isnothing(filename)
             filename, io = mktemp()
@@ -62,8 +62,8 @@ Constructs Hdf5TimeSeriesStorage from an existing file.
 """
 function from_file(::Type{Hdf5TimeSeriesStorage}, filename::AbstractString)
     file_path = tempname() * ".h5"
-    cp(filename, file_path; force=true)
-    storage = Hdf5TimeSeriesStorage(false, false; filename=file_path)
+    cp(filename, file_path; force = true)
+    storage = Hdf5TimeSeriesStorage(false, false; filename = file_path)
     @info "Loaded time series from storage file existing=$filename new=$(storage.file_path)"
     return storage
 end
@@ -71,11 +71,11 @@ end
 get_file_path(storage::Hdf5TimeSeriesStorage) = storage.file_path
 
 function add_time_series!(
-                          storage::Hdf5TimeSeriesStorage,
-                          component_uuid::UUIDs.UUID,
-                          label::AbstractString,
-                          ts::TimeSeriesData,
-                         )
+    storage::Hdf5TimeSeriesStorage,
+    component_uuid::UUIDs.UUID,
+    label::AbstractString,
+    ts::TimeSeriesData,
+)
     uuid = string(get_uuid(ts))
     component_label = make_component_label(component_uuid, label)
 
@@ -106,7 +106,7 @@ function iterate_time_series(storage::Hdf5TimeSeriesStorage)
             for uuid_group in root
                 uuid_path = HDF5.name(uuid_group)
                 range = findlast("/", uuid_path)
-                uuid_str = uuid_path[range.start + 1:end]
+                uuid_str = uuid_path[(range.start + 1):end]
                 uuid = UUIDs.UUID(uuid_str)
                 internal = InfrastructureSystemsInternal(uuid)
                 time_series = TimeSeriesData(get_time_series(storage, uuid), internal)
@@ -120,11 +120,11 @@ function iterate_time_series(storage::Hdf5TimeSeriesStorage)
 end
 
 function remove_time_series!(
-                             storage::Hdf5TimeSeriesStorage,
-                             uuid::UUIDs.UUID,
-                             component_uuid::UUIDs.UUID,
-                             label::AbstractString,
-                            )
+    storage::Hdf5TimeSeriesStorage,
+    uuid::UUIDs.UUID,
+    component_uuid::UUIDs.UUID,
+    label::AbstractString,
+)
     HDF5.h5open(storage.file_path, "r+") do file
         root = _get_root(storage, file)
         path = _get_time_series_path(root, uuid)
@@ -136,11 +136,11 @@ function remove_time_series!(
 end
 
 function get_time_series(
-                         storage::Hdf5TimeSeriesStorage,
-                         uuid::UUIDs.UUID;
-                         index=0,
-                         len=0,
-                        )::TimeSeries.TimeArray
+    storage::Hdf5TimeSeriesStorage,
+    uuid::UUIDs.UUID;
+    index = 0,
+    len = 0,
+)::TimeSeries.TimeArray
     return HDF5.h5open(storage.file_path, "r") do file
         root = _get_root(storage, file)
         path = _get_time_series_path(root, uuid)

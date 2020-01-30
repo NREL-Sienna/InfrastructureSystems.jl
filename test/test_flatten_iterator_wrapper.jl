@@ -14,8 +14,8 @@ function run_test(T, a, b)
 end
 
 @testset "Test IS.FlattenIteratorWrapper dictionaries" begin
-    run_test(Int, Dict("1"=>1, "2"=>2, "3"=>3), Dict("4"=>4, "5"=>5, "6"=>6))
-    run_test(Int, Dict{String, Int}(), Dict{String, Int}())
+    run_test(Int, Dict("1" => 1, "2" => 2, "3" => 3), Dict("4" => 4, "5" => 5, "6" => 6))
+    run_test(Int, Dict{String,Int}(), Dict{String,Int}())
 end
 
 @testset "Test IS.FlattenIteratorWrapper vectors" begin

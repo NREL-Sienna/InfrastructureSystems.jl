@@ -15,21 +15,23 @@ end
 
 Constructs Deterministic after constructing a TimeArray from initial_time and time_steps.
 """
-function Deterministic(label::String,
-                       resolution::Dates.Period,
-                       initial_time::Dates.DateTime,
-                       time_steps::Int)
+function Deterministic(
+    label::String,
+    resolution::Dates.Period,
+    initial_time::Dates.DateTime,
+    time_steps::Int,
+)
     data = TimeSeries.TimeArray(
-        initial_time : Dates.Hour(1) : initial_time + resolution * (time_steps-1),
-        ones(time_steps)
+        initial_time:Dates.Hour(1):(initial_time + resolution * (time_steps - 1)),
+        ones(time_steps),
     )
     return Deterministic(label, data)
 end
 
 function Deterministic(forecasts::Vector{Deterministic})
     @assert !isempty(forecasts)
-    timestamps = collect(Iterators.flatten((TimeSeries.timestamp(get_data(x))
-                                            for x in forecasts)))
+    timestamps =
+        collect(Iterators.flatten((TimeSeries.timestamp(get_data(x)) for x in forecasts)))
     data = collect(Iterators.flatten((TimeSeries.values(get_data(x)) for x in forecasts)))
     ta = TimeSeries.TimeArray(timestamps, data)
 
@@ -49,11 +51,13 @@ function make_internal_forecast(forecast::Deterministic, ts_data::TimeSeriesData
 end
 
 function DeterministicInternal(label::AbstractString, data::TimeSeriesData)
-    return DeterministicInternal(label,
-                                 get_resolution(data),
-                                 get_initial_time(data),
-                                 get_uuid(data),
-                                 get_horizon(data))
+    return DeterministicInternal(
+        label,
+        get_resolution(data),
+        get_initial_time(data),
+        get_uuid(data),
+        get_horizon(data),
+    )
 end
 
 """
@@ -67,15 +71,15 @@ end
 Constructs Probabilistic after constructing a TimeArray from initial_time and time_steps.
 """
 function Probabilistic(
-                       label::String,
-                       resolution::Dates.Period,
-                       initial_time::Dates.DateTime,
-                       percentiles::Vector{Float64},
-                       time_steps::Int,
-                      )
+    label::String,
+    resolution::Dates.Period,
+    initial_time::Dates.DateTime,
+    percentiles::Vector{Float64},
+    time_steps::Int,
+)
     data = TimeSeries.TimeArray(
-        initial_time : Dates.Hour(1) : initial_time + resolution * (time_steps-1),
-        ones(time_steps, length(percentiles))
+        initial_time:Dates.Hour(1):(initial_time + resolution * (time_steps - 1)),
+        ones(time_steps, length(percentiles)),
     )
 
     return Probabilistic(label, percentiles, data)
@@ -105,28 +109,29 @@ Constructs Probabilistic Forecast after constructing a TimeArray from initial_ti
 #    return Probabilistic(label, percentiles, data)
 #end
 
-function Probabilistic(label::String,
-                       resolution::Dates.Period,
-                       initial_time::Dates.DateTime,
-                       percentiles::Vector{Float64},  # percentiles for the probabilistic forecast
-                       data::TimeSeries.TimeArray)
+function Probabilistic(
+    label::String,
+    resolution::Dates.Period,
+    initial_time::Dates.DateTime,
+    percentiles::Vector{Float64},  # percentiles for the probabilistic forecast
+    data::TimeSeries.TimeArray,
+)
     return Probabilistic(label, percentiles, data)
 end
-
 
 function make_public_forecast(forecast::ProbabilisticInternal, data::TimeSeries.TimeArray)
     return Probabilistic(get_label(forecast), get_percentiles(forecast), data)
 end
 
-
 function make_internal_forecast(forecast::Probabilistic, ts_data::TimeSeriesData)
-    return ProbabilisticInternal(get_label(forecast),
-                                 get_resolution(forecast),
-                                 get_initial_time(forecast),
-                                 get_percentiles(forecast),
-                                 get_uuid(ts_data),
-                                 get_horizon(forecast),
-                                )
+    return ProbabilisticInternal(
+        get_label(forecast),
+        get_resolution(forecast),
+        get_initial_time(forecast),
+        get_percentiles(forecast),
+        get_uuid(ts_data),
+        get_horizon(forecast),
+    )
 end
 
 function ScenarioBased(label::String, data::TimeSeries.TimeArray)
@@ -140,14 +145,16 @@ end
 Constructs ScenarioBased Forecast after constructing a TimeArray from initial_time and
 time_steps.
 """
-function ScenarioBased(label::String,
-                       resolution::Dates.Period,
-                       initial_time::Dates.DateTime,
-                       scenario_count::Int,
-                       time_steps::Int)
+function ScenarioBased(
+    label::String,
+    resolution::Dates.Period,
+    initial_time::Dates.DateTime,
+    scenario_count::Int,
+    time_steps::Int,
+)
     data = TimeSeries.TimeArray(
-        initial_time : Dates.Hour(1) : initial_time + resolution * (time_steps-1),
-        ones(time_steps, scenario_count)
+        initial_time:Dates.Hour(1):(initial_time + resolution * (time_steps - 1)),
+        ones(time_steps, scenario_count),
     )
 
     return ScenarioBased(label, data)
@@ -158,16 +165,17 @@ function make_public_forecast(forecast::ScenarioBasedInternal, data::TimeSeries.
 end
 
 function make_internal_forecast(forecast::ScenarioBased, ts_data::TimeSeriesData)
-    return ScenarioBasedInternal(get_label(forecast),
-                                 get_resolution(forecast),
-                                 get_initial_time(forecast),
-                                 get_scenario_count(forecast),
-                                 get_uuid(ts_data),
-                                 get_horizon(forecast),
-                                )
+    return ScenarioBasedInternal(
+        get_label(forecast),
+        get_resolution(forecast),
+        get_initial_time(forecast),
+        get_scenario_count(forecast),
+        get_uuid(ts_data),
+        get_horizon(forecast),
+    )
 end
 
-function forecast_external_to_internal(::Type{T}) where T <: Forecast
+function forecast_external_to_internal(::Type{T}) where {T<:Forecast}
     if T <: Deterministic
         forecast_type = DeterministicInternal
     elseif T <: Probabilistic
@@ -181,7 +189,7 @@ function forecast_external_to_internal(::Type{T}) where T <: Forecast
     return forecast_type
 end
 
-function forecast_internal_to_external(::Type{T}) where T <: ForecastInternal
+function forecast_internal_to_external(::Type{T}) where {T<:ForecastInternal}
     if T <: DeterministicInternal
         forecast_type = Deterministic
     elseif T <: ProbabilisticInternal
@@ -194,4 +202,3 @@ function forecast_internal_to_external(::Type{T}) where T <: ForecastInternal
 
     return forecast_type
 end
-

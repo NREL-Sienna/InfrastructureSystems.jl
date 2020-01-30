@@ -9,7 +9,6 @@ export LogEventTracker
 export report_log_summary
 export get_log_events
 
-
 """
     configure_logging([console, console_stream, console_level,
                        file, filename, file_level, file_mode,
@@ -37,21 +36,21 @@ logger = configure_logging(filename="mylog.txt")
 ```
 """
 function configure_logging(;
-                           console=true,
-                           console_stream=stderr,
-                           console_level=Logging.Error,
-                           file=true,
-                           filename="log.txt",
-                           file_level=Logging.Info,
-                           file_mode="w+",
-                           tracker=LogEventTracker(),
-                           set_global=true
-                          )::MultiLogger
+    console = true,
+    console_stream = stderr,
+    console_level = Logging.Error,
+    file = true,
+    filename = "log.txt",
+    file_level = Logging.Info,
+    file_mode = "w+",
+    tracker = LogEventTracker(),
+    set_global = true,
+)::MultiLogger
     if !console && !file
         error("At least one of console or file must be true")
     end
 
-    loggers = Array{Logging.AbstractLogger, 1}()
+    loggers = Array{Logging.AbstractLogger,1}()
     if console
         console_logger = Logging.ConsoleLogger(console_stream, console_level)
         push!(loggers, console_logger)
@@ -91,8 +90,8 @@ function Logging.handle_message(
     id,
     file,
     line;
-    maxlog=nothing,
-    kwargs...
+    maxlog = nothing,
+    kwargs...,
 )
     Logging.handle_message(
         file_logger.logger,
@@ -103,8 +102,8 @@ function Logging.handle_message(
         id,
         file,
         line;
-        maxlog=maxlog,
-        kwargs...
+        maxlog = maxlog,
+        kwargs...,
     )
 end
 
@@ -130,7 +129,12 @@ open_file_logger("log.txt", Logging.Info) do logger
 end
 ```
 """
-function open_file_logger(func::Function, filename::String, level=Logging.Info, mode="w+")
+function open_file_logger(
+    func::Function,
+    filename::String,
+    level = Logging.Info,
+    mode = "w+",
+)
     stream = open(filename, mode)
     try
         logger = FileLogger(stream, level)
@@ -160,12 +164,12 @@ function LogEvent(file, line, id, message, level)
 end
 
 struct LogEventTracker
-    events::Dict{Logging.LogLevel, Dict{Symbol, LogEvent}}
+    events::Dict{Logging.LogLevel,Dict{Symbol,LogEvent}}
 
     # Defining an inner constructor to prohibit creation of a default constructor that
     # takes a parameter of type Any. The outer constructor below causes an overwrite of
     # that method, which results in a warning message from Julia.
-    LogEventTracker(events::Dict{Logging.LogLevel, Dict{Symbol, LogEvent}}) = new(events)
+    LogEventTracker(events::Dict{Logging.LogLevel,Dict{Symbol,LogEvent}}) = new(events)
 end
 
 """
@@ -179,18 +183,19 @@ LogEventTracker()
 LogEventTracker((Logging.Info, Logging.Warn, Logging.Error))
 ```
 """
-function LogEventTracker(levels=(Logging.Info, Logging.Warn, Logging.Error))
-    return LogEventTracker(Dict(l => Dict{Symbol, LogEvent}() for l in levels))
+function LogEventTracker(levels = (Logging.Info, Logging.Warn, Logging.Error))
+    return LogEventTracker(Dict(l => Dict{Symbol,LogEvent}() for l in levels))
 end
 
 """Returns a summary of log event counts by level."""
 function report_log_summary(tracker::LogEventTracker)::String
     text = "\nLog message summary:\n"
     # Order by criticality.
-    for level in sort!(collect(keys(tracker.events)), rev=true)
+    for level in sort!(collect(keys(tracker.events)), rev = true)
         num_events = length(tracker.events[level])
         text *= "\n$num_events $level events:\n"
-        for event in sort!(collect(get_log_events(tracker, level)), by=x->x.count, rev=true)
+        for event in
+            sort!(collect(get_log_events(tracker, level)), by = x -> x.count, rev = true)
             text *= "  count=$(event.count) at $(event.file):$(event.line)\n"
             text *= "    example message=\"$(event.message)\"\n"
             if event.suppressed > 0
@@ -242,7 +247,7 @@ MultiLogger([ConsoleLogger(stderr), SimpleLogger(stream)], LogEventTracker())
 """
 mutable struct MultiLogger <: Logging.AbstractLogger
     loggers::Array{Logging.AbstractLogger}
-    tracker::Union{LogEventTracker, Nothing}
+    tracker::Union{LogEventTracker,Nothing}
 end
 
 """
@@ -253,7 +258,7 @@ Creates a MultiLogger with no event tracking.
 MultiLogger([ConsoleLogger(stderr), SimpleLogger(stream)])
 ```
 """
-function MultiLogger(loggers::Array{T}) where T <: Logging.AbstractLogger
+function MultiLogger(loggers::Array{T}) where {T<:Logging.AbstractLogger}
     return MultiLogger(loggers, nothing)
 end
 
@@ -265,22 +270,34 @@ end
 
 Logging.catch_exceptions(logger::MultiLogger) = false
 
-function Logging.handle_message(logger::MultiLogger,
-                                level,
-                                message,
-                                _module,
-                                group,
-                                id,
-                                file,
-                                line;
-                                maxlog=nothing,
-                                kwargs...)
+function Logging.handle_message(
+    logger::MultiLogger,
+    level,
+    message,
+    _module,
+    group,
+    id,
+    file,
+    line;
+    maxlog = nothing,
+    kwargs...,
+)
     suppressed = false
     for _logger in logger.loggers
         if level >= Logging.min_enabled_level(_logger)
             if Logging.shouldlog(_logger, level, _module, group, id)
-                Logging.handle_message(_logger, level, message, _module, group, id, file,
-                                       line; maxlog=maxlog, kwargs...)
+                Logging.handle_message(
+                    _logger,
+                    level,
+                    message,
+                    _module,
+                    group,
+                    id,
+                    file,
+                    line;
+                    maxlog = maxlog,
+                    kwargs...,
+                )
             else
                 suppressed = true
             end
@@ -318,9 +335,9 @@ end
 function _handle_log_func(logger::MultiLogger, func::Function)
     for _logger in logger.loggers
         if isa(_logger, Logging.SimpleLogger)
-           func(_logger.stream)
+            func(_logger.stream)
         elseif isa(_logger, FileLogger)
-           func(_logger)
+            func(_logger)
         end
     end
 end

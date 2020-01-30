@@ -104,7 +104,11 @@ end
     @test component.name == "component1"
     @test component.val == 5
 
-    @test_throws ArgumentError IS.get_component(IS.InfrastructureSystemsType, container, "component1")
+    @test_throws ArgumentError IS.get_component(
+        IS.InfrastructureSystemsType,
+        container,
+        "component1",
+    )
 end
 
 @testset "Test get_components_by_name" begin
@@ -113,7 +117,8 @@ end
     component = IS.TestComponent("component1", 5)
     IS.add_component!(container, component)
 
-    components = IS.get_components_by_name(IS.InfrastructureSystemsType, container, "component1")
+    components =
+        IS.get_components_by_name(IS.InfrastructureSystemsType, container, "component1")
     @test length(components) == 1
     @test component.name == "component1"
     @test component.val == 5

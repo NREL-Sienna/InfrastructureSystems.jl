@@ -3,7 +3,6 @@ const MAX_SHOW_COMPONENTS = 10
 const MAX_SHOW_FORECASTS = 10
 const MAX_SHOW_FORECAST_INITIAL_TIMES = 1
 
-
 function Base.summary(components::Components)
     return "$(typeof(components)): $(get_num_components(components))"
 end
@@ -106,16 +105,18 @@ function Base.show(io::IO, ::MIME"text/plain", ist::InfrastructureSystemsType)
 end
 
 function create_components_df(components::Components)
-    counts = Dict{String, Int}()
+    counts = Dict{String,Int}()
     rows = []
 
     for (subtype, values) in components.data
         type_str = strip_module_name(string(subtype))
         counts[type_str] = length(values)
         parents = [strip_module_name(string(x)) for x in supertypes(subtype)]
-        row = (ConcreteType=type_str,
-               SuperTypes=join(parents, " <: "),
-               Count=length(values))
+        row = (
+            ConcreteType = type_str,
+            SuperTypes = join(parents, " <: "),
+            Count = length(values),
+        )
         push!(rows, row)
     end
 
@@ -124,18 +125,26 @@ function create_components_df(components::Components)
     return DataFrames.DataFrame(rows)
 end
 
-function Base.show(io::IO, ::MIME"text/plain", period::Union{Dates.TimePeriod, Dates.DatePeriod})
+function Base.show(
+    io::IO,
+    ::MIME"text/plain",
+    period::Union{Dates.TimePeriod,Dates.DatePeriod},
+)
     total = convert_compound_period(period)
     println(io, "$total")
 end
 
-function Base.show(io::IO, ::MIME"text/html", period::Union{Dates.TimePeriod, Dates.DatePeriod})
+function Base.show(
+    io::IO,
+    ::MIME"text/html",
+    period::Union{Dates.TimePeriod,Dates.DatePeriod},
+)
     total = convert_compound_period(period)
     println(io, "<p>$total</p>")
 end
 
 ## This function takes in a time period or date period and returns a compound period
-function convert_compound_period(period::Union{Dates.TimePeriod, Dates.DatePeriod})
+function convert_compound_period(period::Union{Dates.TimePeriod,Dates.DatePeriod})
     period = time_period_conversion(period)
 
     milli_weeks = period - (period % Dates.Millisecond(604800000))
@@ -169,7 +178,7 @@ function create_forecasts_df(forecasts::Forecasts)
         if i > MAX_SHOW_FORECAST_INITIAL_TIMES
             break
         end
-        counts = Dict{String, Int}()
+        counts = Dict{String,Int}()
         rows = []
 
         for (key, values) in forecasts.data
@@ -180,9 +189,11 @@ function create_forecasts_df(forecasts::Forecasts)
             type_str = strip_module_name(string(key.forecast_type))
             counts[type_str] = length(values)
             parents = [strip_module_name(string(x)) for x in supertypes(key.forecast_type)]
-            row = (ConcreteType=type_str,
-                   SuperTypes=join(parents, " <: "),
-                   Count=length(values))
+            row = (
+                ConcreteType = type_str,
+                SuperTypes = join(parents, " <: "),
+                Count = length(values),
+            )
             push!(rows, row)
         end
 

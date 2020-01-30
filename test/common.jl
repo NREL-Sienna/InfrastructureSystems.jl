@@ -1,6 +1,6 @@
 
-function create_system_data(; with_forecasts=false, time_series_in_memory=false)
-    data = IS.SystemData(; time_series_in_memory=time_series_in_memory)
+function create_system_data(; with_forecasts = false, time_series_in_memory = false)
+    data = IS.SystemData(; time_series_in_memory = time_series_in_memory)
 
     name = "Component1"
     component = IS.TestComponent(name, 5)
@@ -22,7 +22,12 @@ function get_all_forecasts(data)
 end
 
 function create_time_series_data()
-    dates = collect(Dates.DateTime("1/1/2020 00:00:00", "d/m/y H:M:S") : Dates.Hour(1):Dates.DateTime("1/1/2020 23:00:00", "d/m/y H:M:S"))
+    dates = collect(
+        Dates.DateTime("1/1/2020 00:00:00", "d/m/y H:M:S"):Dates.Hour(1):Dates.DateTime(
+            "1/1/2020 23:00:00",
+            "d/m/y H:M:S",
+        ),
+    )
     data = collect(1:24)
     component_name = "gen"
     ta = TimeSeries.TimeArray(dates, data, [component_name])

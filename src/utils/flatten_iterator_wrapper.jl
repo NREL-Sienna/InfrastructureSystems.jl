@@ -6,8 +6,7 @@ struct FlattenIteratorWrapper{T}
     length::Int
 end
 
-function FlattenIteratorWrapper(element_type::Type{T},
-                                 vals) where T
+function FlattenIteratorWrapper(element_type::Type{T}, vals) where {T}
     len = isempty(vals) ? 0 : sum((length(x) for x in vals))
     return FlattenIteratorWrapper(T, Iterators.Flatten(vals), len)
 end
