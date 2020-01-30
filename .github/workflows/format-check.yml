@@ -1,3 +1,13 @@
+name: format-check
+
+on:
+  push:
+    branches:
+      - 'master'
+      - 'release-'
+    tags: '*'
+  pull_request:
+
 jobs:
   build:
     runs-on: ${{ matrix.os }}
