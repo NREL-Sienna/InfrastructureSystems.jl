@@ -3,25 +3,40 @@
 mutable struct TimeseriesFileMetadata
     simulation::String  # User description of simulation
     category::String  # String version of abstract type for the forecasted component.
-                      # Calling module should determine the actual type.
+    # Calling module should determine the actual type.
     component_name::String  # Name of forecast component
     label::String  # Accessor function on component for source of timeseries
-    scaling_factor::Union{String, Float64}  # Controls normalization of timeseries.
-                                            # Use 1.0 for pre-normalized data.
-                                            # Use 'Max' to divide the timeseries by the max
-                                            #   value in the column.
-                                            # Use any float for a custom scaling factor.
+    scaling_factor::Union{String,Float64}  # Controls normalization of timeseries.
+    # Use 1.0 for pre-normalized data.
+    # Use 'Max' to divide the timeseries by the max
+    #   value in the column.
+    # Use any float for a custom scaling factor.
     data_file::String  # path to the timeseries data file
     percentiles::Vector{Float64}
     forecast_type::String
-    component::Union{Nothing, InfrastructureSystemsType}  # Calling module must set.
+    component::Union{Nothing,InfrastructureSystemsType}  # Calling module must set.
 end
 
-function TimeseriesFileMetadata(simulation, category, component_name, label, scaling_factor,
-                                data_file, percentiles, forecast_type)
+function TimeseriesFileMetadata(
+    simulation,
+    category,
+    component_name,
+    label,
+    scaling_factor,
+    data_file,
+    percentiles,
+    forecast_type,
+)
     return TimeseriesFileMetadata(
-        simulation, category, component_name, label, scaling_factor, data_file, percentiles,
-        forecast_type, nothing,
+        simulation,
+        category,
+        component_name,
+        label,
+        scaling_factor,
+        data_file,
+        percentiles,
+        forecast_type,
+        nothing,
     )
 end
 
@@ -37,17 +52,20 @@ function read_time_series_metadata(file_path::AbstractString)
                 if !isa(scaling_factor, AbstractString)
                     scaling_factor = Float64(scaling_factor)
                 end
-                push!(metadata, TimeseriesFileMetadata(
-                    item["simulation"],
-                    item["category"],
-                    item["component_name"],
-                    item["label"],
-                    scaling_factor,
-                    item["data_file"],
-                    # Use default values until CDM data is updated.
-                    get(item, "percentiles", []),
-                    get(item, "forecast_type", "DeterministicInternal"),
-                ))
+                push!(
+                    metadata,
+                    TimeseriesFileMetadata(
+                        item["simulation"],
+                        item["category"],
+                        item["component_name"],
+                        item["label"],
+                        scaling_factor,
+                        item["data_file"],
+                        # Use default values until CDM data is updated.
+                        get(item, "percentiles", []),
+                        get(item, "forecast_type", "DeterministicInternal"),
+                    ),
+                )
             end
             return metadata
         end
@@ -56,17 +74,20 @@ function read_time_series_metadata(file_path::AbstractString)
         metadata = Vector{TimeseriesFileMetadata}()
         for row in eachrow(csv)
             category = _get_category(row.Category)
-            push!(metadata, TimeseriesFileMetadata(row.Simulation,
-                                                   row.Category,
-                                                   row.Object,
-                                                   row.Parameter,
-                                                   row[Symbol("Scaling Factor")],
-                                                   row[Symbol("Data File")],
-                                                   # TODO: update CDM data for the next
-                                                   # two fields.
-                                                   [],
-                                                   "DeterministicInternal",
-                                                  )
+            push!(
+                metadata,
+                TimeseriesFileMetadata(
+                    row.Simulation,
+                    row.Category,
+                    row.Object,
+                    row.Parameter,
+                    row[Symbol("Scaling Factor")],
+                    row[Symbol("Data File")],
+                    # TODO: update CDM data for the next
+                    # two fields.
+                    [],
+                    "DeterministicInternal",
+                ),
             )
         end
 
@@ -95,24 +116,46 @@ struct ForecastInfo
     simulation::String
     component::InfrastructureSystemsType
     label::String  # Component field on which timeseries data is based.
-    scaling_factor::Union{String, Float64}
+    scaling_factor::Union{String,Float64}
     data::TimeSeries.TimeArray
     percentiles::Vector{Float64}
     file_path::String
     forecast_type::String
 
-    function ForecastInfo(simulation, component, label, scaling_factor, data, percentiles,
-                          file_path, forecast_type)
-        new(simulation, component, label, scaling_factor, data, percentiles,
-            abspath(file_path), forecast_type)
+    function ForecastInfo(
+        simulation,
+        component,
+        label,
+        scaling_factor,
+        data,
+        percentiles,
+        file_path,
+        forecast_type,
+    )
+        new(
+            simulation,
+            component,
+            label,
+            scaling_factor,
+            data,
+            percentiles,
+            abspath(file_path),
+            forecast_type,
+        )
     end
 end
 
-function ForecastInfo(metadata::TimeseriesFileMetadata,
-                      timeseries::TimeSeries.TimeArray)
-    return ForecastInfo(metadata.simulation, metadata.component, metadata.label,
-                        metadata.scaling_factor, timeseries, metadata.percentiles,
-                        metadata.data_file, metadata.forecast_type)
+function ForecastInfo(metadata::TimeseriesFileMetadata, timeseries::TimeSeries.TimeArray)
+    return ForecastInfo(
+        metadata.simulation,
+        metadata.component,
+        metadata.label,
+        metadata.scaling_factor,
+        timeseries,
+        metadata.percentiles,
+        metadata.data_file,
+        metadata.forecast_type,
+    )
 end
 
 function get_forecast_type(forecast_info::ForecastInfo)
@@ -121,16 +164,17 @@ end
 
 struct ForecastCache
     forecasts::Vector{ForecastInfo}
-    data_files::Dict{String, TimeSeries.TimeArray}
+    data_files::Dict{String,TimeSeries.TimeArray}
 end
 
 function ForecastCache()
-    return ForecastCache(Vector{ForecastInfo}(),
-                         Dict{String, TimeSeries.TimeArray}())
+    return ForecastCache(Vector{ForecastInfo}(), Dict{String,TimeSeries.TimeArray}())
 end
 
-function handle_scaling_factor(timeseries::TimeSeries.TimeArray,
-                               scaling_factor::Union{String, Float64})
+function handle_scaling_factor(
+    timeseries::TimeSeries.TimeArray,
+    scaling_factor::Union{String,Float64},
+)
     if scaling_factor isa String
         if lowercase(scaling_factor) == "max"
             max_value = maximum(TimeSeries.values(timeseries))
@@ -149,8 +193,11 @@ function handle_scaling_factor(timeseries::TimeSeries.TimeArray,
     return timeseries
 end
 
-function _add_forecast_info!(forecast_cache::ForecastCache, data_file::AbstractString,
-                             component_name::Union{Nothing, String})
+function _add_forecast_info!(
+    forecast_cache::ForecastCache,
+    data_file::AbstractString,
+    component_name::Union{Nothing,String},
+)
     if !haskey(forecast_cache.data_files, data_file)
         forecast_cache.data_files[data_file] = read_time_series(data_file, component_name)
         @debug "Added timeseries file" data_file

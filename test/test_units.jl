@@ -1,7 +1,12 @@
 @testset "Test dictionary time period conversion" begin
     faketimes1 = Dict("one" => Dates.Week(40), "two" => Dates.Day(6))
     faketimes2 = Dict("one" => Dates.Minute(40), "two" => Dates.Minute(6))
-    faketimes3 = Dict("one" => Dates.Millisecond(3), "two" => Dates.Second(4), "three" => Dates.Minute(40), "four" => Dates.Hour(3))
+    faketimes3 = Dict(
+        "one" => Dates.Millisecond(3),
+        "two" => Dates.Second(4),
+        "three" => Dates.Minute(40),
+        "four" => Dates.Hour(3),
+    )
     convert1 = IS.time_period_conversion(faketimes1)
     convert2 = IS.time_period_conversion(faketimes2)
     convert3 = IS.time_period_conversion(faketimes3)

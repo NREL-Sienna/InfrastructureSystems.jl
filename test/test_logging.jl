@@ -14,7 +14,7 @@ TEST_MSG = "test log message"
         IS.LogEvent("file", 14, :id, TEST_MSG, Logging.Error),
     )
 
-    for i in range(1, length=2)
+    for i in range(1, length = 2)
         for event in events
             increment_count(tracker, event, false)
         end
@@ -41,8 +41,10 @@ TEST_MSG = "test log message"
 end
 
 @testset "Test MultiLogger with no event tracking" begin
-    logger = IS.MultiLogger([ConsoleLogger(devnull, Logging.Info),
-                          SimpleLogger(devnull, Logging.Debug)])
+    logger = IS.MultiLogger([
+        ConsoleLogger(devnull, Logging.Info),
+        SimpleLogger(devnull, Logging.Debug),
+    ])
     with_logger(logger) do
         @info TEST_MSG
     end
@@ -52,16 +54,17 @@ end
 
 @testset "Test MultiLogger with event tracking" begin
     levels = (Logging.Debug, Logging.Info, Logging.Warn, Logging.Error)
-    logger = IS.MultiLogger([ConsoleLogger(devnull, Logging.Info),
-                          SimpleLogger(devnull, Logging.Debug)],
-                          IS.LogEventTracker(levels))
+    logger = IS.MultiLogger(
+        [ConsoleLogger(devnull, Logging.Info), SimpleLogger(devnull, Logging.Debug)],
+        IS.LogEventTracker(levels),
+    )
 
     with_logger(logger) do
-        for i in range(1, length=2)
+        for i in range(1, length = 2)
             @debug TEST_MSG
             @info TEST_MSG
             @warn TEST_MSG
-            @error TEST_MSG maxlog=1
+            @error TEST_MSG maxlog = 1
         end
     end
 
@@ -78,8 +81,12 @@ end
 @testset "Test configure_logging" begin
     # Verify logging to a file.
     logfile = "testlog.txt"
-    logger = IS.configure_logging(; file=true, filename=logfile, file_level=Logging.Info,
-                               set_global=false)
+    logger = IS.configure_logging(;
+        file = true,
+        filename = logfile,
+        file_level = Logging.Info,
+        set_global = false,
+    )
     with_logger(logger) do
         @info TEST_MSG
     end
@@ -95,10 +102,14 @@ end
     rm(logfile)
 
     # Verify logging with no file.
-    logger = IS.configure_logging(; console=true, file=false,
-                               console_stream=devnull,
-                               filename=logfile, file_level=Logging.Info,
-                               set_global=false)
+    logger = IS.configure_logging(;
+        console = true,
+        file = false,
+        console_stream = devnull,
+        filename = logfile,
+        file_level = Logging.Info,
+        set_global = false,
+    )
     with_logger(logger) do
         @error TEST_MSG
     end
@@ -110,10 +121,15 @@ end
     @test !isfile(logfile)
 
     # Verify disabling of tracker.
-    logger = IS.configure_logging(; console=true, file=false,
-                               console_stream=devnull,
-                               filename=logfile, file_level=Logging.Info,
-                               set_global=false, tracker=nothing)
+    logger = IS.configure_logging(;
+        console = true,
+        file = false,
+        console_stream = devnull,
+        filename = logfile,
+        file_level = Logging.Info,
+        set_global = false,
+        tracker = nothing,
+    )
     with_logger(logger) do
         @error TEST_MSG
         @test isnothing(logger.tracker)
@@ -121,10 +137,15 @@ end
 
     # Verify setting of global logger
     orig_logger = global_logger()
-    logger = IS.configure_logging(; console=true, file=false,
-                               console_stream=devnull,
-                               filename=logfile, file_level=Logging.Info,
-                               set_global=true, tracker=nothing)
+    logger = IS.configure_logging(;
+        console = true,
+        file = false,
+        console_stream = devnull,
+        filename = logfile,
+        file_level = Logging.Info,
+        set_global = true,
+        tracker = nothing,
+    )
     @error TEST_MSG
     @test orig_logger != global_logger()
     global_logger(orig_logger)

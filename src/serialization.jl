@@ -1,6 +1,6 @@
 
 """Serializes a InfrastructureSystemsType to a JSON file."""
-function to_json(obj::T, filename::AbstractString) where {T <: InfrastructureSystemsType}
+function to_json(obj::T, filename::AbstractString) where {T<:InfrastructureSystemsType}
     result = open(filename, "w") do io
         return to_json(io, obj)
     end
@@ -10,24 +10,24 @@ function to_json(obj::T, filename::AbstractString) where {T <: InfrastructureSys
 end
 
 """Serializes a InfrastructureSystemsType to a JSON string."""
-function to_json(obj::T)::String where {T <: InfrastructureSystemsType}
+function to_json(obj::T)::String where {T<:InfrastructureSystemsType}
     return JSON2.write(obj)
 end
 
 """JSON Serializes a InfrastructureSystemsType to an IO stream in JSON."""
-function to_json(io::IO, obj::T) where {T <: InfrastructureSystemsType}
+function to_json(io::IO, obj::T) where {T<:InfrastructureSystemsType}
     return JSON2.write(io, obj)
 end
 
 """Deserializes a InfrastructureSystemsType from a JSON filename."""
-function from_json(::Type{T}, filename::String) where {T <: InfrastructureSystemsType}
+function from_json(::Type{T}, filename::String) where {T<:InfrastructureSystemsType}
     return open(filename) do io
         from_json(io, T)
     end
 end
 
 """Deserializes a InfrastructureSystemsType from String or IO."""
-function from_json(io::Union{IO, String}, ::Type{T}) where {T <: InfrastructureSystemsType}
+function from_json(io::Union{IO,String}, ::Type{T}) where {T<:InfrastructureSystemsType}
     return JSON2.read(io, T)
 end
 
@@ -35,7 +35,7 @@ end
 The default implementation fails because the data field is defined as an AbstractArray.
 Deserialization can't determine the actual concrete type.
 """
-function JSON2.read(io::IO, ::Type{T}) where {T <: TimeSeries.TimeArray}
+function JSON2.read(io::IO, ::Type{T}) where {T<:TimeSeries.TimeArray}
     data = JSON2.read(io)
     timestamp = [Dates.DateTime(x) for x in data.timestamp]
     colnames = [Symbol(x) for x in data.colnames]
@@ -68,11 +68,10 @@ function JSON2.write(io::IO, resolution::Dates.Period)
 end
 
 function encode_for_json(resolution::Dates.Period)
-    return (value=resolution.value,
-            unit=strip_module_name(string(typeof(resolution))))
+    return (value = resolution.value, unit = strip_module_name(string(typeof(resolution))))
 end
 
-function JSON2.read(io::IO, ::Type{T}) where {T <: Dates.Period}
+function JSON2.read(io::IO, ::Type{T}) where {T<:Dates.Period}
     data = JSON2.read(io)
     return getfield(Dates, Symbol(data.unit))(data.value)
 end
@@ -100,7 +99,7 @@ function JSON2.read(io::IO, ::Type{Base.UUID})
 end
 
 function encode_for_json(uuid::Base.UUID)
-    return (value=string(uuid),)
+    return (value = string(uuid),)
 end
 
 """The next set of methods fix serialization for Complex numbers."""
@@ -119,7 +118,7 @@ function JSON2.read(io::IO, ::Type{Complex})
 end
 
 function encode_for_json(value::Complex)
-    return (real=real(value), imag=imag(value))
+    return (real = real(value), imag = imag(value))
 end
 
 # Refer to docstrings in services.jl.
@@ -132,7 +131,7 @@ function JSON2.write(forecast::Forecast)
     return JSON2.write(encode_for_json(forecast))
 end
 
-function encode_for_json(forecast::T) where T <: Forecast
+function encode_for_json(forecast::T) where {T<:Forecast}
     fields = [x for x in fieldnames(T) if x != :data]
     vals = []
 

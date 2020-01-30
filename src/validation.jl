@@ -7,7 +7,7 @@ struct ValidationInfo
     struct_name::AbstractString
     ist_struct::InfrastructureSystemsType
     field_type::Any
-    limits:: Union{NamedTuple{(:min, :max)}, NamedTuple{(:min, :max, :zero)}}
+    limits::Union{NamedTuple{(:min, :max)},NamedTuple{(:min, :max, :zero)}}
 end
 
 function read_validation_descriptor(filename::AbstractString)
@@ -39,8 +39,8 @@ function get_config_descriptor(config::Vector, name::AbstractString)
         end
     end
 
-   @warn("struct $name does not exist in validation configuration file, validation skipped")
-   return nothing
+    @warn("struct $name does not exist in validation configuration file, validation skipped")
+    return nothing
 end
 
 # Get validation info for one field of one struct.
@@ -51,15 +51,13 @@ function get_field_descriptor(struct_descriptor::Dict, fieldname::AbstractString
         end
     end
 
-    throw(DataFormatError(
-        "field $fieldname does not exist in $(struct_descriptor["struct_name"]) validation config"
-    ))
+    throw(DataFormatError("field $fieldname does not exist in $(struct_descriptor["struct_name"]) validation config"))
 end
 
 function validate_fields(
-                         components::Components,
-                         ist_struct::T,
-                        ) where T <: InfrastructureSystemsType
+    components::Components,
+    ist_struct::T,
+) where {T<:InfrastructureSystemsType}
     name = repr(T)
     type_name = strip_parametric_type(strip_module_name(repr(T)))
     struct_descriptor = get_config_descriptor(components.validation_descriptors, type_name)
@@ -69,9 +67,9 @@ function validate_fields(
     for (name, fieldtype) in zip(fieldnames(T), fieldtypes(T))
         field_value = getfield(ist_struct, name)
         if isnothing(field_value)  # Many structs are of type Union{Nothing, xxx}.
-            ;
-        elseif fieldtype <: Union{Nothing, InfrastructureSystemsType} &&
-                !(fieldtype <: InfrastructureSystemsType)
+
+        elseif fieldtype <: Union{Nothing,InfrastructureSystemsType} &&
+               !(fieldtype <: InfrastructureSystemsType)
             # Recurse. Components are validated separately and do not need to
             # be validated twice.
             if !validate_fields(components, getfield(ist_struct, name))
@@ -84,8 +82,13 @@ function validate_fields(
             end
             valid_range = field_descriptor["valid_range"]
             limits = get_limits(valid_range, ist_struct)
-            valid_info = ValidationInfo(field_descriptor, struct_descriptor["struct_name"],
-                                        ist_struct, fieldtype, limits)
+            valid_info = ValidationInfo(
+                field_descriptor,
+                struct_descriptor["struct_name"],
+                ist_struct,
+                fieldtype,
+                limits,
+            )
             if !validate_range(valid_range, valid_info, field_value)
                 is_valid = false
             end
@@ -96,7 +99,7 @@ end
 
 function get_limits(valid_range::String, ist_struct::InfrastructureSystemsType)
     # Gets min and max values from activepowerlimits for activepower, etc.
-    function recur(d, a, i=1)
+    function recur(d, a, i = 1)
         if i <= length(a)
             d = getfield(d, Symbol(a[i]))
             recur(d, a, i + 1)
@@ -109,7 +112,7 @@ function get_limits(valid_range::String, ist_struct::InfrastructureSystemsType)
     vr = recur(ist_struct, split(valid_range, "."))
 
     if isnothing(vr)
-        limits = (min=nothing, max=nothing)
+        limits = (min = nothing, max = nothing)
     else
         limits = get_limits(vr, ist_struct)
     end
@@ -123,9 +126,10 @@ function get_limits(valid_range::Dict, unused::InfrastructureSystemsType)
     return (min = valid_range["min"], max = valid_range["max"])
 end
 
-
-function get_limits(valid_range::Union{NamedTuple{(:min,:max)}, NamedTuple{(:max,:min)}},
-                    unused::InfrastructureSystemsType)
+function get_limits(
+    valid_range::Union{NamedTuple{(:min, :max)},NamedTuple{(:max, :min)}},
+    unused::InfrastructureSystemsType,
+)
     # Gets min and max value defined for a field,
     # e.g. "valid_range": {"min":-1.571, "max":1.571}.
     return (min = valid_range.min, max = valid_range.max)
@@ -142,29 +146,32 @@ function validate_range(::String, valid_info::ValidationInfo, field_value)
 end
 
 function validate_range(
-                        ::Union{Dict,
-                                NamedTuple{(:min,:max)},
-                                NamedTuple{(:max,:min)},
-                                NamedTuple{(:min,:max,:zero)}},
-                        valid_info::ValidationInfo, field_value,
-                       )
+    ::Union{
+        Dict,
+        NamedTuple{(:min, :max)},
+        NamedTuple{(:max, :min)},
+        NamedTuple{(:min, :max, :zero)},
+    },
+    valid_info::ValidationInfo,
+    field_value,
+)
     return check_limits(valid_info.field_type, valid_info, field_value)
 end
 
 function check_limits(
-                      ::Type{T},
-                      valid_info::ValidationInfo,
-                      field_value,
-                     ) where T <: Union{Nothing, Float64}
+    ::Type{T},
+    valid_info::ValidationInfo,
+    field_value,
+) where {T<:Union{Nothing,Float64}}
     # Validates numbers.
     return check_limits_impl(valid_info, field_value)
 end
 
 function check_limits(
-                      ::Type{T},
-                      valid_info::ValidationInfo,
-                      field_value,
-                     ) where T <: Union{Nothing, NamedTuple}
+    ::Type{T},
+    valid_info::ValidationInfo,
+    field_value,
+) where {T<:Union{Nothing,NamedTuple}}
     # Validates up/down, min/max, from/to named tuples.
     @assert length(field_value) == 2
     result1 = check_limits_impl(valid_info, field_value[1])
@@ -175,9 +182,10 @@ end
 function check_limits_impl(valid_info::ValidationInfo, field_value)
     is_valid = true
     action_function = get_validation_action(valid_info.field_descriptor)
-    if ((!isnothing(valid_info.limits.min) && field_value < valid_info.limits.min) ||
-        (!isnothing(valid_info.limits.max) && field_value > valid_info.limits.max)) &&
-        !(haskey(valid_info.limits, :zero) && field_value == 0.0)
+    if (
+        (!isnothing(valid_info.limits.min) && field_value < valid_info.limits.min) ||
+        (!isnothing(valid_info.limits.max) && field_value > valid_info.limits.max)
+    ) && !(haskey(valid_info.limits, :zero) && field_value == 0.0)
 
         is_valid = action_function(valid_info, field_value)
     end

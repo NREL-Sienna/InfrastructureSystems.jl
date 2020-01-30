@@ -6,7 +6,6 @@ Stores references to time series data, so a disk read may be required for access
 """
 abstract type ForecastInternal <: InfrastructureSystemsType end
 
-
 """
 Abstract type for forecasts supplied to users. They are not stored in a system. Instead,
 they are generated on demand for the user.
@@ -31,14 +30,14 @@ struct ForecastKey
     label::String
 end
 
-const ForecastsByType = Dict{ForecastKey, ForecastInternal}
+const ForecastsByType = Dict{ForecastKey,ForecastInternal}
 
 """
 Forecast container for a component.
 """
 mutable struct Forecasts
     data::ForecastsByType
-    time_series_storage::Union{Nothing, TimeSeriesStorage}
+    time_series_storage::Union{Nothing,TimeSeriesStorage}
 end
 
 function Forecasts()
@@ -49,21 +48,21 @@ Base.length(forecasts::Forecasts) = length(forecasts.data)
 Base.isempty(forecasts::Forecasts) = isempty(forecasts.data)
 
 function set_time_series_storage!(
-                                  forecasts::Forecasts,
-                                  storage::Union{Nothing, TimeSeriesStorage},
-                                 )
+    forecasts::Forecasts,
+    storage::Union{Nothing,TimeSeriesStorage},
+)
     if !isnothing(forecasts.time_series_storage) && !isnothing(storage)
         @show forecasts.time_series_storage
         throw(ArgumentError(
             "The time_series_storage reference is already set. Is this component being " *
-            "added to multiple systems?"
+            "added to multiple systems?",
         ))
     end
 
     forecasts.time_series_storage = storage
 end
 
-function add_forecast!(forecasts::Forecasts, forecast::T) where T <: ForecastInternal
+function add_forecast!(forecasts::Forecasts, forecast::T) where {T<:ForecastInternal}
     key = ForecastKey(T, get_initial_time(forecast), get_label(forecast))
     if haskey(forecasts.data, key)
         throw(ArgumentError("forecast $key is already stored"))
@@ -73,11 +72,11 @@ function add_forecast!(forecasts::Forecasts, forecast::T) where T <: ForecastInt
 end
 
 function remove_forecast!(
-                          ::Type{T},
-                          forecasts::Forecasts,
-                          initial_time::Dates.DateTime,
-                          label::AbstractString,
-                         ) where T <: ForecastInternal
+    ::Type{T},
+    forecasts::Forecasts,
+    initial_time::Dates.DateTime,
+    label::AbstractString,
+) where {T<:ForecastInternal}
     key = ForecastKey(T, initial_time, label)
     if !haskey(forecasts.data, key)
         throw(ArgumentError("forecast $key is not stored"))
@@ -91,11 +90,11 @@ function clear_forecasts!(forecasts::Forecasts)
 end
 
 function get_forecast(
-                      ::Type{T},
-                      forecasts::Forecasts,
-                      initial_time::Dates.DateTime,
-                      label::AbstractString,
-                     ) where T <: ForecastInternal
+    ::Type{T},
+    forecasts::Forecasts,
+    initial_time::Dates.DateTime,
+    label::AbstractString,
+) where {T<:ForecastInternal}
     key = ForecastKey(T, initial_time, label)
     if !haskey(forecasts.data, key)
         throw(ArgumentError("forecast $key is not stored"))
@@ -113,7 +112,10 @@ function get_forecast_initial_times(forecasts::Forecasts)::Vector{Dates.DateTime
     return sort!(Vector{Dates.DateTime}(collect(initial_times)))
 end
 
-function get_forecast_initial_times(::Type{T}, forecasts::Forecasts) where T <: ForecastInternal
+function get_forecast_initial_times(
+    ::Type{T},
+    forecasts::Forecasts,
+) where {T<:ForecastInternal}
     initial_times = Set{Dates.DateTime}()
     for key in keys(forecasts.data)
         if key.forecast_type <: T
@@ -124,7 +126,11 @@ function get_forecast_initial_times(::Type{T}, forecasts::Forecasts) where T <: 
     return sort!(Vector{Dates.DateTime}(collect(initial_times)))
 end
 
-function get_forecast_initial_times(::Type{T}, forecasts::Forecasts, label::AbstractString) where T <: ForecastInternal
+function get_forecast_initial_times(
+    ::Type{T},
+    forecasts::Forecasts,
+    label::AbstractString,
+) where {T<:ForecastInternal}
     initial_times = Set{Dates.DateTime}()
     for key in keys(forecasts.data)
         if key.forecast_type <: T && key.label == label
@@ -136,15 +142,19 @@ function get_forecast_initial_times(::Type{T}, forecasts::Forecasts, label::Abst
 end
 
 function get_forecast_initial_times!(
-                                     initial_times::Set{Dates.DateTime},
-                                     forecasts::Forecasts,
-                                    )
+    initial_times::Set{Dates.DateTime},
+    forecasts::Forecasts,
+)
     for key in keys(forecasts.data)
         push!(initial_times, key.initial_time)
     end
 end
 
-function get_forecast_labels(::Type{T}, forecasts::Forecasts, initial_time::Dates.DateTime) where T <: ForecastInternal
+function get_forecast_labels(
+    ::Type{T},
+    forecasts::Forecasts,
+    initial_time::Dates.DateTime,
+) where {T<:ForecastInternal}
     labels = Set{String}()
     for key in keys(forecasts.data)
         if key.forecast_type <: T && key.initial_time == initial_time
@@ -181,15 +191,16 @@ end
 function JSON2.read(io::IO, ::Type{Forecasts})
     forecasts = Forecasts()
     for raw_forecast in JSON2.read(io)
-        forecast_type = getfield(InfrastructureSystems,
-                                 Symbol(strip_module_name(string(raw_forecast.type))))
+        forecast_type = getfield(
+            InfrastructureSystems,
+            Symbol(strip_module_name(string(raw_forecast.type))),
+        )
         forecast = JSON2.read(JSON2.write(raw_forecast.forecast), forecast_type)
         add_forecast!(forecasts, forecast)
     end
 
     return forecasts
 end
-
 
 function Base.length(forecast::Forecast)
     return get_horizon(forecast)
@@ -228,7 +239,7 @@ end
 
 Return a forecast truncated starting with timestamp.
 """
-function from(forecast::T, timestamp) where T <: Forecast
+function from(forecast::T, timestamp) where {T<:Forecast}
     return T(get_label(forecast), TimeSeries.from(get_data(forecast), timestamp))
 end
 
@@ -237,7 +248,7 @@ end
 
 Return a forecast truncated after timestamp.
 """
-function to(forecast::T, timestamp) where T <: Forecast
+function to(forecast::T, timestamp) where {T<:Forecast}
     return T(get_label(forecast), TimeSeries.to(get_data(forecast), timestamp))
 end
 
@@ -272,10 +283,9 @@ end
 """
 Creates a new forecast from an existing forecast with a split TimeArray.
 """
-function _split_forecast(
-                         forecast::T,
-                         data::TimeSeries.TimeArray;
-                        ) where T <: Forecast
+function
+
+_split_forecast(forecast::T, data::TimeSeries.TimeArray;) where {T<:Forecast}
     vals = []
     for (fname, ftype) in zip(fieldnames(T), fieldtypes(T))
         if ftype <: TimeSeries.TimeArray
@@ -295,7 +305,7 @@ end
 
 function get_resolution(ts::TimeSeries.TimeArray)
     tstamps = TimeSeries.timestamp(ts)
-    timediffs = unique([tstamps[ix] - tstamps[ix - 1] for ix in 2:length(tstamps)])
+    timediffs = unique([tstamps[ix] - tstamps[ix - 1] for ix = 2:length(tstamps)])
 
     res = []
 
@@ -314,9 +324,7 @@ function get_resolution(ts::TimeSeries.TimeArray)
     end
 
     if length(res) > 1
-        throw(DataFormatError(
-            "timeseries has non-uniform resolution: this is currently not supported"
-        ))
+        throw(DataFormatError("timeseries has non-uniform resolution: this is currently not supported"))
     end
 
     return res[1]

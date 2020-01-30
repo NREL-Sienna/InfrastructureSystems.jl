@@ -7,7 +7,8 @@ import UUIDs
 
 import InfrastructureSystems
 const IS = InfrastructureSystems
-const BASE_DIR = abspath(joinpath(dirname(Base.find_package("InfrastructureSystems")), ".."))
+const BASE_DIR =
+    abspath(joinpath(dirname(Base.find_package("InfrastructureSystems")), ".."))
 const DATA_DIR = joinpath(BASE_DIR, "test", "data")
 const FORECASTS_DIR = joinpath(DATA_DIR, "forecasts")
 
@@ -21,7 +22,6 @@ LOG_LEVELS = Dict(
 )
 
 include("common.jl")
-
 
 """
 Copied @includetests from https://github.com/ssfrr/TestSetExtensions.jl.
@@ -48,12 +48,14 @@ macro includetests(testarg...)
         rootfile = @__FILE__
         if length(tests) == 0
             tests = readdir(dirname(rootfile))
-            tests = filter(f -> startswith(f, "test_") &&
-                                endswith(f, ".jl") &&
-                                f != basename(rootfile),
-                           tests)
+            tests = filter(
+                f ->
+                        startswith(f, "test_") &&
+                        endswith(f, ".jl") && f != basename(rootfile),
+                tests,
+            )
         else
-            tests = map(f->string(f, ".jl"), tests)
+            tests = map(f -> string(f, ".jl"), tests)
         end
         println()
         for test in tests
@@ -81,8 +83,8 @@ function run_tests()
 
     IS.open_file_logger(LOG_FILE, file_level) do file_logger
         levels = (Logging.Info, Logging.Warn, Logging.Error)
-        multi_logger = IS.MultiLogger([console_logger, file_logger],
-                                IS.LogEventTracker(levels))
+        multi_logger =
+            IS.MultiLogger([console_logger, file_logger], IS.LogEventTracker(levels))
         global_logger(multi_logger)
 
         @time @testset "Begin Systems tests" begin

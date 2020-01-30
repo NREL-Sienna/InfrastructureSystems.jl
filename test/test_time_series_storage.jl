@@ -38,7 +38,7 @@ function test_get_subset(storage::IS.TimeSeriesStorage)
     @test TimeSeries.timestamp(ts_data) == TimeSeries.timestamp(ts.data)
     index = 3
     len = 5
-    ts_subset = IS.get_time_series(storage, IS.get_uuid(ts); index=index, len=len)
+    ts_subset = IS.get_time_series(storage, IS.get_uuid(ts); index = index, len = len)
     @test ts_subset[1] == ts_data[index]
     @test length(ts_subset) == len
 end

@@ -4,7 +4,7 @@ import UUIDs
 """Internal storage common to InfrastructureSystems types."""
 mutable struct InfrastructureSystemsInternal
     uuid::Base.UUID
-    ext::Union{Nothing, Dict{String, Any}}
+    ext::Union{Nothing,Dict{String,Any}}
 end
 
 """
@@ -22,7 +22,7 @@ Return a user-modifiable dictionary to store extra information.
 """
 function get_ext(obj::InfrastructureSystemsInternal)
     if isnothing(obj.ext)
-        obj.ext = Dict{String, Any}()
+        obj.ext = Dict{String,Any}()
     end
 
     return obj.ext

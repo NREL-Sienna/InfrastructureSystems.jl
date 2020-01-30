@@ -11,11 +11,11 @@ All subtypes must implement:
 """
 abstract type TimeSeriesStorage end
 
-function make_time_series_storage(; in_memory=false, filename=nothing)
+function make_time_series_storage(; in_memory = false, filename = nothing)
     if in_memory
         storage = InMemoryTimeSeriesStorage()
     elseif !isnothing(filename)
-        storage = Hdf5TimeSeriesStorage(; filename=filename)
+        storage = Hdf5TimeSeriesStorage(; filename = filename)
     else
         storage = Hdf5TimeSeriesStorage()
     end
@@ -37,7 +37,7 @@ end
 function serialize(storage::TimeSeriesStorage, file_path::AbstractString)
     if storage isa Hdf5TimeSeriesStorage
         # The data is currently in a temp file, so we can just make a copy.
-        cp(get_file_path(storage), file_path; force=true)
+        cp(get_file_path(storage), file_path; force = true)
     elseif storage isa InMemoryTimeSeriesStorage
         convert_to_hdf5(storage, file_path)
     else

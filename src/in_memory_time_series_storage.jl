@@ -1,5 +1,5 @@
 
-const _ComponentLabelReferences = Set{Tuple{UUIDs.UUID, String}}
+const _ComponentLabelReferences = Set{Tuple{UUIDs.UUID,String}}
 
 struct _TimeSeriesRecord
     component_labels::_ComponentLabelReferences
@@ -16,11 +16,11 @@ end
 Stores all time series data in memory.
 """
 struct InMemoryTimeSeriesStorage <: TimeSeriesStorage
-    data::Dict{UUIDs.UUID, _TimeSeriesRecord}
+    data::Dict{UUIDs.UUID,_TimeSeriesRecord}
 end
 
 function InMemoryTimeSeriesStorage()
-    storage = InMemoryTimeSeriesStorage(Dict{UUIDs.UUID, _TimeSeriesRecord}())
+    storage = InMemoryTimeSeriesStorage(Dict{UUIDs.UUID,_TimeSeriesRecord}())
     @info "Created InMemoryTimeSeriesStorage"
     return storage
 end
@@ -38,11 +38,11 @@ function InMemoryTimeSeriesStorage(hdf5_storage::Hdf5TimeSeriesStorage)
 end
 
 function add_time_series!(
-                          storage::InMemoryTimeSeriesStorage,
-                          component_uuid::UUIDs.UUID,
-                          label::AbstractString,
-                          ts::TimeSeriesData,
-                         )
+    storage::InMemoryTimeSeriesStorage,
+    component_uuid::UUIDs.UUID,
+    label::AbstractString,
+    ts::TimeSeriesData,
+)
     uuid = get_uuid(ts)
     if !haskey(storage.data, uuid)
         @debug "Create new time series entry." uuid component_uuid label
@@ -55,11 +55,11 @@ function add_time_series!(
 end
 
 function remove_time_series!(
-                             storage::InMemoryTimeSeriesStorage,
-                             uuid::UUIDs.UUID,
-                             component_uuid::UUIDs.UUID,
-                             label::AbstractString,
-                            )
+    storage::InMemoryTimeSeriesStorage,
+    uuid::UUIDs.UUID,
+    component_uuid::UUIDs.UUID,
+    label::AbstractString,
+)
     if !haskey(storage.data, uuid)
         throw(ArgumentError("$uuid is not stored"))
     end
@@ -80,11 +80,11 @@ function remove_time_series!(
 end
 
 function get_time_series(
-                         storage::InMemoryTimeSeriesStorage,
-                         uuid::UUIDs.UUID;
-                         index=0,
-                         len=0,
-                        )::TimeSeries.TimeArray
+    storage::InMemoryTimeSeriesStorage,
+    uuid::UUIDs.UUID;
+    index = 0,
+    len = 0,
+)::TimeSeries.TimeArray
     if !haskey(storage.data, uuid)
         throw(ArgumentError("$uuid is not stored"))
     end
@@ -110,7 +110,7 @@ end
 function convert_to_hdf5(storage::InMemoryTimeSeriesStorage, filename::AbstractString)
     create_file = true
     preserve_file = true
-    hdf5_storage = Hdf5TimeSeriesStorage(create_file, preserve_file; filename=filename)
+    hdf5_storage = Hdf5TimeSeriesStorage(create_file, preserve_file; filename = filename)
     for record in values(storage.data)
         for pair in record.component_labels
             add_time_series!(hdf5_storage, pair[1], pair[2], record.ts)
