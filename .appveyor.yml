@@ -13,12 +13,6 @@ platform:
 matrix:
   allow_failures:
   - julia_version: latest
-  - julia_version: 1.3
-
-branches:
-  only:
-    - master
-    - /release-.*/
 
 notifications:
   - provider: Email
