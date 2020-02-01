@@ -305,7 +305,7 @@ end
 
 function get_resolution(ts::TimeSeries.TimeArray)
     tstamps = TimeSeries.timestamp(ts)
-    timediffs = unique([tstamps[ix] - tstamps[ix - 1] for ix = 2:length(tstamps)])
+    timediffs = unique([tstamps[ix] - tstamps[ix - 1] for ix in 2:length(tstamps)])
 
     res = []
 
