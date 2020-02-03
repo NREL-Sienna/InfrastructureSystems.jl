@@ -1,5 +1,5 @@
 
-const ComponentsByType = Dict{DataType,Dict{String,<:InfrastructureSystemsType}}
+const ComponentsByType = Dict{DataType, Dict{String, <:InfrastructureSystemsType}}
 
 struct Components
     data::ComponentsByType
@@ -36,13 +36,13 @@ function add_component!(
     components::Components,
     component::T;
     skip_validation = false,
-) where {T<:InfrastructureSystemsType}
+) where {T <: InfrastructureSystemsType}
     if !isconcretetype(T)
         throw(ArgumentError("add_component! only accepts concrete types"))
     end
 
     if !haskey(components.data, T)
-        components.data[T] = Dict{String,T}()
+        components.data[T] = Dict{String, T}()
     elseif haskey(components.data[T], component.name)
         throw(ArgumentError("$(component.name) is already stored for type $T"))
     end
@@ -89,7 +89,7 @@ Throws ArgumentError if the type is not stored.
 function remove_components!(
     ::Type{T},
     components::Components,
-) where {T<:InfrastructureSystemsType}
+) where {T <: InfrastructureSystemsType}
     if !haskey(components.data, T)
         throw(ArgumentError("component $T is not stored"))
     end
@@ -116,7 +116,7 @@ Throws ArgumentError if the component is not stored.
 function remove_component!(
     components::Components,
     component::T,
-) where {T<:InfrastructureSystemsType}
+) where {T <: InfrastructureSystemsType}
     return _remove_component!(T, components, get_name(component))
 end
 
@@ -135,7 +135,7 @@ function remove_component!(
     ::Type{T},
     components::Components,
     name::AbstractString,
-) where {T<:InfrastructureSystemsType}
+) where {T <: InfrastructureSystemsType}
     return _remove_component!(T, components, name)
 end
 
@@ -143,7 +143,7 @@ function _remove_component!(
     ::Type{T},
     components::Components,
     name::AbstractString,
-) where {T<:InfrastructureSystemsType}
+) where {T <: InfrastructureSystemsType}
     if !haskey(components.data, T)
         throw(ArgumentError("component $T is not stored"))
     end
@@ -175,7 +175,7 @@ function get_component(
     ::Type{T},
     components::Components,
     name::AbstractString,
-)::Union{T,Nothing} where {T<:InfrastructureSystemsType}
+)::Union{T, Nothing} where {T <: InfrastructureSystemsType}
     if !isconcretetype(T)
         throw(ArgumentError("get_component only supports concrete types: $T"))
     end
@@ -207,7 +207,7 @@ function get_components_by_name(
     ::Type{T},
     components::Components,
     name::AbstractString,
-)::Vector{T} where {T<:InfrastructureSystemsType}
+)::Vector{T} where {T <: InfrastructureSystemsType}
     if !isabstracttype(T)
         throw(ArgumentError("get_components_by_name only supports abstract types: $T"))
     end
@@ -239,7 +239,7 @@ See also: [`iterate_components`](@ref)
 function get_components(
     ::Type{T},
     components::Components,
-)::FlattenIteratorWrapper{T} where {T<:InfrastructureSystemsType}
+)::FlattenIteratorWrapper{T} where {T <: InfrastructureSystemsType}
     if isconcretetype(T)
         components_ = get(components.data, T, nothing)
         if isnothing(components_)
@@ -303,7 +303,7 @@ end
 
 function encode_for_json(components::Components)
     # Convert each name-to-value component dictionary to arrays.
-    new_components = Dict{String,Vector{<:InfrastructureSystemsType}}()
+    new_components = Dict{String, Vector{<:InfrastructureSystemsType}}()
     for (data_type, component_dict) in components.data
         new_components[strip_module_name(data_type)] = [x for x in values(component_dict)]
     end
@@ -325,7 +325,7 @@ function get_components_raw(
     ::Type{Components},
     ::Type{T},
     raw::NamedTuple,
-) where {T<:InfrastructureSystemsType}
+) where {T <: InfrastructureSystemsType}
     return getproperty(raw, Symbol(strip_module_name(string(T))))
 end
 

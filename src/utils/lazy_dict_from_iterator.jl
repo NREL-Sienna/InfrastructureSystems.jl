@@ -1,9 +1,9 @@
 
-mutable struct LazyDictFromIterator{K,V}
+mutable struct LazyDictFromIterator{K, V}
     iter::Any
-    state::Union{Nothing,Tuple}
+    state::Union{Nothing, Tuple}
     getter::Function
-    items::Dict{K,V}
+    items::Dict{K, V}
 end
 
 """
@@ -19,8 +19,13 @@ Each V should have a K member.
 - `getter::Function`: method to call on V to get its K
 
 """
-function LazyDictFromIterator(::Type{K}, ::Type{V}, iter::Any, getter::Function) where {K,V}
-    return LazyDictFromIterator(iter, nothing, getter, Dict{K,V}())
+function LazyDictFromIterator(
+    ::Type{K},
+    ::Type{V},
+    iter::Any,
+    getter::Function,
+) where {K, V}
+    return LazyDictFromIterator(iter, nothing, getter, Dict{K, V}())
 end
 
 """

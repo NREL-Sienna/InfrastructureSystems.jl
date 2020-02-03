@@ -1,7 +1,7 @@
 function add_forecast!(
     component::T,
     forecast::ForecastInternal,
-) where {T<:InfrastructureSystemsType}
+) where {T <: InfrastructureSystemsType}
     container = _get_forecast_container(component)
     if isnothing(container)
         throw(ArgumentError("type $T does not support storing forecasts"))
@@ -28,7 +28,7 @@ function remove_forecast_internal!(
     component::InfrastructureSystemsType,
     initial_time::Dates.DateTime,
     label::AbstractString,
-) where {T<:ForecastInternal}
+) where {T <: ForecastInternal}
     remove_forecast!(T, _get_forecast_container(component), initial_time, label)
     @debug "Removed forecast from $component:  $initial_time $label."
 end
@@ -56,7 +56,7 @@ function get_forecast(
     component::InfrastructureSystemsType,
     initial_time::Dates.DateTime,
     label::AbstractString,
-) where {T<:Forecast}
+) where {T <: Forecast}
     forecast_type = forecast_external_to_internal(T)
     forecast = get_forecast(forecast_type, component, initial_time, label)
     storage = _get_time_series_storage(component)
@@ -82,7 +82,7 @@ function get_forecast(
     initial_time::Dates.DateTime,
     label::AbstractString,
     horizon::Int,
-) where {T<:Forecast}
+) where {T <: Forecast}
     if !has_forecasts(component)
         throw(ArgumentError("no forecasts are stored in $component"))
     end
@@ -109,7 +109,7 @@ function get_forecast(
     component::InfrastructureSystemsType,
     initial_time::Dates.DateTime,
     label::AbstractString,
-) where {T<:ForecastInternal}
+) where {T <: ForecastInternal}
     return get_forecast(T, _get_forecast_container(component), initial_time, label)
 end
 
@@ -121,7 +121,7 @@ function get_forecast(
     sys_horizon::Int,
     label::AbstractString,
     horizon::Int,
-) where {T<:ForecastInternal}
+) where {T <: ForecastInternal}
     forecast_type = forecast_internal_to_external(T)
     @debug "Requested forecast" get_name(component) forecast_type label initial_time horizon
     forecasts = Vector{forecast_type}()
@@ -180,7 +180,7 @@ function _make_forecast(
     len::Int,
     initial_time::Dates.DateTime,
     label::AbstractString,
-) where {T<:ForecastInternal}
+) where {T <: ForecastInternal}
     forecast = get_forecast(T, _get_forecast_container(component), initial_time, label)
     ts = get_time_series(
         _get_time_series_storage(component),
@@ -208,7 +208,7 @@ function get_forecast_values(
     component::InfrastructureSystemsType,
     initial_time::Dates.DateTime,
     label::AbstractString,
-) where {T<:Forecast}
+) where {T <: Forecast}
     forecast = get_forecast(T, component, initial_time, label)
     return get_forecast_values(mod, component, forecast)
 end
@@ -233,7 +233,7 @@ end
 function get_forecast_initial_times(
     ::Type{T},
     component::InfrastructureSystemsType,
-) where {T<:Forecast}
+) where {T <: Forecast}
     if !has_forecasts(component)
         throw(ArgumentError("$(typeof(component)) does not have forecasts"))
     end
@@ -247,7 +247,7 @@ function get_forecast_initial_times(
     ::Type{T},
     component::InfrastructureSystemsType,
     label::AbstractString,
-) where {T<:Forecast}
+) where {T <: Forecast}
     if !has_forecasts(component)
         throw(ArgumentError("$(typeof(component)) does not have forecasts"))
     end
@@ -306,7 +306,7 @@ function generate_initial_times(
     component::InfrastructureSystemsType,
     interval::Dates.Period,
     horizon::Int;
-    initial_time::Union{Nothing,Dates.DateTime} = nothing,
+    initial_time::Union{Nothing, Dates.DateTime} = nothing,
 )
     # This throws if no forecasts.
     existing_initial_times = get_forecast_initial_times(component)
@@ -397,7 +397,7 @@ function get_forecast_labels(
     ::Type{T},
     component::InfrastructureSystemsType,
     initial_time::Dates.DateTime,
-) where {T<:Forecast}
+) where {T <: Forecast}
     return get_forecast_labels(
         forecast_external_to_internal(T),
         _get_forecast_container(component),
@@ -461,7 +461,7 @@ end
 
 function set_time_series_storage!(
     component::InfrastructureSystemsType,
-    storage::Union{Nothing,TimeSeriesStorage},
+    storage::Union{Nothing, TimeSeriesStorage},
 )
     container = _get_forecast_container(component)
     if !isnothing(container)
@@ -471,7 +471,7 @@ end
 
 function validate_forecast_consistency(component::InfrastructureSystemsType)
     # Initial times for each label must be identical.
-    initial_times = Dict{String,Vector{Dates.DateTime}}()
+    initial_times = Dict{String, Vector{Dates.DateTime}}()
     for key in keys(_get_forecast_container(component).data)
         if !haskey(initial_times, key.label)
             initial_times[key.label] = Vector{Dates.DateTime}()

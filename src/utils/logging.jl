@@ -50,7 +50,7 @@ function configure_logging(;
         error("At least one of console or file must be true")
     end
 
-    loggers = Array{Logging.AbstractLogger,1}()
+    loggers = Array{Logging.AbstractLogger, 1}()
     if console
         console_logger = Logging.ConsoleLogger(console_stream, console_level)
         push!(loggers, console_logger)
@@ -164,12 +164,12 @@ function LogEvent(file, line, id, message, level)
 end
 
 struct LogEventTracker
-    events::Dict{Logging.LogLevel,Dict{Symbol,LogEvent}}
+    events::Dict{Logging.LogLevel, Dict{Symbol, LogEvent}}
 
     # Defining an inner constructor to prohibit creation of a default constructor that
     # takes a parameter of type Any. The outer constructor below causes an overwrite of
     # that method, which results in a warning message from Julia.
-    LogEventTracker(events::Dict{Logging.LogLevel,Dict{Symbol,LogEvent}}) = new(events)
+    LogEventTracker(events::Dict{Logging.LogLevel, Dict{Symbol, LogEvent}}) = new(events)
 end
 
 """
@@ -184,7 +184,7 @@ LogEventTracker((Logging.Info, Logging.Warn, Logging.Error))
 ```
 """
 function LogEventTracker(levels = (Logging.Info, Logging.Warn, Logging.Error))
-    return LogEventTracker(Dict(l => Dict{Symbol,LogEvent}() for l in levels))
+    return LogEventTracker(Dict(l => Dict{Symbol, LogEvent}() for l in levels))
 end
 
 """Returns a summary of log event counts by level."""
@@ -247,7 +247,7 @@ MultiLogger([ConsoleLogger(stderr), SimpleLogger(stream)], LogEventTracker())
 """
 mutable struct MultiLogger <: Logging.AbstractLogger
     loggers::Array{Logging.AbstractLogger}
-    tracker::Union{LogEventTracker,Nothing}
+    tracker::Union{LogEventTracker, Nothing}
 end
 
 """
@@ -258,7 +258,7 @@ Creates a MultiLogger with no event tracking.
 MultiLogger([ConsoleLogger(stderr), SimpleLogger(stream)])
 ```
 """
-function MultiLogger(loggers::Array{T}) where {T<:Logging.AbstractLogger}
+function MultiLogger(loggers::Array{T}) where {T <: Logging.AbstractLogger}
     return MultiLogger(loggers, nothing)
 end
 
