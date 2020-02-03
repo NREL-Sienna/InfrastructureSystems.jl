@@ -1,5 +1,5 @@
 
-const _ComponentLabelReferences = Set{Tuple{UUIDs.UUID,String}}
+const _ComponentLabelReferences = Set{Tuple{UUIDs.UUID, String}}
 
 struct _TimeSeriesRecord
     component_labels::_ComponentLabelReferences
@@ -16,11 +16,11 @@ end
 Stores all time series data in memory.
 """
 struct InMemoryTimeSeriesStorage <: TimeSeriesStorage
-    data::Dict{UUIDs.UUID,_TimeSeriesRecord}
+    data::Dict{UUIDs.UUID, _TimeSeriesRecord}
 end
 
 function InMemoryTimeSeriesStorage()
-    storage = InMemoryTimeSeriesStorage(Dict{UUIDs.UUID,_TimeSeriesRecord}())
+    storage = InMemoryTimeSeriesStorage(Dict{UUIDs.UUID, _TimeSeriesRecord}())
     @info "Created InMemoryTimeSeriesStorage"
     return storage
 end

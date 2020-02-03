@@ -6,7 +6,7 @@ mutable struct TimeseriesFileMetadata
     # Calling module should determine the actual type.
     component_name::String  # Name of forecast component
     label::String  # Accessor function on component for source of timeseries
-    scaling_factor::Union{String,Float64}  # Controls normalization of timeseries.
+    scaling_factor::Union{String, Float64}  # Controls normalization of timeseries.
     # Use 1.0 for pre-normalized data.
     # Use 'Max' to divide the timeseries by the max
     #   value in the column.
@@ -14,7 +14,7 @@ mutable struct TimeseriesFileMetadata
     data_file::String  # path to the timeseries data file
     percentiles::Vector{Float64}
     forecast_type::String
-    component::Union{Nothing,InfrastructureSystemsType}  # Calling module must set.
+    component::Union{Nothing, InfrastructureSystemsType}  # Calling module must set.
 end
 
 function TimeseriesFileMetadata(
@@ -116,7 +116,7 @@ struct ForecastInfo
     simulation::String
     component::InfrastructureSystemsType
     label::String  # Component field on which timeseries data is based.
-    scaling_factor::Union{String,Float64}
+    scaling_factor::Union{String, Float64}
     data::TimeSeries.TimeArray
     percentiles::Vector{Float64}
     file_path::String
@@ -164,16 +164,16 @@ end
 
 struct ForecastCache
     forecasts::Vector{ForecastInfo}
-    data_files::Dict{String,TimeSeries.TimeArray}
+    data_files::Dict{String, TimeSeries.TimeArray}
 end
 
 function ForecastCache()
-    return ForecastCache(Vector{ForecastInfo}(), Dict{String,TimeSeries.TimeArray}())
+    return ForecastCache(Vector{ForecastInfo}(), Dict{String, TimeSeries.TimeArray}())
 end
 
 function handle_scaling_factor(
     timeseries::TimeSeries.TimeArray,
-    scaling_factor::Union{String,Float64},
+    scaling_factor::Union{String, Float64},
 )
     if scaling_factor isa String
         if lowercase(scaling_factor) == "max"
@@ -196,7 +196,7 @@ end
 function _add_forecast_info!(
     forecast_cache::ForecastCache,
     data_file::AbstractString,
-    component_name::Union{Nothing,String},
+    component_name::Union{Nothing, String},
 )
     if !haskey(forecast_cache.data_files, data_file)
         forecast_cache.data_files[data_file] = read_time_series(data_file, component_name)

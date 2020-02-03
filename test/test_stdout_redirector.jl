@@ -7,7 +7,7 @@
             count = 3
             Logging.with_logger(multi_logger) do
                 IS.redirect_stdout_to_log() do
-                    for i = 1:count
+                    for i in 1:count
                         message = "hello"
                         println("$message $i\n$message $i")
                         sleep(0.01)

@@ -1,6 +1,6 @@
 import InteractiveUtils: subtypes
 
-g_cached_subtypes = Dict{DataType,Vector{DataType}}()
+g_cached_subtypes = Dict{DataType, Vector{DataType}}()
 
 """
 Returns an array of all concrete subtypes of T.
@@ -225,7 +225,7 @@ function compare_values(x::Dict, y::Dict)::Bool
     return true
 end
 
-function compare_values(x::T, y::U)::Bool where {T,U}
+function compare_values(x::T, y::U)::Bool where {T, U}
     # This is a catch-all for where where the types may not be identical but are close
     # enough.
     return x == y

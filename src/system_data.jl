@@ -6,7 +6,7 @@ mutable struct SystemData <: InfrastructureSystemsType
     forecast_metadata::ForecastMetadata
     validation_descriptors::Vector
     time_series_storage::TimeSeriesStorage
-    time_series_storage_file::Union{Nothing,String}  # only valid during serialization
+    time_series_storage_file::Union{Nothing, String}  # only valid during serialization
     internal::InfrastructureSystemsInternal
 end
 
@@ -77,7 +77,7 @@ function add_forecasts!(
     data::SystemData,
     metadata_file::AbstractString;
     resolution = nothing,
-) where {T<:InfrastructureSystemsType}
+) where {T <: InfrastructureSystemsType}
     metadata = read_time_series_metadata(metadata_file)
     return add_forecasts!(T, data, metadata; resolution = resolution)
 end
@@ -101,7 +101,7 @@ function add_forecasts!(
     data::SystemData,
     timeseries_metadata::Vector{TimeseriesFileMetadata};
     resolution = nothing,
-) where {T<:InfrastructureSystemsType}
+) where {T <: InfrastructureSystemsType}
     forecast_cache = ForecastCache()
 
     for metadata in timeseries_metadata
@@ -167,7 +167,7 @@ function add_forecast!(
     filename::AbstractString,
     component::InfrastructureSystemsType,
     label::AbstractString,
-    scaling_factor::Union{String,Float64} = 1.0,
+    scaling_factor::Union{String, Float64} = 1.0,
 )
     component_name = get_name(component)
     ts = read_time_series(filename, component_name)
@@ -193,7 +193,7 @@ function add_forecast!(
     ta::TimeSeries.TimeArray,
     component::InfrastructureSystemsType,
     label::AbstractString,
-    scaling_factor::Union{String,Float64} = 1.0,
+    scaling_factor::Union{String, Float64} = 1.0,
 )
     timeseries = ta[Symbol(get_name(component))]
     _add_forecast!(data, component, label, timeseries, scaling_factor)
@@ -218,7 +218,7 @@ function add_forecast!(
     df::DataFrames.DataFrame,
     component::InfrastructureSystemsType,
     label::AbstractString,
-    scaling_factor::Union{String,Float64} = 1.0;
+    scaling_factor::Union{String, Float64} = 1.0;
     timestamp = :timestamp,
 )
     timeseries = TimeSeries.TimeArray(df; timestamp = timestamp)
@@ -231,7 +231,7 @@ function add_forecast!(
     forecast_cache::ForecastCache,
     metadata::TimeseriesFileMetadata;
     resolution = nothing,
-) where {T<:InfrastructureSystemsType}
+) where {T <: InfrastructureSystemsType}
     set_component!(metadata, data, InfrastructureSystems)
     component = metadata.component
 
@@ -258,7 +258,7 @@ function remove_forecast!(
     component::InfrastructureSystemsType,
     initial_time::Dates.DateTime,
     label::String,
-) where {T<:Forecast}
+) where {T <: Forecast}
     type_ = forecast_external_to_internal(T)
     forecast = get_forecast(type_, component, initial_time, label)
     uuid = get_time_series_uuid(forecast)
@@ -384,7 +384,7 @@ function generate_initial_times(
     data::SystemData,
     interval::Dates.Period,
     horizon::Int;
-    initial_time::Union{Nothing,Dates.DateTime} = nothing,
+    initial_time::Union{Nothing, Dates.DateTime} = nothing,
 )
     for component in iterate_components_with_forecasts(data.components)
         if has_forecasts(component)
@@ -406,7 +406,7 @@ Checks that the component exists in data and the UUID's match.
 function _validate_component(
     data::SystemData,
     component::T,
-) where {T<:InfrastructureSystemsType}
+) where {T <: InfrastructureSystemsType}
     comp = get_component(T, data.components, get_name(component))
     if isnothing(comp)
         throw(ArgumentError("no $T with name=$(get_name(component)) is stored"))
@@ -430,7 +430,7 @@ function get_components_raw(
     ::Type{SystemData},
     ::Type{T},
     raw::NamedTuple,
-) where {T<:InfrastructureSystemsType}
+) where {T <: InfrastructureSystemsType}
     return get_components_raw(Components, T, raw.components)
 end
 
@@ -598,7 +598,7 @@ function deserialize(
     ::Type{SystemData},
     ::Type{T},
     raw::NamedTuple,
-) where {T<:InfrastructureSystemsType}
+) where {T <: InfrastructureSystemsType}
     forecast_metadata = convert_type(ForecastMetadata, raw.forecast_metadata)
 
     if strip_module_name(raw.time_series_storage_type) == "InMemoryTimeSeriesStorage"

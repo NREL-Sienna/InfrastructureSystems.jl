@@ -105,7 +105,7 @@ function Base.show(io::IO, ::MIME"text/plain", ist::InfrastructureSystemsType)
 end
 
 function create_components_df(components::Components)
-    counts = Dict{String,Int}()
+    counts = Dict{String, Int}()
     rows = []
 
     for (subtype, values) in components.data
@@ -128,7 +128,7 @@ end
 function Base.show(
     io::IO,
     ::MIME"text/plain",
-    period::Union{Dates.TimePeriod,Dates.DatePeriod},
+    period::Union{Dates.TimePeriod, Dates.DatePeriod},
 )
     total = convert_compound_period(period)
     println(io, "$total")
@@ -137,14 +137,14 @@ end
 function Base.show(
     io::IO,
     ::MIME"text/html",
-    period::Union{Dates.TimePeriod,Dates.DatePeriod},
+    period::Union{Dates.TimePeriod, Dates.DatePeriod},
 )
     total = convert_compound_period(period)
     println(io, "<p>$total</p>")
 end
 
 ## This function takes in a time period or date period and returns a compound period
-function convert_compound_period(period::Union{Dates.TimePeriod,Dates.DatePeriod})
+function convert_compound_period(period::Union{Dates.TimePeriod, Dates.DatePeriod})
     period = time_period_conversion(period)
 
     milli_weeks = period - (period % Dates.Millisecond(604800000))
@@ -178,7 +178,7 @@ function create_forecasts_df(forecasts::Forecasts)
         if i > MAX_SHOW_FORECAST_INITIAL_TIMES
             break
         end
-        counts = Dict{String,Int}()
+        counts = Dict{String, Int}()
         rows = []
 
         for (key, values) in forecasts.data

@@ -83,11 +83,11 @@ function get_period_columns(::Type{TimeseriesFormatYMDPeriodAsHeader}, file::CSV
 end
 
 """Return a vector of dicts of unique timestamps and their counts."""
-function get_unique_timestamps(::Type{T}, file::CSV.File) where {T<:TimeseriesFileFormat}
-    timestamps = Vector{Dict{String,Any}}()
+function get_unique_timestamps(::Type{T}, file::CSV.File) where {T <: TimeseriesFileFormat}
+    timestamps = Vector{Dict{String, Any}}()
     new_timestamp = x -> Dict("timestamp" => x, "count" => 1)
 
-    for i = 1:length(file)
+    for i in 1:length(file)
         timestamp = get_timestamp(T, file, i)
         if i == 1
             push!(timestamps, new_timestamp(timestamp))
@@ -142,7 +142,7 @@ function read_time_series(
     file::CSV.File,
     component_name = nothing;
     kwargs...,
-) where {T<:TimeseriesFormatPeriodAsColumn}
+) where {T <: TimeseriesFormatPeriodAsColumn}
     timestamps = Vector{Dates.DateTime}()
     step = get_step_time(T, file, file.Period)
 
@@ -151,7 +151,7 @@ function read_time_series(
     # They were validated in get_step_time.
     first = get_timestamp(T, file, 1)
     push!(timestamps, first)
-    for i = 2:length(file)
+    for i in 2:length(file)
         timestamp = first + step * (i - 1)
         push!(timestamps, timestamp)
     end
@@ -170,7 +170,7 @@ function read_time_series(
     file::CSV.File,
     component_name::AbstractString;
     kwargs...,
-) where {T<:TimeseriesFormatPeriodAsHeader}
+) where {T <: TimeseriesFormatPeriodAsHeader}
     timestamps = Vector{Dates.DateTime}()
 
     period_cols_as_symbols = get_period_columns(T, file)
@@ -183,11 +183,11 @@ function read_time_series(
 
     first = Dates.DateTime(Dates.today())
     count = 0
-    for i = 1:length(file)
+    for i in 1:length(file)
         if i == 1
             first = get_timestamp(T, file, 1)
         end
-        for j = 1:length(period)
+        for j in 1:length(period)
             timestamp = first + step * count
             count += 1
             push!(timestamps, timestamp)
@@ -195,7 +195,7 @@ function read_time_series(
     end
 
     vals = Vector{Float64}()
-    for i = 1:length(file)
+    for i in 1:length(file)
         for period in period_cols_as_symbols
             val = getproperty(file, period)[i]
             push!(vals, val)
@@ -216,12 +216,12 @@ function read_time_series(
     file::CSV.File,
     component_name = nothing;
     kwargs...,
-) where {T<:TimeseriesFormatComponentsAsColumnsNoTime}
+) where {T <: TimeseriesFormatComponentsAsColumnsNoTime}
     timestamps = Vector{Dates.DateTime}()
     step = get_step_time(T, file)
 
     start = get(kwargs, :start_datetime, Dates.DateTime(Dates.today()))
-    for i = 1:length(file)
+    for i in 1:length(file)
         timestamp = start + step * (i - 1)
         push!(timestamps, timestamp)
     end
@@ -237,7 +237,7 @@ function get_step_time(
     ::Type{T},
     file::CSV.File,
     period::AbstractArray,
-) where {T<:TimeseriesFileFormat}
+) where {T <: TimeseriesFileFormat}
     timestamps = get_unique_timestamps(T, file)
     if T <: TimeseriesFormatPeriodAsColumn
         num_steps = timestamps[1]["count"]
@@ -256,7 +256,7 @@ function get_step_time(
     else
         resolution = timestamps[2]["timestamp"] - timestamps[1]["timestamp"]
         if length(timestamps) > 2
-            for i = 3:length(timestamps)
+            for i in 3:length(timestamps)
                 diff = timestamps[i]["timestamp"] - timestamps[i - 1]["timestamp"]
                 if diff != resolution
                     msg = "conflicting resolution=$resolution i=$i diff=$diff"
@@ -272,7 +272,7 @@ end
 function get_step_time(
     ::Type{T},
     file::CSV.File,
-) where {T<:TimeseriesFormatComponentsAsColumnsNoTime}
+) where {T <: TimeseriesFormatComponentsAsColumnsNoTime}
     resolution = Dates.Day(1)
     num_steps = length(file)
     return calculate_step_time(resolution, num_steps)

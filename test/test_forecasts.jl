@@ -123,7 +123,7 @@ end
     data = collect(1:24)
     components = []
 
-    for i = 1:2
+    for i in 1:2
         name = "Component" * string(i)
         component = IS.TestComponent(name, i)
         IS.add_component!(sys, component)
@@ -283,7 +283,7 @@ function validate_generated_initial_times(
     for it in initial_times
         @test it == initial_time
         # Verify all possible forecast ranges.
-        for i = 2:horizon
+        for i in 2:horizon
             forecast = IS.get_forecast(forecast_type, component, it, label, i)
             @test IS.get_horizon(forecast) == i
             @test IS.get_initial_time(forecast) == it

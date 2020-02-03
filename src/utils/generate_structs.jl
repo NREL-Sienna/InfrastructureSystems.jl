@@ -91,7 +91,7 @@ function generate_structs(directory, data::Vector; print_results = true)
         for field in item["fields"]
             param = field
             if haskey(param, "valid_range")
-                if typeof(param["valid_range"]) == Dict{String,Any}
+                if typeof(param["valid_range"]) == Dict{String, Any}
                     param["valid_range"] =
                         param["valid_range"]["min"], param["valid_range"]["max"]
                 elseif typeof(param["valid_range"]) == String

@@ -7,7 +7,7 @@ struct ValidationInfo
     struct_name::AbstractString
     ist_struct::InfrastructureSystemsType
     field_type::Any
-    limits::Union{NamedTuple{(:min, :max)},NamedTuple{(:min, :max, :zero)}}
+    limits::Union{NamedTuple{(:min, :max)}, NamedTuple{(:min, :max, :zero)}}
 end
 
 function read_validation_descriptor(filename::AbstractString)
@@ -57,7 +57,7 @@ end
 function validate_fields(
     components::Components,
     ist_struct::T,
-) where {T<:InfrastructureSystemsType}
+) where {T <: InfrastructureSystemsType}
     name = repr(T)
     type_name = strip_parametric_type(strip_module_name(repr(T)))
     struct_descriptor = get_config_descriptor(components.validation_descriptors, type_name)
@@ -68,7 +68,7 @@ function validate_fields(
         field_value = getfield(ist_struct, name)
         if isnothing(field_value)  # Many structs are of type Union{Nothing, xxx}.
 
-        elseif fieldtype <: Union{Nothing,InfrastructureSystemsType} &&
+        elseif fieldtype <: Union{Nothing, InfrastructureSystemsType} &&
                !(fieldtype <: InfrastructureSystemsType)
             # Recurse. Components are validated separately and do not need to
             # be validated twice.
@@ -127,7 +127,7 @@ function get_limits(valid_range::Dict, unused::InfrastructureSystemsType)
 end
 
 function get_limits(
-    valid_range::Union{NamedTuple{(:min, :max)},NamedTuple{(:max, :min)}},
+    valid_range::Union{NamedTuple{(:min, :max)}, NamedTuple{(:max, :min)}},
     unused::InfrastructureSystemsType,
 )
     # Gets min and max value defined for a field,
@@ -162,7 +162,7 @@ function check_limits(
     ::Type{T},
     valid_info::ValidationInfo,
     field_value,
-) where {T<:Union{Nothing,Float64}}
+) where {T <: Union{Nothing, Float64}}
     # Validates numbers.
     return check_limits_impl(valid_info, field_value)
 end
@@ -171,7 +171,7 @@ function check_limits(
     ::Type{T},
     valid_info::ValidationInfo,
     field_value,
-) where {T<:Union{Nothing,NamedTuple}}
+) where {T <: Union{Nothing, NamedTuple}}
     # Validates up/down, min/max, from/to named tuples.
     @assert length(field_value) == 2
     result1 = check_limits_impl(valid_info, field_value[1])

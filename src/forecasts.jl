@@ -30,14 +30,14 @@ struct ForecastKey
     label::String
 end
 
-const ForecastsByType = Dict{ForecastKey,ForecastInternal}
+const ForecastsByType = Dict{ForecastKey, ForecastInternal}
 
 """
 Forecast container for a component.
 """
 mutable struct Forecasts
     data::ForecastsByType
-    time_series_storage::Union{Nothing,TimeSeriesStorage}
+    time_series_storage::Union{Nothing, TimeSeriesStorage}
 end
 
 function Forecasts()
@@ -49,7 +49,7 @@ Base.isempty(forecasts::Forecasts) = isempty(forecasts.data)
 
 function set_time_series_storage!(
     forecasts::Forecasts,
-    storage::Union{Nothing,TimeSeriesStorage},
+    storage::Union{Nothing, TimeSeriesStorage},
 )
     if !isnothing(forecasts.time_series_storage) && !isnothing(storage)
         @show forecasts.time_series_storage
@@ -62,7 +62,7 @@ function set_time_series_storage!(
     forecasts.time_series_storage = storage
 end
 
-function add_forecast!(forecasts::Forecasts, forecast::T) where {T<:ForecastInternal}
+function add_forecast!(forecasts::Forecasts, forecast::T) where {T <: ForecastInternal}
     key = ForecastKey(T, get_initial_time(forecast), get_label(forecast))
     if haskey(forecasts.data, key)
         throw(ArgumentError("forecast $key is already stored"))
@@ -76,7 +76,7 @@ function remove_forecast!(
     forecasts::Forecasts,
     initial_time::Dates.DateTime,
     label::AbstractString,
-) where {T<:ForecastInternal}
+) where {T <: ForecastInternal}
     key = ForecastKey(T, initial_time, label)
     if !haskey(forecasts.data, key)
         throw(ArgumentError("forecast $key is not stored"))
@@ -94,7 +94,7 @@ function get_forecast(
     forecasts::Forecasts,
     initial_time::Dates.DateTime,
     label::AbstractString,
-) where {T<:ForecastInternal}
+) where {T <: ForecastInternal}
     key = ForecastKey(T, initial_time, label)
     if !haskey(forecasts.data, key)
         throw(ArgumentError("forecast $key is not stored"))
@@ -115,7 +115,7 @@ end
 function get_forecast_initial_times(
     ::Type{T},
     forecasts::Forecasts,
-) where {T<:ForecastInternal}
+) where {T <: ForecastInternal}
     initial_times = Set{Dates.DateTime}()
     for key in keys(forecasts.data)
         if key.forecast_type <: T
@@ -130,7 +130,7 @@ function get_forecast_initial_times(
     ::Type{T},
     forecasts::Forecasts,
     label::AbstractString,
-) where {T<:ForecastInternal}
+) where {T <: ForecastInternal}
     initial_times = Set{Dates.DateTime}()
     for key in keys(forecasts.data)
         if key.forecast_type <: T && key.label == label
@@ -154,7 +154,7 @@ function get_forecast_labels(
     ::Type{T},
     forecasts::Forecasts,
     initial_time::Dates.DateTime,
-) where {T<:ForecastInternal}
+) where {T <: ForecastInternal}
     labels = Set{String}()
     for key in keys(forecasts.data)
         if key.forecast_type <: T && key.initial_time == initial_time
@@ -239,7 +239,7 @@ end
 
 Return a forecast truncated starting with timestamp.
 """
-function from(forecast::T, timestamp) where {T<:Forecast}
+function from(forecast::T, timestamp) where {T <: Forecast}
     return T(get_label(forecast), TimeSeries.from(get_data(forecast), timestamp))
 end
 
@@ -248,7 +248,7 @@ end
 
 Return a forecast truncated after timestamp.
 """
-function to(forecast::T, timestamp) where {T<:Forecast}
+function to(forecast::T, timestamp) where {T <: Forecast}
     return T(get_label(forecast), TimeSeries.to(get_data(forecast), timestamp))
 end
 
@@ -285,7 +285,7 @@ Creates a new forecast from an existing forecast with a split TimeArray.
 """
 function
 
-_split_forecast(forecast::T, data::TimeSeries.TimeArray;) where {T<:Forecast}
+_split_forecast(forecast::T, data::TimeSeries.TimeArray;) where {T <: Forecast}
     vals = []
     for (fname, ftype) in zip(fieldnames(T), fieldtypes(T))
         if ftype <: TimeSeries.TimeArray
@@ -305,7 +305,7 @@ end
 
 function get_resolution(ts::TimeSeries.TimeArray)
     tstamps = TimeSeries.timestamp(ts)
-    timediffs = unique([tstamps[ix] - tstamps[ix - 1] for ix = 2:length(tstamps)])
+    timediffs = unique([tstamps[ix] - tstamps[ix - 1] for ix in 2:length(tstamps)])
 
     res = []
 

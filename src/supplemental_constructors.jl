@@ -175,7 +175,7 @@ function make_internal_forecast(forecast::ScenarioBased, ts_data::TimeSeriesData
     )
 end
 
-function forecast_external_to_internal(::Type{T}) where {T<:Forecast}
+function forecast_external_to_internal(::Type{T}) where {T <: Forecast}
     if T <: Deterministic
         forecast_type = DeterministicInternal
     elseif T <: Probabilistic
@@ -189,7 +189,7 @@ function forecast_external_to_internal(::Type{T}) where {T<:Forecast}
     return forecast_type
 end
 
-function forecast_internal_to_external(::Type{T}) where {T<:ForecastInternal}
+function forecast_internal_to_external(::Type{T}) where {T <: ForecastInternal}
     if T <: DeterministicInternal
         forecast_type = Deterministic
     elseif T <: ProbabilisticInternal
