@@ -1,8 +1,16 @@
 # InfrastructureSystems
 
-## 0.5.3
+## 0.5.5
+
+- Use get_name methods in system construction
+
+## 0.5.4
 
 - Update get_components to work with parametrized structs
+
+## 0.5.3
+
+- Update dependencies
 
 ## 0.5.2
 
