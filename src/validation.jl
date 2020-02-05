@@ -58,25 +58,24 @@ function validate_fields(
     components::Components,
     ist_struct::T,
 ) where {T <: InfrastructureSystemsType}
-    name = repr(T)
     type_name = strip_parametric_type(strip_module_name(repr(T)))
     struct_descriptor = get_config_descriptor(components.validation_descriptors, type_name)
     isnothing(struct_descriptor) && return true
     is_valid = true
 
-    for (name, fieldtype) in zip(fieldnames(T), fieldtypes(T))
-        field_value = getfield(ist_struct, name)
+    for (field_name, fieldtype) in zip(fieldnames(T), fieldtypes(T))
+        field_value = getfield(ist_struct, field_name)
         if isnothing(field_value)  # Many structs are of type Union{Nothing, xxx}.
 
         elseif fieldtype <: Union{Nothing, InfrastructureSystemsType} &&
                !(fieldtype <: InfrastructureSystemsType)
             # Recurse. Components are validated separately and do not need to
             # be validated twice.
-            if !validate_fields(components, getfield(ist_struct, name))
+            if !validate_fields(components, getfield(ist_struct, field_name))
                 is_valid = false
             end
         else
-            field_descriptor = get_field_descriptor(struct_descriptor, string(name))
+            field_descriptor = get_field_descriptor(struct_descriptor, string(field_name))
             if !haskey(field_descriptor, "valid_range")
                 continue
             end
@@ -179,7 +178,7 @@ function check_limits(
     return result1 && result2
 end
 
-function check_limits_impl(valid_info::ValidationInfo, field_value)
+function check_limits_impl(valid_info::ValidationInfo, field_value::Real)
     is_valid = true
     action_function = get_validation_action(valid_info.field_descriptor)
     if (

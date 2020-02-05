@@ -3,8 +3,8 @@ language: julia
 os:
   - linux
   - osx
+  - windows
 julia:
-  - 1.2
   - 1.3
   - nightly
 
@@ -26,6 +26,7 @@ jobs:
   allow_failures:
     - julia: nightly
     - os: osx
+    - os: windows
   include:
     - stage: "Cross Package Testing"
       julia: 1.3
