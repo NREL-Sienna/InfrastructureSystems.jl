@@ -26,6 +26,7 @@ jobs:
   allow_failures:
     - julia: nightly
     - os: osx
+    - os: windows
   include:
     - stage: "Cross Package Testing"
       julia: 1.3
