@@ -65,14 +65,14 @@ function validate_fields(
     is_valid = true
 
     for (name, fieldtype) in zip(fieldnames(T), fieldtypes(T))
-        field_value = getfield(ist_struct, name)
+        field_value = get_name(ist_struct)
         if isnothing(field_value)  # Many structs are of type Union{Nothing, xxx}.
 
         elseif fieldtype <: Union{Nothing, InfrastructureSystemsType} &&
                !(fieldtype <: InfrastructureSystemsType)
             # Recurse. Components are validated separately and do not need to
             # be validated twice.
-            if !validate_fields(components, getfield(ist_struct, name))
+            if !validate_fields(components, get_name(ist_struct))
                 is_valid = false
             end
         else
@@ -180,6 +180,7 @@ function check_limits(
 end
 
 function check_limits_impl(valid_info::ValidationInfo, field_value)
+    @show field_value
     is_valid = true
     action_function = get_validation_action(valid_info.field_descriptor)
     if (

@@ -37,14 +37,15 @@ function add_component!(
     component::T;
     skip_validation = false,
 ) where {T <: InfrastructureSystemsType}
+    component_name = get_name(component)
     if !isconcretetype(T)
         throw(ArgumentError("add_component! only accepts concrete types"))
     end
 
     if !haskey(components.data, T)
         components.data[T] = Dict{String, T}()
-    elseif haskey(components.data[T], component.name)
-        throw(ArgumentError("$(component.name) is already stored for type $T"))
+    elseif haskey(components.data[T], component_name)
+        throw(ArgumentError("$(component_name) is already stored for type $T"))
     end
 
     if !isempty(components.validation_descriptors) && !skip_validation
@@ -63,7 +64,7 @@ function add_component!(
     #end
 
     set_time_series_storage!(component, components.time_series_storage)
-    components.data[T][component.name] = component
+    components.data[T][component_name] = component
     return
 end
 
