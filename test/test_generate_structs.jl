@@ -11,10 +11,9 @@
 
     matched = true
     try
-        run(`diff $output_dir $existing_dir`)
-    catch
-        (err)
-        @error "Generated structs do not match the descriptor file."
+        run(`diff --strip-trailing-cr $output_dir $existing_dir`)
+    catch err
+        @error "Generated structs do not match the descriptor file." err
         matched = false
     finally
         rm(output_dir; recursive = true)
