@@ -19,6 +19,7 @@ coverage:
     patch:
       default:
         target: 70
+        threshold: 10
 
 parsers:
   gcov:

@@ -99,9 +99,19 @@ function generate_structs(directory, data::Vector; print_results = true)
                 end
             end
             push!(parameters, param)
-            accessor_name = "get_" * param["name"]
+
+            # Allow accessor functions to be re-implemented from another module.
+            # If this key is defined then the accessor function will not be exported.
+            # Example:  get_name is defined in InfrastructureSystems and re-implemented in
+            # PowerSystems.
+            if haskey(param, "accessor_module")
+                accessor_module = param["accessor_module"] * "."
+            else
+                accessor_module = ""
+            end
+            accessor_name = accessor_module * "get_" * param["name"]
             push!(accessors, Dict("name" => param["name"], "accessor" => accessor_name))
-            if accessor_name != "internal"
+            if accessor_name != "internal" && accessor_module == ""
                 push!(unique_accessor_functions, accessor_name)
             end
 
