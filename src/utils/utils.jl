@@ -250,11 +250,9 @@ foo(value::Fruits.Fruit) = nothing
 
 """
 macro scoped_enum(T, args...)
-    blk = esc(:(
-            baremodule $(Symbol("$(T)s"))
-               using Base: @enum
-               @enum $T $(args...)
-            end
-        ))
+    blk = esc(:(baremodule $(Symbol("$(T)s"))
+    using Base: @enum
+    @enum $T $(args...)
+    end))
     return blk
 end
