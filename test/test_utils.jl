@@ -37,3 +37,13 @@ end
 @testset "Test exported names" begin
     @test IS.validate_exported_names(IS)
 end
+
+IS.@scoped_enum Fruit begin
+    APPLE
+    ORANGE
+end
+
+@testset "Test scoped_enum" begin
+    @test Fruits.APPLE isa Fruits.Fruit
+    @test Fruits.ORANGE isa Fruits.Fruit
+end
