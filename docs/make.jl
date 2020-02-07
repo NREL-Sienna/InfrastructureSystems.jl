@@ -17,6 +17,5 @@ deploydocs(
     repo = "github.com/NREL/InfrastructureSystems.jl.git",
     branch = "gh-pages",
     target = "build",
-    deps = Deps.pip("pygments", "mkdocs", "python-markdown-math"),
     make = nothing,
 )
