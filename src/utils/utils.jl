@@ -230,3 +230,31 @@ function compare_values(x::T, y::U)::Bool where {T, U}
     # enough.
     return x == y
 end
+
+"""
+Macro to wrap Enum in a baremodule to keep the top level scope clean.
+The macro name should be singular. The macro will create a module for access that is plural.
+
+# Examples
+```julia
+@scoped_enum Fruit begin
+    APPLE
+    ORANGE
+end
+
+value = Fruits.APPLE
+
+# Usage as a function parameter
+foo(value::Fruits.Fruit) = nothing
+```
+
+"""
+macro scoped_enum(T, args...)
+    blk = esc(:(
+            baremodule $(Symbol("$(T)s"))
+               using Base: @enum
+               @enum $T $(args...)
+            end
+        ))
+    return blk
+end
