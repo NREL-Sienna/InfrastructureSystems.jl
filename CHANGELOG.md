@@ -1,6 +1,6 @@
 # InfrastructureSystems
 
-## 0.5.6
+## 0.5.7
 
 - Add macro to simplifiy calls to enums
 
