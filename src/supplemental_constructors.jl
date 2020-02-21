@@ -22,7 +22,7 @@ function Deterministic(
     time_steps::Int,
 )
     data = TimeSeries.TimeArray(
-        initial_time:Dates.Hour(1):(initial_time + resolution * (time_steps - 1)),
+        initial_time:resolution:(initial_time + resolution * (time_steps - 1)),
         ones(time_steps),
     )
     return Deterministic(label, data)
@@ -78,7 +78,7 @@ function Probabilistic(
     time_steps::Int,
 )
     data = TimeSeries.TimeArray(
-        initial_time:Dates.Hour(1):(initial_time + resolution * (time_steps - 1)),
+        initial_time:resolution:(initial_time + resolution * (time_steps - 1)),
         ones(time_steps, length(percentiles)),
     )
 
@@ -153,7 +153,7 @@ function ScenarioBased(
     time_steps::Int,
 )
     data = TimeSeries.TimeArray(
-        initial_time:Dates.Hour(1):(initial_time + resolution * (time_steps - 1)),
+        initial_time:resolution:(initial_time + resolution * (time_steps - 1)),
         ones(time_steps, scenario_count),
     )
 
