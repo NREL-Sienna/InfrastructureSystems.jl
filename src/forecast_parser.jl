@@ -104,8 +104,8 @@ function read_time_series_metadata(file_path::AbstractString)
 end
 
 function _get_category(category::String)
-    # HACK alert because of wackiness in PowerSystems RTS data.
-    if category == "LoadZone"
+    # Re-mapping for PowerSystems RTS data.
+    if category == "Area"
         category = "bus"
     end
 

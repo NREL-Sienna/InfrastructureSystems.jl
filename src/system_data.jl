@@ -524,9 +524,7 @@ Modules can override for custom behavior.
 """
 function set_component!(metadata::TimeseriesFileMetadata, data::SystemData, mod::Module)
 
-    # TODO: CDM data should change LoadZone to LoadZones.
-    symbol = metadata.category == "LoadZone" ? :LoadZones : Symbol(metadata.category)
-    category = getfield(mod, symbol)
+    category = getfield(mod, Symbol(metadata.category))
     if isconcretetype(category)
         metadata.component =
             get_component(category, data.components, metadata.component_name)
