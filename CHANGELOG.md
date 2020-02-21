@@ -1,5 +1,10 @@
 # InfrastructureSystems
 
+## 0.5.8
+
+- Bug fix in default values for forecasts
+- Addition of results abstract type
+
 ## 0.5.7
 
 - Add macro to simplifiy calls to enums
