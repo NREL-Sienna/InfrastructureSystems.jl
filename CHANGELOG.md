@@ -1,5 +1,9 @@
 # InfrastructureSystems
 
+## 0.5.9 
+
+- Modify TableData parsing to use Area and Zone correctly 
+
 ## 0.5.8
 
 - Bug fix in default values for forecasts
