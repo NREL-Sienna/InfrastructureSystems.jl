@@ -60,7 +60,7 @@ end
 
 {{/has_null_values}}
 {{#accessors}}
-\"\"\"Get {{struct_name}} {{name}}.\"\"\"
+{{#create_docstring}}\"\"\"Get {{struct_name}} {{name}}.\"\"\"{{/create_docstring}}
 {{accessor}}(value::{{struct_name}}) = value.{{name}}
 {{/accessors}}
 """
@@ -106,11 +106,20 @@ function generate_structs(directory, data::Vector; print_results = true)
             # PowerSystems.
             if haskey(param, "accessor_module")
                 accessor_module = param["accessor_module"] * "."
+                create_docstring = false
             else
                 accessor_module = ""
+                create_docstring = true
             end
             accessor_name = accessor_module * "get_" * param["name"]
-            push!(accessors, Dict("name" => param["name"], "accessor" => accessor_name))
+            push!(
+                accessors,
+                Dict(
+                    "name" => param["name"],
+                    "accessor" => accessor_name,
+                    "create_docstring" => create_docstring,
+                ),
+            )
             if accessor_name != "internal" && accessor_module == ""
                 push!(unique_accessor_functions, accessor_name)
             end
