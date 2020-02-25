@@ -2,7 +2,7 @@
 struct TestComponent <: InfrastructureSystemsType
     name::AbstractString
     val::Int
-    _forecasts::Forecasts
+    forecasts::Forecasts
     internal::InfrastructureSystemsInternal
 end
 
@@ -12,8 +12,8 @@ end
 
 get_val(component::TestComponent) = component.val
 
-function get__forecasts(component::TestComponent)
-    return component._forecasts
+function get_forecasts(component::TestComponent)
+    return component.forecasts
 end
 
 function JSON2.read(io::IO, ::Type{TestComponent})
@@ -21,7 +21,7 @@ function JSON2.read(io::IO, ::Type{TestComponent})
     return TestComponent(
         data.name,
         data.val,
-        convert_type(Forecasts, data._forecasts),
+        convert_type(Forecasts, data.forecasts),
         JSON2.read(JSON2.write(data.internal), InfrastructureSystemsInternal),
     )
 end

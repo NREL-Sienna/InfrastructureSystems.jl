@@ -17,6 +17,18 @@ abstract type InfrastructureSystemsType end
 
 get_name(value::InfrastructureSystemsType) = value.name
 
+"""
+Return the internal forecast storage container or nothing, if the type doesn't store
+forecasts.
+
+Subtypes need to implement this method if they store forecasts.
+"""
+function get_forecasts(value::T) where {T <: InfrastructureSystemsType}
+    # Older code relied on a field called _forecasts. Keep this until other packages comply
+    # with the new requirement for implementing this method.
+    return hasfield(T, :_forecasts) ? value._forecasts : nothing
+end
+
 include("common.jl")
 include("internal.jl")
 include("utils/flatten_iterator_wrapper.jl")
