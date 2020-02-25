@@ -17,6 +17,14 @@ abstract type InfrastructureSystemsType end
 
 get_name(value::InfrastructureSystemsType) = value.name
 
+"""
+Return the internal forecast storage container or nothing, if the type doesn't store
+forecasts.
+
+Subtypes need to implement this method if they store forecasts.
+"""
+get_forecasts(value::InfrastructureSystemsType) = nothing
+
 include("common.jl")
 include("internal.jl")
 include("utils/flatten_iterator_wrapper.jl")
