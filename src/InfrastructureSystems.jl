@@ -23,7 +23,11 @@ forecasts.
 
 Subtypes need to implement this method if they store forecasts.
 """
-get_forecasts(value::InfrastructureSystemsType) = nothing
+function get_forecasts(value::T) where T <: InfrastructureSystemsType
+    # Older code relied on a field called _forecasts. Keep this until other packages comply
+    # with the new requirement for implementing this method.
+    return hasfield(T, :_forecasts) ? value._forecasts : nothing
+end
 
 include("common.jl")
 include("internal.jl")
