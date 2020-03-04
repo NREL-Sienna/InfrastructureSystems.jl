@@ -60,7 +60,9 @@ function Base.show(io::IO, ::MIME"text/plain", data::SystemData)
 
     println(io, "Forecasts")
     println(io, "=========")
-    println(io, "Resolution: $(Dates.Minute(get_forecasts_resolution(data)))")
+    res = get_forecasts_resolution(data)
+    res = res <= Dates.Minute(1) ? Dates.Second(res) : Dates.Minute(res)
+    println(io, "Resolution: $(res)")
     println(io, "Horizon: $(get_forecasts_horizon(data))")
     initial_times = [string(x) for x in get_forecast_initial_times(data)]
     println(io, "Initial Times: $(join(initial_times, ", "))")
@@ -74,8 +76,10 @@ function Base.show(io::IO, ::MIME"text/html", data::SystemData)
     show(io, MIME"text/html"(), data.components)
     println(io, "\n")
 
+    res = get_forecasts_resolution(data)
+    res = res <= Dates.Minute(1) ? Dates.Second(res) : Dates.Minute(res)
     println(io, "<h2>Forecasts</h2>")
-    println(io, "<p><b>Resolution</b>: $(Dates.Minute(get_forecasts_resolution(data)))</p>")
+    println(io, "<p><b>Resolution</b>: $(res)</p>")
     println(io, "<p><b>Horizon</b>: $(get_forecasts_horizon(data))</p>")
     initial_times = [string(x) for x in get_forecast_initial_times(data)]
     println(io, "<p><b>Initial Times</b>: $(join(initial_times, ", "))</p>")
