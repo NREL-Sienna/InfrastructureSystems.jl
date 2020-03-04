@@ -64,7 +64,11 @@ function get_value_columns(::Type{TimeseriesFormatYMDPeriodAsColumn}, file::CSV.
     return [x for x in propertynames(file) if !in(x, (:Year, :Month, :Day, :Period))]
 end
 
-function get_value_columns(::Type{T}, file::CSV.File) where T <: Union{TimeseriesFormatDateTimePeriodAsColumn, TimeseriesFormatDateTimeAsColumn}
+function get_value_columns(
+    ::Type{T},
+    file::CSV.File,
+) where {T <:
+         Union{TimeseriesFormatDateTimePeriodAsColumn, TimeseriesFormatDateTimeAsColumn}}
     return [x for x in propertynames(file) if !in(x, (:DateTime, :Period))]
 end
 
@@ -124,7 +128,8 @@ function get_timestamp(
     ::Type{T},
     file::CSV.File,
     row_index::Int,
-) where T <: Union{TimeseriesFormatDateTimePeriodAsColumn, TimeseriesFormatDateTimeAsColumn}
+) where {T <:
+         Union{TimeseriesFormatDateTimePeriodAsColumn, TimeseriesFormatDateTimeAsColumn}}
     return Dates.DateTime(file.DateTime[row_index])
 end
 
@@ -145,7 +150,7 @@ function read_time_series(
     file::CSV.File,
     component_name = nothing;
     kwargs...,
-) where T <: TimeseriesFormatDateTimeAsColumn
+) where {T <: TimeseriesFormatDateTimeAsColumn}
     timestamps = Vector{Dates.DateTime}()
     step = get_step_time(TimeseriesFormatDateTimeAsColumn, file, collect(1:length(file)))
 
@@ -265,18 +270,30 @@ function read_time_series(
 end
 
 """Return the number of steps specified by the period in the file."""
-function get_num_steps(::Type{T}, file::CSV.File, period::AbstractArray) where T <: TimeseriesFileFormat
+function get_num_steps(
+    ::Type{T},
+    file::CSV.File,
+    period::AbstractArray,
+) where {T <: TimeseriesFileFormat}
     error("Unsupported time series file format")
 end
 
 """Return the number of steps specified by the period in the file."""
-function get_num_steps(::Type{T}, file::CSV.File, period::AbstractArray) where T <: Union{TimeseriesFormatPeriodAsColumn, TimeseriesFormatDateTimeAsColumn}
+function get_num_steps(
+    ::Type{T},
+    file::CSV.File,
+    period::AbstractArray,
+) where {T <: Union{TimeseriesFormatPeriodAsColumn, TimeseriesFormatDateTimeAsColumn}}
     timestamps = get_unique_timestamps(T, file)
     return timestamps[1]["count"]
 end
 
 """Return the number of steps specified by the period in the file."""
-function get_num_steps(::Type{T}, file::CSV.File, period::AbstractArray) where T <: TimeseriesFormatPeriodAsHeader
+function get_num_steps(
+    ::Type{T},
+    file::CSV.File,
+    period::AbstractArray,
+) where {T <: TimeseriesFormatPeriodAsHeader}
     return num_steps = period[end]
 end
 
