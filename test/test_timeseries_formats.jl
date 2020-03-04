@@ -20,7 +20,7 @@ import TimeSeries
             nothing,
         ),
         (
-            IS.TimeseriesFormatDateTimePeriodAsColumn,
+            IS.TimeseriesFormatDateTimeAsColumn,
             joinpath(FORECASTS_DIR, "DateTimeAsColumn.csv"),
             nothing,
         ),
