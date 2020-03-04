@@ -67,8 +67,9 @@ end
 function get_value_columns(
     ::Type{T},
     file::CSV.File,
-) where {T <:
-         Union{TimeseriesFormatDateTimePeriodAsColumn, TimeseriesFormatDateTimeAsColumn}}
+) where {
+    T <: Union{TimeseriesFormatDateTimePeriodAsColumn, TimeseriesFormatDateTimeAsColumn},
+}
     return [x for x in propertynames(file) if !in(x, (:DateTime, :Period))]
 end
 
@@ -128,8 +129,9 @@ function get_timestamp(
     ::Type{T},
     file::CSV.File,
     row_index::Int,
-) where {T <:
-         Union{TimeseriesFormatDateTimePeriodAsColumn, TimeseriesFormatDateTimeAsColumn}}
+) where {
+    T <: Union{TimeseriesFormatDateTimePeriodAsColumn, TimeseriesFormatDateTimeAsColumn},
+}
     return Dates.DateTime(file.DateTime[row_index])
 end
 
