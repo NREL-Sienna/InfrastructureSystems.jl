@@ -19,9 +19,16 @@ import TimeSeries
             joinpath(FORECASTS_DIR, "ComponentsAsColumnsNoTime.csv"),
             nothing,
         ),
-        # TODO: add a file that has a column name with a DateTime.
-        # TODO: add a file that more than one unique timestamp so that we can fully test
-        # IS.get_step_time().
+        (
+            IS.TimeseriesFormatDateTimeAsColumn,
+            joinpath(FORECASTS_DIR, "DateTimeAsColumn.csv"),
+            nothing,
+        ),
+        (
+            IS.TimeseriesFormatDateTimePeriodAsColumn,
+            joinpath(FORECASTS_DIR, "DateTimePeriodAsColumn.csv"),
+            nothing,
+        ),
     ]
 
     for (format, filename, component_name) in formats
