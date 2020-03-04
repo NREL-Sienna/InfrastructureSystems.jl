@@ -24,6 +24,11 @@ import TimeSeries
             joinpath(FORECASTS_DIR, "DateTimeAsColumn.csv"),
             nothing,
         ),
+        (
+            IS.TimeseriesFormatDateTimePeriodAsColumn,
+            joinpath(FORECASTS_DIR, "DateTimePeriodAsColumn.csv"),
+            nothing,
+        ),
     ]
 
     for (format, filename, component_name) in formats
