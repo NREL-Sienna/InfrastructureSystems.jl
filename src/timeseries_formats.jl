@@ -44,10 +44,8 @@ function get_timeseries_format(file::CSV.File)
         format = TimeseriesFormatYMDPeriodAsHeader
     elseif has_datetime
         format = TimeseriesFormatDateTimeAsColumn
-    elseif !has_datetime
-        format = TimeseriesFormatComponentsAsColumnsNoTime
     else
-        @assert(false, "Unknown timeseries format in $(file.name)")
+        format = TimeseriesFormatComponentsAsColumnsNoTime
     end
 
     if format in (TimeseriesFormatYMDPeriodAsColumn, TimeseriesFormatYMDPeriodAsHeader)
