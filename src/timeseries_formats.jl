@@ -33,12 +33,10 @@ function get_timeseries_format(file::CSV.File)
     has_period = :Period in columns
     has_datetime = :DateTime in columns
 
-    if has_period
-        if has_datetime
-            format = TimeseriesFormatDateTimePeriodAsColumn
-        else
-            format = TimeseriesFormatYMDPeriodAsColumn
-        end
+    if has_period && !has_datetime
+        format = TimeseriesFormatYMDPeriodAsColumn
+    elseif has_datetime
+        format = TimeseriesFormatDateTimePeriodAsColumn
     elseif has_ymd
         format = TimeseriesFormatYMDPeriodAsHeader
     elseif !has_datetime
@@ -144,7 +142,8 @@ function read_time_series(
     kwargs...,
 ) where {T <: TimeseriesFormatPeriodAsColumn}
     timestamps = Vector{Dates.DateTime}()
-    step = get_step_time(T, file, file.Period)
+    periods = :Period in propertynames(file) ? file.Period : collect(1:length(file))
+    step = get_step_time(T, file, periods)
 
     # All timestamps must be sequential by step, so we can ignore the timestamps in the
     # file after the first one.
