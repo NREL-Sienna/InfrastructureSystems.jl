@@ -1,8 +1,12 @@
 # InfrastructureSystems
 
-## 0.5.10 
+## 0.5.11 
 
 - Add new timestamp format to parsing
+
+## 0.5.10 
+
+- Internal rename of the forecast field
 
 ## 0.5.9 
 
