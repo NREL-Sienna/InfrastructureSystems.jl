@@ -1,5 +1,9 @@
 # InfrastructureSystems
 
+## 0.5.10 
+
+- Add new timestamp format to parsing
+
 ## 0.5.9 
 
 - Modify TableData parsing to use Area and Zone correctly 
