@@ -1,5 +1,9 @@
 # InfrastructureSystems
 
+## 0.5.12
+
+- Remove export of logging functions
+
 ## 0.5.11 
 
 - Add new timestamp format to parsing
