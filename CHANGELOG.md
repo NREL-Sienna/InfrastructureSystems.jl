@@ -1,5 +1,9 @@
 # InfrastructureSystems
 
+## 0.5.13
+
+- add get_basepower method for results
+
 ## 0.5.12
 
 - Remove export of logging functions
