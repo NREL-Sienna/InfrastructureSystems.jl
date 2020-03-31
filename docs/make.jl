@@ -14,7 +14,7 @@ makedocs(
 )
 
 deploydocs(
-    repo = "github.com/NREL/InfrastructureSystems.jl.git",
+    repo = "github.com/NREL-SIIP/InfrastructureSystems.jl.git",
     branch = "gh-pages",
     target = "build",
     make = nothing,
