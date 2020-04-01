@@ -1,5 +1,9 @@
 # InfrastructureSystems
 
+## 0.5.14
+
+- Update TimeSeries.jl dependency
+
 ## 0.5.13
 
 - add get_basepower method for results
@@ -8,17 +12,17 @@
 
 - Remove export of logging functions
 
-## 0.5.11 
+## 0.5.11
 
 - Add new timestamp format to parsing
 
-## 0.5.10 
+## 0.5.10
 
 - Internal rename of the forecast field
 
-## 0.5.9 
+## 0.5.9
 
-- Modify TableData parsing to use Area and Zone correctly 
+- Modify TableData parsing to use Area and Zone correctly
 
 ## 0.5.8
 
