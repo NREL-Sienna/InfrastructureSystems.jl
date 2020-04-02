@@ -1,5 +1,9 @@
 # InfrastructureSystems
 
+# 0.5.15
+
+- Improvements to TableData parsing
+
 ## 0.5.14
 
 - Update TimeSeries.jl dependency
