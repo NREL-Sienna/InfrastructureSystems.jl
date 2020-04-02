@@ -73,7 +73,7 @@ function read_time_series_metadata(file_path::AbstractString)
         csv = CSV.read(file_path)
         metadata = Vector{TimeseriesFileMetadata}()
         for row in eachrow(csv)
-            category = _get_category(row.Category)
+            category = _get_category(row.category)
             push!(
                 metadata,
                 TimeseriesFileMetadata(
