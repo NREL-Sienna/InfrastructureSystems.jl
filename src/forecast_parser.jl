@@ -73,16 +73,16 @@ function read_time_series_metadata(file_path::AbstractString)
         csv = CSV.read(file_path)
         metadata = Vector{TimeseriesFileMetadata}()
         for row in eachrow(csv)
-            category = _get_category(row.Category)
+            category = _get_category(row.category)
             push!(
                 metadata,
                 TimeseriesFileMetadata(
-                    row.Simulation,
-                    row.Category,
-                    row.Object,
-                    row.Parameter,
-                    row[Symbol("Scaling Factor")],
-                    row[Symbol("Data File")],
+                    row.simulation,
+                    row.category,
+                    row.component_name,
+                    row.label,
+                    row.scaling_factor,
+                    row.data_file,
                     # TODO: update CDM data for the next
                     # two fields.
                     [],
