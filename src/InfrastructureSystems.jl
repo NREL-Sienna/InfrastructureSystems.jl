@@ -7,6 +7,7 @@ import DataFrames
 import Dates
 import JSON
 import JSON2
+import PrettyTables
 import TimeSeries
 
 # IS should not export any function since it can have name clashes with other packages.
@@ -31,6 +32,7 @@ end
 
 include("common.jl")
 include("internal.jl")
+include("utils/event_recorder.jl")
 include("utils/flatten_iterator_wrapper.jl")
 include("utils/generate_structs.jl")
 include("utils/lazy_dict_from_iterator.jl")
