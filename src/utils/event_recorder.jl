@@ -19,7 +19,6 @@ get_timestamp(event::RecorderEventCommon) = event.timestamp
 function serialize(event::T) where {T <: AbstractRecorderEvent}
     data = Dict{Symbol, Any}()
 
-    vals = []
     for (fieldname, fieldtype) in zip(fieldnames(T), fieldtypes(T))
         if fieldtype <: RecorderEventCommon
             data[:name] = get_name(event)
@@ -27,7 +26,6 @@ function serialize(event::T) where {T <: AbstractRecorderEvent}
         else
             data[fieldname] = getfield(event, fieldname)
         end
-
     end
 
     return JSON.json(data)
