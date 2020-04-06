@@ -61,11 +61,6 @@ Records user-defined events in JSON format.
 mutable struct Recorder
     name::Symbol
     io::IO
-
-    function Recorder(name, io)
-        mgr = new(name, io)
-        return mgr
-    end
 end
 
 """
