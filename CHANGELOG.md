@@ -1,5 +1,9 @@
 # InfrastructureSystems
 
+## 0.5.16
+
+- Update CSV dependency to v0.6
+
 ## 0.5.15
 
 - Improvements to TableData parsing
