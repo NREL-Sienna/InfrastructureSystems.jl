@@ -32,7 +32,7 @@ end
 
 include("common.jl")
 include("internal.jl")
-include("utils/event_recorder.jl")
+include("utils/recorder_events.jl")
 include("utils/flatten_iterator_wrapper.jl")
 include("utils/generate_structs.jl")
 include("utils/lazy_dict_from_iterator.jl")
