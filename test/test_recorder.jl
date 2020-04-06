@@ -1,4 +1,4 @@
-@testset "Test event recorder" begin
+@testset "Test recorder" begin
     filename = "test_recorder.log"
     try
         # Post event while disabled.
