@@ -1,5 +1,9 @@
 # InfrastructureSystems
 
+## 0.6.0
+
+- Add event recorder logging capabilities
+
 ## 0.5.16
 
 - Update CSV dependency to v0.6
