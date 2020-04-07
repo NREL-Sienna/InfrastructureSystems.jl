@@ -48,7 +48,8 @@ function deserialize(::Type{T}, text::AbstractString) where {T <: AbstractRecord
         if fieldtype <: RecorderEventCommon
             push!(vals, common)
         else
-            push!(vals, data[string(fieldname)])
+            val = fieldtype(data[string(fieldname)])
+            push!(vals, val)
         end
     end
 
