@@ -1,5 +1,5 @@
 @testset "Test recorder" begin
-    filename = "test_recorder.log"
+    filename = "test.log"
     try
         # Post event while disabled.
         @IS.record :test InfrastructureSystems.TestEvent("a", 1, 2.0)
@@ -27,7 +27,7 @@
 end
 
 @testset "Test list_recorder_events" begin
-    filename = "test_recorder.log"
+    filename = "test.log"
     try
         IS.register_recorder!(:test)
         for _ in 1:5
@@ -48,7 +48,7 @@ end
 end
 
 @testset "Test list_recorder_events filter" begin
-    filename = "test_recorder.log"
+    filename = "test.log"
     try
         IS.register_recorder!(:test)
         for i in 1:5

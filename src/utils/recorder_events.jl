@@ -87,7 +87,7 @@ function Recorder(
     directory = ".",
 )
     if isnothing(io)
-        filename = joinpath(directory, string(name) * "_recorder.log")
+        filename = joinpath(directory, string(name) * ".log")
         io = open(filename, mode)
         @debug "opened recorder log at" filename
     end
@@ -109,7 +109,7 @@ g_recorders = Dict{Symbol, Recorder}()
     )
 
 Register a recorder to log events. Afterwards, calls to @record name <event-type>()
-will record the event as JSON in <name>_recorder.log.
+will record the event as JSON in <name>.log.
 
 # Arguments
 - `name::Symbol`: name of recorder
