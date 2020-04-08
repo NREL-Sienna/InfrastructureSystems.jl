@@ -2,11 +2,11 @@
     filename = "test.log"
     try
         # Post event while disabled.
-        @IS.record :test InfrastructureSystems.TestEvent("a", 1, 2.0)
+        IS.@record :test InfrastructureSystems.TestEvent("a", 1, 2.0)
         @test !isfile(filename)
 
         IS.register_recorder!(:test)
-        @IS.record :test InfrastructureSystems.TestEvent("a", 1, 2.0)
+        IS.@record :test InfrastructureSystems.TestEvent("a", 1, 2.0)
         IS.unregister_recorder!(:test)
 
         @test isfile(filename)
@@ -19,7 +19,7 @@
         @test data.val3 == 2.0
 
         rm(filename)
-        @IS.record :test InfrastructureSystems.TestEvent("a", 1, 2.0)
+        IS.@record :test InfrastructureSystems.TestEvent("a", 1, 2.0)
         @test !isfile(filename)
     finally
         isfile(filename) && rm(filename)
@@ -31,8 +31,8 @@ end
     try
         IS.register_recorder!(:test)
         for _ in 1:5
-            @IS.record :test InfrastructureSystems.TestEvent("a", 1, 2.0)
-            @IS.record :test InfrastructureSystems.TestEvent2(5)
+            IS.@record :test InfrastructureSystems.TestEvent("a", 1, 2.0)
+            IS.@record :test InfrastructureSystems.TestEvent2(5)
         end
         IS.unregister_recorder!(:test)
         @test isfile(filename)
@@ -52,8 +52,8 @@ end
     try
         IS.register_recorder!(:test)
         for i in 1:5
-            @IS.record :test InfrastructureSystems.TestEvent("a", i, 2.0)
-            @IS.record :test InfrastructureSystems.TestEvent2(3)
+            IS.@record :test InfrastructureSystems.TestEvent("a", i, 2.0)
+            IS.@record :test InfrastructureSystems.TestEvent2(3)
         end
         IS.unregister_recorder!(:test)
         @test isfile(filename)
