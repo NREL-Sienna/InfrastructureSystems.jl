@@ -14,7 +14,7 @@ julia> Pkg.clone("https://github.com/NREL/InfrastructureSystems.jl.git")
 ## Overview
 
 InfrastructureSystems.jl provides utilities to support infrastructure modeling
-and simulations.  It is used primarily by
+and simulations packages.  It is used primarily by
 [PowerSystems.jl](https://github.com/NREL-SIIP/PowerSystems.jl) and
 [PowerSimulations.jl](https://github.com/NREL-SIIP/PowerSimulations.jl) but is
 written to be extensible for other kinds of applications as well.
@@ -193,5 +193,6 @@ of that data to figure out what went wrong.
    exception is thrown.  Otherwise, the file may not get flushed and closed.
 5. After your code runs call `InfrastructureSystems.show_recorder_events` to
    view events.  Refer to the docstrings for more information.
-6. Refer to `PowerSimulations.show_simulation_events` for examples on how to
-   customize this behavior for your package.
+6. Refer to
+   [PowerSimulations.show_simulation_events](https://nrel-siip.github.io/PowerSimulations.jl/latest/api/PowerSimulations/#PowerSimulations.show_simulation_events-Union{Tuple{T},%20Tuple{Type{T},AbstractString},%20Tuple{Type{T},AbstractString,Union{Nothing,%20Function}}}%20where%20T%3C:InfrastructureSystems.AbstractRecorderEvent)
+   for an example on how to customize this behavior for your package.
