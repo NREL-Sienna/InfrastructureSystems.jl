@@ -6,7 +6,7 @@ makedocs(
     sitename = "InfrastructureSystems.jl",
     pages = Any[ # Compat: `Any` for 0.4 compat
         "Home" => "index.md",
-        # "User Guide" => "man/guide.md",
+        "User Guide" => "man/guide.md",
         "API" => Any[
             "InfrastructureSystems" => "api/InfrastructureSystems.md"
         ]
