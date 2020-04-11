@@ -114,7 +114,8 @@ components. Here are reasons to consider using it:
 
 *Notes*:
 - Time series data can optionally be stored fully in memory. Refer to the
-  `SystemData` documentation.
+[SystemData](https://nrel-siip.github.io/InfrastructureSystems.jl/latest/api/InfrastructureSystems/#InfrastructureSystems.SystemData-Tuple{AbstractString})
+documentation.
 
 #### Instructions
 
