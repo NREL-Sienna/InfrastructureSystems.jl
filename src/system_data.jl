@@ -1,6 +1,18 @@
 
 const TIME_SERIES_STORAGE_FILE = "time_series_storage.h5"
 
+"""
+    mutable struct SystemData <: InfrastructureSystemsType
+        components::Components
+        forecast_metadata::ForecastMetadata
+        validation_descriptors::Vector
+        time_series_storage::TimeSeriesStorage
+        time_series_storage_file::Union{Nothing, String}
+        internal::InfrastructureSystemsInternal
+    end
+
+Container for system components and time series data
+"""
 mutable struct SystemData <: InfrastructureSystemsType
     components::Components
     forecast_metadata::ForecastMetadata
@@ -10,6 +22,17 @@ mutable struct SystemData <: InfrastructureSystemsType
     internal::InfrastructureSystemsInternal
 end
 
+"""
+    SystemData(; validation_descriptor_file = nothing, time_series_in_memory = false)
+
+Construct SystemData to store components and time series data.
+
+# Arguments
+- `validation_descriptor_file = nothing`: Optionally, a file defining component validation
+  descriptors.
+- `time_series_in_memory = false`: Controls whether time series data is stored in memory or
+  in a file.
+"""
 function SystemData(; validation_descriptor_file = nothing, time_series_in_memory = false)
     if isnothing(validation_descriptor_file)
         validation_descriptors = Vector()

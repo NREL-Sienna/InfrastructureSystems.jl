@@ -153,9 +153,10 @@ end
         (:error, r"initial times don't match"),
         @test !IS.validate_forecast_consistency(sys)
     )
-    @test_logs((:error, r"initial times don't match"), @test_throws IS.DataFormatError !IS.check_forecast_consistency(
-        sys,
-    ))
+    @test_logs(
+        (:error, r"initial times don't match"),
+        @test_throws IS.DataFormatError !IS.check_forecast_consistency(sys)
+    )
 
     @test IS.get_forecast_counts(sys) == (2, 4)
 
