@@ -1,6 +1,18 @@
 
 const TIME_SERIES_STORAGE_FILE = "time_series_storage.h5"
 
+"""
+    mutable struct SystemData <: InfrastructureSystemsType
+        components::Components
+        forecast_metadata::ForecastMetadata
+        validation_descriptors::Vector
+        time_series_storage::TimeSeriesStorage
+        time_series_storage_file::Union{Nothing, String}
+        internal::InfrastructureSystemsInternal
+    end
+
+Container for system components and time series data
+"""
 mutable struct SystemData <: InfrastructureSystemsType
     components::Components
     forecast_metadata::ForecastMetadata
