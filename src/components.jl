@@ -240,7 +240,7 @@ Call collect on the result if an array is desired.
 - `T`: component type
 - `components::Components`: Components of the sytem
 - `filter_func::Union{Nothing, Function} = nothing`: Optional function that accepts an event
-   of type T and returns a Bool. Apply this function to each event and only return events
+   of type T and returns a Bool. Apply this function to each component and only return components
    where the result is true.
 
 See also: [`iterate_components`](@ref)
