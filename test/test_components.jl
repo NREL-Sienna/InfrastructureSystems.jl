@@ -92,6 +92,15 @@ end
     components = IS.get_components(IS.TestComponent, container)
     @test length(components) == 1
 
+    # by abstract type with filter_func
+    components =
+        IS.get_components(IS.InfrastructureSystemsType, container, x -> (IS.get_val(x) < 5))
+    @test length(components) == 0
+
+    # by concrete type
+    components = IS.get_components(IS.TestComponent, container, x -> (IS.get_val(x) < 5))
+    @test length(components) == 0
+
 end
 
 @testset "Test get_component" begin
