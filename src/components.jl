@@ -259,7 +259,8 @@ function get_components(
         if isnothing(components_)
             iter = FlattenIteratorWrapper(T, Vector{Base.ValueIterator}([]))
         else
-            iter = FlattenIteratorWrapper(T, Vector{Base.ValueIterator}([values(components_)]))
+            iter =
+                FlattenIteratorWrapper(T, Vector{Base.ValueIterator}([values(components_)]))
         end
     else
         types = [x for x in keys(components.data) if x <: T]
