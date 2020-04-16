@@ -670,7 +670,11 @@ iterate_components(data::SystemData) = iterate_components(data.components)
 
 get_component(::Type{T}, data::SystemData, args...) where {T} =
     get_component(T, data.components, args...)
-function get_components(::Type{T}, data::SystemData, filter_func::Union{Nothing, Function} = nothing) where {T}
+function get_components(
+    ::Type{T},
+    data::SystemData,
+    filter_func::Union{Nothing, Function} = nothing,
+) where {T}
     return get_components(T, data.components, filter_func)
 end
 
