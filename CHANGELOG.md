@@ -1,5 +1,9 @@
 # InfrastructureSystems
 
+## 0.6.1
+
+- Enable filtering function for get_components
+
 ## 0.6.0
 
 - Add event recorder logging capabilities
