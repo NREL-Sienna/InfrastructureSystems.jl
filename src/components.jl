@@ -252,23 +252,22 @@ function get_components(
 )::FlattenIteratorWrapper{T} where {T <: InfrastructureSystemsType}
     if isconcretetype(T)
         components_ = get(components.data, T, nothing)
+        if !isnothing(filter_func) && !isnothing(components_)
+            _filter_func = x -> filter_func(x.second)
+            components_ = values(filter!(_filter_func, components_))
+        end
         if isnothing(components_)
             iter = FlattenIteratorWrapper(T, Vector{Base.ValueIterator}([]))
         else
-            if isnothing(filter_func)
-                components_ = [values(components_)]
-            else
-                components_ = [x for x in values(components_) if filter_func(x)]
-            end
-            iter = FlattenIteratorWrapper(T, Vector{Base.ValueIterator}(components_))
+            iter = FlattenIteratorWrapper(T, Vector{Base.ValueIterator}([values(components_)]))
         end
     else
         types = [x for x in keys(components.data) if x <: T]
         if isnothing(filter_func)
             components_ = [values(components.data[x]) for x in types]
         else
-            components_ =
-                [[d for d in values(components.data[x]) if filter_func(d)] for x in types]
+            _filter_func = x -> filter_func(x.second)
+            components_ = [values(filter!(_filter_func, components.data[x])) for x in types]
         end
         iter = FlattenIteratorWrapper(T, components_)
     end
