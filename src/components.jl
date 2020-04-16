@@ -230,28 +230,47 @@ end
     get_components(
                    ::Type{T},
                    components::Components,
+                   filter_func::Union{Nothing, Function} = nothing,
                   )::FlattenIteratorWrapper{T} where T <: InfrastructureSystemsType
 
 Returns an iterator of components. T can be concrete or abstract.
 Call collect on the result if an array is desired.
+
+# Arguments
+- `T`: component type
+- `components::Components`: Components of the sytem
+- `filter_func::Union{Nothing, Function} = nothing`: Optional function that accepts an event
+   of type T and returns a Bool. Apply this function to each event and only return events
+   where the result is true.
 
 See also: [`iterate_components`](@ref)
 """
 function get_components(
     ::Type{T},
     components::Components,
+    filter_func::Union{Nothing, Function} = nothing,
 )::FlattenIteratorWrapper{T} where {T <: InfrastructureSystemsType}
     if isconcretetype(T)
         components_ = get(components.data, T, nothing)
         if isnothing(components_)
             iter = FlattenIteratorWrapper(T, Vector{Base.ValueIterator}([]))
         else
-            iter =
-                FlattenIteratorWrapper(T, Vector{Base.ValueIterator}([values(components_)]))
+            if isnothing(filter_func)
+                components_ = [values(components_)]
+            else
+                components_ = [x for x in values(components_) if filter_func(x)]
+            end
+            iter = FlattenIteratorWrapper(T, Vector{Base.ValueIterator}(components_))
         end
     else
         types = [x for x in keys(components.data) if x <: T]
-        iter = FlattenIteratorWrapper(T, [values(components.data[x]) for x in types])
+        if isnothing(filter_func)
+            components_ = [values(components.data[x]) for x in types]
+        else
+            components_ =
+                [[d for d in values(components.data[x]) if filter_func(d)] for x in types]
+        end
+        iter = FlattenIteratorWrapper(T, components_)
     end
 
     @assert eltype(iter) == T
