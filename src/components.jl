@@ -254,7 +254,7 @@ function get_components(
         components_ = get(components.data, T, nothing)
         if !isnothing(filter_func) && !isnothing(components_)
             _filter_func = x -> filter_func(x.second)
-            components_ = values(filter!(_filter_func, components_))
+            components_ = values(filter(_filter_func, components_))
         end
         if isnothing(components_)
             iter = FlattenIteratorWrapper(T, Vector{Base.ValueIterator}([]))
@@ -268,7 +268,7 @@ function get_components(
             components_ = [values(components.data[x]) for x in types]
         else
             _filter_func = x -> filter_func(x.second)
-            components_ = [values(filter!(_filter_func, components.data[x])) for x in types]
+            components_ = [values(filter(_filter_func, components.data[x])) for x in types]
         end
         iter = FlattenIteratorWrapper(T, components_)
     end
