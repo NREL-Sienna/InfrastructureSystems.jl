@@ -1,5 +1,9 @@
 # InfrastructureSystems
 
+## 0.6.2
+
+- Remove check for \_forecast in get_forecasts
+
 ## 0.6.1
 
 - Enable filtering function for get_components
