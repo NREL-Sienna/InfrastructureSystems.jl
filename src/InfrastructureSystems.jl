@@ -16,8 +16,6 @@ import TimeSeries
 # Every subtype must implement InfrastructureSystems.get_name() or have a field called name.
 abstract type InfrastructureSystemsType end
 
-get_name(value::InfrastructureSystemsType) = value.name
-
 """
 Return the internal forecast storage container or nothing, if the type doesn't store
 forecasts.
@@ -25,10 +23,10 @@ forecasts.
 Subtypes need to implement this method if they store forecasts.
 """
 function get_forecasts(value::T) where {T <: InfrastructureSystemsType}
-    # Older code relied on a field called _forecasts. Keep this until other packages comply
-    # with the new requirement for implementing this method.
-    return hasfield(T, :_forecasts) ? value._forecasts : nothing
+    return nothing
 end
+
+get_name(value::InfrastructureSystemsType) = value.name
 
 include("common.jl")
 include("internal.jl")
