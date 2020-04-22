@@ -15,7 +15,9 @@ makedocs(
 
 deploydocs(
     repo = "github.com/NREL-SIIP/InfrastructureSystems.jl.git",
-    branch = "gh-pages",
     target = "build",
-    make = nothing,
+    branch = "gh-pages",
+    devbranch = "master",
+    devurl = "dev",
+    versions = ["stable" => "v^", "v#.#"],
 )
