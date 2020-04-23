@@ -111,6 +111,9 @@ g_recorders = Dict{Symbol, Recorder}()
 Register a recorder to log events. Afterwards, calls to @record name <event-type>()
 will record the event as JSON in <name>.log.
 
+Callers should guarantee that [`unregister_recorder!`](@ref) is called to close the file
+handle.
+
 # Arguments
 - `name::Symbol`: name of recorder
 - `io::Union{Nothing, IO}`:  If nothing, record events in a file using name.

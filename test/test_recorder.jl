@@ -22,6 +22,7 @@
         IS.@record :test InfrastructureSystems.TestEvent("a", 1, 2.0)
         @test !isfile(filename)
     finally
+        IS.unregister_recorder!(:test)
         isfile(filename) && rm(filename)
     end
 end
@@ -43,6 +44,7 @@ end
 
         IS.show_recorder_events(devnull, InfrastructureSystems.TestEvent, filename)
     finally
+        IS.unregister_recorder!(:test)
         isfile(filename) && rm(filename)
     end
 end
@@ -72,6 +74,7 @@ end
             x -> x.val2 > 0,
         )
     finally
+        IS.unregister_recorder!(:test)
         isfile(filename) && rm(filename)
     end
 end
