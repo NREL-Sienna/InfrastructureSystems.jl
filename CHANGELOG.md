@@ -1,5 +1,10 @@
 # InfrastructureSystems
 
+## 0.6.3
+
+- Enable location set for hdf5 time series files
+- add get_parameter method 
+
 ## 0.6.2
 
 - Remove check for \_forecast in get_forecasts
