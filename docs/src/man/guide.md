@@ -116,6 +116,9 @@ components. Here are reasons to consider using it:
 - Time series data can optionally be stored fully in memory. Refer to the
 [SystemData](https://nrel-siip.github.io/InfrastructureSystems.jl/latest/api/InfrastructureSystems/#InfrastructureSystems.SystemData-Tuple{AbstractString})
 documentation.
+- InfrastructureSystems creates HDF5 files on the tmp filesystem by default.
+  This can be changed if the time series data is larger than the amount of
+  tmp space available. Refer to the `SystemData` link above.
 
 #### Instructions
 

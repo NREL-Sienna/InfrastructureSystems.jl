@@ -65,4 +65,8 @@ end
         test_get_subset(IS.make_time_series_storage(; in_memory = in_memory))
         test_clear(IS.make_time_series_storage(; in_memory = in_memory))
     end
+
+    test_add_remove(IS.make_time_series_storage(; in_memory = false, directory = "."))
+    test_get_subset(IS.make_time_series_storage(; in_memory = false, directory = "."))
+    test_clear(IS.make_time_series_storage(; in_memory = false, directory = "."))
 end

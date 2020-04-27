@@ -32,15 +32,24 @@ Construct SystemData to store components and time series data.
   descriptors.
 - `time_series_in_memory = false`: Controls whether time series data is stored in memory or
   in a file.
+- time_series_directory = nothing`: Controls what directory time series data is stored in.
+  Default is tempdir().
 """
-function SystemData(; validation_descriptor_file = nothing, time_series_in_memory = false)
+function SystemData(;
+    validation_descriptor_file = nothing,
+    time_series_in_memory = false,
+    time_series_directory = nothing,
+)
     if isnothing(validation_descriptor_file)
         validation_descriptors = Vector()
     else
         validation_descriptors = read_validation_descriptor(validation_descriptor_file)
     end
 
-    ts_storage = make_time_series_storage(; in_memory = time_series_in_memory)
+    ts_storage = make_time_series_storage(;
+        in_memory = time_series_in_memory,
+        directory = time_series_directory,
+    )
     components = Components(ts_storage, validation_descriptors)
     return SystemData(
         components,
