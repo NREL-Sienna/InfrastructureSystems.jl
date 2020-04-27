@@ -27,11 +27,22 @@ Constructs Hdf5TimeSeriesStorage.
 - `create_file::Bool`: create new file
 - `preserve_file::Bool`: if false, delete the file when the instance is GC'd.
 - `filename=nothing`: if nothing, create a temp file, else use this name.
+- `directory=nothing`: if set and filename is nothing, create a temp file in this
+   directory. Use tempdir() if not set. This should be set if the time series data is larger
+   than the tmp filesystem can hold.
 """
-function Hdf5TimeSeriesStorage(create_file::Bool, preserve_file::Bool; filename = nothing)
+function Hdf5TimeSeriesStorage(
+    create_file::Bool,
+    preserve_file::Bool;
+    filename = nothing,
+    directory = nothing,
+)
     if create_file
         if isnothing(filename)
-            filename, io = mktemp()
+            if isnothing(directory)
+                directory = tempdir()
+            end
+            filename, io = mktemp(directory)
             close(io)
         end
 

@@ -11,13 +11,17 @@ All subtypes must implement:
 """
 abstract type TimeSeriesStorage end
 
-function make_time_series_storage(; in_memory = false, filename = nothing)
+function make_time_series_storage(;
+    in_memory = false,
+    filename = nothing,
+    directory = nothing,
+)
     if in_memory
         storage = InMemoryTimeSeriesStorage()
     elseif !isnothing(filename)
         storage = Hdf5TimeSeriesStorage(; filename = filename)
     else
-        storage = Hdf5TimeSeriesStorage()
+        storage = Hdf5TimeSeriesStorage(true, false; directory = directory)
     end
 
     return storage
