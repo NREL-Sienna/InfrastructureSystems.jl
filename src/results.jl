@@ -8,6 +8,10 @@ function get_variables(r::T) where {T <: Results}
     error("get_variables must be implemented for $T")
 end
 
+function get_parameters(r::T) where {T <: Results}
+    error("get_parameters must be implemented for $T")
+end
+
 function get_total_cost(r::T) where {T <: Results}
     error("get_total_cost must be implemented for $T")
 end
