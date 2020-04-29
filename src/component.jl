@@ -218,7 +218,7 @@ function get_forecast_values(
     mod::Module,
     component::InfrastructureSystemsType,
     forecast::Forecast,
-)
+)::TimeSeries.TimeArray
     scaling_factors = get_data(forecast)
     label = get_label(forecast)
     accessor_func = getfield(mod, Symbol(label))
