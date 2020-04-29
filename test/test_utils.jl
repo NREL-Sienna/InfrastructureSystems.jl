@@ -26,7 +26,7 @@ end
     struct Foo{Float64, Int} end
     text = "Foo{Float64,Int64}"
     symbol = IS.parse_serialized_type(text)
-    @test eval(symbol) == Foo{Float64,Int64}
+    @test eval(symbol) == Foo{Float64, Int64}
 
     text = "Float64"
     symbol = IS.parse_serialized_type(text)
@@ -37,8 +37,30 @@ end
 
 @testset "Test checking of parametric expression characters" begin
     illegal_chars = (
-        '+', '=', '!', '@', '#', '$', '%', '^', '&', '*', '(', ')', '-', '\\', '"', '\'',
-        '[', ']', '|', '~', '<', '>', ';', ':'
+        '+',
+        '=',
+        '!',
+        '@',
+        '#',
+        '$',
+        '%',
+        '^',
+        '&',
+        '*',
+        '(',
+        ')',
+        '-',
+        '\\',
+        '"',
+        '\'',
+        '[',
+        ']',
+        '|',
+        '~',
+        '<',
+        '>',
+        ';',
+        ':',
     )
     for char in illegal_chars
         text = "foo" * char
