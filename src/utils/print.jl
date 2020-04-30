@@ -40,8 +40,22 @@ function Base.show(io::IO, ::MIME"text/html", components::Components)
     end
 end
 
+function Base.summary(forecasts::Forecasts)
+    return "$(typeof(forecasts)): $(length(forecasts))"
+end
+
+function Base.show(io::IO, ::MIME"text/plain", forecasts::Forecasts)
+    println(io, summary(forecasts))
+    for key in keys(forecasts.data)
+        println(
+            io,
+            "$(key.forecast_type): initial_time=$(key.initial_time) label=$(key.label)",
+        )
+    end
+end
+
 function Base.summary(forecast::Forecast)
-    return "$(typeof(forecast)) forecast"
+    return "$(typeof(forecast)) forecast ($length(forecast))"
 end
 
 function Base.summary(forecast::ForecastInternal)
@@ -97,14 +111,28 @@ end
 
 function Base.show(io::IO, ::MIME"text/plain", ist::InfrastructureSystemsType)
     print(io, summary(ist), ":")
-    for name in fieldnames(typeof(ist))
-        name == :internal && continue
-        val = getfield(ist, name)
+    for (name, field_type) in zip(fieldnames(typeof(ist)), fieldtypes(typeof(ist)))
+        if field_type <: InfrastructureSystemsInternal
+            continue
+        elseif field_type <: Forecasts || field_type <: InfrastructureSystemsType
+            val = summary(getfield(ist, name))
+        elseif field_type <: Vector{<:InfrastructureSystemsType}
+            val = summary(getfield(ist, name))
+        else
+            val = getfield(ist, name)
+        end
         # Not allowed to print `nothing`
         if isnothing(val)
             val = "nothing"
         end
         print(io, "\n   ", name, ": ", val)
+    end
+end
+
+function Base.show(io::IO, ::MIME"text/plain", ists::Vector{<:InfrastructureSystemsType})
+    println(io, summary(ists))
+    for ist in ists
+        println(io, "$(summary(ist))")
     end
 end
 
