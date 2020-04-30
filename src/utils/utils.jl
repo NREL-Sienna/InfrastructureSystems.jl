@@ -87,25 +87,78 @@ function strip_parametric_type(name::AbstractString)
 end
 
 """
-Return a Tuple of type and parameter types for cases where a parametric type has been
-encoded as a string. If the type is not parameterized then just return the type.
+    parse_serialized_type(type_str::AbstractString, mod::Module)
+
+Return a symbol parsed from a serialized string. Sanitizes the input first and attempts to
+ensure that the string does not contain code. The caller can call `eval` on the returned
+symbol.
+
+Throws ErrorException if the string contains invalid characters or code.
+
 """
-function separate_type_and_parameter_types(name::String)
-    parameters = Vector{String}()
-    index_start_brace = findfirst("{", name)
-    if isnothing(index_start_brace)
-        type_str = name
-    else
-        type_str = name[1:(index_start_brace.start - 1)]
-        index_close_brace = findfirst("}", name)
-        @assert index_start_brace.start < index_close_brace.start
-        for x in
-            split(name[(index_start_brace.start + 1):(index_close_brace.start - 1)], ",")
-            push!(parameters, strip(x))
-        end
+function parse_serialized_type(serialized_type::Union{Symbol, String})
+    if serialized_type isa Symbol
+        serialized_type = string(serialized_type)
     end
 
-    return (type_str, parameters)
+    _check_expression_characters(serialized_type)
+    val = Meta.parse(serialized_type)
+    if val isa Symbol
+        return val
+    elseif val isa Expr
+        _check_parametric_expression(val)
+    else
+        error("invalid type: $val")
+    end
+
+    return val
+end
+
+function _check_expression_characters(serialized_type::String)
+    # This will return false if the char is any symbol or operator other than
+    # '{', '}', and ',', which should be the only non-alphanumeric characters allowed
+    # in a type that we are handling during serialization (as of now).
+    # Look up an ASCII table to interpret these.
+    for char in serialized_type
+        is_valid = false
+        value = codepoint(char)
+        if value < 32
+            is_valid = false
+        elseif value >= 33 && value <= 47 && value != 44
+            is_valid = false
+        elseif value >= 58 && value <= 64
+            is_valid = false
+        elseif value >= 91 && value <= 94
+            is_valid = false
+        elseif value == 96 || value == 124 || value == 126
+            is_valid = false
+        elseif value == 124
+            is_valid = false
+        else
+            is_valid = true
+        end
+
+        if !is_valid
+            error("$char is not allowed in $serialized_type")
+        end
+    end
+end
+
+function _check_parametric_expression(expr::Expr)
+    # Recursively check the expression to make sure it only contains :curly and Symbols.
+    if expr.head != :curly
+        error("invalid expr: $expr")
+    end
+
+    for arg in expr.args
+        if arg isa Symbol
+            continue
+        elseif arg isa Expr
+            _check_parametric_expression(arg)
+        else
+            error("invalid expr: $arg")
+        end
+    end
 end
 
 """Converts an object deserialized from JSON into a Julia type, such as NamedTuple,

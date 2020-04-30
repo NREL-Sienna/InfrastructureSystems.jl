@@ -23,15 +23,56 @@ end
 end
 
 @testset "Test serialization utility functions" begin
-    text = "SomeType{ParameterType1, ParameterType2}"
-    type_str, parameters = IS.separate_type_and_parameter_types(text)
-    @test type_str == "SomeType"
-    @test parameters == ["ParameterType1", "ParameterType2"]
+    struct Foo{Float64, Int} end
+    text = "Foo{Float64,Int64}"
+    symbol = IS.parse_serialized_type(text)
+    @test eval(symbol) == Foo{Float64, Int64}
 
-    text = "SomeType"
-    type_str, parameters = IS.separate_type_and_parameter_types(text)
-    @test type_str == "SomeType"
-    @test parameters == []
+    text = "Float64"
+    symbol = IS.parse_serialized_type(text)
+    @test eval(symbol) == Float64
+
+    @test_throws ErrorException IS.parse_serialized_type("foo()")
+end
+
+@testset "Test checking of parametric expression characters" begin
+    illegal_chars = (
+        '+',
+        '=',
+        '!',
+        '@',
+        '#',
+        '$',
+        '%',
+        '^',
+        '&',
+        '*',
+        '(',
+        ')',
+        '-',
+        '\\',
+        '"',
+        '\'',
+        '[',
+        ']',
+        '|',
+        '~',
+        '<',
+        '>',
+        ';',
+        ':',
+    )
+    for char in illegal_chars
+        text = "foo" * char
+        @test_throws ErrorException IS._check_expression_characters(text)
+    end
+end
+
+@testset "Test checking of parametric expressions" begin
+    IS._check_parametric_expression(Meta.parse("Foo{Float64,Int64}"))
+    @test_throws ErrorException IS._check_parametric_expression(Meta.parse("foo()"))
+    expr = Meta.parse("Foo{Float64, print(\"hello\")}")
+    @test_throws ErrorException IS._check_parametric_expression(expr)
 end
 
 @testset "Test exported names" begin
