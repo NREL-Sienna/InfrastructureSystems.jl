@@ -1,5 +1,10 @@
 # InfrastructureSystems
 
+## 0.6.4
+
+- Add capability to deserialize parametrized structs 
+- Improve printing of structs 
+
 ## 0.6.3
 
 - Enable location set for hdf5 time series files
