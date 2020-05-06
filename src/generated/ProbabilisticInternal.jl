@@ -60,3 +60,18 @@ get_time_series_uuid(value::ProbabilisticInternal) = value.time_series_uuid
 get_horizon(value::ProbabilisticInternal) = value.horizon
 """Get ProbabilisticInternal internal."""
 get_internal(value::ProbabilisticInternal) = value.internal
+
+"""Set ProbabilisticInternal label."""
+set_label(value::ProbabilisticInternal, val) = value.label = val
+"""Set ProbabilisticInternal resolution."""
+set_resolution(value::ProbabilisticInternal, val) = value.resolution = val
+"""Set ProbabilisticInternal initial_time."""
+set_initial_time(value::ProbabilisticInternal, val) = value.initial_time = val
+"""Set ProbabilisticInternal percentiles."""
+set_percentiles(value::ProbabilisticInternal, val) = value.percentiles = val
+"""Set ProbabilisticInternal time_series_uuid."""
+set_time_series_uuid(value::ProbabilisticInternal, val) = value.time_series_uuid = val
+"""Set ProbabilisticInternal horizon."""
+set_horizon(value::ProbabilisticInternal, val) = value.horizon = val
+"""Set ProbabilisticInternal internal."""
+set_internal(value::ProbabilisticInternal, val) = value.internal = val

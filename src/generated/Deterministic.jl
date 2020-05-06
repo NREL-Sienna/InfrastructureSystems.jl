@@ -29,3 +29,8 @@ end
 get_label(value::Deterministic) = value.label
 """Get Deterministic data."""
 get_data(value::Deterministic) = value.data
+
+"""Set Deterministic label."""
+set_label(value::Deterministic, val) = value.label = val
+"""Set Deterministic data."""
+set_data(value::Deterministic, val) = value.data = val
