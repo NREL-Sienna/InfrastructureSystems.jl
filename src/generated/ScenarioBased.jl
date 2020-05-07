@@ -35,3 +35,10 @@ get_label(value::ScenarioBased) = value.label
 get_scenario_count(value::ScenarioBased) = value.scenario_count
 """Get ScenarioBased data."""
 get_data(value::ScenarioBased) = value.data
+
+"""Set ScenarioBased label."""
+set_label(value::ScenarioBased, val) = value.label = val
+"""Set ScenarioBased scenario_count."""
+set_scenario_count(value::ScenarioBased, val) = value.scenario_count = val
+"""Set ScenarioBased data."""
+set_data(value::ScenarioBased, val) = value.data = val

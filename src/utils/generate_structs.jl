@@ -63,6 +63,11 @@ end
 {{#create_docstring}}\"\"\"Get {{struct_name}} {{name}}.\"\"\"{{/create_docstring}}
 {{accessor}}(value::{{struct_name}}) = value.{{name}}
 {{/accessors}}
+
+{{#setters}}
+{{#create_docstring}}\"\"\"Set {{struct_name}} {{name}}.\"\"\"{{/create_docstring}}
+{{setter}}(value::{{struct_name}}, val) = value.{{name}} = val
+{{/setters}}
 """
 
 function read_json_data(filename::String)
@@ -74,10 +79,12 @@ end
 function generate_structs(directory, data::Vector; print_results = true)
     struct_names = Vector{String}()
     unique_accessor_functions = Set{String}()
+    unique_setter_functions = Set{String}()
 
     for item in data
         has_internal = false
         accessors = Vector{Dict}()
+        setters = Vector{Dict}()
         item["has_null_values"] = true
 
         item["constructor_func"] = item["struct_name"]
@@ -112,6 +119,7 @@ function generate_structs(directory, data::Vector; print_results = true)
                 create_docstring = true
             end
             accessor_name = accessor_module * "get_" * param["name"]
+            setter_name = accessor_module * "set_" * param["name"]
             push!(
                 accessors,
                 Dict(
@@ -120,8 +128,17 @@ function generate_structs(directory, data::Vector; print_results = true)
                     "create_docstring" => create_docstring,
                 ),
             )
+            push!(
+                setters,
+                Dict(
+                    "name" => param["name"],
+                    "setter" => setter_name,
+                    "create_docstring" => create_docstring,
+                ),
+            )
             if accessor_name != "internal" && accessor_module == ""
                 push!(unique_accessor_functions, accessor_name)
+                push!(unique_setter_functions, accessor_name)
             end
 
             if haskey(param, "internal_default")
@@ -142,6 +159,7 @@ function generate_structs(directory, data::Vector; print_results = true)
 
         item["parameters"] = parameters
         item["accessors"] = accessors
+        item["setters"] = setters
         item["needs_positional_constructor"] = has_internal
 
         filename = joinpath(directory, item["struct_name"] * ".jl")

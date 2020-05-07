@@ -73,6 +73,9 @@ Constructs Hdf5TimeSeriesStorage from an existing file.
 """
 function from_file(::Type{Hdf5TimeSeriesStorage}, filename::AbstractString)
     file_path = tempname() * ".h5"
+    if !isfile(filename)
+        error("time series storage $filename does not exist")
+    end
     cp(filename, file_path; force = true)
     storage = Hdf5TimeSeriesStorage(false, false; filename = file_path)
     @info "Loaded time series from storage file existing=$filename new=$(storage.file_path)"

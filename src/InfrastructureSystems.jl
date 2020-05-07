@@ -26,7 +26,10 @@ function get_forecasts(value::T) where {T <: InfrastructureSystemsType}
     return nothing
 end
 
+set_forecasts(value::T) where {T <: InfrastructureSystemsType} = nothing
+
 get_name(value::InfrastructureSystemsType) = value.name
+set_name(value::InfrastructureSystemsType, name) = value.name = name
 
 include("common.jl")
 include("internal.jl")

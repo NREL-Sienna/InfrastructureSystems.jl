@@ -35,3 +35,10 @@ get_label(value::Probabilistic) = value.label
 get_percentiles(value::Probabilistic) = value.percentiles
 """Get Probabilistic data."""
 get_data(value::Probabilistic) = value.data
+
+"""Set Probabilistic label."""
+set_label(value::Probabilistic, val) = value.label = val
+"""Set Probabilistic percentiles."""
+set_percentiles(value::Probabilistic, val) = value.percentiles = val
+"""Set Probabilistic data."""
+set_data(value::Probabilistic, val) = value.data = val
