@@ -26,6 +26,8 @@ function get_forecasts(value::T) where {T <: InfrastructureSystemsType}
     return nothing
 end
 
+set_forecasts(value::T) where {T <: InfrastructureSystemsType} = nothing
+
 get_name(value::InfrastructureSystemsType) = value.name
 
 include("common.jl")
