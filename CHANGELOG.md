@@ -1,5 +1,9 @@
 # InfrastructureSystems
 
+## 0.6.5
+
+- add code for auto generation of setter functions
+
 ## 0.6.4
 
 - Add capability to deserialize parametrized structs 
