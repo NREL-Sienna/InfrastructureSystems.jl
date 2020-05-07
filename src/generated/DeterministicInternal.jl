@@ -56,14 +56,14 @@ get_horizon(value::DeterministicInternal) = value.horizon
 get_internal(value::DeterministicInternal) = value.internal
 
 """Set DeterministicInternal label."""
-set_label(value::DeterministicInternal, val) = value.label = val
+set_label!(value::DeterministicInternal, val) = value.label = val
 """Set DeterministicInternal resolution."""
-set_resolution(value::DeterministicInternal, val) = value.resolution = val
+set_resolution!(value::DeterministicInternal, val) = value.resolution = val
 """Set DeterministicInternal initial_time."""
-set_initial_time(value::DeterministicInternal, val) = value.initial_time = val
+set_initial_time!(value::DeterministicInternal, val) = value.initial_time = val
 """Set DeterministicInternal time_series_uuid."""
-set_time_series_uuid(value::DeterministicInternal, val) = value.time_series_uuid = val
+set_time_series_uuid!(value::DeterministicInternal, val) = value.time_series_uuid = val
 """Set DeterministicInternal horizon."""
-set_horizon(value::DeterministicInternal, val) = value.horizon = val
+set_horizon!(value::DeterministicInternal, val) = value.horizon = val
 """Set DeterministicInternal internal."""
-set_internal(value::DeterministicInternal, val) = value.internal = val
+set_internal!(value::DeterministicInternal, val) = value.internal = val

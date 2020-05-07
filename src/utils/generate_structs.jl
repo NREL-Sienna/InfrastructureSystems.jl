@@ -132,7 +132,7 @@ function generate_structs(directory, data::Vector; print_results = true)
                 setters,
                 Dict(
                     "name" => param["name"],
-                    "setter" => setter_name,
+                    "setter" => setter_name * "!",
                     "create_docstring" => create_docstring,
                 ),
             )
