@@ -20,4 +20,5 @@ deploydocs(
     devbranch = "master",
     devurl = "dev",
     versions = ["stable" => "v^", "v#.#"],
+    push_preview = true,
 )
