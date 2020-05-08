@@ -2,7 +2,7 @@ using Documenter, InfrastructureSystems
 
 makedocs(
     modules = [InfrastructureSystems],
-    format = Documenter.HTML(),
+    format = Documenter.HTML(prettyurls = haskey(ENV, "GITHUB_ACTIONS"),),
     sitename = "InfrastructureSystems.jl",
     pages = Any[ # Compat: `Any` for 0.4 compat
         "Home" => "index.md",
