@@ -4,7 +4,7 @@
 [![codecov](https://codecov.io/gh/NREL-SIIP/InfrastructureSystems.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/NREL-SIIP/InfrastructureSystems.jl)
 [![Documentation](https://github.com/NREL-SIIP/InfrastructureSystems.jl/workflows/Documentation/badge.svg)](https://nrel-siip.github.io/InfrastructureSystems.jl/latest/)
 
-The `InfrastructureSystems.jl` package provides utilities to support data models for infrastructure modeling data using Julia. The `InfrastructureSystems.jl` package is used to support functionalities in [PowerSystems.jl](https://github.com/NREL-SIIP/PowerSystems.jl). This package is only compatible with Julia 1.2 or higher.
+The `InfrastructureSystems.jl` package provides utilities to support data models for infrastructure modeling in [NREL-SIIP](https://github.com/NREL-SIIP). The `InfrastructureSystems.jl` package is used to support functionalities in [PowerSystems.jl](https://github.com/NREL-SIIP/PowerSystems.jl) and [PowerSimulations.jl](https://github.com/NREL-SIIP/PowerSystems.jl). This package is only compatible with Julia 1.2 or higher.
 
 ## Development
 
