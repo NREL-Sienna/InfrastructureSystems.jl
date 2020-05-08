@@ -1,5 +1,9 @@
 using Documenter, InfrastructureSystems
 
+if haskey(ENV, "GITHUB_ACTIONS")
+    ENV["JULIA_DEBUG"] = "Documenter"
+end
+
 makedocs(
     modules = [InfrastructureSystems],
     format = Documenter.HTML(prettyurls = haskey(ENV, "GITHUB_ACTIONS"),),
