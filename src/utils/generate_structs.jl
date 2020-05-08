@@ -66,7 +66,7 @@ end
 
 {{#setters}}
 {{#create_docstring}}\"\"\"Set {{struct_name}} {{name}}.\"\"\"{{/create_docstring}}
-{{setter}}(value::{{struct_name}}, val) = value.{{name}} = val
+{{setter}}(value::{{struct_name}}, val::{{data_type}}) = value.{{name}} = val
 {{/setters}}
 """
 
@@ -128,14 +128,18 @@ function generate_structs(directory, data::Vector; print_results = true)
                     "create_docstring" => create_docstring,
                 ),
             )
-            push!(
-                setters,
-                Dict(
-                    "name" => param["name"],
-                    "setter" => setter_name * "!",
-                    "create_docstring" => create_docstring,
-                ),
-            )
+            include_setter = !get(param, "exclude_setter", false)
+            if include_setter
+                push!(
+                    setters,
+                    Dict(
+                        "name" => param["name"],
+                        "setter" => setter_name * "!",
+                        "data_type" => param["data_type"],
+                        "create_docstring" => create_docstring,
+                    ),
+                )
+            end
             if accessor_name != "internal" && accessor_module == ""
                 push!(unique_accessor_functions, accessor_name)
                 push!(unique_setter_functions, accessor_name)

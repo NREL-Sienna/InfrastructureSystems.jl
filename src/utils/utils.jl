@@ -194,7 +194,7 @@ function validate_exported_names(mod::Module)
 end
 
 """
-Recursively compares immutable struct values by performing == on each field in the struct.
+Recursively compares struct values by performing == on each field in the struct.
 When performing == on values of immutable structs Julia will perform === on
 each field.  This will return false if any field is mutable even if the
 contents are the same.  So, comparison of any InfrastructureSystems type with an array
