@@ -62,16 +62,16 @@ get_horizon(value::ScenarioBasedInternal) = value.horizon
 get_internal(value::ScenarioBasedInternal) = value.internal
 
 """Set ScenarioBasedInternal label."""
-set_label!(value::ScenarioBasedInternal, val) = value.label = val
+set_label!(value::ScenarioBasedInternal, val::String) = value.label = val
 """Set ScenarioBasedInternal resolution."""
-set_resolution!(value::ScenarioBasedInternal, val) = value.resolution = val
+set_resolution!(value::ScenarioBasedInternal, val::Dates.Period) = value.resolution = val
 """Set ScenarioBasedInternal initial_time."""
-set_initial_time!(value::ScenarioBasedInternal, val) = value.initial_time = val
+set_initial_time!(value::ScenarioBasedInternal, val::Dates.DateTime) = value.initial_time = val
 """Set ScenarioBasedInternal scenario_count."""
-set_scenario_count!(value::ScenarioBasedInternal, val) = value.scenario_count = val
+set_scenario_count!(value::ScenarioBasedInternal, val::Int64) = value.scenario_count = val
 """Set ScenarioBasedInternal time_series_uuid."""
-set_time_series_uuid!(value::ScenarioBasedInternal, val) = value.time_series_uuid = val
+set_time_series_uuid!(value::ScenarioBasedInternal, val::UUIDs.UUID) = value.time_series_uuid = val
 """Set ScenarioBasedInternal horizon."""
-set_horizon!(value::ScenarioBasedInternal, val) = value.horizon = val
+set_horizon!(value::ScenarioBasedInternal, val::Int) = value.horizon = val
 """Set ScenarioBasedInternal internal."""
-set_internal!(value::ScenarioBasedInternal, val) = value.internal = val
+set_internal!(value::ScenarioBasedInternal, val::InfrastructureSystemsInternal) = value.internal = val
