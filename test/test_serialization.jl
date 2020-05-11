@@ -18,32 +18,29 @@ function validate_serialization(sys::IS.SystemData)
     end
     close(io)
 
-    ts_file = nothing
-    try
-        ts_file = open(path) do file
-            JSON2.read(file).time_series_storage_file
-        end
-        sys2 = IS.SystemData(path)
-        return IS.compare_values(sys, sys2)
-    finally
-        @debug "delete temp file" path
-        rm(path)
-        rm(ts_file)
+    # Make sure the code supports the files changing directories.
+    test_dir = mktempdir()
+    path = mv(path, joinpath(test_dir, path))
+    mv(IS.TIME_SERIES_STORAGE_FILE, joinpath(test_dir, IS.TIME_SERIES_STORAGE_FILE))
+    mv(IS.VALIDATION_DESCRIPTOR_FILE, joinpath(test_dir, IS.VALIDATION_DESCRIPTOR_FILE))
+
+    ts_file = open(path) do file
+        JSON2.read(file).time_series_storage_file
     end
+    sys2 = IS.SystemData(path)
+    return IS.compare_values(sys, sys2)
 end
 
 @testset "Test JSON serialization of system data" begin
     for in_memory in (true, false)
         sys = create_system_data(; with_forecasts = true, time_series_in_memory = in_memory)
         @test validate_serialization(sys)
-        text = JSON2.write(sys)
-        @test length(text) > 0
     end
 end
 
 @testset "Test prepare_for_serialization" begin
     sys = create_system_data(; with_forecasts = true)
-    IS.prepare_for_serialization!(sys, joinpath("dir1", "dir2", "sys.json"))
-    @test sys.time_series_storage_file ==
-          joinpath("dir1", "dir2", "sys_" * IS.TIME_SERIES_STORAGE_FILE)
+    directory = joinpath("dir1", "dir2")
+    IS.prepare_for_serialization!(sys, joinpath(directory, "sys.json"))
+    @test IS.get_ext(sys.internal)["serialization_directory"] == directory
 end
