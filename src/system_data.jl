@@ -1,5 +1,6 @@
 
 const TIME_SERIES_STORAGE_FILE = "time_series_storage.h5"
+const VALIDATION_DESCRIPTOR_FILE = "validation_descriptors.json"
 
 """
     mutable struct SystemData <: InfrastructureSystemsType
@@ -16,9 +17,8 @@ Container for system components and time series data
 mutable struct SystemData <: InfrastructureSystemsType
     components::Components
     forecast_metadata::ForecastMetadata
-    validation_descriptors::Vector
     time_series_storage::TimeSeriesStorage
-    time_series_storage_file::Union{Nothing, String}  # only valid during serialization
+    validation_descriptors::Vector
     internal::InfrastructureSystemsInternal
 end
 
@@ -54,9 +54,8 @@ function SystemData(;
     return SystemData(
         components,
         ForecastMetadata(),
-        validation_descriptors,
         ts_storage,
-        nothing,
+        validation_descriptors,
         InfrastructureSystemsInternal(),
     )
 end
@@ -71,9 +70,8 @@ function SystemData(
     return SystemData(
         components,
         forecast_metadata,
-        validation_descriptors,
         time_series_storage,
-        nothing,
+        validation_descriptors,
         internal,
     )
 end
@@ -81,10 +79,25 @@ end
 """
     SystemData(filename::AbstractString)
 
-Deserialize SystemData from a JSON file.
+Construct SystemData from a JSON file.
 """
 function SystemData(filename::AbstractString)
     return from_json(SystemData, filename)
+end
+
+"""Deserializes a SystemData from a JSON file."""
+function from_json(::Type{SystemData}, filename::String)
+    # File paths in the JSON are relative. Temporarily change to this directory in order
+    # to find all dependent files.
+    orig_dir = pwd()
+    cd(dirname(filename))
+    try
+        return open(filename) do io
+            from_json(io, SystemData)
+        end
+    finally
+        cd(orig_dir)
+    end
 end
 
 """
@@ -504,11 +517,7 @@ function iterate_forecasts(data::SystemData)
     Channel() do channel
         for component in iterate_components_with_forecasts(data.components)
             for forecast in iterate_forecasts(component)
-                time_series = get_time_series(
-                    data.time_series_storage,
-                    get_time_series_uuid(forecast),
-                )
-                put!(channel, make_public_forecast(forecast, time_series))
+                put!(channel, forecast)
             end
         end
     end
@@ -583,10 +592,29 @@ end
 Parent object should call this prior to serialization so that SystemData can store the
 appropriate path information for the time series data.
 """
-function prepare_for_serialization!(data::SystemData, filename::AbstractString)
-    dir = dirname(filename)
-    base = splitext(basename(filename))[1]
-    data.time_series_storage_file = joinpath(dir, base * "_" * TIME_SERIES_STORAGE_FILE)
+function prepare_for_serialization!(
+    data::SystemData,
+    filename::AbstractString;
+    force = false,
+)
+    directory = dirname(filename)
+    if !isdir(directory)
+        mkpath(directory)
+    end
+
+    files = [
+        filename,
+        joinpath(directory, TIME_SERIES_STORAGE_FILE),
+        joinpath(directory, VALIDATION_DESCRIPTOR_FILE),
+    ]
+    for file in files
+        if !force && isfile(file)
+            error("$file already exists. Set force=true to overwrite.")
+        end
+    end
+
+    ext = get_ext(data.internal)
+    ext["serialization_directory"] = directory
 end
 
 function JSON2.write(io::IO, data::SystemData)
@@ -598,23 +626,29 @@ function JSON2.write(data::SystemData)
 end
 
 function encode_for_json(data::SystemData)
-    if isnothing(data.time_series_storage_file)
-        data.time_series_storage_file = TIME_SERIES_STORAGE_FILE
-    end
-
     json_data = Dict()
-    for field in (
-        :components,
-        :forecast_metadata,
-        :validation_descriptors,
-        :time_series_storage_file,
-        :internal,
-    )
+    for field in (:components, :forecast_metadata, :internal)
         json_data[string(field)] = getfield(data, field)
     end
 
-    serialize(data.time_series_storage, data.time_series_storage_file)
+    ext = get_ext(data.internal)
+    if !haskey(ext, "serialization_directory")
+        error("prepare_for_serialization! was not called")
+    end
+    directory = pop!(ext, "serialization_directory")
+    isempty(ext) && clear_ext(data.internal)
+
+    time_series_storage_file = joinpath(directory, TIME_SERIES_STORAGE_FILE)
+    serialize(data.time_series_storage, time_series_storage_file)
+    json_data["time_series_storage_file"] = TIME_SERIES_STORAGE_FILE
     json_data["time_series_storage_type"] = string(typeof(data.time_series_storage))
+    descriptor_file = joinpath(directory, VALIDATION_DESCRIPTOR_FILE)
+    text = JSON.json(data.validation_descriptors)
+    open(descriptor_file, "w") do io
+        write(io, text)
+    end
+    json_data["validation_descriptor_file"] = VALIDATION_DESCRIPTOR_FILE
+
     return json_data
 end
 
@@ -630,6 +664,14 @@ function deserialize(
     raw::NamedTuple,
 ) where {T <: InfrastructureSystemsType}
     forecast_metadata = convert_type(ForecastMetadata, raw.forecast_metadata)
+    # The code calling this function must have changed to this directory.
+    if !isfile(raw.time_series_storage_file)
+        error("time series file $(raw.time_series_storage_file) does not exist")
+    end
+    if !isfile(raw.validation_descriptor_file)
+        error("validation descriptor file $(raw.validation_descriptor_file) does not exist")
+    end
+    validation_descriptors = read_validation_descriptor(raw.validation_descriptor_file)
 
     if strip_module_name(raw.time_series_storage_type) == "InMemoryTimeSeriesStorage"
         hdf5_storage = Hdf5TimeSeriesStorage(raw.time_series_storage_file)
@@ -637,11 +679,6 @@ function deserialize(
     else
         time_series_storage = from_file(Hdf5TimeSeriesStorage, raw.time_series_storage_file)
     end
-
-    # OPT: This looks odd and is wasteful.
-    # JSON2 creates NamedTuples recursively. JSON creates dicts, which is what we need.
-    # Could be optimized.
-    validation_descriptors = JSON.parse(JSON2.write(raw.validation_descriptors))
 
     internal = convert_type(InfrastructureSystemsInternal, raw.internal)
     sys =

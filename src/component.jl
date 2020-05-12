@@ -88,7 +88,7 @@ function get_forecast(
         throw(ArgumentError("no forecasts are stored in $component"))
     end
 
-    first_forecast = iterate(iterate_forecasts(component))[1]
+    first_forecast = iterate(iterate_forecasts(ForecastInternal, component))[1]
     resolution = get_resolution(first_forecast)
     sys_horizon = get_horizon(first_forecast)
 
@@ -312,7 +312,7 @@ function generate_initial_times(
     # This throws if no forecasts.
     existing_initial_times = get_forecast_initial_times(component)
 
-    first_forecast = iterate(iterate_forecasts(component))[1]
+    first_forecast = iterate(iterate_forecasts(ForecastInternal, component))[1]
     resolution = Dates.Second(get_resolution(first_forecast))
     sys_horizon = get_horizon(first_forecast)
 
@@ -350,7 +350,7 @@ function are_forecasts_contiguous(component::InfrastructureSystemsType)
     existing_initial_times = get_forecast_initial_times(component)
     first_initial_time = existing_initial_times[1]
 
-    first_forecast = iterate(iterate_forecasts(component))[1]
+    first_forecast = iterate(iterate_forecasts(ForecastInternal, component))[1]
     resolution = Dates.Second(get_resolution(first_forecast))
     horizon = get_horizon(first_forecast)
     total_horizon = horizon * length(existing_initial_times)
@@ -440,7 +440,27 @@ function prepare_for_removal!(component::InfrastructureSystemsType)
     @debug "cleared all forecast data from" component
 end
 
+"""
+Returns an iterator of Forecast instances attached to the component.
+"""
 function iterate_forecasts(component::InfrastructureSystemsType)
+    container = get_forecasts(component)
+    forecast_keys = sort!(collect(keys(container.data)), by = x -> x.initial_time)
+
+    Channel() do channel
+        for key in forecast_keys
+            storage = _get_time_series_storage(component)
+            forecast = container.data[key]
+            time_series = get_time_series(storage, get_time_series_uuid(forecast))
+            put!(channel, make_public_forecast(forecast, time_series))
+        end
+    end
+end
+
+"""
+Returns an iterator of ForecastInternal instances attached to the component.
+"""
+function iterate_forecasts(::Type{ForecastInternal}, component::InfrastructureSystemsType)
     container = get_forecasts(component)
     forecast_keys = sort!(collect(keys(container.data)), by = x -> x.initial_time)
 
