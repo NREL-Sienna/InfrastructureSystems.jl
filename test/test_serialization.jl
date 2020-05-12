@@ -5,24 +5,27 @@ function validate_serialization(sys::IS.SystemData)
     #path, io = mktemp()
     # For some reason files aren't getting deleted when written to /tmp. Using current dir.
     path = "test_system_serialization.json"
-    io = open(path, "w")
     @info "Serializing to $path"
 
     try
+        if isfile(path)
+            rm(path)
+        end
         IS.prepare_for_serialization!(sys, path)
-        IS.to_json(io, sys)
+        IS.to_json(sys, path)
     catch
-        close(io)
         rm(path)
         rethrow()
     end
-    close(io)
 
     # Make sure the code supports the files changing directories.
     test_dir = mktempdir()
     path = mv(path, joinpath(test_dir, path))
-    mv(IS.TIME_SERIES_STORAGE_FILE, joinpath(test_dir, IS.TIME_SERIES_STORAGE_FILE))
-    mv(IS.VALIDATION_DESCRIPTOR_FILE, joinpath(test_dir, IS.VALIDATION_DESCRIPTOR_FILE))
+
+    t_file = splitext(basename(path))[1] * "_" * IS.TIME_SERIES_STORAGE_FILE
+    mv(t_file, joinpath(test_dir, t_file))
+    v_file = splitext(basename(path))[1] * "_" * IS.VALIDATION_DESCRIPTOR_FILE
+    mv(v_file, joinpath(test_dir, v_file))
 
     ts_file = open(path) do file
         JSON2.read(file).time_series_storage_file
