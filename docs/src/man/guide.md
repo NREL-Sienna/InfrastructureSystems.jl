@@ -112,6 +112,14 @@ components. Here are reasons to consider using it:
 - Supports parsing raw data files of several formats as well as data stored in
   `TimeSeries.TimeArray` and `DataFrames.DataFrame` objects.
 
+> :warning: **You must reimplement deepcopy if you use HDF5**
+
+If you store an instance of ``SystemData`` within your system and then a user
+calls ``deepcopy`` on a system, the .h5 file will not be copied. The new and
+old instances will have references to the same file. You will need to
+reimplement ``deepcopy`` to handle this. One solution is to serialize and then
+deserialize the system.
+
 *Notes*:
 - Time series data can optionally be stored fully in memory. Refer to the
 [SystemData](https://nrel-siip.github.io/InfrastructureSystems.jl/latest/api/InfrastructureSystems/#InfrastructureSystems.SystemData-Tuple{AbstractString})
