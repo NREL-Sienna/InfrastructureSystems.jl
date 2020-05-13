@@ -90,7 +90,12 @@ function from_json(::Type{SystemData}, filename::String)
     # File paths in the JSON are relative. Temporarily change to this directory in order
     # to find all dependent files.
     orig_dir = pwd()
-    cd(dirname(filename))
+    new_dir = dirname(filename)
+    if isempty(new_dir)
+        new_dir = "."
+    end
+
+    cd(new_dir)
     try
         return open(filename) do io
             from_json(io, SystemData)
@@ -615,6 +620,7 @@ function prepare_for_serialization!(
 
     ext = get_ext(data.internal)
     ext["serialization_directory"] = directory
+    ext["basename"] = splitext(basename(filename))[1]
 end
 
 function JSON2.write(io::IO, data::SystemData)
@@ -636,18 +642,22 @@ function encode_for_json(data::SystemData)
         error("prepare_for_serialization! was not called")
     end
     directory = pop!(ext, "serialization_directory")
+    base = pop!(ext, "basename")
     isempty(ext) && clear_ext(data.internal)
 
-    time_series_storage_file = joinpath(directory, TIME_SERIES_STORAGE_FILE)
+    time_series_base_name = base * "_" * TIME_SERIES_STORAGE_FILE
+    time_series_storage_file = joinpath(directory, time_series_base_name)
     serialize(data.time_series_storage, time_series_storage_file)
-    json_data["time_series_storage_file"] = TIME_SERIES_STORAGE_FILE
+    json_data["time_series_storage_file"] = time_series_base_name
     json_data["time_series_storage_type"] = string(typeof(data.time_series_storage))
-    descriptor_file = joinpath(directory, VALIDATION_DESCRIPTOR_FILE)
+
+    descriptor_base_name = base * "_" * VALIDATION_DESCRIPTOR_FILE
+    descriptor_file = joinpath(directory, descriptor_base_name)
     text = JSON.json(data.validation_descriptors)
     open(descriptor_file, "w") do io
         write(io, text)
     end
-    json_data["validation_descriptor_file"] = VALIDATION_DESCRIPTOR_FILE
+    json_data["validation_descriptor_file"] = descriptor_base_name
 
     return json_data
 end
