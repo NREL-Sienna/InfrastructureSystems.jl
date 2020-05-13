@@ -516,6 +516,7 @@ end
 function clear_forecasts!(data::SystemData)
     clear_forecasts!(data.components)
     clear_time_series!(data.time_series_storage)
+    reset_info!(data.forecast_metadata)
 end
 
 function iterate_forecasts(data::SystemData)
