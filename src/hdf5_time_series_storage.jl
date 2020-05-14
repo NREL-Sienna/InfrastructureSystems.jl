@@ -17,7 +17,7 @@ end
 Constructs Hdf5TimeSeriesStorage by creating a temp file.
 """
 function Hdf5TimeSeriesStorage()
-    return Hdf5TimeSeriesStorage(true, false)
+    return Hdf5TimeSeriesStorage(true)
 end
 
 """
@@ -25,18 +25,12 @@ Constructs Hdf5TimeSeriesStorage.
 
 # Arguments
 - `create_file::Bool`: create new file
-- `preserve_file::Bool`: if false, delete the file when the instance is GC'd.
 - `filename=nothing`: if nothing, create a temp file, else use this name.
 - `directory=nothing`: if set and filename is nothing, create a temp file in this
    directory. Use tempdir() if not set. This should be set if the time series data is larger
    than the tmp filesystem can hold.
 """
-function Hdf5TimeSeriesStorage(
-    create_file::Bool,
-    preserve_file::Bool;
-    filename = nothing,
-    directory = nothing,
-)
+function Hdf5TimeSeriesStorage(create_file::Bool; filename = nothing, directory = nothing)
     if create_file
         if isnothing(filename)
             if isnothing(directory)
@@ -54,10 +48,6 @@ function Hdf5TimeSeriesStorage(
 
     @debug "Constructed new Hdf5TimeSeriesStorage" storage.file_path
 
-    if !preserve_file
-        finalizer(_cleanup, storage)
-    end
-
     return storage
 end
 
@@ -72,12 +62,13 @@ end
 Constructs Hdf5TimeSeriesStorage from an existing file.
 """
 function from_file(::Type{Hdf5TimeSeriesStorage}, filename::AbstractString)
-    file_path = tempname() * ".h5"
+    file_path, io = mktemp()
+    close(io)
     if !isfile(filename)
         error("time series storage $filename does not exist")
     end
     cp(filename, file_path; force = true)
-    storage = Hdf5TimeSeriesStorage(false, false; filename = file_path)
+    storage = Hdf5TimeSeriesStorage(false; filename = file_path)
     @info "Loaded time series from storage file existing=$filename new=$(storage.file_path)"
     return storage
 end

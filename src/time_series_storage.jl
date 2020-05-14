@@ -21,7 +21,7 @@ function make_time_series_storage(;
     elseif !isnothing(filename)
         storage = Hdf5TimeSeriesStorage(; filename = filename)
     else
-        storage = Hdf5TimeSeriesStorage(true, false; directory = directory)
+        storage = Hdf5TimeSeriesStorage(true; directory = directory)
     end
 
     return storage
