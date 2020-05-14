@@ -97,7 +97,7 @@ function from_json(::Type{SystemData}, filename::String)
 
     cd(new_dir)
     try
-        return open(filename) do io
+        return open(basename(filename)) do io
             from_json(io, SystemData)
         end
     finally
