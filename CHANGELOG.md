@@ -1,5 +1,9 @@
 # InfrastructureSystems
 
+## 0.8.2
+
+- Bug fix on serialization
+
 ## 0.8.1
 
 - Bug fix on serialization
