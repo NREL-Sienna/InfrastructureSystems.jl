@@ -6,7 +6,7 @@ template = """
 This file is auto-generated. Do not edit.
 =#
 \"\"\"
-    mutable struct {{struct_name}}{{#parametric}}{T <: {{parametric}}}{{/parametric}} <: {{supertype}}
+    mutable struct {{struct_name}}{{#parametric}}{T <: {{parametric}}}{{/parametric}}{{#supertype}} <: {{supertype}}{{/supertype}}{{^supertype}}{{/supertype}}
         {{#parameters}}
         {{name}}::{{{data_type}}}
         {{/parameters}}
@@ -19,7 +19,7 @@ This file is auto-generated. Do not edit.
 - `{{name}}::{{{data_type}}}`{{#comment}}: {{{comment}}}{{/comment}}{{#valid_range}}, validation range: {{valid_range}}{{/valid_range}}{{#validation_action}}, action if invalid: {{validation_action}}{{/validation_action}}
 {{/parameters}}
 \"\"\"
-mutable struct {{struct_name}}{{#parametric}}{T <: {{parametric}}}{{/parametric}} <: {{supertype}}
+mutable struct {{struct_name}}{{#parametric}}{T <: {{parametric}}}{{/parametric}}{{#supertype}} <: {{supertype}}{{/supertype}}{{^supertype}}{{/supertype}}
     {{#parameters}}
     {{#comment}}"{{{comment}}}"\n    {{/comment}}{{name}}::{{{data_type}}}
     {{/parameters}}
@@ -245,4 +245,65 @@ function test_generated_structs(descriptor_file, existing_dir)
     end
 
     return matched
+end
+
+function generate_struct_descriptors_from_openapi(
+    input_files::Vector{String},
+    output_directory::AbstractString;
+    print_results = true,
+)
+    structs = Vector{Dict}()
+    for input_file in input_files
+        data = read_json_data(input_file)
+        generate_struct_descriptors!(structs, data, print_results = print_results)
+    end
+
+    text = JSON.json(structs)
+    output_file = joinpath(output_directory, "structs.json")
+    open(output_file, "w") do io
+        write(io, text)
+    end
+
+    println("Wrote structs to $output_file")
+    generate_structs(output_file, output_directory)
+end
+
+function generate_struct_descriptors!(structs, data::Dict; print_results = true)
+    struct_names = collect(keys(data["components"]["schemas"]))
+
+    for struct_name in struct_names
+        struct_info =
+            Dict{String, Any}("struct_name" => struct_name, "fields" => Vector{Dict}())
+        for (property, property_info) in
+            data["components"]["schemas"][struct_name]["properties"]
+            field_info = Dict{String, Any}("name" => property)
+            if haskey(property_info, "description")
+                field_info["comment"] = property_info["description"]
+            end
+            if haskey(property_info, "example")
+                field_info["null_value"] = property_info["example"]
+            end
+            field_info["data_type"] = _translate_type(property_info["type"], property_info)
+            push!(struct_info["fields"], field_info)
+        end
+        push!(structs, struct_info)
+    end
+end
+
+function _translate_type(openapi_type, property_info)
+    if openapi_type == "integer"
+        return "Int"
+    elseif openapi_type == "number"
+        return "Float64"
+    elseif openapi_type == "boolean"
+        return "Bool"
+    elseif openapi_type == "string"
+        return "String"
+    elseif openapi_type == "array"
+        item_type = _translate_type(property_info["items"]["type"], property_info)
+        return "Vector{$item_type}"
+    else
+        error("not supported: $openapi_type")
+        # TODO: object
+    end
 end
