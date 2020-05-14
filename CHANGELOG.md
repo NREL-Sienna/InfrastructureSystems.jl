@@ -2,6 +2,10 @@
 
 ## 0.8.2
 
+- Add reset to clear forecasts call
+
+## 0.8.2
+
 - Bug fix on serialization
 
 ## 0.8.1
