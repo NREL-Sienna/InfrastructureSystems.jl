@@ -169,7 +169,7 @@ end
 Get the component of type T with name. Returns nothing if no component matches. If T is an abstract
 type then the names of components across all subtypes of T must be unique.
 
-See [`get_components_by_name`](@ref) if the concrete type is unknown.
+See [`get_components_by_name`](@ref) for abstract types with non-unique names across subtypes.
 
 Throws ArgumentError if T is not a concrete type and there is more than one component with
     requested name
