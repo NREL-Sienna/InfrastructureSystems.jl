@@ -2,7 +2,7 @@
 
 ## 0.9.0
 
-- Enable passing AbstractType to get_component
+- Enable passing AbstractType to get_component and update to error message
 
 ## 0.8.3
 
