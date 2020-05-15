@@ -13,7 +13,6 @@ struct AdditionalTestComponent <: InfrastructureSystemsType
     internal::InfrastructureSystemsInternal
 end
 
-
 function TestComponent(name, val)
     return TestComponent(name, val, Forecasts(), InfrastructureSystemsInternal())
 end
@@ -21,7 +20,6 @@ end
 function AdditionalTestComponent(name, val)
     return AdditionalTestComponent(name, val, Forecasts(), InfrastructureSystemsInternal())
 end
-
 
 get_val(component::TestComponent) = component.val
 
