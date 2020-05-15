@@ -178,7 +178,11 @@ function get_component(
     name::AbstractString,
 )::Union{T, Nothing} where {T <: InfrastructureSystemsType}
     if !isconcretetype(T)
-        throw(ArgumentError("get_component only supports concrete types: $T"))
+        components = get_components(T, components, x -> get_name(x) == name)
+        if length(components) > 1
+            throw(ArgumentError("More than one components of type $T"))
+        end
+        return first(components)
     end
 
     if !haskey(components.data, T)
