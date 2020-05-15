@@ -166,8 +166,8 @@ end
                   name::AbstractString
                  )::Union{T, Nothing} where T <: InfrastructureSystemsType
 
-Get the component of type T with name. Returns nothing if no component matches. If an Abastract
-    Type T is passed the names should be unique accross Abastract Types
+Get the component of type T with name. Returns nothing if no component matches. If T is an abstract
+type then the names of components across all subtypes of T must be unique.
 
 See [`get_components_by_name`](@ref) if the concrete type is unknown.
 
