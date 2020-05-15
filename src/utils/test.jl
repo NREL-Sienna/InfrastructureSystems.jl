@@ -6,8 +6,19 @@ struct TestComponent <: InfrastructureSystemsType
     internal::InfrastructureSystemsInternal
 end
 
+struct AdditionalTestComponent <: InfrastructureSystemsType
+    name::AbstractString
+    val::Int
+    forecasts::Forecasts
+    internal::InfrastructureSystemsInternal
+end
+
 function TestComponent(name, val)
     return TestComponent(name, val, Forecasts(), InfrastructureSystemsInternal())
+end
+
+function AdditionalTestComponent(name, val)
+    return AdditionalTestComponent(name, val, Forecasts(), InfrastructureSystemsInternal())
 end
 
 get_val(component::TestComponent) = component.val

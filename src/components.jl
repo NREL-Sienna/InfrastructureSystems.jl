@@ -166,11 +166,13 @@ end
                   name::AbstractString
                  )::Union{T, Nothing} where T <: InfrastructureSystemsType
 
-Get the component of concrete type T with name. Returns nothing if no component matches.
+Get the component of type T with name. Returns nothing if no component matches. If T is an abstract
+type then the names of components across all subtypes of T must be unique.
 
-See [`get_components_by_name`](@ref) if the concrete type is unknown.
+See [`get_components_by_name`](@ref) for abstract types with non-unique names across subtypes.
 
-Throws ArgumentError if T is not a concrete type.
+Throws ArgumentError if T is not a concrete type and there is more than one component with
+    requested name
 """
 function get_component(
     ::Type{T},
@@ -178,7 +180,11 @@ function get_component(
     name::AbstractString,
 )::Union{T, Nothing} where {T <: InfrastructureSystemsType}
     if !isconcretetype(T)
-        throw(ArgumentError("get_component only supports concrete types: $T"))
+        components = get_components_by_name(T, components, name)
+        if length(components) > 1
+            throw(ArgumentError("More than one abstract component of type $T with name $name in the system. Operation can't continue"))
+        end
+        return isempty(components) ? nothing : first(components)
     end
 
     if !haskey(components.data, T)

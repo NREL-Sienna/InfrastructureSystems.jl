@@ -113,6 +113,9 @@ end
     @test component.name == "component1"
     @test component.val == 5
 
+    same_name_component = IS.AdditionalTestComponent("component1", 5)
+    IS.add_component!(container, same_name_component)
+
     @test_throws ArgumentError IS.get_component(
         IS.InfrastructureSystemsType,
         container,
