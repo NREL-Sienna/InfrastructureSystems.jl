@@ -182,7 +182,7 @@ function get_component(
     if !isconcretetype(T)
         components = get_components_by_name(T, components, name)
         if length(components) > 1
-            @throw(ArgumentError("More than one abstract component of type $T with name $name in the system. Operation can't continue"))
+            throw(ArgumentError("More than one abstract component of type $T with name $name in the system. Operation can't continue"))
         end
         return isempty(components) ? nothing : first(components)
     end
