@@ -1,6 +1,10 @@
 # InfrastructureSystems
 
-## 0.8.2
+## 0.9.0
+
+- Enable passing AbstractType to get_component
+
+## 0.8.3
 
 - Add reset to clear forecasts call
 
@@ -14,7 +18,7 @@
 
 ## 0.8.0
 
-- Force types in the setter functions. 
+- Force types in the setter functions.
 
 ## 0.7.0
 
@@ -26,13 +30,13 @@
 
 ## 0.6.4
 
-- Add capability to deserialize parametrized structs 
-- Improve printing of structs 
+- Add capability to deserialize parametrized structs
+- Improve printing of structs
 
 ## 0.6.3
 
 - Enable location set for hdf5 time series files
-- add get_parameter method 
+- add get_parameter method
 
 ## 0.6.2
 
