@@ -177,5 +177,68 @@
       }
     ],
     "supertype": "Forecast"
+  },
+  {
+    "struct_name": "CostCoefficient",
+    "docstring": "A forecast for cost function data field in a Component.",
+    "fields": [
+      {
+        "name": "label",
+        "data_type": "String",
+        "comment": "label of component parameter forecasted"
+      },
+      {
+        "name": "break_points",
+        "data_type": "Int64",
+        "comment": "Number of break points"
+      },
+      {
+        "name": "data",
+        "data_type": "TimeSeries.TimeArray",
+        "comment": "timestamp - scalingfactor"
+      }
+    ],
+    "supertype": "Forecast"
+  },
+  {
+    "struct_name": "CostCoefficientInternal",
+    "docstring": "A Discrete Scenario Based forecast for a particular data field in a Component.",
+    "fields": [
+      {
+        "name": "label",
+        "data_type": "String",
+        "comment": "label of component parameter forecasted"
+      },
+      {
+        "name": "resolution",
+        "data_type": "Dates.Period"
+      },
+      {
+        "name": "initial_time",
+        "data_type": "Dates.DateTime",
+        "comment": "forecast availability time"
+      },
+      {
+        "name": "break_points",
+        "data_type": "Int64",
+        "comment": "Number of break points"
+      },
+      {
+        "name": "time_series_uuid",
+        "data_type": "UUIDs.UUID",
+        "comment": "reference to time series data; timestamp - scalingfactor"
+      },
+      {
+        "name": "horizon",
+        "data_type": "Int",
+        "comment": "length of this forecast"
+      },
+      {
+        "name": "internal",
+        "data_type": "InfrastructureSystemsInternal",
+        "internal_default": "InfrastructureSystemsInternal()"
+      }
+    ],
+    "supertype": "ForecastInternal"
   }
 ]
