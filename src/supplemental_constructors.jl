@@ -195,7 +195,7 @@ end
 function CostCoefficient(label::String, data::TimeSeries.TimeArray)
     initial_time = TimeSeries.timestamp(data)[1]
     resolution = get_resolution(data)
-    breakpoints = length(TimeSeries.colnames(data))/2
+    breakpoints = length(TimeSeries.colnames(data)) / 2
     return CostCoefficient(label, breakpoints, data)
 end
 
@@ -211,7 +211,8 @@ function CostCoefficient(
     time_steps::Int,
 )
     name = collect(Iterators.flatten([
-        (Symbol("cost_bp$(ix)"), Symbol("load_bp$ix")) for ix in 1:break_points]))
+        (Symbol("cost_bp$(ix)"), Symbol("load_bp$ix")) for ix in 1:break_points
+    ]))
     data = TimeSeries.TimeArray(
         initial_time:resolution:(initial_time + resolution * (time_steps - 1)),
         ones(time_steps, break_points),
@@ -276,7 +277,7 @@ function forecast_internal_to_external(::Type{T}) where {T <: ForecastInternal}
         forecast_type = Probabilistic
     elseif T <: ScenarioBasedInternal
         forecast_type = ScenarioBased
-    elseif T <: CostCoefficientInternal 
+    elseif T <: CostCoefficientInternal
         forecast_type = CostCoefficient
     else
         @assert false

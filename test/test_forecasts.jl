@@ -781,7 +781,8 @@ end
     )
     data = ones(24, 4)
     name = collect(Iterators.flatten([
-        (Symbol("cost_bp$(ix)"), Symbol("load_bp$ix")) for ix in 1:2]))
+        (Symbol("cost_bp$(ix)"), Symbol("load_bp$ix")) for ix in 1:2
+    ]))
     ta = TimeSeries.TimeArray(dates, data, name)
     forecast = IS.CostCoefficient(label, ta)
     fdata = IS.get_data(forecast)
