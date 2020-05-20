@@ -769,6 +769,35 @@ end
     @test TimeSeries.values(ta) == TimeSeries.values(fdata2)
 end
 
+@testset "Test CostCoefficient forecasts" begin
+    sys = IS.SystemData()
+    name = "Component1"
+    label = "get_val"
+    component = IS.TestComponent(name, 5)
+    IS.add_component!(sys, component)
+
+    dates = collect(
+        Dates.DateTime("2020-01-01T00:00:00"):Dates.Hour(1):Dates.DateTime("2020-01-01T23:00:00"),
+    )
+    data = ones(24, 4)
+    name = collect(Iterators.flatten([
+        (Symbol("cost_bp$(ix)"), Symbol("load_bp$ix")) for ix in 1:2]))
+    ta = TimeSeries.TimeArray(dates, data, name)
+    forecast = IS.CostCoefficient(label, ta)
+    fdata = IS.get_data(forecast)
+    @test length(TimeSeries.colnames(fdata)) == 4
+    @test TimeSeries.timestamp(ta) == TimeSeries.timestamp(fdata)
+    @test TimeSeries.values(ta) == TimeSeries.values(fdata)
+
+    IS.add_forecast!(sys, component, forecast)
+    forecast2 = IS.get_forecast(IS.CostCoefficient, component, dates[1], label)
+    @test forecast2 isa IS.CostCoefficient
+    fdata2 = IS.get_data(forecast2)
+    @test length(TimeSeries.colnames(fdata2)) == 4
+    @test TimeSeries.timestamp(ta) == TimeSeries.timestamp(fdata2)
+    @test TimeSeries.values(ta) == TimeSeries.values(fdata2)
+end
+
 @testset "Add forecast to unsupported struct" begin
     struct TestComponentNoForecasts <: IS.InfrastructureSystemsType
         name::AbstractString

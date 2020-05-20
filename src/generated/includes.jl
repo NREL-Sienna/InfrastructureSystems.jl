@@ -4,7 +4,10 @@ include("ProbabilisticInternal.jl")
 include("Probabilistic.jl")
 include("ScenarioBasedInternal.jl")
 include("ScenarioBased.jl")
+include("CostCoefficient.jl")
+include("CostCoefficientInternal.jl")
 
+export get_break_points
 export get_data
 export get_horizon
 export get_initial_time
