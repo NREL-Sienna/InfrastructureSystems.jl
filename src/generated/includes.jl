@@ -4,8 +4,8 @@ include("ProbabilisticInternal.jl")
 include("Probabilistic.jl")
 include("ScenarioBasedInternal.jl")
 include("ScenarioBased.jl")
-include("CostCoefficient.jl")
-include("CostCoefficientInternal.jl")
+include("PiecewiseCost.jl")
+include("PiecewiseCostInternal.jl")
 
 export get_break_points
 export get_data
