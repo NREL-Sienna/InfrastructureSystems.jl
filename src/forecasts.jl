@@ -329,3 +329,5 @@ function get_resolution(ts::TimeSeries.TimeArray)
 
     return res[1]
 end
+
+get_columns(::Type{<:ForecastInternal}, ta::TimeSeries.TimeArray) = nothing

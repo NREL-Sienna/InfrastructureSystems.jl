@@ -239,6 +239,9 @@ function CostCoefficient(forecasts::Vector{CostCoefficient})
     return forecast
 end
 
+get_columns(::Type{CostCoefficientInternal}, ta::TimeSeries.TimeArray) =
+    TimeSeries.colnames(ta)
+
 function make_public_forecast(forecast::CostCoefficientInternal, data::TimeSeries.TimeArray)
     return CostCoefficient(get_label(forecast), get_break_points(forecast), data)
 end
