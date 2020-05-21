@@ -179,8 +179,8 @@
     "supertype": "Forecast"
   },
   {
-    "struct_name": "CostCoefficient",
-    "docstring": "A forecast for cost function data field in a Component.",
+    "struct_name": "PiecewiseCost",
+    "docstring": "A forecast for  piecewise cost function data field in a Component.",
     "fields": [
       {
         "name": "label",
@@ -189,7 +189,7 @@
       },
       {
         "name": "break_points",
-        "data_type": "Int64",
+        "data_type": "Int",
         "comment": "Number of break points"
       },
       {
@@ -201,8 +201,8 @@
     "supertype": "Forecast"
   },
   {
-    "struct_name": "CostCoefficientInternal",
-    "docstring": "A Discrete Scenario Based forecast for a particular data field in a Component.",
+    "struct_name": "PiecewiseCostInternal",
+    "docstring": "A forecast for piecewise cost function data field in a Component.",
     "fields": [
       {
         "name": "label",
@@ -220,7 +220,7 @@
       },
       {
         "name": "break_points",
-        "data_type": "Int64",
+        "data_type": "Int",
         "comment": "Number of break points"
       },
       {
