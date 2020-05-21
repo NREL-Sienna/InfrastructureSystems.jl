@@ -92,6 +92,7 @@ function add_time_series!(
             path = root[uuid]
             @debug "Create new time series entry." uuid component_uuid label
             path["data"] = TimeSeries.values(ts.data)
+            path["dims"] = HDF5.ndims(path["data"])
             timestamps = [Dates.datetime2epochms(x) for x in TimeSeries.timestamp(ts.data)]
             path["timestamps"] = timestamps
             # Storing the UUID as an integer would take less space, but HDF5 library says
@@ -173,7 +174,10 @@ function get_time_series(
             # resulted in various crashes if we tried to close the file before references
             # to the array data were garbage collected. May need to consult with the
             # Julia HDF5 library maintainers about that.
-            data = path["data"][index:end_index]
+            ndims = HDF5.read(path["dims"])
+            data = path["data"][(
+                i == 1 ? (index:end_index) : Colon() for i in 1:ndims
+            )...]
             timestamps = path["timestamps"][index:end_index]
         end
 
