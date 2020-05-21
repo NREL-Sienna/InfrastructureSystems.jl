@@ -80,6 +80,7 @@ function add_time_series!(
     component_uuid::UUIDs.UUID,
     label::AbstractString,
     ts::TimeSeriesData,
+    columns = nothing,
 )
     uuid = string(get_uuid(ts))
     component_label = make_component_label(component_uuid, label)
@@ -96,10 +97,22 @@ function add_time_series!(
             # Storing the UUID as an integer would take less space, but HDF5 library says
             # arrays of 128-bit integers aren't supported.
             path["components"] = [component_label]
+            if !isnothing(columns)
+                HDF5.attrs(path)["columns"] = string.(columns)
+            end
         else
             path = root[uuid]
             @debug "Add reference to existing time series entry." uuid component_uuid label
             _append_item!(path, "components", component_label)
+            if !isnothing(columns)
+                if !HDF5.exists(HDF5.attrs(path), "columns")
+                    throw(ArgumentError("columns are specified but existing array does not have columns"))
+                end
+                existing = HDF5.attrs(path)["columns"]
+                if columns != existing
+                    throw(ArgumentError("columns do not match $columns $existing"))
+                end
+            end
         end
     end
 end
@@ -164,8 +177,14 @@ function get_time_series(
             timestamps = path["timestamps"][index:end_index]
         end
 
-        # Note: we don't care what column names get returned. TimeArray creates :A, :B, ...
-        return TimeSeries.TimeArray([Dates.epochms2datetime(x) for x in timestamps], data)
+        # If the user set column names, return them. Otherwise, let TimeArray pick them.
+        dtimestamps = [Dates.epochms2datetime(x) for x in timestamps]
+        if HDF5.exists(HDF5.attrs(path), "columns")
+            columns = Symbol.(HDF5.read(HDF5.attrs(path)["columns"]))
+            return TimeSeries.TimeArray(dtimestamps, data, columns)
+        end
+
+        return TimeSeries.TimeArray(dtimestamps, data)
     end
 end
 

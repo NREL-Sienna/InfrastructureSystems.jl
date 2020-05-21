@@ -42,6 +42,7 @@ function add_time_series!(
     component_uuid::UUIDs.UUID,
     label::AbstractString,
     ts::TimeSeriesData,
+    unused = nothing,
 )
     uuid = get_uuid(ts)
     if !haskey(storage.data, uuid)
@@ -112,7 +113,8 @@ function convert_to_hdf5(storage::InMemoryTimeSeriesStorage, filename::AbstractS
     hdf5_storage = Hdf5TimeSeriesStorage(create_file; filename = filename)
     for record in values(storage.data)
         for pair in record.component_labels
-            add_time_series!(hdf5_storage, pair[1], pair[2], record.ts)
+            columns = TimeSeries.colnames(record.ts.data)
+            add_time_series!(hdf5_storage, pair[1], pair[2], record.ts, columns)
         end
     end
 end

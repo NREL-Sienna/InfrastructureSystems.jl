@@ -184,9 +184,9 @@ end
 function add_forecast!(
     data::SystemData,
     component::InfrastructureSystemsType,
-    forecast::ForecastInternal,
+    forecast::T,
     ts_data::TimeSeriesData,
-)
+) where {T <: ForecastInternal}
     _validate_component(data, component)
     check_add_forecast!(data.forecast_metadata, forecast)
     add_forecast!(component, forecast)
@@ -196,6 +196,7 @@ function add_forecast!(
         get_uuid(component),
         get_label(forecast),
         ts_data,
+        get_columns(T, ts_data.data),
     )
 end
 
