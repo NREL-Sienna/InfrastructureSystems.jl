@@ -40,7 +40,7 @@ function Deterministic(forecasts::Vector{Deterministic})
     return forecast
 end
 
-# TODO: need to make concatenation constructors for Probabilistic and ScenarioBased.
+# TODO: need to make concatenation constructors for Probabilistic
 
 function make_public_forecast(forecast::DeterministicInternal, data::TimeSeries.TimeArray)
     return Deterministic(get_label(forecast), data)
@@ -164,12 +164,9 @@ function ScenarioBased(forecasts::Vector{ScenarioBased})
     @assert !isempty(forecasts)
     scenario_count = get_scenario_count(forecasts[1])
     colnames = TimeSeries.colnames(get_data(forecasts[1]))
-    data = Array{Any}(undef, 0, scenario_count)
     timestamps =
         collect(Iterators.flatten((TimeSeries.timestamp(get_data(x)) for x in forecasts)))
-    for x in forecasts
-        data = vcat(data, TimeSeries.values(get_data(x)))
-    end
+    data = vcat((TimeSeries.values(get_data(x)) for x in forecasts)...)
     ta = TimeSeries.TimeArray(timestamps, data, colnames)
 
     forecast = ScenarioBased(get_label(forecasts[1]), ta)
@@ -192,18 +189,18 @@ function make_internal_forecast(forecast::ScenarioBased, ts_data::TimeSeriesData
     )
 end
 
-function CostCoefficient(label::String, data::TimeSeries.TimeArray)
+function PiecewiseCost(label::String, data::TimeSeries.TimeArray)
     initial_time = TimeSeries.timestamp(data)[1]
     resolution = get_resolution(data)
     breakpoints = length(TimeSeries.colnames(data)) / 2
-    return CostCoefficient(label, breakpoints, data)
+    return PiecewiseCost(label, breakpoints, data)
 end
 
 """
-Constructs CostCoefficient Forecast after constructing a TimeArray from initial_time and
+Constructs PiecewiseCost Forecast after constructing a TimeArray from initial_time and
 time_steps.
 """
-function CostCoefficient(
+function PiecewiseCost(
     label::String,
     resolution::Dates.Period,
     initial_time::Dates.DateTime,
@@ -219,35 +216,32 @@ function CostCoefficient(
         name,
     )
 
-    return CostCoefficient(label, break_points, data)
+    return PiecewiseCost(label, break_points, data)
 end
 
-function CostCoefficient(forecasts::Vector{CostCoefficient})
+function PiecewiseCost(forecasts::Vector{PiecewiseCost})
     @assert !isempty(forecasts)
     break_points = get_break_points(forecasts[1])
     colnames = TimeSeries.colnames(get_data(forecasts[1]))
-    data = Array{Any}(undef, 0, break_points)
     timestamps =
         collect(Iterators.flatten((TimeSeries.timestamp(get_data(x)) for x in forecasts)))
-    for x in forecasts
-        data = vcat(data, TimeSeries.values(get_data(x)))
-    end
+    data = vcat((TimeSeries.values(get_data(x)) for x in forecasts)...)
     ta = TimeSeries.TimeArray(timestamps, data, colnames)
 
-    forecast = CostCoefficient(get_label(forecasts[1]), break_points, ta)
+    forecast = PiecewiseCost(get_label(forecasts[1]), break_points, ta)
     @debug "concatenated forecasts" forecast
     return forecast
 end
 
-get_columns(::Type{CostCoefficientInternal}, ta::TimeSeries.TimeArray) =
+get_columns(::Type{PiecewiseCostInternal}, ta::TimeSeries.TimeArray) =
     TimeSeries.colnames(ta)
 
-function make_public_forecast(forecast::CostCoefficientInternal, data::TimeSeries.TimeArray)
-    return CostCoefficient(get_label(forecast), get_break_points(forecast), data)
+function make_public_forecast(forecast::PiecewiseCostInternal, data::TimeSeries.TimeArray)
+    return PiecewiseCost(get_label(forecast), get_break_points(forecast), data)
 end
 
-function make_internal_forecast(forecast::CostCoefficient, ts_data::TimeSeriesData)
-    return CostCoefficientInternal(
+function make_internal_forecast(forecast::PiecewiseCost, ts_data::TimeSeriesData)
+    return PiecewiseCostInternal(
         get_label(forecast),
         get_resolution(forecast),
         get_initial_time(forecast),
@@ -264,8 +258,8 @@ function forecast_external_to_internal(::Type{T}) where {T <: Forecast}
         forecast_type = ProbabilisticInternal
     elseif T <: ScenarioBased
         forecast_type = ScenarioBasedInternal
-    elseif T <: CostCoefficient
-        forecast_type = CostCoefficientInternal
+    elseif T <: PiecewiseCost
+        forecast_type = PiecewiseCostInternal
     else
         @assert false
     end
@@ -280,8 +274,8 @@ function forecast_internal_to_external(::Type{T}) where {T <: ForecastInternal}
         forecast_type = Probabilistic
     elseif T <: ScenarioBasedInternal
         forecast_type = ScenarioBased
-    elseif T <: CostCoefficientInternal
-        forecast_type = CostCoefficient
+    elseif T <: PiecewiseCostInternal
+        forecast_type = PiecewiseCost
     else
         @assert false
     end
