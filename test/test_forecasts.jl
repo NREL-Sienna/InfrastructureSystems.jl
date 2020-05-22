@@ -807,7 +807,8 @@ end
     @test TimeSeries.values(ta) == TimeSeries.values(fdata2)
 
     no_forecast = 4
-    forecast3 = IS.get_forecast(IS.PiecewiseFunction, component, dates[1], label, no_forecast)
+    forecast3 =
+        IS.get_forecast(IS.PiecewiseFunction, component, dates[1], label, no_forecast)
     @test forecast3 isa IS.PiecewiseFunction
     fdata3 = IS.get_data(forecast3)
     @test length(TimeSeries.colnames(fdata3)) == 4

@@ -236,7 +236,10 @@ end
 get_columns(::Type{PiecewiseFunctionInternal}, ta::TimeSeries.TimeArray) =
     TimeSeries.colnames(ta)
 
-function make_public_forecast(forecast::PiecewiseFunctionInternal, data::TimeSeries.TimeArray)
+function make_public_forecast(
+    forecast::PiecewiseFunctionInternal,
+    data::TimeSeries.TimeArray,
+)
     return PiecewiseFunction(get_label(forecast), get_break_points(forecast), data)
 end
 
