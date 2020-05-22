@@ -175,9 +175,7 @@ function get_time_series(
             # to the array data were garbage collected. May need to consult with the
             # Julia HDF5 library maintainers about that.
             ndims = HDF5.read(path["dims"])
-            data = path["data"][(
-                i == 1 ? (index:end_index) : Colon() for i in 1:ndims
-            )...]
+            data = path["data"][(i == 1 ? (index:end_index) : Colon() for i in 1:ndims)...]
             timestamps = path["timestamps"][index:end_index]
         end
 
