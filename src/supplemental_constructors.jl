@@ -189,18 +189,18 @@ function make_internal_forecast(forecast::ScenarioBased, ts_data::TimeSeriesData
     )
 end
 
-function PiecewiseCost(label::String, data::TimeSeries.TimeArray)
+function PiecewiseFunction(label::String, data::TimeSeries.TimeArray)
     initial_time = TimeSeries.timestamp(data)[1]
     resolution = get_resolution(data)
     breakpoints = length(TimeSeries.colnames(data)) / 2
-    return PiecewiseCost(label, breakpoints, data)
+    return PiecewiseFunction(label, breakpoints, data)
 end
 
 """
-Constructs PiecewiseCost Forecast after constructing a TimeArray from initial_time and
+Constructs PiecewiseFunction Forecast after constructing a TimeArray from initial_time and
 time_steps.
 """
-function PiecewiseCost(
+function PiecewiseFunction(
     label::String,
     resolution::Dates.Period,
     initial_time::Dates.DateTime,
@@ -216,10 +216,10 @@ function PiecewiseCost(
         name,
     )
 
-    return PiecewiseCost(label, break_points, data)
+    return PiecewiseFunction(label, break_points, data)
 end
 
-function PiecewiseCost(forecasts::Vector{PiecewiseCost})
+function PiecewiseFunction(forecasts::Vector{PiecewiseFunction})
     @assert !isempty(forecasts)
     break_points = get_break_points(forecasts[1])
     colnames = TimeSeries.colnames(get_data(forecasts[1]))
@@ -228,20 +228,20 @@ function PiecewiseCost(forecasts::Vector{PiecewiseCost})
     data = vcat((TimeSeries.values(get_data(x)) for x in forecasts)...)
     ta = TimeSeries.TimeArray(timestamps, data, colnames)
 
-    forecast = PiecewiseCost(get_label(forecasts[1]), break_points, ta)
+    forecast = PiecewiseFunction(get_label(forecasts[1]), break_points, ta)
     @debug "concatenated forecasts" forecast
     return forecast
 end
 
-get_columns(::Type{PiecewiseCostInternal}, ta::TimeSeries.TimeArray) =
+get_columns(::Type{PiecewiseFunctionInternal}, ta::TimeSeries.TimeArray) =
     TimeSeries.colnames(ta)
 
-function make_public_forecast(forecast::PiecewiseCostInternal, data::TimeSeries.TimeArray)
-    return PiecewiseCost(get_label(forecast), get_break_points(forecast), data)
+function make_public_forecast(forecast::PiecewiseFunctionInternal, data::TimeSeries.TimeArray)
+    return PiecewiseFunction(get_label(forecast), get_break_points(forecast), data)
 end
 
-function make_internal_forecast(forecast::PiecewiseCost, ts_data::TimeSeriesData)
-    return PiecewiseCostInternal(
+function make_internal_forecast(forecast::PiecewiseFunction, ts_data::TimeSeriesData)
+    return PiecewiseFunctionInternal(
         get_label(forecast),
         get_resolution(forecast),
         get_initial_time(forecast),
@@ -258,8 +258,8 @@ function forecast_external_to_internal(::Type{T}) where {T <: Forecast}
         forecast_type = ProbabilisticInternal
     elseif T <: ScenarioBased
         forecast_type = ScenarioBasedInternal
-    elseif T <: PiecewiseCost
-        forecast_type = PiecewiseCostInternal
+    elseif T <: PiecewiseFunction
+        forecast_type = PiecewiseFunctionInternal
     else
         @assert false
     end
@@ -274,8 +274,8 @@ function forecast_internal_to_external(::Type{T}) where {T <: ForecastInternal}
         forecast_type = Probabilistic
     elseif T <: ScenarioBasedInternal
         forecast_type = ScenarioBased
-    elseif T <: PiecewiseCostInternal
-        forecast_type = PiecewiseCost
+    elseif T <: PiecewiseFunctionInternal
+        forecast_type = PiecewiseFunction
     else
         @assert false
     end

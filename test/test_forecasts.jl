@@ -777,7 +777,7 @@ end
     @test TimeSeries.values(ta)[1:no_forecast, :] == TimeSeries.values(fdata3)
 end
 
-@testset "Test PiecewiseCost forecasts" begin
+@testset "Test PiecewiseFunction forecasts" begin
     sys = IS.SystemData()
     name = "Component1"
     label = "get_val"
@@ -792,23 +792,23 @@ end
         (Symbol("cost_bp$(ix)"), Symbol("load_bp$ix")) for ix in 1:2
     ]))
     ta = TimeSeries.TimeArray(dates, data, name)
-    forecast = IS.PiecewiseCost(label, ta)
+    forecast = IS.PiecewiseFunction(label, ta)
     fdata = IS.get_data(forecast)
     @test length(TimeSeries.colnames(fdata)) == 4
     @test TimeSeries.timestamp(ta) == TimeSeries.timestamp(fdata)
     @test TimeSeries.values(ta) == TimeSeries.values(fdata)
 
     IS.add_forecast!(sys, component, forecast)
-    forecast2 = IS.get_forecast(IS.PiecewiseCost, component, dates[1], label)
-    @test forecast2 isa IS.PiecewiseCost
+    forecast2 = IS.get_forecast(IS.PiecewiseFunction, component, dates[1], label)
+    @test forecast2 isa IS.PiecewiseFunction
     fdata2 = IS.get_data(forecast2)
     @test length(TimeSeries.colnames(fdata2)) == 4
     @test TimeSeries.timestamp(ta) == TimeSeries.timestamp(fdata2)
     @test TimeSeries.values(ta) == TimeSeries.values(fdata2)
 
     no_forecast = 4
-    forecast3 = IS.get_forecast(IS.PiecewiseCost, component, dates[1], label, no_forecast)
-    @test forecast3 isa IS.PiecewiseCost
+    forecast3 = IS.get_forecast(IS.PiecewiseFunction, component, dates[1], label, no_forecast)
+    @test forecast3 isa IS.PiecewiseFunction
     fdata3 = IS.get_data(forecast3)
     @test length(TimeSeries.colnames(fdata3)) == 4
     @test TimeSeries.timestamp(ta)[1:no_forecast] == TimeSeries.timestamp(fdata3)

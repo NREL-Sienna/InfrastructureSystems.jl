@@ -179,8 +179,8 @@
     "supertype": "Forecast"
   },
   {
-    "struct_name": "PiecewiseCost",
-    "docstring": "A forecast for  piecewise cost function data field in a Component.",
+    "struct_name": "PiecewiseFunction",
+    "docstring": "A forecast for  piecewise function data field in a Component.",
     "fields": [
       {
         "name": "label",
@@ -201,8 +201,8 @@
     "supertype": "Forecast"
   },
   {
-    "struct_name": "PiecewiseCostInternal",
-    "docstring": "A forecast for piecewise cost function data field in a Component.",
+    "struct_name": "PiecewiseFunctionInternal",
+    "docstring": "A forecast for piecewise function data field in a Component.",
     "fields": [
       {
         "name": "label",
