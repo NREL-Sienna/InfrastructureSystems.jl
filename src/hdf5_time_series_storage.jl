@@ -92,7 +92,6 @@ function add_time_series!(
             path = root[uuid]
             @debug "Create new time series entry." uuid component_uuid label
             path["data"] = TimeSeries.values(ts.data)
-            path["dims"] = HDF5.ndims(path["data"])
             timestamps = [Dates.datetime2epochms(x) for x in TimeSeries.timestamp(ts.data)]
             path["timestamps"] = timestamps
             # Storing the UUID as an integer would take less space, but HDF5 library says
