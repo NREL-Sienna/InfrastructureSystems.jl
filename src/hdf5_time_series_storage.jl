@@ -174,8 +174,12 @@ function get_time_series(
             # resulted in various crashes if we tried to close the file before references
             # to the array data were garbage collected. May need to consult with the
             # Julia HDF5 library maintainers about that.
-            ndims = HDF5.read(path["dims"])
-            data = path["data"][(i == 1 ? (index:end_index) : Colon() for i in 1:ndims)...]
+            sz_tuple = size(path["data"])
+            if length(sz_tuple) == 1
+                data = path["data"][index:end_index]
+            else
+                data = path["data"][index:end_index, 1:sz_tuple[2]]
+            end
             timestamps = path["timestamps"][index:end_index]
         end
 
