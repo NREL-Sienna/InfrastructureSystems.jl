@@ -119,7 +119,7 @@ function generate_structs(directory, data::Vector; print_results = true)
                 create_docstring = true
             end
             accessor_name = accessor_module * "get_" * param["name"]
-            setter_name = accessor_module * "set_" * param["name"]
+            setter_name = accessor_module * "set_" * param["name"] * "!"
             push!(
                 accessors,
                 Dict(
@@ -134,7 +134,7 @@ function generate_structs(directory, data::Vector; print_results = true)
                     setters,
                     Dict(
                         "name" => param["name"],
-                        "setter" => setter_name * "!",
+                        "setter" => setter_name,
                         "data_type" => param["data_type"],
                         "create_docstring" => create_docstring,
                     ),
@@ -142,7 +142,7 @@ function generate_structs(directory, data::Vector; print_results = true)
             end
             if accessor_name != "internal" && accessor_module == ""
                 push!(unique_accessor_functions, accessor_name)
-                push!(unique_setter_functions, accessor_name)
+                push!(unique_setter_functions, setter_name)
             end
 
             if haskey(param, "internal_default")
@@ -179,7 +179,6 @@ function generate_structs(directory, data::Vector; print_results = true)
 
     accessors = sort!(collect(unique_accessor_functions))
     setters = sort!(collect(unique_setter_functions))
-
     filename = joinpath(directory, "includes.jl")
     open(filename, "w") do io
         for name in struct_names
