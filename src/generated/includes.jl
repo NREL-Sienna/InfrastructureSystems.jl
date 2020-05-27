@@ -17,3 +17,13 @@ export get_percentiles
 export get_resolution
 export get_scenario_count
 export get_time_series_uuid
+export set_break_points!
+export set_data!
+export set_horizon!
+export set_initial_time!
+export set_internal!
+export set_label!
+export set_percentiles!
+export set_resolution!
+export set_scenario_count!
+export set_time_series_uuid!
