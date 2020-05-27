@@ -178,6 +178,7 @@ function generate_structs(directory, data::Vector; print_results = true)
     end
 
     accessors = sort!(collect(unique_accessor_functions))
+    setters = sort!(collect(unique_setter_functions))
 
     filename = joinpath(directory, "includes.jl")
     open(filename, "w") do io
@@ -189,7 +190,9 @@ function generate_structs(directory, data::Vector; print_results = true)
         for accessor in accessors
             write(io, "export $accessor\n")
         end
-
+        for setter in setters
+            write(io, "export $setter\n")
+        end
         if print_results
             println("Wrote $filename")
         end
