@@ -40,7 +40,7 @@ function Deterministic(forecasts::Vector{Deterministic})
     return forecast
 end
 
-# TODO: need to make concatenation constructors for Probabilistic and ScenarioBased.
+# TODO: need to make concatenation constructors for Probabilistic
 
 function make_public_forecast(forecast::DeterministicInternal, data::TimeSeries.TimeArray)
     return Deterministic(get_label(forecast), data)
@@ -160,6 +160,20 @@ function ScenarioBased(
     return ScenarioBased(label, data)
 end
 
+function ScenarioBased(forecasts::Vector{ScenarioBased})
+    @assert !isempty(forecasts)
+    scenario_count = get_scenario_count(forecasts[1])
+    colnames = TimeSeries.colnames(get_data(forecasts[1]))
+    timestamps =
+        collect(Iterators.flatten((TimeSeries.timestamp(get_data(x)) for x in forecasts)))
+    data = vcat((TimeSeries.values(get_data(x)) for x in forecasts)...)
+    ta = TimeSeries.TimeArray(timestamps, data, colnames)
+
+    forecast = ScenarioBased(get_label(forecasts[1]), ta)
+    @debug "concatenated forecasts" forecast
+    return forecast
+end
+
 function make_public_forecast(forecast::ScenarioBasedInternal, data::TimeSeries.TimeArray)
     return ScenarioBased(get_label(forecast), data)
 end
@@ -175,6 +189,71 @@ function make_internal_forecast(forecast::ScenarioBased, ts_data::TimeSeriesData
     )
 end
 
+function PiecewiseFunction(label::String, data::TimeSeries.TimeArray)
+    initial_time = TimeSeries.timestamp(data)[1]
+    resolution = get_resolution(data)
+    breakpoints = length(TimeSeries.colnames(data)) / 2
+    return PiecewiseFunction(label, breakpoints, data)
+end
+
+"""
+Constructs PiecewiseFunction Forecast after constructing a TimeArray from initial_time and
+time_steps.
+"""
+function PiecewiseFunction(
+    label::String,
+    resolution::Dates.Period,
+    initial_time::Dates.DateTime,
+    break_points::Int,
+    time_steps::Int,
+)
+    name = collect(Iterators.flatten([
+        (Symbol("cost_bp$(ix)"), Symbol("load_bp$ix")) for ix in 1:break_points
+    ]))
+    data = TimeSeries.TimeArray(
+        initial_time:resolution:(initial_time + resolution * (time_steps - 1)),
+        ones(time_steps, break_points),
+        name,
+    )
+
+    return PiecewiseFunction(label, break_points, data)
+end
+
+function PiecewiseFunction(forecasts::Vector{PiecewiseFunction})
+    @assert !isempty(forecasts)
+    break_points = get_break_points(forecasts[1])
+    colnames = TimeSeries.colnames(get_data(forecasts[1]))
+    timestamps =
+        collect(Iterators.flatten((TimeSeries.timestamp(get_data(x)) for x in forecasts)))
+    data = vcat((TimeSeries.values(get_data(x)) for x in forecasts)...)
+    ta = TimeSeries.TimeArray(timestamps, data, colnames)
+
+    forecast = PiecewiseFunction(get_label(forecasts[1]), break_points, ta)
+    @debug "concatenated forecasts" forecast
+    return forecast
+end
+
+get_columns(::Type{PiecewiseFunctionInternal}, ta::TimeSeries.TimeArray) =
+    TimeSeries.colnames(ta)
+
+function make_public_forecast(
+    forecast::PiecewiseFunctionInternal,
+    data::TimeSeries.TimeArray,
+)
+    return PiecewiseFunction(get_label(forecast), get_break_points(forecast), data)
+end
+
+function make_internal_forecast(forecast::PiecewiseFunction, ts_data::TimeSeriesData)
+    return PiecewiseFunctionInternal(
+        get_label(forecast),
+        get_resolution(forecast),
+        get_initial_time(forecast),
+        get_break_points(forecast),
+        get_uuid(ts_data),
+        get_horizon(forecast),
+    )
+end
+
 function forecast_external_to_internal(::Type{T}) where {T <: Forecast}
     if T <: Deterministic
         forecast_type = DeterministicInternal
@@ -182,6 +261,8 @@ function forecast_external_to_internal(::Type{T}) where {T <: Forecast}
         forecast_type = ProbabilisticInternal
     elseif T <: ScenarioBased
         forecast_type = ScenarioBasedInternal
+    elseif T <: PiecewiseFunction
+        forecast_type = PiecewiseFunctionInternal
     else
         @assert false
     end
@@ -196,6 +277,8 @@ function forecast_internal_to_external(::Type{T}) where {T <: ForecastInternal}
         forecast_type = Probabilistic
     elseif T <: ScenarioBasedInternal
         forecast_type = ScenarioBased
+    elseif T <: PiecewiseFunctionInternal
+        forecast_type = PiecewiseFunction
     else
         @assert false
     end

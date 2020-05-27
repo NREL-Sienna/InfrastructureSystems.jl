@@ -4,7 +4,10 @@ include("ProbabilisticInternal.jl")
 include("Probabilistic.jl")
 include("ScenarioBasedInternal.jl")
 include("ScenarioBased.jl")
+include("PiecewiseFunction.jl")
+include("PiecewiseFunctionInternal.jl")
 
+export get_break_points
 export get_data
 export get_horizon
 export get_initial_time

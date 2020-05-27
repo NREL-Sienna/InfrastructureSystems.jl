@@ -767,6 +767,53 @@ end
     @test length(TimeSeries.colnames(fdata2)) == 2
     @test TimeSeries.timestamp(ta) == TimeSeries.timestamp(fdata2)
     @test TimeSeries.values(ta) == TimeSeries.values(fdata2)
+
+    no_forecast = 3
+    forecast3 = IS.get_forecast(IS.ScenarioBased, component, dates[1], label, no_forecast)
+    @test forecast3 isa IS.ScenarioBased
+    fdata3 = IS.get_data(forecast3)
+    @test length(TimeSeries.colnames(fdata3)) == 2
+    @test TimeSeries.timestamp(ta)[1:no_forecast] == TimeSeries.timestamp(fdata3)
+    @test TimeSeries.values(ta)[1:no_forecast, :] == TimeSeries.values(fdata3)
+end
+
+@testset "Test PiecewiseFunction forecasts" begin
+    sys = IS.SystemData()
+    name = "Component1"
+    label = "get_val"
+    component = IS.TestComponent(name, 5)
+    IS.add_component!(sys, component)
+
+    dates = collect(
+        Dates.DateTime("2020-01-01T00:00:00"):Dates.Hour(1):Dates.DateTime("2020-01-01T23:00:00"),
+    )
+    data = ones(24, 4)
+    name = collect(Iterators.flatten([
+        (Symbol("cost_bp$(ix)"), Symbol("load_bp$ix")) for ix in 1:2
+    ]))
+    ta = TimeSeries.TimeArray(dates, data, name)
+    forecast = IS.PiecewiseFunction(label, ta)
+    fdata = IS.get_data(forecast)
+    @test length(TimeSeries.colnames(fdata)) == 4
+    @test TimeSeries.timestamp(ta) == TimeSeries.timestamp(fdata)
+    @test TimeSeries.values(ta) == TimeSeries.values(fdata)
+
+    IS.add_forecast!(sys, component, forecast)
+    forecast2 = IS.get_forecast(IS.PiecewiseFunction, component, dates[1], label)
+    @test forecast2 isa IS.PiecewiseFunction
+    fdata2 = IS.get_data(forecast2)
+    @test length(TimeSeries.colnames(fdata2)) == 4
+    @test TimeSeries.timestamp(ta) == TimeSeries.timestamp(fdata2)
+    @test TimeSeries.values(ta) == TimeSeries.values(fdata2)
+
+    no_forecast = 4
+    forecast3 =
+        IS.get_forecast(IS.PiecewiseFunction, component, dates[1], label, no_forecast)
+    @test forecast3 isa IS.PiecewiseFunction
+    fdata3 = IS.get_data(forecast3)
+    @test length(TimeSeries.colnames(fdata3)) == 4
+    @test TimeSeries.timestamp(ta)[1:no_forecast] == TimeSeries.timestamp(fdata3)
+    @test TimeSeries.values(ta)[1:no_forecast, :] == TimeSeries.values(fdata3)
 end
 
 @testset "Add forecast to unsupported struct" begin
