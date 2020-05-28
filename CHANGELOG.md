@@ -1,5 +1,11 @@
 # InfrastructureSystems
 
+## 0.10.0
+
+- Add Read only option for deserialization
+- Fix bug in autogeneration code for setters
+- Update DataFrames to v0.21
+
 ## 0.9.0
 
 - Enable passing AbstractType to get_component and update to error message
