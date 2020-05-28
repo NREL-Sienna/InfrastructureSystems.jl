@@ -37,6 +37,8 @@ function InMemoryTimeSeriesStorage(hdf5_storage::Hdf5TimeSeriesStorage)
     return storage
 end
 
+check_read_only(storage::InMemoryTimeSeriesStorage) = nothing
+
 function add_time_series!(
     storage::InMemoryTimeSeriesStorage,
     component_uuid::UUIDs.UUID,
