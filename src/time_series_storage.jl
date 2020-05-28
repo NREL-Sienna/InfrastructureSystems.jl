@@ -8,6 +8,7 @@ All subtypes must implement:
 - get_time_series
 - clear_time_series!
 - get_num_time_series
+- check_read_only
 """
 abstract type TimeSeriesStorage end
 

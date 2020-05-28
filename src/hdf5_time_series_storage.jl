@@ -11,6 +11,7 @@ no more references to the storage object.
 """
 mutable struct Hdf5TimeSeriesStorage <: TimeSeriesStorage
     file_path::String
+    read_only::Bool
 end
 
 """
@@ -29,8 +30,15 @@ Constructs Hdf5TimeSeriesStorage.
 - `directory=nothing`: if set and filename is nothing, create a temp file in this
    directory. Use tempdir() if not set. This should be set if the time series data is larger
    than the tmp filesystem can hold.
+- `read_only = false`: If true, don't allow changes to the file. Allows simultaneous read
+   access.
 """
-function Hdf5TimeSeriesStorage(create_file::Bool; filename = nothing, directory = nothing)
+function Hdf5TimeSeriesStorage(
+    create_file::Bool;
+    filename = nothing,
+    directory = nothing,
+    read_only = false,
+)
     if create_file
         if isnothing(filename)
             if isnothing(directory)
@@ -40,35 +48,37 @@ function Hdf5TimeSeriesStorage(create_file::Bool; filename = nothing, directory 
             close(io)
         end
 
-        storage = Hdf5TimeSeriesStorage(filename)
+        storage = Hdf5TimeSeriesStorage(filename, read_only)
         _make_file(storage)
     else
-        storage = Hdf5TimeSeriesStorage(filename)
+        storage = Hdf5TimeSeriesStorage(filename, read_only)
     end
 
-    @debug "Constructed new Hdf5TimeSeriesStorage" storage.file_path
+    @debug "Constructed new Hdf5TimeSeriesStorage" storage.file_path read_only
 
     return storage
-end
-
-function _cleanup(storage::Hdf5TimeSeriesStorage)
-    if isfile(storage.file_path)
-        @debug "Delete Hdf5TimeSeriesStorage" storage.file_path
-        rm(storage.file_path)
-    end
 end
 
 """
 Constructs Hdf5TimeSeriesStorage from an existing file.
 """
-function from_file(::Type{Hdf5TimeSeriesStorage}, filename::AbstractString)
-    file_path, io = mktemp()
-    close(io)
+function from_file(
+    ::Type{Hdf5TimeSeriesStorage},
+    filename::AbstractString;
+    read_only = false,
+)
     if !isfile(filename)
         error("time series storage $filename does not exist")
     end
-    cp(filename, file_path; force = true)
-    storage = Hdf5TimeSeriesStorage(false; filename = file_path)
+
+    if read_only
+        file_path = abspath(filename)
+    else
+        file_path, io = mktemp()
+        close(io)
+        cp(filename, file_path; force = true)
+    end
+    storage = Hdf5TimeSeriesStorage(false; filename = file_path, read_only = read_only)
     @info "Loaded time series from storage file existing=$filename new=$(storage.file_path)"
     return storage
 end
@@ -82,6 +92,7 @@ function add_time_series!(
     ts::TimeSeriesData,
     columns = nothing,
 )
+    check_read_only(storage)
     uuid = string(get_uuid(ts))
     component_label = make_component_label(component_uuid, label)
 
@@ -143,6 +154,7 @@ function remove_time_series!(
     component_uuid::UUIDs.UUID,
     label::AbstractString,
 )
+    check_read_only(storage)
     HDF5.h5open(storage.file_path, "r+") do file
         root = _get_root(storage, file)
         path = _get_time_series_path(root, uuid)
@@ -194,6 +206,7 @@ function get_time_series(
 end
 
 function clear_time_series!(storage::Hdf5TimeSeriesStorage)
+    check_read_only(storage)
     # Re-create the file. HDF5 will not actually free up the deleted space until h5repack
     # is run on the file.
     _make_file(storage)
@@ -270,6 +283,12 @@ function _remove_item!(path::HDF5.HDF5Group, name::AbstractString, value::Abstra
     @debug "Removed $value from $name" values
 
     return is_empty
+end
+
+function check_read_only(storage::Hdf5TimeSeriesStorage)
+    if storage.read_only
+        error("Operation not permitted; this time series file is read-only")
+    end
 end
 
 function compare_values(x::Hdf5TimeSeriesStorage, y::Hdf5TimeSeriesStorage)::Bool

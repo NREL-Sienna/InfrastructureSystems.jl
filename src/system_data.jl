@@ -81,12 +81,12 @@ end
 
 Construct SystemData from a JSON file.
 """
-function SystemData(filename::AbstractString)
-    return from_json(SystemData, filename)
+function SystemData(filename::AbstractString; time_series_read_only = false)
+    return from_json(SystemData, filename; time_series_read_only = time_series_read_only)
 end
 
 """Deserializes a SystemData from a JSON file."""
-function from_json(::Type{SystemData}, filename::String)
+function from_json(::Type{SystemData}, filename::String; time_series_read_only = false)
     # File paths in the JSON are relative. Temporarily change to this directory in order
     # to find all dependent files.
     orig_dir = pwd()
@@ -97,9 +97,16 @@ function from_json(::Type{SystemData}, filename::String)
 
     cd(new_dir)
     try
-        return open(basename(filename)) do io
+        raw = open(basename(filename)) do io
             from_json(io, SystemData)
         end
+        sys = deserialize(
+            SystemData,
+            InfrastructureSystemsType,
+            raw;
+            time_series_read_only = time_series_read_only,
+        )
+        return sys
     finally
         cd(orig_dir)
     end
@@ -189,6 +196,7 @@ function add_forecast!(
 ) where {T <: ForecastInternal}
     _validate_component(data, component)
     check_add_forecast!(data.forecast_metadata, forecast)
+    check_read_only(data.time_series_storage)
     add_forecast!(component, forecast)
     # TODO: can this be atomic with forecast addition?
     add_time_series!(
@@ -515,8 +523,8 @@ function remove_components!(::Type{T}, data::SystemData) where {T}
 end
 
 function clear_forecasts!(data::SystemData)
-    clear_forecasts!(data.components)
     clear_time_series!(data.time_series_storage)
+    clear_forecasts!(data.components)
     reset_info!(data.forecast_metadata)
 end
 
@@ -665,15 +673,14 @@ function encode_for_json(data::SystemData)
 end
 
 function JSON2.read(io::IO, ::Type{SystemData})
-    raw = JSON2.read(io, NamedTuple)
-    sys = deserialize(SystemData, InfrastructureSystemsType, raw)
-    return sys
+    return JSON2.read(io, NamedTuple)
 end
 
 function deserialize(
     ::Type{SystemData},
     ::Type{T},
-    raw::NamedTuple,
+    raw::NamedTuple;
+    time_series_read_only = false,
 ) where {T <: InfrastructureSystemsType}
     forecast_metadata = convert_type(ForecastMetadata, raw.forecast_metadata)
     # The code calling this function must have changed to this directory.
@@ -686,10 +693,14 @@ function deserialize(
     validation_descriptors = read_validation_descriptor(raw.validation_descriptor_file)
 
     if strip_module_name(raw.time_series_storage_type) == "InMemoryTimeSeriesStorage"
-        hdf5_storage = Hdf5TimeSeriesStorage(raw.time_series_storage_file)
+        hdf5_storage = Hdf5TimeSeriesStorage(raw.time_series_storage_file, true)
         time_series_storage = InMemoryTimeSeriesStorage(hdf5_storage)
     else
-        time_series_storage = from_file(Hdf5TimeSeriesStorage, raw.time_series_storage_file)
+        time_series_storage = from_file(
+            Hdf5TimeSeriesStorage,
+            raw.time_series_storage_file;
+            read_only = time_series_read_only,
+        )
     end
 
     internal = convert_type(InfrastructureSystemsInternal, raw.internal)
