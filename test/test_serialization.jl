@@ -36,21 +36,21 @@ end
 
 @testset "Test JSON serialization of system data" begin
     for in_memory in (true, false)
-        sys = create_system_data(; with_forecasts = true, time_series_in_memory = in_memory)
+        sys = create_system_data_shared_forecasts(; time_series_in_memory = in_memory)
         _, result = validate_serialization(sys)
         @test result
     end
 end
 
 @testset "Test prepare_for_serialization" begin
-    sys = create_system_data(; with_forecasts = true)
+    sys = create_system_data_shared_forecasts()
     directory = joinpath("dir1", "dir2")
     IS.prepare_for_serialization!(sys, joinpath(directory, "sys.json"))
     @test IS.get_ext(sys.internal)["serialization_directory"] == directory
 end
 
 @testset "Test JSON serialization of with read-only time series" begin
-    sys = create_system_data(; with_forecasts = true, time_series_in_memory = false)
+    sys = create_system_data_shared_forecasts(; time_series_in_memory = false)
     sys2, result = validate_serialization(sys; time_series_read_only = true)
     @test result
     component = collect(IS.get_components(IS.TestComponent, sys2))[1]
@@ -73,7 +73,7 @@ end
 end
 
 @testset "Test JSON serialization of with mutable time series" begin
-    sys = create_system_data(; with_forecasts = true, time_series_in_memory = false)
+    sys = create_system_data_shared_forecasts(; time_series_in_memory = false)
     sys2, result = validate_serialization(sys; time_series_read_only = false)
     @test result
     IS.clear_forecasts!(sys2)
