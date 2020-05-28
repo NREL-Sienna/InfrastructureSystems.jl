@@ -119,7 +119,7 @@ function add_time_series!(
                 if !HDF5.exists(HDF5.attrs(path), "columns")
                     throw(ArgumentError("columns are specified but existing array does not have columns"))
                 end
-                existing = HDF5.attrs(path)["columns"]
+                existing = Symbol.(HDF5.read(HDF5.attrs(path)["columns"]))
                 if columns != existing
                     throw(ArgumentError("columns do not match $columns $existing"))
                 end
