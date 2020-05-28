@@ -1,5 +1,9 @@
 # InfrastructureSystems
 
+## 0.10.1
+
+- Bug fix with serialization of shared time series data 
+
 ## 0.10.0
 
 - Add Read only option for deserialization
