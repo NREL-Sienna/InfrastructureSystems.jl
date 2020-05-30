@@ -330,7 +330,7 @@ end
 
 function forward(sender::Tuple{Type,Symbol}, receiver::Type, method::Method)
     # Assert that function is always just one argument
-    @assert method.nargs == 2 "`forward` only works for one argument functions"
+    @assert method.nargs < 4 "`forward` only works for one and two argument functions"
     # Assert that function name always starts with `get_*`
     "`forward` only works for accessor methods that are defined as `get_*` or `set_*`"
     @assert startswith(string(method.name), r"set_|get_")
@@ -368,7 +368,7 @@ function forward(sender::Tuple{Type,Symbol}, receiver::Type)
             # forwarding works for functions with 1 argument and starts with `get_`
             append!(code, forward(sender, receiver, m))
         end
-        if startswith(string(m.name), "set_") && m.nargs == 2
+        if startswith(string(m.name), "set_") && m.nargs == 3
             # forwarding works for functions with 1 argument and starts with `set_`
             append!(code, forward(sender, receiver, m))
         end
