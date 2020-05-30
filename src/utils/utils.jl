@@ -1,4 +1,4 @@
-import InteractiveUtils: subtypes
+import InteractiveUtils
 
 g_cached_subtypes = Dict{DataType, Vector{DataType}}()
 
@@ -19,7 +19,7 @@ end
 
 """Recursively builds a vector of subtypes."""
 function _get_all_concrete_subtypes(::Type{T}, sub_types::Vector{DataType}) where {T}
-    for sub_type in subtypes(T)
+    for sub_type in InteractiveUtils.subtypes(T)
         if isconcretetype(sub_type)
             push!(sub_types, sub_type)
         elseif isabstracttype(sub_type)
@@ -32,12 +32,12 @@ end
 
 """Returns an array of concrete types that are direct subtypes of T."""
 function get_concrete_subtypes(::Type{T}) where {T}
-    return [x for x in subtypes(T) if isconcretetype(x)]
+    return [x for x in InteractiveUtils.subtypes(T) if isconcretetype(x)]
 end
 
 """Returns an array of abstract types that are direct subtypes of T."""
 function get_abstract_subtypes(::Type{T}) where {T}
-    return [x for x in subtypes(T) if isabstracttype(x)]
+    return [x for x in InteractiveUtils.subtypes(T) if isabstracttype(x)]
 end
 
 """Returns an array of all super types of T."""
@@ -308,4 +308,80 @@ macro scoped_enum(T, args...)
     @enum $T $(args...)
     end))
     return blk
+end
+
+function compose_function_delegation_string(sender_type::String, sender_symbol::String, argid::Vector{Int}, method::Method)
+    s = "p" .* string.(1:method.nargs-1)
+    s .*= "::" .* string.(fieldtype.(Ref(method.sig), 2:method.nargs))
+    s[argid] .= "p" .* string.(argid) .* "::$sender_type"
+
+    m = string(method.module.eval(:(parentmodule($(method.name))))) * "."
+    l = "$m:(" * string(method.name) * ")(" * join(s,", ")
+
+    m = string(method.module) * "."
+    l *= ") = $m:(" * string(method.name) * ")("
+    s = "p" .* string.(1:method.nargs-1)
+
+    s[argid] .= "getfield(" .* s[argid] .* ", :$sender_symbol)"
+    l *= join(s, ", ") * ")"
+    l = join(split(l, "#"))
+    return l
+end
+
+function forward(sender::Tuple{Type,Symbol}, receiver::Type, method::Method)
+    # Assert that function is always just one argument
+    @assert method.nargs == 2 "`forward` only works for one argument functions"
+    # Assert that function name always starts with `get_*`
+    "`forward` only works for accessor methods that are defined as `get_*` or `set_*`"
+    @assert startswith(string(method.name), r"set_|get_")
+    sender_type = "$(parentmodule(sender[1])).$(nameof(sender[1]))"
+    sender_symbol = string(sender[2])
+    code_array = Vector{String}()
+    # Search for receiver type in method arguments
+    argtype = fieldtype(method.sig, 2)
+    (sender[1] == argtype)  &&  (return code_array)
+    if string(method.name)[1] == '@'
+        @warn "Forwarding macros is not yet supported."
+        display(method)
+        println()
+        return code_array
+    end
+
+    # first argument only
+    push!(code_array, compose_function_delegation_string(sender_type, sender_symbol, [1], method))
+
+    tmp = split(string(method.module), ".")[1]
+    code = "@eval " .* tmp .* " " .* code_array .*
+        " # " .* string(method.file) .* ":" .* string(method.line)
+    if  (tmp != "Base")  &&
+        (tmp != "Main")
+        pushfirst!(code, "using $tmp")
+    end
+    code = unique(code)
+    return code
+end
+
+function forward(sender::Tuple{Type,Symbol}, receiver::Type)
+    code = Vector{String}()
+    for m in InteractiveUtils.methodswith(receiver)
+        if startswith(string(m.name), "get_") && m.nargs == 2
+            # forwarding works for functions with 1 argument and starts with `get_`
+            append!(code, forward(sender, receiver, m))
+        end
+        if startswith(string(m.name), "set_") && m.nargs == 2
+            # forwarding works for functions with 1 argument and starts with `set_`
+            append!(code, forward(sender, receiver, m))
+        end
+    end
+    return code
+end
+
+macro forward(sender, receiver)
+    out = quote
+        list = InfrastructureSystems.forward($sender, $receiver)
+        for line in list
+            eval(Meta.parse("$line"))
+        end
+    end
+    return esc(out)
 end
