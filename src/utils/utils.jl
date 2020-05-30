@@ -310,17 +310,22 @@ macro scoped_enum(T, args...)
     return blk
 end
 
-function compose_function_delegation_string(sender_type::String, sender_symbol::String, argid::Vector{Int}, method::Method)
-    s = "p" .* string.(1:method.nargs-1)
-    s .*= "::" .* string.(fieldtype.(Ref(method.sig), 2:method.nargs))
+function compose_function_delegation_string(
+    sender_type::String,
+    sender_symbol::String,
+    argid::Vector{Int},
+    method::Method,
+)
+    s = "p" .* string.(1:(method.nargs - 1))
+    s .*= "::" .* string.(fieldtype.(Ref(method.sig), 2:(method.nargs)))
     s[argid] .= "p" .* string.(argid) .* "::$sender_type"
 
     m = string(method.module.eval(:(parentmodule($(method.name))))) * "."
-    l = "$m:(" * string(method.name) * ")(" * join(s,", ")
+    l = "$m:(" * string(method.name) * ")(" * join(s, ", ")
 
     m = string(method.module) * "."
     l *= ") = $m:(" * string(method.name) * ")("
-    s = "p" .* string.(1:method.nargs-1)
+    s = "p" .* string.(1:(method.nargs - 1))
 
     s[argid] .= "getfield(" .* s[argid] .* ", :$sender_symbol)"
     l *= join(s, ", ") * ")"
@@ -328,7 +333,7 @@ function compose_function_delegation_string(sender_type::String, sender_symbol::
     return l
 end
 
-function forward(sender::Tuple{Type,Symbol}, receiver::Type, method::Method)
+function forward(sender::Tuple{Type, Symbol}, receiver::Type, method::Method)
     # Assert that function is always just one argument
     @assert method.nargs < 4 "`forward` only works for one and two argument functions"
     # Assert that function name always starts with `get_*`
@@ -339,7 +344,7 @@ function forward(sender::Tuple{Type,Symbol}, receiver::Type, method::Method)
     code_array = Vector{String}()
     # Search for receiver type in method arguments
     argtype = fieldtype(method.sig, 2)
-    (sender[1] == argtype)  &&  (return code_array)
+    (sender[1] == argtype) && (return code_array)
     if string(method.name)[1] == '@'
         @warn "Forwarding macros is not yet supported."
         display(method)
@@ -348,20 +353,23 @@ function forward(sender::Tuple{Type,Symbol}, receiver::Type, method::Method)
     end
 
     # first argument only
-    push!(code_array, compose_function_delegation_string(sender_type, sender_symbol, [1], method))
+    push!(
+        code_array,
+        compose_function_delegation_string(sender_type, sender_symbol, [1], method),
+    )
 
     tmp = split(string(method.module), ".")[1]
-    code = "@eval " .* tmp .* " " .* code_array .*
-        " # " .* string(method.file) .* ":" .* string(method.line)
-    if  (tmp != "Base")  &&
-        (tmp != "Main")
+    code =
+        "@eval " .* tmp .* " " .* code_array .* " # " .* string(method.file) .* ":" .*
+        string(method.line)
+    if (tmp != "Base") && (tmp != "Main")
         pushfirst!(code, "using $tmp")
     end
     code = unique(code)
     return code
 end
 
-function forward(sender::Tuple{Type,Symbol}, receiver::Type)
+function forward(sender::Tuple{Type, Symbol}, receiver::Type)
     code = Vector{String}()
     for m in InteractiveUtils.methodswith(receiver)
         if startswith(string(m.name), "get_") && m.nargs == 2
