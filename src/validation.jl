@@ -170,6 +170,15 @@ function check_limits(
     ::Type{T},
     valid_info::ValidationInfo,
     field_value,
+) where {T <: Union{Nothing, Int}}
+    # Validates numbers.
+    return check_limits_impl(valid_info, field_value)
+end
+
+function check_limits(
+    ::Type{T},
+    valid_info::ValidationInfo,
+    field_value,
 ) where {T <: Union{Nothing, NamedTuple}}
     # Validates up/down, min/max, from/to named tuples.
     @assert length(field_value) == 2
