@@ -14,7 +14,7 @@ function test_add_remove(storage::IS.TimeSeriesStorage)
     component2 = IS.TestComponent("component2", 6)
     IS.add_time_series!(storage, IS.get_uuid(component2), label, ts)
 
-    IS.get_num_time_series(storage) == 2
+    @test IS.get_num_time_series(storage) == 1
 
     IS.remove_time_series!(storage, IS.get_uuid(ts), IS.get_uuid(component2), label)
 
@@ -23,6 +23,27 @@ function test_add_remove(storage::IS.TimeSeriesStorage)
     @test ts_data2 isa TimeSeries.TimeArray
 
     IS.remove_time_series!(storage, IS.get_uuid(ts), IS.get_uuid(component), label)
+    @test_throws ArgumentError IS.get_time_series(storage, IS.get_uuid(ts))
+    IS.get_num_time_series(storage) == 0
+end
+
+function test_add_references(storage::IS.TimeSeriesStorage)
+    label = "val"
+    component1 = IS.TestComponent("component1", 5)
+    component2 = IS.TestComponent("component2", 6)
+    ts = create_time_series_data()
+    ts_uuid = IS.get_uuid(ts)
+    IS.add_time_series!(storage, IS.get_uuid(component1), label, ts)
+    IS.add_time_series_reference!(storage, IS.get_uuid(component2), label, ts_uuid)
+
+    @test IS.get_num_time_series(storage) == 1
+
+    IS.remove_time_series!(storage, ts_uuid, IS.get_uuid(component1), label)
+
+    # There should still be one reference to the data.
+    @test IS.get_time_series(storage, ts_uuid) isa TimeSeries.TimeArray
+
+    IS.remove_time_series!(storage, ts_uuid, IS.get_uuid(component2), label)
     @test_throws ArgumentError IS.get_time_series(storage, IS.get_uuid(ts))
     IS.get_num_time_series(storage) == 0
 end
@@ -69,4 +90,13 @@ end
     test_add_remove(IS.make_time_series_storage(; in_memory = false, directory = "."))
     test_get_subset(IS.make_time_series_storage(; in_memory = false, directory = "."))
     test_clear(IS.make_time_series_storage(; in_memory = false, directory = "."))
+end
+
+@testset "Test copy time series references" begin
+    for in_memory in (true, false)
+        test_add_remove(IS.make_time_series_storage(; in_memory = in_memory))
+        test_add_references(IS.make_time_series_storage(; in_memory = in_memory))
+        test_get_subset(IS.make_time_series_storage(; in_memory = in_memory))
+        test_clear(IS.make_time_series_storage(; in_memory = in_memory))
+    end
 end
