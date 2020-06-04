@@ -24,11 +24,24 @@ function read_validation_descriptor(filename::AbstractString)
         error("Filename is not a YAML or JSON file.")
     end
 
-    if !isa(data, Array)
+    if data isa Array
+        descriptors = data
+    elseif data isa Dict
+        if haskey(data, "auto_generated_structs")
+            descriptors = data["auto_generated_structs"]
+        else
+            descriptors = []
+        end
+        if haskey(data, "struct_validation_descriptors")
+            for descr in data["struct_validation_descriptors"]
+                push!(descriptors, descr)
+            end
+        end
+    else
         throw(DataFormatError("{filename} has invalid format"))
     end
 
-    return data
+    return descriptors
 end
 
 # Get validation info for one struct.

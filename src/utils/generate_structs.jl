@@ -73,6 +73,13 @@ end
 function read_json_data(filename::String)
     return open(filename) do io
         data = JSON.parse(io)
+        if data isa Array
+            return data
+        elseif data isa Dict && haskey(data, "auto_generated_structs")
+            return data["auto_generated_structs"]
+        else
+            throw(DataFormatError("{filename} has invalid format"))
+        end
     end
 end
 
