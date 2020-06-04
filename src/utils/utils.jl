@@ -371,13 +371,15 @@ end
 
 function forward(sender::Tuple{Type, Symbol}, receiver::Type)
     code = Vector{String}()
+    active_methods = getfield.(InteractiveUtils.methodswith(sender[1]), :name)
     for m in InteractiveUtils.methodswith(receiver)
+        m.name ∈ active_methods && continue
         if startswith(string(m.name), "get_") && m.nargs == 2
             # forwarding works for functions with 1 argument and starts with `get_`
             append!(code, forward(sender, receiver, m))
         end
         if startswith(string(m.name), "set_") && m.nargs == 3
-            # forwarding works for functions with 1 argument and starts with `set_`
+            # forwarding works for functions with 2 argument and starts with `set_`
             append!(code, forward(sender, receiver, m))
         end
     end
