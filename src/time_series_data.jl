@@ -15,6 +15,8 @@ function TimeSeriesData(data)
     return TimeSeriesData(data, InfrastructureSystemsInternal())
 end
 
+get_internal(data) = data.internal
+
 function Base.summary(data::TimeSeriesData)
     return "TimeSeriesData"
 end

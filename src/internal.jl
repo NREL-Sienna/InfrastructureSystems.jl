@@ -35,9 +35,18 @@ function clear_ext(obj::InfrastructureSystemsInternal)
     obj.ext = nothing
 end
 
+get_uuid(internal::InfrastructureSystemsInternal) = internal.uuid
+
 """
 Gets the UUID for any PowerSystemType.
 """
-function get_uuid(obj::InfrastructureSystemsType)::Base.UUID
-    return obj.internal.uuid
+function get_uuid(obj::InfrastructureSystemsType)
+    return get_internal(obj).uuid
+end
+
+"""
+Assign a new UUID.
+"""
+function assign_new_uuid!(obj::InfrastructureSystemsType)
+    get_internal(obj).uuid = UUIDs.uuid4()
 end

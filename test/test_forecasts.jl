@@ -270,7 +270,7 @@ end
     @test length(forecast) == 3
 end
 
-@testset "Test copy forecast references" begin
+@testset "Test copy forecasts no label mapping" begin
     sys = create_system_data()
     components = collect(IS.get_components(IS.InfrastructureSystemsType, sys))
     @test length(components) == 1
@@ -291,6 +291,69 @@ end
     @test forecast isa IS.Deterministic
     @test IS.get_initial_time(forecast) == initial_time
     @test IS.get_label(forecast) == label
+end
+
+@testset "Test copy forecasts label mapping" begin
+    sys = create_system_data()
+    components = collect(IS.get_components(IS.InfrastructureSystemsType, sys))
+    @test length(components) == 1
+    component = components[1]
+
+    initial_time = Dates.DateTime("2020-01-01T00:00:00")
+    dates = collect(initial_time:Dates.Hour(1):Dates.DateTime("2020-01-01T23:00:00"))
+    data = collect(1:24)
+
+    ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
+    label1 = "get_val1"
+    IS.add_forecast!(sys, ta, component, label1)
+
+    component2 = IS.TestComponent("component2", 6)
+    IS.add_component!(sys, component2)
+    label2 = "get_val2"
+    label_mapping = Dict(label1 => label2)
+    IS.copy_forecasts!(component, component2, label_mapping)
+    forecast = IS.get_forecast(IS.Deterministic, component2, initial_time, label2)
+    @test forecast isa IS.Deterministic
+    @test IS.get_initial_time(forecast) == initial_time
+    @test IS.get_label(forecast) == label2
+end
+
+@testset "Test copy forecasts label mapping, missing label" begin
+    sys = create_system_data()
+    components = collect(IS.get_components(IS.InfrastructureSystemsType, sys))
+    @test length(components) == 1
+    component = components[1]
+
+    initial_time1 = Dates.DateTime("2020-01-01T00:00:00")
+    end_time1 = Dates.DateTime("2020-01-01T23:00:00")
+    dates1 = collect(initial_time1:Dates.Hour(1):end_time1)
+    initial_time2 = Dates.DateTime("2020-01-02T00:00:00")
+    end_time2 = Dates.DateTime("2020-01-02T23:00:00")
+    dates2 = collect(initial_time2:Dates.Hour(1):end_time2)
+    data = collect(1:24)
+
+    ta1 = TimeSeries.TimeArray(dates1, data, [IS.get_name(component)])
+    ta2 = TimeSeries.TimeArray(dates2, data, [IS.get_name(component)])
+    label1 = "get_val1"
+    label2a = "get_val2a"
+    IS.add_forecast!(sys, ta1, component, label1)
+    IS.add_forecast!(sys, ta2, component, label2a)
+
+    component2 = IS.TestComponent("component2", 6)
+    IS.add_component!(sys, component2)
+    label2b = "get_val2b"
+    label_mapping = Dict(label2a => label2b)
+    IS.copy_forecasts!(component, component2, label_mapping)
+    forecast = IS.get_forecast(IS.Deterministic, component2, initial_time2, label2b)
+    @test forecast isa IS.Deterministic
+    @test IS.get_initial_time(forecast) == initial_time2
+    @test IS.get_label(forecast) == label2b
+    @test_throws ArgumentError IS.get_forecast(
+        IS.Deterministic,
+        component2,
+        initial_time2,
+        label2a,
+    )
 end
 
 function validate_generated_initial_times(
