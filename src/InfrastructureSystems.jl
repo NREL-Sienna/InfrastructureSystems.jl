@@ -30,6 +30,7 @@ set_forecasts!(value::T) where {T <: InfrastructureSystemsType} = nothing
 
 get_name(value::InfrastructureSystemsType) = value.name
 set_name!(value::InfrastructureSystemsType, name) = value.name = name
+get_internal(value::InfrastructureSystemsType) = value.internal
 
 include("common.jl")
 include("internal.jl")

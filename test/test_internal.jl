@@ -1,3 +1,10 @@
+@testset "Test assign_new_uuid" begin
+    component = IS.TestComponent("component", 5)
+    uuid1 = IS.get_uuid(component)
+    IS.assign_new_uuid!(component)
+    @test uuid1 != IS.get_uuid(component)
+end
+
 @testset "Test ext" begin
     internal = IS.InfrastructureSystemsInternal()
     @test isnothing(internal.ext)

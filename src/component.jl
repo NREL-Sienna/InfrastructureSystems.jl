@@ -393,16 +393,41 @@ end
 """
 Efficiently add all forecasts in one component to another by copying the underlying
 references.
+
+# Arguments
+- `src::InfrastructureSystemsType`: Source component
+- `dst::InfrastructureSystemsType`: Destination component
+- `label_mapping::Dict = nothing`: Optionally map src labels to different dst labels.
+  If provided and src has a forecast with a label not present in label_mapping, that
+  forecast will not copied. If label_mapping is nothing then all forecasts will be copied
+  with src's labels.
 """
-function copy_forecasts!(src::InfrastructureSystemsType, dst::InfrastructureSystemsType)
+function copy_forecasts!(
+    src::InfrastructureSystemsType,
+    dst::InfrastructureSystemsType,
+    label_mapping::Union{Nothing, Dict{String, String}} = nothing,
+)
     for forecast in iterate_forecasts(ForecastInternal, src)
-        add_forecast!(dst, forecast)
+        label = get_label(forecast)
+        new_label = label
+        if !isnothing(label_mapping)
+            new_label = get(label_mapping, label, nothing)
+            if isnothing(new_label)
+                @debug "Skip copying forecast" label
+                continue
+            end
+            @debug "Copy forecast with" new_label
+        end
+        new_forecast = deepcopy(forecast)
+        assign_new_uuid!(new_forecast)
+        set_label!(new_forecast, new_label)
+        add_forecast!(dst, new_forecast)
         storage = _get_time_series_storage(dst)
         if isnothing(storage)
             throw(ArgumentError("component does not have time series storage"))
         end
         ts_uuid = get_time_series_uuid(forecast)
-        add_time_series_reference!(storage, get_uuid(dst), get_label(forecast), ts_uuid)
+        add_time_series_reference!(storage, get_uuid(dst), new_label, ts_uuid)
     end
 end
 

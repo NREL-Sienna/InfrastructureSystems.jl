@@ -21,6 +21,8 @@ function AdditionalTestComponent(name, val)
     return AdditionalTestComponent(name, val, Forecasts(), InfrastructureSystemsInternal())
 end
 
+get_internal(component::TestComponent) = component.internal
+get_internal(component::AdditionalTestComponent) = component.internal
 get_val(component::TestComponent) = component.val
 
 function get_forecasts(component::TestComponent)
