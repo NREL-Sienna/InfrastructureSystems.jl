@@ -4,6 +4,7 @@ Abstract type for time series storage implementations.
 
 All subtypes must implement:
 - add_time_series!
+- add_time_series_reference!
 - remove_time_series!
 - get_time_series
 - clear_time_series!

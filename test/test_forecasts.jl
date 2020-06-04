@@ -270,6 +270,29 @@ end
     @test length(forecast) == 3
 end
 
+@testset "Test copy forecast references" begin
+    sys = create_system_data()
+    components = collect(IS.get_components(IS.InfrastructureSystemsType, sys))
+    @test length(components) == 1
+    component = components[1]
+
+    initial_time = Dates.DateTime("2020-01-01T00:00:00")
+    dates = collect(initial_time:Dates.Hour(1):Dates.DateTime("2020-01-01T23:00:00"))
+    data = collect(1:24)
+
+    ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
+    label = "get_val"
+    IS.add_forecast!(sys, ta, component, label)
+
+    component2 = IS.TestComponent("component2", 6)
+    IS.add_component!(sys, component2)
+    IS.copy_forecasts!(component, component2)
+    forecast = IS.get_forecast(IS.Deterministic, component2, initial_time, label)
+    @test forecast isa IS.Deterministic
+    @test IS.get_initial_time(forecast) == initial_time
+    @test IS.get_label(forecast) == label
+end
+
 function validate_generated_initial_times(
     forecast_type::Type{<:IS.Forecast},
     component::IS.InfrastructureSystemsType,

@@ -113,8 +113,6 @@ function add_time_series!(
             end
         else
             path = root[uuid]
-            @debug "Add reference to existing time series entry." uuid component_uuid label
-            _append_item!(path, "components", component_label)
             if !isnothing(columns)
                 if !HDF5.exists(HDF5.attrs(path), "columns")
                     throw(ArgumentError("columns are specified but existing array does not have columns"))
@@ -124,7 +122,26 @@ function add_time_series!(
                     throw(ArgumentError("columns do not match $columns $existing"))
                 end
             end
+            @debug "Add reference to existing time series entry." uuid component_uuid label
+            _append_item!(path, "components", component_label)
         end
+    end
+end
+
+function add_time_series_reference!(
+    storage::Hdf5TimeSeriesStorage,
+    component_uuid::UUIDs.UUID,
+    label::AbstractString,
+    ts_uuid::UUIDs.UUID,
+)
+    check_read_only(storage)
+    uuid = string(ts_uuid)
+    component_label = make_component_label(component_uuid, label)
+    HDF5.h5open(storage.file_path, "r+") do file
+        root = _get_root(storage, file)
+        path = root[uuid]
+        _append_item!(path, "components", component_label)
+        @debug "Add reference to existing time series entry." uuid component_uuid label
     end
 end
 

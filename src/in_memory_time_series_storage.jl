@@ -51,10 +51,19 @@ function add_time_series!(
         @debug "Create new time series entry." uuid component_uuid label
         storage.data[uuid] = _TimeSeriesRecord(component_uuid, label, ts)
     else
-        @debug "Add reference to existing time series entry." uuid component_uuid label
-        record = storage.data[uuid]
-        push!(record.component_labels, (component_uuid, label))
+        add_time_series_reference!(storage, component_uuid, label, uuid)
     end
+end
+
+function add_time_series_reference!(
+    storage::InMemoryTimeSeriesStorage,
+    component_uuid::UUIDs.UUID,
+    label::AbstractString,
+    ts_uuid::UUIDs.UUID,
+)
+    @debug "Add reference to existing time series entry." ts_uuid component_uuid label
+    record = storage.data[ts_uuid]
+    push!(record.component_labels, (component_uuid, label))
 end
 
 function remove_time_series!(

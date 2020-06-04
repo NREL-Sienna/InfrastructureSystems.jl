@@ -390,6 +390,22 @@ function check_contiguous_forecasts(
     return first_initial_time, total_horizon
 end
 
+"""
+Efficiently add all forecasts in one component to another by copying the underlying
+references.
+"""
+function copy_forecasts!(src::InfrastructureSystemsType, dst::InfrastructureSystemsType)
+    for forecast in iterate_forecasts(ForecastInternal, src)
+        add_forecast!(dst, forecast)
+        storage = _get_time_series_storage(dst)
+        if isnothing(storage)
+            throw(ArgumentError("component does not have time series storage"))
+        end
+        ts_uuid = get_time_series_uuid(forecast)
+        add_time_series_reference!(storage, get_uuid(dst), get_label(forecast), ts_uuid)
+    end
+end
+
 function get_forecast_keys(component::InfrastructureSystemsType)
     return keys(get_forecasts(component).data)
 end
