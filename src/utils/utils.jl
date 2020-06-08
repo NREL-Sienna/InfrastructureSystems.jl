@@ -377,8 +377,7 @@ function forward(sender::Tuple{Type, Symbol}, receiver::Type)
         if startswith(string(m.name), "get_") && m.nargs == 2
             # forwarding works for functions with 1 argument and starts with `get_`
             append!(code, forward(sender, receiver, m))
-        end
-        if startswith(string(m.name), "set_") && m.nargs == 3
+        elseif startswith(string(m.name), "set_") && m.nargs == 3
             # forwarding works for functions with 2 argument and starts with `set_`
             append!(code, forward(sender, receiver, m))
         end
