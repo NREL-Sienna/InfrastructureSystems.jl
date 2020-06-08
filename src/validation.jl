@@ -174,7 +174,7 @@ function check_limits(
     ::Type{T},
     valid_info::ValidationInfo,
     field_value,
-) where {T <: Union{Nothing, Float64}}
+) where {T <: Union{Nothing, Real}}
     # Validates numbers.
     return check_limits_impl(valid_info, field_value)
 end
