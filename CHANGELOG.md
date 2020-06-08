@@ -1,5 +1,11 @@
 # InfrastructureSystems
 
+## 0.11.0
+
+- Add forward macro for code re-use
+- Add function to copy forecasts between components
+- Allow to check for integer values in function checks
+
 ## 0.10.1
 
 - Bug fix with serialization of shared time series data 
