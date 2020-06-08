@@ -215,8 +215,8 @@ function get_components_by_name(
     components::Components,
     name::AbstractString,
 )::Vector{T} where {T <: InfrastructureSystemsType}
-    if !isabstracttype(T)
-        throw(ArgumentError("get_components_by_name only supports abstract types: $T"))
+    if isconcretetype(T)
+        throw(ArgumentError("get_components_by_name does not support concrete types: $T"))
     end
 
     components_ = Vector{T}()
