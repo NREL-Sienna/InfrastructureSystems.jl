@@ -23,8 +23,6 @@ mutable struct SystemData <: InfrastructureSystemsType
 end
 
 """
-    SystemData(; validation_descriptor_file = nothing, time_series_in_memory = false)
-
 Construct SystemData to store components and time series data.
 
 # Arguments
@@ -77,8 +75,6 @@ function SystemData(
 end
 
 """
-    SystemData(filename::AbstractString)
-
 Construct SystemData from a JSON file.
 """
 function SystemData(filename::AbstractString; time_series_read_only = false)
@@ -113,13 +109,6 @@ function from_json(::Type{SystemData}, filename::String; time_series_read_only =
 end
 
 """
-    add_forecasts!(
-                   ::Type{T},
-                   data::SystemData,
-                   metadata_file::AbstractString,
-                   resolution=nothing,
-                  ) where T <: InfrastructureSystemsType
-
 Adds forecasts from a metadata file or metadata descriptors.
 
 # Arguments
@@ -140,12 +129,6 @@ function add_forecasts!(
 end
 
 """
-    add_forecasts!(
-                   data::SystemData,
-                   timeseries_metadata::Vector{TimeseriesFileMetadata};
-                   resolution=nothing,
-                  )
-
 Adds forecasts from a metadata file or metadata descriptors.
 
 # Arguments
@@ -167,8 +150,6 @@ function add_forecasts!(
 end
 
 """
-    add_forecast!(data::SystemData, forecast)
-
 Add a forecast.
 
 # Arguments
@@ -209,14 +190,6 @@ function add_forecast!(
 end
 
 """
-    add_forecast!(
-                  data::SystemData,
-                  filename::AbstractString,
-                  component::InfrastructureSystemsType,
-                  label::AbstractString,
-                  scaling_factor::Union{String, Float64}=1.0,
-                 )
-
 Add a forecast from a CSV file.
 
 See [`TimeseriesFileMetadata`](@ref) for description of scaling_factor.
@@ -235,14 +208,6 @@ function add_forecast!(
 end
 
 """
-    add_forecast!(
-                  data::SystemData,
-                  ta::TimeSeries.TimeArray,
-                  component::InfrastructureSystemsType,
-                  label::AbstractString,
-                  scaling_factor::Union{String, Float64}=1.0,
-                 )
-
 Add a forecast to a system from a TimeSeries.TimeArray.
 
 See [`TimeseriesFileMetadata`](@ref) for description of scaling_factor.
@@ -259,15 +224,6 @@ function add_forecast!(
 end
 
 """
-    add_forecast!(
-                  data::SystemData,
-                  df::DataFrames.DataFrame,
-                  component::InfrastructureSystemsType,
-                  label::AbstractString,
-                  scaling_factor::Union{String, Float64}=1.0;
-                  timestamp=:timestamp,
-                 )
-
 Add a forecast to a system from a DataFrames.DataFrame.
 
 See [`TimeseriesFileMetadata`](@ref) for description of scaling_factor.
@@ -301,14 +257,6 @@ function add_forecast!(
 end
 
 """
-    remove_forecast!(
-                     ::Type{T},
-                     data::SystemData,
-                     component::InfrastructureSystemsType,
-                     initial_time::Dates.DateTime,
-                     label::String,
-                    ) where T <: Forecast
-
 Remove the time series data for a component.
 """
 function remove_forecast!(
@@ -327,9 +275,6 @@ function remove_forecast!(
 end
 
 """
-    make_forecast!(timeseries_metadata::TimeseriesFileMetadata;
-                   resolution=nothing)
-
 Return a vector of forecasts from TimeseriesFileMetadata.
 
 # Arguments
@@ -401,8 +346,6 @@ function add_forecast_info!(forecast_cache::ForecastCache, metadata::TimeseriesF
 end
 
 """
-    are_forecasts_contiguous(data::SystemData)
-
 Return true if forecasts are stored contiguously.
 
 Throws ArgumentError if there are no forecasts stored.
@@ -418,13 +361,6 @@ function are_forecasts_contiguous(data::SystemData)
 end
 
 """
-    generate_initial_times(
-                           data::SystemData,
-                           interval::Dates.Period,
-                           horizon::Int;
-                           initial_time::Union{Nothing, Dates.DateTime}=nothing,
-                          )
-
 Generates all possible initial times for the stored forecasts. This should return the same
 result regardless of whether the forecasts have been stored as one contiguous array or
 chunks of contiguous arrays, such as one 365-day forecast vs 365 one-day forecasts.
@@ -552,8 +488,6 @@ function get_forecasts_interval(data::SystemData)
 end
 
 """
-    get_forecast_counts(data::SystemData)
-
 Return a tuple of counts of components with forecasts and total forecasts.
 """
 function get_forecast_counts(data::SystemData)
@@ -568,12 +502,6 @@ function get_forecast_counts(data::SystemData)
 end
 
 """
-    set_component!(
-                   metadata::TimeseriesFileMetadata,
-                   data::SystemData,
-                   mod::Module,
-                  )
-
 Set the component value in metadata by looking up the category in module.
 This requires that category be a string version of a component's abstract type.
 Modules can override for custom behavior.
@@ -602,8 +530,6 @@ function set_component!(metadata::TimeseriesFileMetadata, data::SystemData, mod:
 end
 
 """
-    prepare_for_serialization!(data::SystemData, filename::AbstractString)
-
 Parent object should call this prior to serialization so that SystemData can store the
 appropriate path information for the time series data.
 """

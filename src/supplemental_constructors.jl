@@ -8,11 +8,6 @@ function make_internal_forecast(forecast::Forecast)
 end
 
 """
-    Deterministic(label::String,
-                  resolution::Dates.Period,
-                  initial_time::Dates.DateTime,
-                  time_steps::Int)
-
 Constructs Deterministic after constructing a TimeArray from initial_time and time_steps.
 """
 function Deterministic(
@@ -61,13 +56,6 @@ function DeterministicInternal(label::AbstractString, data::TimeSeriesData)
 end
 
 """
-    Probabilistic(
-                  label::String,
-                  resolution::Dates.Period,
-                  initial_time::Dates.DateTime,
-                  percentiles::Vector{Float64},
-                  time_steps::Int,
-                 )
 Constructs Probabilistic after constructing a TimeArray from initial_time and time_steps.
 """
 function Probabilistic(
@@ -86,11 +74,6 @@ function Probabilistic(
 end
 
 """
-    Probabilistic(
-                  label::String,
-                  percentiles::Vector{Float64},  # percentiles for the probabilistic forecast
-                  data::TimeSeries.TimeArray,
-                 )
 Constructs Probabilistic Forecast after constructing a TimeArray from initial_time and time_steps.
 """
 # TODO: do we need this check still?

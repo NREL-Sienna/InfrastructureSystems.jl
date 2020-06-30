@@ -1,6 +1,4 @@
 """
-    redirect_stdout_to_log(func::Function)
-
 Redirect all data written to stdout by a function to log events.
 """
 function redirect_stdout_to_log(func::Function)

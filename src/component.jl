@@ -14,13 +14,6 @@ function add_forecast!(
 end
 
 """
-    remove_forecast_internal!(
-                              ::Type{T},
-                              component::InfrastructureSystemsType,
-                              initial_time::Dates.DateTime,
-                              label::AbstractString,
-                             ) where T <: ForecastInternal
-
 Removes the metadata for a forecast.
 The caller must also remove the actual time series data.
 """
@@ -43,13 +36,6 @@ function clear_forecasts!(component::InfrastructureSystemsType)
 end
 
 """
-    get_forecast(
-                 ::Type{T},
-                 component::Component,
-                 initial_time::Dates.DateTime,
-                 label::AbstractString,
-                ) where T <: Forecast
-
 Return a forecast for the entire time series range stored for these parameters.
 """
 function get_forecast(
@@ -66,14 +52,6 @@ function get_forecast(
 end
 
 """
-    get_forecast(
-                 ::Type{T},
-                 component::InfrastructureSystemsType,
-                 initial_time::Dates.DateTime,
-                 label::AbstractString,
-                 horizon::Int,
-                ) where T <: Forecast
-
 Return a forecast for a subset of the time series range stored for these parameters.
 The range may span time series arrays as long as those timestamps are contiguous.
 """
@@ -193,13 +171,6 @@ function _make_forecast(
 end
 
 """
-    get_forecast_values(
-                        ::Type{T},
-                        component::InfrastructureSystemsType,
-                        initial_time::Dates.DateTime,
-                        label::AbstractString,
-                       ) where T <: Forecast
-
 Return a TimeSeries.TimeArray where the forecast data has been multiplied by the forecasted
 component field.
 """
@@ -282,13 +253,6 @@ function get_forecast_initial_times(component::InfrastructureSystemsType)
 end
 
 """
-    generate_initial_times(
-                           component::InfrastructureSystemsType,
-                           interval::Dates.Period,
-                           horizon::Int;
-                           initial_time::Union{Nothing, Dates.DateTime}=nothing,
-                          )
-
 Generates all possible initial times for the stored forecasts. This should return the same
 result regardless of whether the forecasts have been stored as one contiguous array or
 chunks of contiguous arrays, such as one 365-day forecast vs 365 one-day forecasts.
@@ -344,7 +308,7 @@ function generate_initial_times(
 end
 
 """
-    are_forecasts_contiguous(component::InfrastructureSystemsType)
+Return true if the forecasts are contiguous.
 """
 function are_forecasts_contiguous(component::InfrastructureSystemsType)
     existing_initial_times = get_forecast_initial_times(component)

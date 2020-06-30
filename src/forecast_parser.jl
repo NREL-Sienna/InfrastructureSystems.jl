@@ -1,4 +1,3 @@
-
 """Describes how to construct forecasts from raw timeseries data files."""
 mutable struct TimeseriesFileMetadata
     simulation::String  # User description of simulation

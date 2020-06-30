@@ -9,8 +9,6 @@ abstract type TimeseriesFormatComponentsAsColumnsNoTime <: TimeseriesFileFormat 
 abstract type TimeseriesFormatDateTimeAsColumn <: TimeseriesFileFormat end
 
 """
-    read_time_series(file_path::AbstractString, component_name=nothing)
-
 Return a TimeArray from a CSV file.
 
 Pass component_name when the file does not have the component name in a column header.
@@ -27,7 +25,9 @@ function read_time_series(file_path::AbstractString, component_name = nothing; k
     return read_time_series(get_timeseries_format(file), file, component_name; kwargs...)
 end
 
-"""Return the timeseries format used in the CSV file."""
+"""
+Return the timeseries format used in the CSV file.
+"""
 function get_timeseries_format(file::CSV.File)
     columns = propertynames(file)
     has_ymd = :Year in columns && :Month in columns && :Day in columns
@@ -57,7 +57,9 @@ function get_timeseries_format(file::CSV.File)
     return format
 end
 
-"""Return the column names with values (components)."""
+"""
+Return the column names with values (components).
+"""
 function get_value_columns(::Type{TimeseriesFormatYMDPeriodAsColumn}, file::CSV.File)
     return [x for x in propertynames(file) if !in(x, (:Year, :Month, :Day, :Period))]
 end
@@ -71,7 +73,9 @@ function get_value_columns(
     return [x for x in propertynames(file) if !in(x, (:DateTime, :Period))]
 end
 
-"""Return the column names with values."""
+"""
+Return the column names with values.
+"""
 function get_value_columns(
     ::Type{TimeseriesFormatComponentsAsColumnsNoTime},
     file::CSV.File,
@@ -79,7 +83,9 @@ function get_value_columns(
     return propertynames(file)
 end
 
-"""Return the column names that specify the Period."""
+"""
+Return the column names that specify the Period.
+"""
 function get_period_columns(::Type{TimeseriesFormatPeriodAsColumn}, file::CSV.File)
     return [:Period]
 end
@@ -88,7 +94,9 @@ function get_period_columns(::Type{TimeseriesFormatYMDPeriodAsHeader}, file::CSV
     return [x for x in propertynames(file) if !in(x, (:Year, :Month, :Day))]
 end
 
-"""Return a vector of dicts of unique timestamps and their counts."""
+"""
+Return a vector of dicts of unique timestamps and their counts.
+"""
 function get_unique_timestamps(::Type{T}, file::CSV.File) where {T <: TimeseriesFileFormat}
     timestamps = Vector{Dict{String, Any}}()
     new_timestamp = x -> Dict("timestamp" => x, "count" => 1)
@@ -114,7 +122,9 @@ function get_unique_timestamps(::Type{T}, file::CSV.File) where {T <: Timeseries
     return timestamps
 end
 
-"""Return a Dates.DateTime for the row in the CSV file."""
+"""
+Return a Dates.DateTime for the row in the CSV file.
+"""
 function get_timestamp(
     ::Type{TimeseriesFormatYMDPeriodAsColumn},
     file::CSV.File,
@@ -141,7 +151,8 @@ function get_timestamp(
     return get_timestamp(TimeseriesFormatYMDPeriodAsColumn, file, row_index)
 end
 
-"""Return a TimeSeries.TimeArray representing the CSV file.
+"""
+Return a TimeSeries.TimeArray representing the CSV file.
 
 This version of the function only has component_name to match the interface. It is unused.
 """
@@ -170,7 +181,8 @@ function read_time_series(
     return TimeSeries.TimeArray(timestamps, hcat(vals...), value_columns)
 end
 
-"""Return a TimeSeries.TimeArray representing the CSV file.
+"""
+Return a TimeSeries.TimeArray representing the CSV file.
 
 This version of the function only has component_name to match the interface. It is unused.
 """
@@ -199,7 +211,8 @@ function read_time_series(
     return TimeSeries.TimeArray(timestamps, hcat(vals...), value_columns)
 end
 
-"""This version of the function supports the format where there is no column header for
+"""
+This version of the function supports the format where there is no column header for
 a component, so the component_name must be passed in.
 """
 function read_time_series(
@@ -242,7 +255,8 @@ function read_time_series(
     return TimeSeries.TimeArray(timestamps, vals, Symbol.([component_name]))
 end
 
-"""This version of the function only has component_name to match the interface.
+"""
+This version of the function only has component_name to match the interface.
 It is unused.
 
 Set start_datetime as a keyword argument for the starting timestamp, otherwise the current
@@ -269,7 +283,9 @@ function read_time_series(
     return TimeSeries.TimeArray(timestamps, hcat(vals...), value_columns)
 end
 
-"""Return the number of steps specified by the period in the file."""
+"""
+Return the number of steps specified by the period in the file.
+"""
 function get_num_steps(
     ::Type{T},
     file::CSV.File,
@@ -278,7 +294,9 @@ function get_num_steps(
     error("Unsupported time series file format")
 end
 
-"""Return the number of steps specified by the period in the file."""
+"""
+Return the number of steps specified by the period in the file.
+"""
 function get_num_steps(
     ::Type{T},
     file::CSV.File,
@@ -288,7 +306,9 @@ function get_num_steps(
     return timestamps[1]["count"]
 end
 
-"""Return the number of steps specified by the period in the file."""
+"""
+Return the number of steps specified by the period in the file.
+"""
 function get_num_steps(
     ::Type{T},
     file::CSV.File,
@@ -297,7 +317,9 @@ function get_num_steps(
     return num_steps = period[end]
 end
 
-"""Return a DateTime for the step between values as specified by the period in the file."""
+"""
+Return a DateTime for the step between values as specified by the period in the file.
+"""
 function get_step_time(
     ::Type{T},
     file::CSV.File,

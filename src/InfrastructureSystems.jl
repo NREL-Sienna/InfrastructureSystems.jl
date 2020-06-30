@@ -10,6 +10,13 @@ import JSON2
 import PrettyTables
 import TimeSeries
 
+using DocStringExtensions
+
+@template (FUNCTIONS, METHODS) = """
+                                 $(TYPEDSIGNATURES)
+                                 $(DOCSTRING)
+                                 """
+
 # IS should not export any function since it can have name clashes with other packages.
 # Do not add export statements.
 

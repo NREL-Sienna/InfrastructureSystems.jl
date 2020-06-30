@@ -1,5 +1,7 @@
 
-"""Wrapper around Iterators.Flatten to provide total length."""
+"""
+Wrapper around Iterators.Flatten to provide total length.
+"""
 struct FlattenIteratorWrapper{T}
     element_type::Type{T}
     iter::Iterators.Flatten
