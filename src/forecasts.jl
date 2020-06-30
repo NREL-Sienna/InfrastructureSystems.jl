@@ -225,8 +225,6 @@ Base.eachindex(forecast::Forecast) = eachindex(get_data(forecast))
 Base.iterate(forecast::Forecast, n = 1) = iterate(get_data(forecast), n)
 
 """
-    when(forecast::Forecast, period::Function, t::Integer)
-
 Refer to TimeSeries.when(). Underlying data is copied.
 """
 function when(forecast::Forecast, period::Function, t::Integer)
@@ -235,8 +233,6 @@ function when(forecast::Forecast, period::Function, t::Integer)
 end
 
 """
-    from(forecast::Forecast, timestamp)
-
 Return a forecast truncated starting with timestamp.
 """
 function from(forecast::T, timestamp) where {T <: Forecast}
@@ -244,8 +240,6 @@ function from(forecast::T, timestamp) where {T <: Forecast}
 end
 
 """
-    to(forecast::Forecast, timestamp)
-
 Return a forecast truncated after timestamp.
 """
 function to(forecast::T, timestamp) where {T <: Forecast}
@@ -253,9 +247,6 @@ function to(forecast::T, timestamp) where {T <: Forecast}
 end
 
 """
-    head(forecast::Forecast)
-    head(forecast::Forecast, num)
-
 Return a forecast with only the first num values.
 """
 function head(forecast::Forecast)
@@ -267,9 +258,6 @@ function head(forecast::Forecast, num)
 end
 
 """
-    tail(forecast::Forecast)
-    tail(forecast::Forecast, num)
-
 Return a forecast with only the ending num values.
 """
 function tail(forecast::Forecast)

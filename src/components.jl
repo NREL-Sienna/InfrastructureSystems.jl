@@ -19,12 +19,6 @@ function Components(
 end
 
 """
-    add_component!(
-                   components::Components,
-                   component::T;
-                   kwargs...
-                  ) where T <: InfrastructureSystemsType
-
 Add a component.
 
 Throws ArgumentError if the component's name is already stored for its concrete type.
@@ -78,11 +72,6 @@ function clear_components!(components::Components)
 end
 
 """
-    remove_components!(
-                       ::Type{T},
-                       components::Components,
-                      ) where T <: InfrastructureSystemsType
-
 Remove all components of type T.
 
 Throws ArgumentError if the type is not stored.
@@ -105,11 +94,6 @@ function remove_components!(
 end
 
 """
-    remove_component!(
-                      components::Components,
-                      component::T,
-                     ) where T <: InfrastructureSystemsType
-
 Remove a component by its value.
 
 Throws ArgumentError if the component is not stored.
@@ -122,12 +106,6 @@ function remove_component!(
 end
 
 """
-    remove_component!(
-                      ::Type{T},
-                      components::Components,
-                      name::AbstractString,
-                      ) where T <: InfrastructureSystemsType
-
 Remove a component by its name.
 
 Throws ArgumentError if the component is not stored.
@@ -160,12 +138,6 @@ function _remove_component!(
 end
 
 """
-    get_component(
-                  ::Type{T},
-                  components::Components,
-                  name::AbstractString
-                 )::Union{T, Nothing} where T <: InfrastructureSystemsType
-
 Get the component of type T with name. Returns nothing if no component matches. If T is an abstract
 type then the names of components across all subtypes of T must be unique.
 
@@ -196,12 +168,6 @@ function get_component(
 end
 
 """
-    get_components_by_name(
-                           ::Type{T},
-                           components::Components,
-                           name::AbstractString
-                          )::Vector{T} where T <: InfrastructureSystemsType
-
 Get the components of abstract type T with name. Note that
 InfrastructureSystems enforces unique names on each concrete type but not
 across concrete types.
@@ -233,12 +199,6 @@ function get_components_by_name(
 end
 
 """
-    get_components(
-                   ::Type{T},
-                   components::Components,
-                   filter_func::Union{Nothing, Function} = nothing,
-                  )::FlattenIteratorWrapper{T} where T <: InfrastructureSystemsType
-
 Returns an iterator of components. T can be concrete or abstract.
 Call collect on the result if an array is desired.
 
@@ -284,8 +244,6 @@ function get_components(
 end
 
 """
-    iterate_components(obj) where T <: InfrastructureSystemsType
-
 Iterates over all components.
 
 # Examples
@@ -397,8 +355,6 @@ function get_forecasts_last_initial_time(components::Components)
 end
 
 """
-    check_forecast_consistency(components::Components)
-
 Throws DataFormatError if forecasts have inconsistent parameters.
 """
 function check_forecast_consistency(components::Components)

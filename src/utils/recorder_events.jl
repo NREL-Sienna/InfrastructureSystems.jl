@@ -32,8 +32,6 @@ function serialize(event::T) where {T <: AbstractRecorderEvent}
 end
 
 """
-    deserialize(::Type{T}, text::AbstractString) where T <: AbstractRecorderEvent
-
 Deserialize an event from raw text. Will throw an exception if the text does not contain
 a serialized version of T.
 """
@@ -65,13 +63,6 @@ mutable struct Recorder
 end
 
 """
-    Recorder(
-        name::Symbol;
-        io::Union{Nothing, IO} = nothing,
-        mode = "w",
-        directory = ".",
-    )
-
 Construct a Recorder.
 
 # Arguments
@@ -101,13 +92,6 @@ Base.flush(mgr::Recorder) = flush(mgr.io)
 g_recorders = Dict{Symbol, Recorder}()
 
 """
-    register_recorder!(
-        name::Symbol;
-        io::Union{Nothing, IO} = nothing,
-        mode = "w",
-        directory = ".",
-    )
-
 Register a recorder to log events. Afterwards, calls to @record name <event-type>()
 will record the event as JSON in <name>.log.
 
@@ -132,8 +116,6 @@ function register_recorder!(
 end
 
 """
-    unregister_recorder!(name::Symbol)
-
 Unregister the recorder with this name and stop recording events.
 """
 function unregister_recorder!(name::Symbol; close_io = true)
@@ -145,8 +127,6 @@ function unregister_recorder!(name::Symbol; close_io = true)
 end
 
 """
-    @record name event
-
 Record an event if the recorder with name is enabled.
 
 # Arguments
@@ -170,12 +150,6 @@ function _record_event(name::Symbol, event::AbstractRecorderEvent)
 end
 
 """
-    list_recorder_events(
-        ::Type{T},
-        filename::AbstractString,
-        filter_func::Union{Nothing, Function} = nothing,
-    ) where {T <: AbstractRecorderEvent}
-
 Return the events of type T in filename.
 
 # Arguments
@@ -211,13 +185,6 @@ function list_recorder_events(
 end
 
 """
-    show_recorder_events(
-        ::Type{T},
-        filename::AbstractString,
-        filter_func::Union{Nothing, Function} = nothing;
-        kwargs...
-    ) where {T <: AbstractRecorderEvent}
-
 Show the events of type T in filename in a table. Refer to PrettyTables.jl documentation
 for accepted kwargs.
 

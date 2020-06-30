@@ -87,8 +87,6 @@ function strip_parametric_type(name::AbstractString)
 end
 
 """
-    parse_serialized_type(type_str::AbstractString, mod::Module)
-
 Return a symbol parsed from a serialized string. Sanitizes the input first and attempts to
 ensure that the string does not contain code. The caller can call `eval` on the returned
 symbol.
@@ -177,8 +175,6 @@ function convert_type(::Type{T}, data::Any) where {T}
 end
 
 """
-    validate_exported_names(mod::Module)
-
 Return true if all publicly exported names in mod are defined.
 """
 function validate_exported_names(mod::Module)

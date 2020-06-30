@@ -231,8 +231,6 @@ function validation_error(valid_info::ValidationInfo, field_value)
 end
 
 """
-    validate_components(components::Components)
-
 Iterates over all components and throws InvalidRange if any of the component's field values
 are outside of defined valid range.
 """

@@ -2,10 +2,6 @@
 import Logging
 
 """
-    configure_logging([console, console_stream, console_level,
-                       file, filename, file_level, file_mode,
-                       tracker, set_global])
-
 Creates console and file loggers per caller specification and returns a MultiLogger.
 
 **Note:** If logging to a file users must call Base.close() on the returned MultiLogger to
@@ -109,8 +105,6 @@ Base.flush(logger::FileLogger) = flush(logger.logger.stream)
 Base.close(logger::FileLogger) = close(logger.logger.stream)
 
 """
-    open_file_logger(func, filename[, level, mode])
-
 Opens a file logger using Logging.SimpleLogger.
 
 # Example
@@ -165,8 +159,6 @@ struct LogEventTracker
 end
 
 """
-    LogEventTracker(Tuple{Logging.LogLevel})
-
 Tracks counts of all log events by level.
 
 # Examples
@@ -227,8 +219,6 @@ function _is_level_valid(tracker::LogEventTracker, level::Logging.LogLevel)
 end
 
 """
-    MultiLogger(Array{AbstractLogger}, Union{LogEventTracker, Nothing})
-
 Redirects log events to multiple loggers. The primary use case is to allow logging to
 both a file and the console. Secondarily, it can track the counts of all log messages.
 

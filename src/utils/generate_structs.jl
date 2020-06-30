@@ -229,8 +229,6 @@ function generate_structs(
 end
 
 """
-    test_generated_structs(descriptor_file, existing_dir)
-
 Return true if the structs defined in existing_dir match structs freshly-generated
 from descriptor_file.
 """
