@@ -1,9 +1,12 @@
 
 import UUIDs
 
+abstract type UnitsData end
+
 """Internal storage common to InfrastructureSystems types."""
 mutable struct InfrastructureSystemsInternal
     uuid::Base.UUID
+    units_info::Union{Nothing, UnitsData}
     ext::Union{Nothing, Dict{String, Any}}
 end
 
