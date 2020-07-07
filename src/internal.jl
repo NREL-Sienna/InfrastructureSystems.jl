@@ -13,12 +13,12 @@ end
 """
 Creates PowerSystemInternal with a new UUID.
 """
-InfrastructureSystemsInternal() = InfrastructureSystemsInternal(UUIDs.uuid4(), nothing)
+InfrastructureSystemsInternal() = InfrastructureSystemsInternal(UUIDs.uuid4(), nothing, nothing)
 
 """
 Creates PowerSystemInternal with an existing UUID.
 """
-InfrastructureSystemsInternal(u::UUIDs.UUID) = InfrastructureSystemsInternal(u, nothing)
+InfrastructureSystemsInternal(u::UUIDs.UUID) = InfrastructureSystemsInternal(u, nothing, nothing)
 
 """
 Return a user-modifiable dictionary to store extra information.
