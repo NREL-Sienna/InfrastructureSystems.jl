@@ -133,7 +133,7 @@ function generate_structs(directory, data::Vector; print_results = true)
                     "name" => param["name"],
                     "accessor" => accessor_name,
                     "create_docstring" => create_docstring,
-                    "needs_conversion" => get(param, "needs_conversion", false)
+                    "needs_conversion" => get(param, "needs_conversion", false),
                 ),
             )
             include_setter = !get(param, "exclude_setter", false)
