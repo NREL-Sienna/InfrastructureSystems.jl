@@ -61,7 +61,7 @@ end
 {{/has_null_values}}
 {{#accessors}}
 {{#create_docstring}}\"\"\"Get {{struct_name}} {{name}}.\"\"\"{{/create_docstring}}
-{{accessor}}(value::{{struct_name}}) = {{#needs_conversion}}get_value(value, :{{name}}){{/needs_conversion}}{{^needs_conversion}}value.{{name}}{{/needs_conversion}}
+{{accessor}}(value::{{struct_name}}) = {{#needs_conversion}}get_value({{data_type}}, value, :{{name}}){{/needs_conversion}}{{^needs_conversion}}value.{{name}}{{/needs_conversion}}
 {{/accessors}}
 
 {{#setters}}
@@ -133,6 +133,7 @@ function generate_structs(directory, data::Vector; print_results = true)
                     "name" => param["name"],
                     "accessor" => accessor_name,
                     "create_docstring" => create_docstring,
+                    "data_type" => param["data_type"],
                     "needs_conversion" => get(param, "needs_conversion", false),
                 ),
             )
