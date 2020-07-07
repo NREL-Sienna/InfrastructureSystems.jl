@@ -9,7 +9,7 @@ abstract type ForecastInternal <: InfrastructureSystemsType end
 """
 Abstract type for forecasts supplied to users. They are not stored in a system. Instead,
 they are generated on demand for the user.
-Users can create them. The system will convert them to a subtype of ForecastInternal for 
+Users can create them. The system will convert them to a subtype of ForecastInternal for
 storage.
 Time series data is stored as a field, so reads will always be from memory.
 """
@@ -62,13 +62,21 @@ function set_time_series_storage!(
     forecasts.time_series_storage = storage
 end
 
-function add_forecast!(forecasts::Forecasts, forecast::T) where {T <: ForecastInternal}
+function add_forecast!(
+    forecasts::Forecasts,
+    forecast::T;
+    skip_if_present = false,
+) where {T <: ForecastInternal}
     key = ForecastKey(T, get_initial_time(forecast), get_label(forecast))
     if haskey(forecasts.data, key)
-        throw(ArgumentError("forecast $key is already stored"))
+        if skip_if_present
+            @warn "forecat $key is already present, skipping overwrite"
+        else
+            throw(ArgumentError("forecast $key is already stored"))
+        end
+    else
+        forecasts.data[key] = forecast
     end
-
-    forecasts.data[key] = forecast
 end
 
 function remove_forecast!(
