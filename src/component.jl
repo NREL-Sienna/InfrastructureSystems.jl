@@ -1,6 +1,7 @@
 function add_forecast!(
     component::T,
-    forecast::ForecastInternal,
+    forecast::ForecastInternal;
+    skip_if_present = false,
 ) where {T <: InfrastructureSystemsType}
     component_name = get_name(component)
     container = get_forecasts(component)
@@ -8,7 +9,7 @@ function add_forecast!(
         throw(ArgumentError("type $T does not support storing forecasts"))
     end
 
-    add_forecast!(container, forecast)
+    add_forecast!(container, forecast, skip_if_present = skip_if_present)
     @debug "Added $forecast to $(typeof(component)) $(component_name) " *
            "num_forecasts=$(length(get_forecasts(component).data))."
 end

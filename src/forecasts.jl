@@ -70,7 +70,7 @@ function add_forecast!(
     key = ForecastKey(T, get_initial_time(forecast), get_label(forecast))
     if haskey(forecasts.data, key)
         if skip_if_present
-            @warn "forecat $key is already present, skipping overwrite"
+            @warn "forecast $key is already present, skipping overwrite"
         else
             throw(ArgumentError("forecast $key is already stored"))
         end

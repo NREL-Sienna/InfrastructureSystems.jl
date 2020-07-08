@@ -173,12 +173,13 @@ function add_forecast!(
     data::SystemData,
     component::InfrastructureSystemsType,
     forecast::T,
-    ts_data::TimeSeriesData,
+    ts_data::TimeSeriesData;
+    skip_if_present = false,
 ) where {T <: ForecastInternal}
     _validate_component(data, component)
     check_add_forecast!(data.forecast_metadata, forecast)
     check_read_only(data.time_series_storage)
-    add_forecast!(component, forecast)
+    add_forecast!(component, forecast, skip_if_present = skip_if_present)
     # TODO: can this be atomic with forecast addition?
     add_time_series!(
         data.time_series_storage,
