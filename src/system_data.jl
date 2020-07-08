@@ -174,7 +174,7 @@ function add_forecast!(
     component::InfrastructureSystemsType,
     forecast::T,
     ts_data::TimeSeriesData;
-    skip_if_present = false
+    skip_if_present = false,
 ) where {T <: ForecastInternal}
     _validate_component(data, component)
     check_add_forecast!(data.forecast_metadata, forecast)
