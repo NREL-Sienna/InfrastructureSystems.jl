@@ -133,7 +133,6 @@ function generate_structs(directory, data::Vector; print_results = true)
                     "name" => param["name"],
                     "accessor" => accessor_name,
                     "create_docstring" => create_docstring,
-                    "data_type" => param["data_type"],
                     "needs_conversion" => get(param, "needs_conversion", false),
                 ),
             )
