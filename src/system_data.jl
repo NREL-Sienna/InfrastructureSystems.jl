@@ -594,7 +594,6 @@ function encode_for_json(data::SystemData)
         write(io, text)
     end
     json_data["validation_descriptor_file"] = descriptor_base_name
-
     return json_data
 end
 
