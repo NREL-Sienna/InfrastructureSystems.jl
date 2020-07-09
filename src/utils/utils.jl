@@ -170,7 +170,6 @@ function convert_type(::Type{T}, data::Any) where {T}
     if T <: AbstractString
         return T(data)
     end
-
     return JSON2.read(JSON2.write(data), T)
 end
 
