@@ -82,14 +82,13 @@ function encode_for_json(internal::InfrastructureSystemsInternal)
 
     for field in fields
         val = getfield(internal, field)
+        # reset the units data since this is a struct related to the system the components is
+        # added which is resolved later in the de-serialization.
         if val isa UnitsData
             val = nothing
-            push!(vals, val)
-            push!(final_fields, field)
-        else
-            push!(vals, val)
-            push!(final_fields, field)
         end
+        push!(vals, val)
+        push!(final_fields, field)
     end
 
     return NamedTuple{Tuple(final_fields)}(vals)
