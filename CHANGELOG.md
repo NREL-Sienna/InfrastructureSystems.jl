@@ -1,5 +1,11 @@
 # InfrastructureSystems
 
+## 0.12.0
+
+- Add new field check for autogeneration code - needs conversion.
+- Add UnitsInfo to Internal.
+- Use DocString Extensions.
+
 ## 0.11.0
 
 - Add forward macro for code re-use
