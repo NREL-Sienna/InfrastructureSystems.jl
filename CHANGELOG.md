@@ -1,5 +1,9 @@
 # InfrastructureSystems
 
+## 0.12.1
+
+- Bump CVS.jl version
+
 ## 0.12.0
 
 - Add new field check for autogeneration code - needs conversion.
