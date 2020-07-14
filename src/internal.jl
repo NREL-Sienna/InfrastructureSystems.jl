@@ -9,7 +9,7 @@ abstract type UnitsData end
     NATURAL_UNITS
 end
 
-struct SystemUnitsSettings <: UnitsData
+mutable struct SystemUnitsSettings <: UnitsData
     base_value::Float64
     unit_system::UnitSystem
 end
