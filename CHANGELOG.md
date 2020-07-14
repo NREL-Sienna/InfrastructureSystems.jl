@@ -2,6 +2,7 @@
 
 ## 0.12.1
 
+- Make SystemUnitsSettings a mutable struct
 - Bump CVS.jl version
 
 ## 0.12.0
