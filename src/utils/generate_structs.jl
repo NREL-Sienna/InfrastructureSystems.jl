@@ -206,15 +206,6 @@ function generate_structs(directory, data::Vector; print_results = true)
     end
 end
 
-function namedtuple_to_dict(tuple)
-    parameters = Dict()
-    for property in propertynames(tuple)
-        parameters[string(property)] = getproperty(tuple, property)
-    end
-
-    return parameters
-end
-
 function generate_structs(
     input_file::AbstractString,
     output_directory::AbstractString;
