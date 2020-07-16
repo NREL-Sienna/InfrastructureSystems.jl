@@ -132,6 +132,9 @@ function _remove_component!(
     end
 
     component = pop!(components.data[T], name)
+    if isempty(components.data[T])
+        pop!(components.data, T)
+    end
     prepare_for_removal!(component)
     @debug "Removed component" T name
     return component

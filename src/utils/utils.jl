@@ -112,30 +112,26 @@ function parse_serialized_type(serialized_type::Union{Symbol, String})
     return val
 end
 
+const _DISALLOWED_CODE_POINTS = Set([
+    # Refer to ASCII table.
+    collect(0:31)...,
+    collect(33:43)...,
+    45,
+    47,
+    collect(58:64)...,
+    collect(91:94)...,
+    124,
+    126,
+    127,
+])
+
 function _check_expression_characters(serialized_type::String)
     # This will return false if the char is any symbol or operator other than
-    # '{', '}', and ',', which should be the only non-alphanumeric characters allowed
+    # '{', '}', '.' and ',', which should be the only non-alphanumeric characters allowed
     # in a type that we are handling during serialization (as of now).
-    # Look up an ASCII table to interpret these.
     for char in serialized_type
-        is_valid = false
         value = codepoint(char)
-        if value < 32
-            is_valid = false
-        elseif value >= 33 && value <= 47 && value != 44
-            is_valid = false
-        elseif value >= 58 && value <= 64
-            is_valid = false
-        elseif value >= 91 && value <= 94
-            is_valid = false
-        elseif value == 96 || value == 124 || value == 126
-            is_valid = false
-        elseif value == 124
-            is_valid = false
-        else
-            is_valid = true
-        end
-
+        is_valid = !(value in _DISALLOWED_CODE_POINTS)
         if !is_valid
             error("$char is not allowed in $serialized_type")
         end
