@@ -1,5 +1,11 @@
 # InfrastructureSystems
 
+## 0.13.0
+
+- Remove container for last component
+- Allow for periods in serialization 
+- Remove unused tuple to dict conversion
+
 ## 0.12.1
 
 - Make SystemUnitsSettings a mutable struct
