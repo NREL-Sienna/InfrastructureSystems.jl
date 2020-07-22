@@ -360,10 +360,11 @@ function forward(sender::Tuple{Type, Symbol}, receiver::Type, method::Method)
     return code
 end
 
-function forward(sender::Tuple{Type, Symbol}, receiver::Type)
+function forward(sender::Tuple{Type, Symbol}, receiver::Type, exclusions::Vector{Symbol})
     code = Vector{String}()
     active_methods = getfield.(InteractiveUtils.methodswith(sender[1]), :name)
     for m in InteractiveUtils.methodswith(receiver)
+        m.name ∈ exclusions && continue
         m.name ∈ active_methods && continue
         if startswith(string(m.name), "get_") && m.nargs == 2
             # forwarding works for functions with 1 argument and starts with `get_`
@@ -376,9 +377,9 @@ function forward(sender::Tuple{Type, Symbol}, receiver::Type)
     return code
 end
 
-macro forward(sender, receiver)
+macro forward(sender, receiver, exclusions = Symbol[])
     out = quote
-        list = InfrastructureSystems.forward($sender, $receiver)
+        list = InfrastructureSystems.forward($sender, $receiver, $exclusions)
         for line in list
             eval(Meta.parse("$line"))
         end
