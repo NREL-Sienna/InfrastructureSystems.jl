@@ -89,12 +89,3 @@ end
     @test Fruits.APPLE isa Fruits.Fruit
     @test Fruits.ORANGE isa Fruits.Fruit
 end
-
-@testset "Test Forward" begin
-    include("module_for_testing.jl")
-    using .TestModule
-    comp = TestModuleForwardStruct(10.0, 1)
-    @test get_val(comp) == 1
-    @test get_name(comp) == "meh"
-    @test_throws MethodError IS.get_ext(comp)
-end
