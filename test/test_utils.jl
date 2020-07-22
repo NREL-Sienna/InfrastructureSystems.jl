@@ -91,26 +91,10 @@ end
 end
 
 @testset "Test Forward" begin
-    module TestModule
-
-    import InfrastructureSystems
-    const IS = InfrastructureSystems
-
-    struct TestModuleStruct
-        is_test_struct::IS.TestComponent
-        foo::Float64
-    end
-
-    function TestModuleStruct(a::Float64, b::Int)
-        return TestModuleStruct(TestComponent("meh", b), a)
-    end
-
-    IS.@Forward((TestModuleStruct, :is_test_struct), IS.TestComponent, [:get_ext])
-
-    comp = TestModuleStruct(10.0, 1)
-
+    include("module_for_testing.jl")
+    using .TestModule
+    comp = TestModuleForwardStruct(10.0, 1)
     @test get_val(comp) == 1
     @test get_name(comp) == "meh"
-    @test_throws MethodError get_ext(comp)
-    end
+    @test_throws MethodError IS.get_ext(comp)
 end
