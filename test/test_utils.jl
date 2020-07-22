@@ -89,3 +89,28 @@ end
     @test Fruits.APPLE isa Fruits.Fruit
     @test Fruits.ORANGE isa Fruits.Fruit
 end
+
+@testset "Test Forward" begin
+    module TestModule
+
+    import InfrastructureSystems
+    const IS = InfrastructureSystems
+
+    struct TestModuleStruct
+        is_test_struct::IS.TestComponent
+        foo::Float64
+    end
+
+    function TestModuleStruct(a::Float64, b::Int)
+        return TestModuleStruct(TestComponent("meh", b), a)
+    end
+
+    IS.@Forward((TestModuleStruct, :is_test_struct), IS.TestComponent, [:get_ext])
+
+    comp = TestModuleStruct(10.0, 1)
+
+    @test get_val(comp) == 1
+    @test get_name(comp) == "meh"
+    @test_throws MethodError get_ext(comp)
+    end
+end
