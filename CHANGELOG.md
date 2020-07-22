@@ -1,5 +1,9 @@
 # InfrastructureSystems
 
+## 0.13.1
+
+- Add exclusions to the @forward macro
+
 ## 0.13.0
 
 - Remove container for last component
