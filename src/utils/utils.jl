@@ -324,13 +324,13 @@ function compose_function_delegation_string(
     return l
 end
 
-function forward(sender::Tuple{Type, Symbol}, receiver::Type, method::Method)
+function forward(sender::Tuple{Type, Symbol}, ::Type, method::Method)
     # Assert that function is always just one argument
     @assert method.nargs < 4 "`forward` only works for one and two argument functions"
     # Assert that function name always starts with `get_*`
     "`forward` only works for accessor methods that are defined as `get_*` or `set_*`"
     @assert startswith(string(method.name), r"set_|get_")
-    sender_type = "$(parentmodule(sender[1])).$(nameof(sender[1]))"
+    sender_type = "$(parentmodule(sender[1])).$(strip_module_name(sender[1]))"
     sender_symbol = string(sender[2])
     code_array = Vector{String}()
     # Search for receiver type in method arguments
@@ -361,6 +361,8 @@ function forward(sender::Tuple{Type, Symbol}, receiver::Type, method::Method)
 end
 
 function forward(sender::Tuple{Type, Symbol}, receiver::Type, exclusions::Vector{Symbol})
+    @assert isconcretetype(sender[1])
+    @assert isconcretetype(receiver)
     code = Vector{String}()
     active_methods = getfield.(InteractiveUtils.methodswith(sender[1]), :name)
     for m in InteractiveUtils.methodswith(receiver)
