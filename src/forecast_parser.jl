@@ -69,7 +69,7 @@ function read_time_series_metadata(file_path::AbstractString)
             return metadata
         end
     elseif endswith(file_path, ".csv")
-        csv = CSV.read(file_path)
+        csv = DataFrames.DataFrame(CSV.File(file_path))
         metadata = Vector{TimeseriesFileMetadata}()
         for row in eachrow(csv)
             category = _get_category(row.category)
