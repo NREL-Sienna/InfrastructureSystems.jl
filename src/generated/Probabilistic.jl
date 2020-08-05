@@ -37,8 +37,8 @@ get_percentiles(value::Probabilistic) = value.percentiles
 get_data(value::Probabilistic) = value.data
 
 """Set Probabilistic label."""
-set_label!(value::Probabilistic, val::String) = value.label = val
+set_label!(value::Probabilistic, val) = value.label = val
 """Set Probabilistic percentiles."""
-set_percentiles!(value::Probabilistic, val::Vector{Float64}) = value.percentiles = val
+set_percentiles!(value::Probabilistic, val) = value.percentiles = val
 """Set Probabilistic data."""
-set_data!(value::Probabilistic, val::TimeSeries.TimeArray) = value.data = val
+set_data!(value::Probabilistic, val) = value.data = val

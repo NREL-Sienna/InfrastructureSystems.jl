@@ -31,6 +31,6 @@ get_label(value::Deterministic) = value.label
 get_data(value::Deterministic) = value.data
 
 """Set Deterministic label."""
-set_label!(value::Deterministic, val::String) = value.label = val
+set_label!(value::Deterministic, val) = value.label = val
 """Set Deterministic data."""
-set_data!(value::Deterministic, val::TimeSeries.TimeArray) = value.data = val
+set_data!(value::Deterministic, val) = value.data = val

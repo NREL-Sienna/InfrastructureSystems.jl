@@ -66,7 +66,7 @@ end
 
 {{#setters}}
 {{#create_docstring}}\"\"\"Set {{struct_name}} {{name}}.\"\"\"{{/create_docstring}}
-{{setter}}(value::{{struct_name}}, val::{{data_type}}) = value.{{name}} = val
+{{setter}}(value::{{struct_name}}, val) = value.{{name}} = val
 {{/setters}}
 """
 

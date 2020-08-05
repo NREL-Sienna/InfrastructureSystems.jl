@@ -62,16 +62,16 @@ get_horizon(value::ProbabilisticInternal) = value.horizon
 get_internal(value::ProbabilisticInternal) = value.internal
 
 """Set ProbabilisticInternal label."""
-set_label!(value::ProbabilisticInternal, val::String) = value.label = val
+set_label!(value::ProbabilisticInternal, val) = value.label = val
 """Set ProbabilisticInternal resolution."""
-set_resolution!(value::ProbabilisticInternal, val::Dates.Period) = value.resolution = val
+set_resolution!(value::ProbabilisticInternal, val) = value.resolution = val
 """Set ProbabilisticInternal initial_time."""
-set_initial_time!(value::ProbabilisticInternal, val::Dates.DateTime) = value.initial_time = val
+set_initial_time!(value::ProbabilisticInternal, val) = value.initial_time = val
 """Set ProbabilisticInternal percentiles."""
-set_percentiles!(value::ProbabilisticInternal, val::Vector{Float64}) = value.percentiles = val
+set_percentiles!(value::ProbabilisticInternal, val) = value.percentiles = val
 """Set ProbabilisticInternal time_series_uuid."""
-set_time_series_uuid!(value::ProbabilisticInternal, val::UUIDs.UUID) = value.time_series_uuid = val
+set_time_series_uuid!(value::ProbabilisticInternal, val) = value.time_series_uuid = val
 """Set ProbabilisticInternal horizon."""
-set_horizon!(value::ProbabilisticInternal, val::Int) = value.horizon = val
+set_horizon!(value::ProbabilisticInternal, val) = value.horizon = val
 """Set ProbabilisticInternal internal."""
-set_internal!(value::ProbabilisticInternal, val::InfrastructureSystemsInternal) = value.internal = val
+set_internal!(value::ProbabilisticInternal, val) = value.internal = val

@@ -62,16 +62,16 @@ get_horizon(value::PiecewiseFunctionInternal) = value.horizon
 get_internal(value::PiecewiseFunctionInternal) = value.internal
 
 """Set PiecewiseFunctionInternal label."""
-set_label!(value::PiecewiseFunctionInternal, val::String) = value.label = val
+set_label!(value::PiecewiseFunctionInternal, val) = value.label = val
 """Set PiecewiseFunctionInternal resolution."""
-set_resolution!(value::PiecewiseFunctionInternal, val::Dates.Period) = value.resolution = val
+set_resolution!(value::PiecewiseFunctionInternal, val) = value.resolution = val
 """Set PiecewiseFunctionInternal initial_time."""
-set_initial_time!(value::PiecewiseFunctionInternal, val::Dates.DateTime) = value.initial_time = val
+set_initial_time!(value::PiecewiseFunctionInternal, val) = value.initial_time = val
 """Set PiecewiseFunctionInternal break_points."""
-set_break_points!(value::PiecewiseFunctionInternal, val::Int) = value.break_points = val
+set_break_points!(value::PiecewiseFunctionInternal, val) = value.break_points = val
 """Set PiecewiseFunctionInternal time_series_uuid."""
-set_time_series_uuid!(value::PiecewiseFunctionInternal, val::UUIDs.UUID) = value.time_series_uuid = val
+set_time_series_uuid!(value::PiecewiseFunctionInternal, val) = value.time_series_uuid = val
 """Set PiecewiseFunctionInternal horizon."""
-set_horizon!(value::PiecewiseFunctionInternal, val::Int) = value.horizon = val
+set_horizon!(value::PiecewiseFunctionInternal, val) = value.horizon = val
 """Set PiecewiseFunctionInternal internal."""
-set_internal!(value::PiecewiseFunctionInternal, val::InfrastructureSystemsInternal) = value.internal = val
+set_internal!(value::PiecewiseFunctionInternal, val) = value.internal = val

@@ -37,8 +37,8 @@ get_scenario_count(value::ScenarioBased) = value.scenario_count
 get_data(value::ScenarioBased) = value.data
 
 """Set ScenarioBased label."""
-set_label!(value::ScenarioBased, val::String) = value.label = val
+set_label!(value::ScenarioBased, val) = value.label = val
 """Set ScenarioBased scenario_count."""
-set_scenario_count!(value::ScenarioBased, val::Int64) = value.scenario_count = val
+set_scenario_count!(value::ScenarioBased, val) = value.scenario_count = val
 """Set ScenarioBased data."""
-set_data!(value::ScenarioBased, val::TimeSeries.TimeArray) = value.data = val
+set_data!(value::ScenarioBased, val) = value.data = val
