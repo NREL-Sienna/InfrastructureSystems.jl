@@ -37,8 +37,8 @@ get_break_points(value::PiecewiseFunction) = value.break_points
 get_data(value::PiecewiseFunction) = value.data
 
 """Set PiecewiseFunction label."""
-set_label!(value::PiecewiseFunction, val::String) = value.label = val
+set_label!(value::PiecewiseFunction, val) = value.label = val
 """Set PiecewiseFunction break_points."""
-set_break_points!(value::PiecewiseFunction, val::Int) = value.break_points = val
+set_break_points!(value::PiecewiseFunction, val) = value.break_points = val
 """Set PiecewiseFunction data."""
-set_data!(value::PiecewiseFunction, val::TimeSeries.TimeArray) = value.data = val
+set_data!(value::PiecewiseFunction, val) = value.data = val
