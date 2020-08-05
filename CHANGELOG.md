@@ -1,5 +1,9 @@
 # InfrastructureSystems
 
+## 0.15.0
+
+- Remove type restrictions in code autogeneration
+
 ## 0.14.0
 
 - Change implementation of @forward macro
