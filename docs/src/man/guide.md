@@ -114,10 +114,10 @@ components. Here are reasons to consider using it:
 
 > :warning: **You must reimplement deepcopy if you use HDF5**
 
-If you store an instance of ``SystemData`` within your system and then a user
-calls ``deepcopy`` on a system, the .h5 file will not be copied. The new and
+If you store an instance of `SystemData` within your system and then a user
+calls `deepcopy` on a system, the .h5 file will not be copied. The new and
 old instances will have references to the same file. You will need to
-reimplement ``deepcopy`` to handle this. One solution is to serialize and then
+reimplement `deepcopy` to handle this. One solution is to serialize and then
 deserialize the system.
 
 *Notes*:
