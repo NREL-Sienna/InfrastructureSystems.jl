@@ -42,28 +42,28 @@ function DeterministicInternal(; label, resolution, initial_time, time_series_uu
     DeterministicInternal(label, resolution, initial_time, time_series_uuid, horizon, )
 end
 
-"""Get DeterministicInternal label."""
+"""Get [`DeterministicInternal`](@ref) `label`."""
 get_label(value::DeterministicInternal) = value.label
-"""Get DeterministicInternal resolution."""
+"""Get [`DeterministicInternal`](@ref) `resolution`."""
 get_resolution(value::DeterministicInternal) = value.resolution
-"""Get DeterministicInternal initial_time."""
+"""Get [`DeterministicInternal`](@ref) `initial_time`."""
 get_initial_time(value::DeterministicInternal) = value.initial_time
-"""Get DeterministicInternal time_series_uuid."""
+"""Get [`DeterministicInternal`](@ref) `time_series_uuid`."""
 get_time_series_uuid(value::DeterministicInternal) = value.time_series_uuid
-"""Get DeterministicInternal horizon."""
+"""Get [`DeterministicInternal`](@ref) `horizon`."""
 get_horizon(value::DeterministicInternal) = value.horizon
-"""Get DeterministicInternal internal."""
+"""Get [`DeterministicInternal`](@ref) `internal`."""
 get_internal(value::DeterministicInternal) = value.internal
 
-"""Set DeterministicInternal label."""
+"""Set [`DeterministicInternal`](@ref) `label`."""
 set_label!(value::DeterministicInternal, val) = value.label = val
-"""Set DeterministicInternal resolution."""
+"""Set [`DeterministicInternal`](@ref) `resolution`."""
 set_resolution!(value::DeterministicInternal, val) = value.resolution = val
-"""Set DeterministicInternal initial_time."""
+"""Set [`DeterministicInternal`](@ref) `initial_time`."""
 set_initial_time!(value::DeterministicInternal, val) = value.initial_time = val
-"""Set DeterministicInternal time_series_uuid."""
+"""Set [`DeterministicInternal`](@ref) `time_series_uuid`."""
 set_time_series_uuid!(value::DeterministicInternal, val) = value.time_series_uuid = val
-"""Set DeterministicInternal horizon."""
+"""Set [`DeterministicInternal`](@ref) `horizon`."""
 set_horizon!(value::DeterministicInternal, val) = value.horizon = val
-"""Set DeterministicInternal internal."""
+"""Set [`DeterministicInternal`](@ref) `internal`."""
 set_internal!(value::DeterministicInternal, val) = value.internal = val

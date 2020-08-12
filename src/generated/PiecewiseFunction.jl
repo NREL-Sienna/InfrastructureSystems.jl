@@ -29,16 +29,16 @@ function PiecewiseFunction(; label, break_points, data, )
     PiecewiseFunction(label, break_points, data, )
 end
 
-"""Get PiecewiseFunction label."""
+"""Get [`PiecewiseFunction`](@ref) `label`."""
 get_label(value::PiecewiseFunction) = value.label
-"""Get PiecewiseFunction break_points."""
+"""Get [`PiecewiseFunction`](@ref) `break_points`."""
 get_break_points(value::PiecewiseFunction) = value.break_points
-"""Get PiecewiseFunction data."""
+"""Get [`PiecewiseFunction`](@ref) `data`."""
 get_data(value::PiecewiseFunction) = value.data
 
-"""Set PiecewiseFunction label."""
+"""Set [`PiecewiseFunction`](@ref) `label`."""
 set_label!(value::PiecewiseFunction, val) = value.label = val
-"""Set PiecewiseFunction break_points."""
+"""Set [`PiecewiseFunction`](@ref) `break_points`."""
 set_break_points!(value::PiecewiseFunction, val) = value.break_points = val
-"""Set PiecewiseFunction data."""
+"""Set [`PiecewiseFunction`](@ref) `data`."""
 set_data!(value::PiecewiseFunction, val) = value.data = val

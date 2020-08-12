@@ -46,32 +46,32 @@ function ScenarioBasedInternal(; label, resolution, initial_time, scenario_count
     ScenarioBasedInternal(label, resolution, initial_time, scenario_count, time_series_uuid, horizon, )
 end
 
-"""Get ScenarioBasedInternal label."""
+"""Get [`ScenarioBasedInternal`](@ref) `label`."""
 get_label(value::ScenarioBasedInternal) = value.label
-"""Get ScenarioBasedInternal resolution."""
+"""Get [`ScenarioBasedInternal`](@ref) `resolution`."""
 get_resolution(value::ScenarioBasedInternal) = value.resolution
-"""Get ScenarioBasedInternal initial_time."""
+"""Get [`ScenarioBasedInternal`](@ref) `initial_time`."""
 get_initial_time(value::ScenarioBasedInternal) = value.initial_time
-"""Get ScenarioBasedInternal scenario_count."""
+"""Get [`ScenarioBasedInternal`](@ref) `scenario_count`."""
 get_scenario_count(value::ScenarioBasedInternal) = value.scenario_count
-"""Get ScenarioBasedInternal time_series_uuid."""
+"""Get [`ScenarioBasedInternal`](@ref) `time_series_uuid`."""
 get_time_series_uuid(value::ScenarioBasedInternal) = value.time_series_uuid
-"""Get ScenarioBasedInternal horizon."""
+"""Get [`ScenarioBasedInternal`](@ref) `horizon`."""
 get_horizon(value::ScenarioBasedInternal) = value.horizon
-"""Get ScenarioBasedInternal internal."""
+"""Get [`ScenarioBasedInternal`](@ref) `internal`."""
 get_internal(value::ScenarioBasedInternal) = value.internal
 
-"""Set ScenarioBasedInternal label."""
+"""Set [`ScenarioBasedInternal`](@ref) `label`."""
 set_label!(value::ScenarioBasedInternal, val) = value.label = val
-"""Set ScenarioBasedInternal resolution."""
+"""Set [`ScenarioBasedInternal`](@ref) `resolution`."""
 set_resolution!(value::ScenarioBasedInternal, val) = value.resolution = val
-"""Set ScenarioBasedInternal initial_time."""
+"""Set [`ScenarioBasedInternal`](@ref) `initial_time`."""
 set_initial_time!(value::ScenarioBasedInternal, val) = value.initial_time = val
-"""Set ScenarioBasedInternal scenario_count."""
+"""Set [`ScenarioBasedInternal`](@ref) `scenario_count`."""
 set_scenario_count!(value::ScenarioBasedInternal, val) = value.scenario_count = val
-"""Set ScenarioBasedInternal time_series_uuid."""
+"""Set [`ScenarioBasedInternal`](@ref) `time_series_uuid`."""
 set_time_series_uuid!(value::ScenarioBasedInternal, val) = value.time_series_uuid = val
-"""Set ScenarioBasedInternal horizon."""
+"""Set [`ScenarioBasedInternal`](@ref) `horizon`."""
 set_horizon!(value::ScenarioBasedInternal, val) = value.horizon = val
-"""Set ScenarioBasedInternal internal."""
+"""Set [`ScenarioBasedInternal`](@ref) `internal`."""
 set_internal!(value::ScenarioBasedInternal, val) = value.internal = val

@@ -29,16 +29,16 @@ function Probabilistic(; label, percentiles, data, )
     Probabilistic(label, percentiles, data, )
 end
 
-"""Get Probabilistic label."""
+"""Get [`Probabilistic`](@ref) `label`."""
 get_label(value::Probabilistic) = value.label
-"""Get Probabilistic percentiles."""
+"""Get [`Probabilistic`](@ref) `percentiles`."""
 get_percentiles(value::Probabilistic) = value.percentiles
-"""Get Probabilistic data."""
+"""Get [`Probabilistic`](@ref) `data`."""
 get_data(value::Probabilistic) = value.data
 
-"""Set Probabilistic label."""
+"""Set [`Probabilistic`](@ref) `label`."""
 set_label!(value::Probabilistic, val) = value.label = val
-"""Set Probabilistic percentiles."""
+"""Set [`Probabilistic`](@ref) `percentiles`."""
 set_percentiles!(value::Probabilistic, val) = value.percentiles = val
-"""Set Probabilistic data."""
+"""Set [`Probabilistic`](@ref) `data`."""
 set_data!(value::Probabilistic, val) = value.data = val

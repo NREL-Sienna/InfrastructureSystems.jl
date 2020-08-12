@@ -46,32 +46,32 @@ function PiecewiseFunctionInternal(; label, resolution, initial_time, break_poin
     PiecewiseFunctionInternal(label, resolution, initial_time, break_points, time_series_uuid, horizon, )
 end
 
-"""Get PiecewiseFunctionInternal label."""
+"""Get [`PiecewiseFunctionInternal`](@ref) `label`."""
 get_label(value::PiecewiseFunctionInternal) = value.label
-"""Get PiecewiseFunctionInternal resolution."""
+"""Get [`PiecewiseFunctionInternal`](@ref) `resolution`."""
 get_resolution(value::PiecewiseFunctionInternal) = value.resolution
-"""Get PiecewiseFunctionInternal initial_time."""
+"""Get [`PiecewiseFunctionInternal`](@ref) `initial_time`."""
 get_initial_time(value::PiecewiseFunctionInternal) = value.initial_time
-"""Get PiecewiseFunctionInternal break_points."""
+"""Get [`PiecewiseFunctionInternal`](@ref) `break_points`."""
 get_break_points(value::PiecewiseFunctionInternal) = value.break_points
-"""Get PiecewiseFunctionInternal time_series_uuid."""
+"""Get [`PiecewiseFunctionInternal`](@ref) `time_series_uuid`."""
 get_time_series_uuid(value::PiecewiseFunctionInternal) = value.time_series_uuid
-"""Get PiecewiseFunctionInternal horizon."""
+"""Get [`PiecewiseFunctionInternal`](@ref) `horizon`."""
 get_horizon(value::PiecewiseFunctionInternal) = value.horizon
-"""Get PiecewiseFunctionInternal internal."""
+"""Get [`PiecewiseFunctionInternal`](@ref) `internal`."""
 get_internal(value::PiecewiseFunctionInternal) = value.internal
 
-"""Set PiecewiseFunctionInternal label."""
+"""Set [`PiecewiseFunctionInternal`](@ref) `label`."""
 set_label!(value::PiecewiseFunctionInternal, val) = value.label = val
-"""Set PiecewiseFunctionInternal resolution."""
+"""Set [`PiecewiseFunctionInternal`](@ref) `resolution`."""
 set_resolution!(value::PiecewiseFunctionInternal, val) = value.resolution = val
-"""Set PiecewiseFunctionInternal initial_time."""
+"""Set [`PiecewiseFunctionInternal`](@ref) `initial_time`."""
 set_initial_time!(value::PiecewiseFunctionInternal, val) = value.initial_time = val
-"""Set PiecewiseFunctionInternal break_points."""
+"""Set [`PiecewiseFunctionInternal`](@ref) `break_points`."""
 set_break_points!(value::PiecewiseFunctionInternal, val) = value.break_points = val
-"""Set PiecewiseFunctionInternal time_series_uuid."""
+"""Set [`PiecewiseFunctionInternal`](@ref) `time_series_uuid`."""
 set_time_series_uuid!(value::PiecewiseFunctionInternal, val) = value.time_series_uuid = val
-"""Set PiecewiseFunctionInternal horizon."""
+"""Set [`PiecewiseFunctionInternal`](@ref) `horizon`."""
 set_horizon!(value::PiecewiseFunctionInternal, val) = value.horizon = val
-"""Set PiecewiseFunctionInternal internal."""
+"""Set [`PiecewiseFunctionInternal`](@ref) `internal`."""
 set_internal!(value::PiecewiseFunctionInternal, val) = value.internal = val
