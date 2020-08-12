@@ -46,32 +46,32 @@ function ProbabilisticInternal(; label, resolution, initial_time, percentiles, t
     ProbabilisticInternal(label, resolution, initial_time, percentiles, time_series_uuid, horizon, )
 end
 
-"""Get ProbabilisticInternal label."""
+"""Get [`ProbabilisticInternal`](@ref) `label`."""
 get_label(value::ProbabilisticInternal) = value.label
-"""Get ProbabilisticInternal resolution."""
+"""Get [`ProbabilisticInternal`](@ref) `resolution`."""
 get_resolution(value::ProbabilisticInternal) = value.resolution
-"""Get ProbabilisticInternal initial_time."""
+"""Get [`ProbabilisticInternal`](@ref) `initial_time`."""
 get_initial_time(value::ProbabilisticInternal) = value.initial_time
-"""Get ProbabilisticInternal percentiles."""
+"""Get [`ProbabilisticInternal`](@ref) `percentiles`."""
 get_percentiles(value::ProbabilisticInternal) = value.percentiles
-"""Get ProbabilisticInternal time_series_uuid."""
+"""Get [`ProbabilisticInternal`](@ref) `time_series_uuid`."""
 get_time_series_uuid(value::ProbabilisticInternal) = value.time_series_uuid
-"""Get ProbabilisticInternal horizon."""
+"""Get [`ProbabilisticInternal`](@ref) `horizon`."""
 get_horizon(value::ProbabilisticInternal) = value.horizon
-"""Get ProbabilisticInternal internal."""
+"""Get [`ProbabilisticInternal`](@ref) `internal`."""
 get_internal(value::ProbabilisticInternal) = value.internal
 
-"""Set ProbabilisticInternal label."""
+"""Set [`ProbabilisticInternal`](@ref) `label`."""
 set_label!(value::ProbabilisticInternal, val) = value.label = val
-"""Set ProbabilisticInternal resolution."""
+"""Set [`ProbabilisticInternal`](@ref) `resolution`."""
 set_resolution!(value::ProbabilisticInternal, val) = value.resolution = val
-"""Set ProbabilisticInternal initial_time."""
+"""Set [`ProbabilisticInternal`](@ref) `initial_time`."""
 set_initial_time!(value::ProbabilisticInternal, val) = value.initial_time = val
-"""Set ProbabilisticInternal percentiles."""
+"""Set [`ProbabilisticInternal`](@ref) `percentiles`."""
 set_percentiles!(value::ProbabilisticInternal, val) = value.percentiles = val
-"""Set ProbabilisticInternal time_series_uuid."""
+"""Set [`ProbabilisticInternal`](@ref) `time_series_uuid`."""
 set_time_series_uuid!(value::ProbabilisticInternal, val) = value.time_series_uuid = val
-"""Set ProbabilisticInternal horizon."""
+"""Set [`ProbabilisticInternal`](@ref) `horizon`."""
 set_horizon!(value::ProbabilisticInternal, val) = value.horizon = val
-"""Set ProbabilisticInternal internal."""
+"""Set [`ProbabilisticInternal`](@ref) `internal`."""
 set_internal!(value::ProbabilisticInternal, val) = value.internal = val

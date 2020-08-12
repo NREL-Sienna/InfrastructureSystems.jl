@@ -16,7 +16,7 @@ This file is auto-generated. Do not edit.
 
 # Arguments
 {{#parameters}}
-- `{{name}}::{{{data_type}}}`{{#comment}}: {{{comment}}}{{/comment}}{{#valid_range}}, validation range: {{valid_range}}{{/valid_range}}{{#validation_action}}, action if invalid: {{validation_action}}{{/validation_action}}
+- `{{name}}::{{{data_type}}}`{{#comment}}: {{{comment}}}{{/comment}}{{#valid_range}}, validation range: `{{{valid_range}}}`{{/valid_range}}{{#validation_action}}, action if invalid: `{{{validation_action}}}`{{/validation_action}}
 {{/parameters}}
 \"\"\"
 mutable struct {{struct_name}}{{#parametric}}{T <: {{parametric}}}{{/parametric}} <: {{supertype}}
@@ -60,12 +60,12 @@ end
 
 {{/has_null_values}}
 {{#accessors}}
-{{#create_docstring}}\"\"\"Get {{struct_name}} {{name}}.\"\"\"{{/create_docstring}}
+{{#create_docstring}}\"\"\"Get [`{{struct_name}}`](@ref) `{{name}}`.\"\"\"{{/create_docstring}}
 {{accessor}}(value::{{struct_name}}) = {{#needs_conversion}}get_value(value, value.{{name}}){{/needs_conversion}}{{^needs_conversion}}value.{{name}}{{/needs_conversion}}
 {{/accessors}}
 
 {{#setters}}
-{{#create_docstring}}\"\"\"Set {{struct_name}} {{name}}.\"\"\"{{/create_docstring}}
+{{#create_docstring}}\"\"\"Set [`{{struct_name}}`](@ref) `{{name}}`.\"\"\"{{/create_docstring}}
 {{setter}}(value::{{struct_name}}, val) = value.{{name}} = val
 {{/setters}}
 """

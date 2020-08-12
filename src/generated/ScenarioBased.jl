@@ -29,16 +29,16 @@ function ScenarioBased(; label, scenario_count, data, )
     ScenarioBased(label, scenario_count, data, )
 end
 
-"""Get ScenarioBased label."""
+"""Get [`ScenarioBased`](@ref) `label`."""
 get_label(value::ScenarioBased) = value.label
-"""Get ScenarioBased scenario_count."""
+"""Get [`ScenarioBased`](@ref) `scenario_count`."""
 get_scenario_count(value::ScenarioBased) = value.scenario_count
-"""Get ScenarioBased data."""
+"""Get [`ScenarioBased`](@ref) `data`."""
 get_data(value::ScenarioBased) = value.data
 
-"""Set ScenarioBased label."""
+"""Set [`ScenarioBased`](@ref) `label`."""
 set_label!(value::ScenarioBased, val) = value.label = val
-"""Set ScenarioBased scenario_count."""
+"""Set [`ScenarioBased`](@ref) `scenario_count`."""
 set_scenario_count!(value::ScenarioBased, val) = value.scenario_count = val
-"""Set ScenarioBased data."""
+"""Set [`ScenarioBased`](@ref) `data`."""
 set_data!(value::ScenarioBased, val) = value.data = val

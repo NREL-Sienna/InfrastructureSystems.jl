@@ -25,12 +25,12 @@ function Deterministic(; label, data, )
     Deterministic(label, data, )
 end
 
-"""Get Deterministic label."""
+"""Get [`Deterministic`](@ref) `label`."""
 get_label(value::Deterministic) = value.label
-"""Get Deterministic data."""
+"""Get [`Deterministic`](@ref) `data`."""
 get_data(value::Deterministic) = value.data
 
-"""Set Deterministic label."""
+"""Set [`Deterministic`](@ref) `label`."""
 set_label!(value::Deterministic, val) = value.label = val
-"""Set Deterministic data."""
+"""Set [`Deterministic`](@ref) `data`."""
 set_data!(value::Deterministic, val) = value.data = val
