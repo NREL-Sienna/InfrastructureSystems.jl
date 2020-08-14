@@ -234,14 +234,20 @@ function test_generated_structs(descriptor_file, existing_dir)
     generate_structs(descriptor_file, output_dir; print_results = false)
 
     matched = true
-    try
-        run(`diff --strip-trailing-cr $output_dir $existing_dir`)
-    catch err
-        @error "Generated structs do not match the descriptor file." err
-        matched = false
-    finally
-        rm(output_dir; recursive = true)
+    for (file1, file2) in zip(readdir(output_dir), readdir(existing_dir))
+        path1 = joinpath(output_dir, file1)
+        path2 = joinpath(existing_dir, file2)
+        for (line1, line2) in zip(readlines(path1), readlines(path2))
+            # Note: must strip the line endings.
+            line1 = strip(line1)
+            line2 = strip(line2)
+            if line1 != line2
+                @error "Generated structs do not match descriptor file" file1 line1 line2
+                matched = false
+            end
+        end
     end
 
+    rm(output_dir; recursive = true)
     return matched
 end

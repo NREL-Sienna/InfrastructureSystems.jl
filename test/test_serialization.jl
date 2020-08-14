@@ -11,7 +11,7 @@ function validate_serialization(sys::IS.SystemData; time_series_read_only = fals
         if isfile(path)
             rm(path)
         end
-        IS.prepare_for_serialization!(sys, path)
+        IS.prepare_for_serialization!(sys, path; force = true)
         IS.to_json(sys, path)
     catch
         rm(path)
