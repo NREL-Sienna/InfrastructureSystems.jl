@@ -448,17 +448,49 @@ end
 
 """
 Returns an iterator of Forecast instances attached to the component.
+
+Note that passing a filter function can be much slower than the other filtering parameters
+because it reads time series data from media.
+
+Call `collect` on the result to get an array.
+
+# Arguments
+- `component::InfrastructureSystemsType`: component from which to get forecasts
+- `filter_func = nothing`: Only return forecasts for which this returns true.
+- `type = nothing`: Only return forecasts with this type.
+- `initial_time = nothing`: Only return forecasts matching this value.
+- `label = nothing`: Only return forecasts matching this value.
 """
-function iterate_forecasts(component::InfrastructureSystemsType)
+function iterate_forecasts(
+    component::InfrastructureSystemsType,
+    filter_func = nothing;
+    type = nothing,
+    initial_time = nothing,
+    label = nothing,
+)
     container = get_forecasts(component)
     forecast_keys = sort!(collect(keys(container.data)), by = x -> x.initial_time)
 
     Channel() do channel
         for key in forecast_keys
+            if !isnothing(type) &&
+               !(forecast_internal_to_external(key.forecast_type) <: type)
+                continue
+            end
+            if !isnothing(initial_time) && key.initial_time != initial_time
+                continue
+            end
+            if !isnothing(label) && key.label != label
+                continue
+            end
             storage = _get_time_series_storage(component)
-            forecast = container.data[key]
-            time_series = get_time_series(storage, get_time_series_uuid(forecast))
-            put!(channel, make_public_forecast(forecast, time_series))
+            forecast_internal = container.data[key]
+            time_series = get_time_series(storage, get_time_series_uuid(forecast_internal))
+            forecast = make_public_forecast(forecast_internal, time_series)
+            if !isnothing(filter_func) && !filter_func(forecast)
+                continue
+            end
+            put!(channel, forecast)
         end
     end
 end

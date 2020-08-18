@@ -465,10 +465,37 @@ function clear_forecasts!(data::SystemData)
     reset_info!(data.forecast_metadata)
 end
 
-function iterate_forecasts(data::SystemData)
+"""
+Returns an iterator of Forecast instances attached to the system.
+
+Note that passing a filter function can be much slower than the other filtering parameters
+because it reads time series data from media.
+
+Call `collect` on the result to get an array.
+
+# Arguments
+- `data::SystemData`: system
+- `filter_func = nothing`: Only return forecasts for which this returns true.
+- `type = nothing`: Only return forecasts with this type.
+- `initial_time = nothing`: Only return forecasts matching this value.
+- `label = nothing`: Only return forecasts matching this value.
+"""
+function iterate_forecasts(
+    data::SystemData,
+    filter_func = nothing;
+    type = nothing,
+    initial_time = nothing,
+    label = nothing,
+)
     Channel() do channel
         for component in iterate_components_with_forecasts(data.components)
-            for forecast in iterate_forecasts(component)
+            for forecast in iterate_forecasts(
+                component,
+                filter_func;
+                type = type,
+                initial_time = initial_time,
+                label = label,
+            )
                 put!(channel, forecast)
             end
         end

@@ -75,6 +75,49 @@ end
     @test_throws ArgumentError IS.add_forecast!(sys, component3, forecast)
 end
 
+@testset "Test iterate_forecasts" begin
+    sys = IS.SystemData()
+    name = "Component1"
+    component_val = 5
+    component = IS.TestComponent(name, component_val)
+    IS.add_component!(sys, component)
+    initial_time1 = Dates.DateTime("2020-01-01T00:00:00")
+    initial_time2 = Dates.DateTime("2020-01-02T00:00:00")
+
+    dates1 = collect(initial_time1:Dates.Hour(1):Dates.DateTime("2020-01-01T23:00:00"))
+    dates2 = collect(initial_time2:Dates.Hour(1):Dates.DateTime("2020-01-02T23:00:00"))
+    data1 = collect(1:24)
+    data2 = collect(25:48)
+    ta1 = TimeSeries.TimeArray(dates1, data1, [IS.get_name(component)])
+    ta2 = TimeSeries.TimeArray(dates2, data2, [IS.get_name(component)])
+    forecast1 = IS.Deterministic("get_val", ta1)
+    forecast2 = IS.Deterministic("get_val", ta2)
+    IS.add_forecast!(sys, component, forecast1)
+    IS.add_forecast!(sys, component, forecast2)
+
+    @test length(collect(IS.iterate_forecasts(sys))) == 2
+    @test length(collect(IS.iterate_forecasts(component))) == 2
+    @test length(collect(IS.iterate_forecasts(sys))) == 2
+
+    @test length(collect(IS.iterate_forecasts(sys; type = IS.Deterministic))) == 2
+    @test length(collect(IS.iterate_forecasts(sys; type = IS.Probabilistic))) == 0
+
+    forecasts = collect(IS.iterate_forecasts(sys; initial_time = initial_time1))
+    @test length(forecasts) == 1
+    @test IS.get_initial_time(forecasts[1]) == initial_time1
+    @test TimeSeries.values(IS.get_data(forecasts[1]))[1] == 1
+
+    @test length(collect(IS.iterate_forecasts(sys; label = "get_val"))) == 2
+    @test length(collect(IS.iterate_forecasts(sys; label = "bad_label"))) == 0
+
+    filter_func = x -> TimeSeries.values(IS.get_data(x))[12] == 12
+    @test length(collect(IS.iterate_forecasts(
+        sys,
+        filter_func;
+        initial_time = initial_time2,
+    ))) == 0
+end
+
 # TODO: this is disabled because PowerSystems currently does not set labels correctly.
 #@testset "Test add_forecast bad label" begin
 #    sys = IS.SystemData()
