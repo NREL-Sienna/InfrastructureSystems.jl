@@ -91,6 +91,6 @@ end
 end
 
 @testset "Test undef component prints" begin
-    v = Vector{PowerSystemType}(undef, 3)
-    @test sprint(show, v) == "PowerSystemType[#undef, #undef, #undef]"
+    v = Vector{IS.InfrastructureSystemsType}(undef, 3)
+    @test sprint(show, v) == "InfrastructureSystems.InfrastructureSystemsType[#undef, #undef, #undef]"
 end
