@@ -89,3 +89,8 @@ end
     @test Fruits.APPLE isa Fruits.Fruit
     @test Fruits.ORANGE isa Fruits.Fruit
 end
+
+@testset "Test undef component prints" begin
+    v = Vector{PowerSystemType}(undef, 3)
+    @test sprint(show, v) == "PowerSystemType[#undef, #undef, #undef]"
+end
