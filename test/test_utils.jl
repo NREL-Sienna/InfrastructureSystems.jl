@@ -89,3 +89,9 @@ end
     @test Fruits.APPLE isa Fruits.Fruit
     @test Fruits.ORANGE isa Fruits.Fruit
 end
+
+@testset "Test undef component prints" begin
+    v = Vector{IS.InfrastructureSystemsType}(undef, 3)
+    @test sprint(show, v) ==
+          "InfrastructureSystems.InfrastructureSystemsType[#undef, #undef, #undef]"
+end
