@@ -131,8 +131,8 @@ end
 
 function Base.show(io::IO, ::MIME"text/plain", ists::Vector{<:InfrastructureSystemsType})
     println(io, summary(ists))
-    for ist in ists
-        println(io, "$(summary(ist))")
+    for i = 1:length(ists)
+        isassigned(ists, i) && println(io, "$(summary(ists[i]))")
     end
 end
 
