@@ -8,7 +8,12 @@ end
 
 pages = OrderedDict(
         "Welcome Page" => "index.md",
-        "User Guide" => "man/guide.md",
+        "User Guide" => Any[
+            "user_guide/installation.md",
+            "user_guide/guide.md",
+            "user_guide/logging.md",
+            "user_guide/tests.md",
+        ],
         "API" => "api/InfrastructureSystems.md"
 )
 
