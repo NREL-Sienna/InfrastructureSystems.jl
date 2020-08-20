@@ -1,5 +1,9 @@
 # InfrastructureSystems
 
+## 0.15.3
+
+- Fix priting of components
+
 ## 0.15.2
 
 - Fix windows issue with addition of structs
