@@ -1,30 +1,5 @@
 # User Guide
 
-## Installation
-
-This package is not yet registered. **Until it is, things may change. It is perfectly
-usable but should not be considered stable**.
-
-You can install it by typing
-
-```julia
-julia> Pkg.clone("https://github.com/NREL/InfrastructureSystems.jl.git")
-```
-
-## Overview
-
-InfrastructureSystems.jl provides utilities to support infrastructure modeling
-and simulations packages.  It is used primarily by
-[PowerSystems.jl](https://github.com/NREL-SIIP/PowerSystems.jl) and
-[PowerSimulations.jl](https://github.com/NREL-SIIP/PowerSimulations.jl) but is
-written to be extensible for other kinds of applications as well.
-
-This document describes how to integrate it with other packages.
-
-*Note*: This is a work-in-progress and may not fully describe everything you
-need to know. You may need to refer to implementations in PowerSystems.jl and
-PowerSimulations.jl.
-
 ## Component structs
 InfrastructureSystems provides a common way of managing component structs in a
 system.
