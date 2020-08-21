@@ -1,4 +1,4 @@
-# Tests
+# Running Tests
 
 Unit tests can be executed in the REPL by executing the following:
 
