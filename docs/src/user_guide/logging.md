@@ -34,7 +34,7 @@ The function provides lots of customization. Refer to the docstring for complete
 Create a `MultiLogger` from `Logging.ConsoleLogger` and `Logging.SimpleLogger`.
 Use `open_file_logger` to guarantee that all messages get flushed to the file.
 
-**Example** Multiloger configuration
+**Example** Multilogger configuration
 
 ```julia
 console_logger = ConsoleLogger(stderr, Logging.Error)
