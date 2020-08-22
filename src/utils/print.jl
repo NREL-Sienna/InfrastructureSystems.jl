@@ -103,20 +103,20 @@ function Base.show(io::IO, ::MIME"text/html", data::SystemData)
     println(io, "<p><b>Total Forecasts</b>: $forecast_count</p>")
 end
 
-function Base.summary(ist::InfrastructureSystemsType)
-    # All InfrastructureSystemsType subtypes are supposed to implement get_name.
+function Base.summary(ist::InfrastructureSystemsComponent)
+    # All InfrastructureSystemsComponent subtypes are supposed to implement get_name.
     # Some don't.  They need to override this function.
     return "$(get_name(ist)) ($(typeof(ist)))"
 end
 
-function Base.show(io::IO, ::MIME"text/plain", ist::InfrastructureSystemsType)
+function Base.show(io::IO, ::MIME"text/plain", ist::InfrastructureSystemsComponent)
     print(io, summary(ist), ":")
     for (name, field_type) in zip(fieldnames(typeof(ist)), fieldtypes(typeof(ist)))
         if field_type <: InfrastructureSystemsInternal
             continue
         elseif field_type <: Forecasts || field_type <: InfrastructureSystemsType
             val = summary(getfield(ist, name))
-        elseif field_type <: Vector{<:InfrastructureSystemsType}
+        elseif field_type <: Vector{<:InfrastructureSystemsComponent}
             val = summary(getfield(ist, name))
         else
             val = getfield(ist, name)
@@ -129,7 +129,11 @@ function Base.show(io::IO, ::MIME"text/plain", ist::InfrastructureSystemsType)
     end
 end
 
-function Base.show(io::IO, ::MIME"text/plain", ists::Vector{<:InfrastructureSystemsType})
+function Base.show(
+    io::IO,
+    ::MIME"text/plain",
+    ists::Vector{<:InfrastructureSystemsComponent},
+)
     println(io, summary(ists))
     for i in 1:length(ists)
         if isassigned(ists, i)

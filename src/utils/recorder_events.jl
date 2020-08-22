@@ -28,15 +28,14 @@ function serialize(event::T) where {T <: AbstractRecorderEvent}
         end
     end
 
-    return JSON.json(data)
+    return data
 end
 
-"""
-Deserialize an event from raw text. Will throw an exception if the text does not contain
-a serialized version of T.
-"""
-function deserialize(::Type{T}, text::AbstractString) where {T <: AbstractRecorderEvent}
-    data = JSON.parse(text)
+to_json(event::AbstractRecorderEvent) = JSON3.write(serialize(event))
+from_json(::Type{T}, text::AbstractString) where {T <: AbstractRecorderEvent} =
+    deserialize(T, JSON3.read(text, Dict))
+
+function deserialize(::Type{T}, data::Dict) where {T <: AbstractRecorderEvent}
     name = pop!(data, "name")
     timestamp = Dates.DateTime(pop!(data, "timestamp"))
     common = RecorderEventCommon(name, timestamp)
@@ -145,7 +144,7 @@ end
 function _record_event(name::Symbol, event::AbstractRecorderEvent)
     # Key is not checked. Callers must use @record and not call this directly.
     recorder = g_recorders[name]
-    write(recorder.io, serialize(event))
+    write(recorder.io, JSON3.write(serialize(event)))
     write(recorder.io, "\n")
 end
 
@@ -169,7 +168,7 @@ function list_recorder_events(
         type_name = "\"" * strip_module_name(T) * "\""
         # Perform a string search for the type to avoid decoding every JSON object.
         if occursin(type_name, line)
-            event = deserialize(T, line)
+            event = from_json(T, line)
             valid = true
             if !isnothing(filter_func)
                 valid = filter_func(event)

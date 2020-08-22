@@ -75,40 +75,6 @@ function SystemData(
 end
 
 """
-Construct SystemData from a JSON file.
-"""
-function SystemData(filename::AbstractString; time_series_read_only = false)
-    return from_json(SystemData, filename; time_series_read_only = time_series_read_only)
-end
-
-"""Deserializes a SystemData from a JSON file."""
-function from_json(::Type{SystemData}, filename::String; time_series_read_only = false)
-    # File paths in the JSON are relative. Temporarily change to this directory in order
-    # to find all dependent files.
-    orig_dir = pwd()
-    new_dir = dirname(filename)
-    if isempty(new_dir)
-        new_dir = "."
-    end
-
-    cd(new_dir)
-    try
-        raw = open(basename(filename)) do io
-            from_json(io, SystemData)
-        end
-        sys = deserialize(
-            SystemData,
-            InfrastructureSystemsType,
-            raw;
-            time_series_read_only = time_series_read_only,
-        )
-        return sys
-    finally
-        cd(orig_dir)
-    end
-end
-
-"""
 Adds forecasts from a metadata file or metadata descriptors.
 
 # Arguments
@@ -123,7 +89,7 @@ function add_forecasts!(
     data::SystemData,
     metadata_file::AbstractString;
     resolution = nothing,
-) where {T <: InfrastructureSystemsType}
+) where {T <: InfrastructureSystemsComponent}
     metadata = read_time_series_metadata(metadata_file)
     return add_forecasts!(T, data, metadata; resolution = resolution)
 end
@@ -141,7 +107,7 @@ function add_forecasts!(
     data::SystemData,
     timeseries_metadata::Vector{TimeseriesFileMetadata};
     resolution = nothing,
-) where {T <: InfrastructureSystemsType}
+) where {T <: InfrastructureSystemsComponent}
     forecast_cache = ForecastCache()
 
     for metadata in timeseries_metadata
@@ -161,7 +127,7 @@ Throws ArgumentError if the forecast's component is not stored in the system.
 """
 function add_forecast!(
     data::SystemData,
-    component::InfrastructureSystemsType,
+    component::InfrastructureSystemsComponent,
     forecast::Forecast,
 )
     ts_data = TimeSeriesData(get_data(forecast))
@@ -171,7 +137,7 @@ end
 
 function add_forecast!(
     data::SystemData,
-    component::InfrastructureSystemsType,
+    component::InfrastructureSystemsComponent,
     forecast::T,
     ts_data::TimeSeriesData;
     skip_if_present = false,
@@ -198,7 +164,7 @@ See [`TimeseriesFileMetadata`](@ref) for description of scaling_factor.
 function add_forecast!(
     data::SystemData,
     filename::AbstractString,
-    component::InfrastructureSystemsType,
+    component::InfrastructureSystemsComponent,
     label::AbstractString,
     scaling_factor::Union{String, Float64} = 1.0,
 )
@@ -216,7 +182,7 @@ See [`TimeseriesFileMetadata`](@ref) for description of scaling_factor.
 function add_forecast!(
     data::SystemData,
     ta::TimeSeries.TimeArray,
-    component::InfrastructureSystemsType,
+    component::InfrastructureSystemsComponent,
     label::AbstractString,
     scaling_factor::Union{String, Float64} = 1.0,
 )
@@ -232,7 +198,7 @@ See [`TimeseriesFileMetadata`](@ref) for description of scaling_factor.
 function add_forecast!(
     data::SystemData,
     df::DataFrames.DataFrame,
-    component::InfrastructureSystemsType,
+    component::InfrastructureSystemsComponent,
     label::AbstractString,
     scaling_factor::Union{String, Float64} = 1.0;
     timestamp = :timestamp,
@@ -247,7 +213,7 @@ function add_forecast!(
     forecast_cache::ForecastCache,
     metadata::TimeseriesFileMetadata;
     resolution = nothing,
-) where {T <: InfrastructureSystemsType}
+) where {T <: InfrastructureSystemsComponent}
     set_component!(metadata, data, InfrastructureSystems)
     component = metadata.component
 
@@ -263,7 +229,7 @@ Remove the time series data for a component.
 function remove_forecast!(
     ::Type{T},
     data::SystemData,
-    component::InfrastructureSystemsType,
+    component::InfrastructureSystemsComponent,
     initial_time::Dates.DateTime,
     label::String,
 ) where {T <: Forecast}
@@ -293,7 +259,7 @@ end
 
 function _add_forecast!(
     data::SystemData,
-    component::InfrastructureSystemsType,
+    component::InfrastructureSystemsComponent,
     label::AbstractString,
     timeseries::TimeSeries.TimeArray,
     scaling_factor,
@@ -402,7 +368,7 @@ Checks that the component exists in data and the UUID's match.
 function _validate_component(
     data::SystemData,
     component::T,
-) where {T <: InfrastructureSystemsType}
+) where {T <: InfrastructureSystemsComponent}
     comp = get_component(T, data.components, get_name(component))
     if isnothing(comp)
         throw(ArgumentError("no $T with name=$(get_name(component)) is stored"))
@@ -418,30 +384,17 @@ function _validate_component(
     end
 end
 
-function get_component_types_raw(::Type{SystemData}, raw::NamedTuple)
-    return get_component_types_raw(Components, raw.components)
-end
-
-function get_components_raw(
-    ::Type{SystemData},
-    ::Type{T},
-    raw::NamedTuple,
-) where {T <: InfrastructureSystemsType}
-    return get_components_raw(Components, T, raw.components)
-end
-
 function compare_values(x::SystemData, y::SystemData)::Bool
     match = true
-    for key in keys(x.components.data)
-        if !compare_values(x.components.data[key], y.components.data[key])
-            @debug "System components do not match"
+    for name in fieldnames(SystemData)
+        if name == :components
+            # Not deserialized in IS.
+            continue
+        end
+        if !compare_values(getfield(x, name), getfield(y, name))
+            @error "SystemData field=$name does not match"
             match = false
         end
-    end
-
-    if !compare_values(x.forecast_metadata, y.forecast_metadata)
-        @debug "System forecasts do not match"
-        match = false
     end
 
     return match
@@ -587,18 +540,11 @@ function prepare_for_serialization!(
     ext["basename"] = splitext(basename(filename))[1]
 end
 
-function JSON2.write(io::IO, data::SystemData)
-    return JSON2.write(io, encode_for_json(data))
-end
-
-function JSON2.write(data::SystemData)
-    return JSON2.write(encode_for_json(data))
-end
-
-function encode_for_json(data::SystemData)
+function serialize(data::SystemData)
+    @debug "serialize SystemData"
     json_data = Dict()
     for field in (:components, :forecast_metadata, :internal)
-        json_data[string(field)] = getfield(data, field)
+        json_data[string(field)] = serialize(getfield(data, field))
     end
 
     ext = get_ext(data.internal)
@@ -607,7 +553,7 @@ function encode_for_json(data::SystemData)
     end
     directory = pop!(ext, "serialization_directory")
     base = pop!(ext, "basename")
-    isempty(ext) && clear_ext(data.internal)
+    isempty(ext) && clear_ext!(data.internal)
 
     time_series_base_name = base * "_" * TIME_SERIES_STORAGE_FILE
     time_series_storage_file = joinpath(directory, time_series_base_name)
@@ -617,7 +563,8 @@ function encode_for_json(data::SystemData)
 
     descriptor_base_name = base * "_" * VALIDATION_DESCRIPTOR_FILE
     descriptor_file = joinpath(directory, descriptor_base_name)
-    text = JSON.json(data.validation_descriptors)
+    descriptors = Dict("struct_validation_descriptors" => data.validation_descriptors)
+    text = JSON3.write(descriptors)
     open(descriptor_file, "w") do io
         write(io, text)
     end
@@ -625,63 +572,36 @@ function encode_for_json(data::SystemData)
     return json_data
 end
 
-function JSON2.read(io::IO, ::Type{SystemData})
-    return JSON2.read(io, NamedTuple)
-end
-
-function deserialize(
-    ::Type{SystemData},
-    ::Type{T},
-    raw::NamedTuple;
-    time_series_read_only = false,
-) where {T <: InfrastructureSystemsType}
-    forecast_metadata = convert_type(ForecastMetadata, raw.forecast_metadata)
+function deserialize(::Type{SystemData}, raw; time_series_read_only = false)
+    @debug "deserialize" raw
+    forecast_metadata = deserialize(ForecastMetadata, raw["forecast_metadata"])
     # The code calling this function must have changed to this directory.
-    if !isfile(raw.time_series_storage_file)
-        error("time series file $(raw.time_series_storage_file) does not exist")
+    if !isfile(raw["time_series_storage_file"])
+        error("time series file $(raw["time_series_storage_file"]) does not exist")
     end
-    if !isfile(raw.validation_descriptor_file)
-        error("validation descriptor file $(raw.validation_descriptor_file) does not exist")
+    if !isfile(raw["validation_descriptor_file"])
+        error("validation descriptor file $(raw["validation_descriptor_file"]) does not exist")
     end
-    validation_descriptors = read_validation_descriptor(raw.validation_descriptor_file)
+    validation_descriptors = read_validation_descriptor(raw["validation_descriptor_file"])
 
-    if strip_module_name(raw.time_series_storage_type) == "InMemoryTimeSeriesStorage"
-        hdf5_storage = Hdf5TimeSeriesStorage(raw.time_series_storage_file, true)
+    if strip_module_name(raw["time_series_storage_type"]) == "InMemoryTimeSeriesStorage"
+        hdf5_storage = Hdf5TimeSeriesStorage(raw["time_series_storage_file"], true)
         time_series_storage = InMemoryTimeSeriesStorage(hdf5_storage)
     else
         time_series_storage = from_file(
             Hdf5TimeSeriesStorage,
-            raw.time_series_storage_file;
+            raw["time_series_storage_file"];
             read_only = time_series_read_only,
         )
     end
 
-    internal = convert_type(InfrastructureSystemsInternal, raw.internal)
+    internal = deserialize(InfrastructureSystemsInternal, raw["internal"])
+    @debug "deserialize" validation_descriptors time_series_storage internal
     sys =
         SystemData(forecast_metadata, validation_descriptors, time_series_storage, internal)
-    deserialize_components(T, sys, raw)
+    # Note: components need to be deserialized by the parent so that they can got through
+    # the proper checks.
     return sys
-end
-
-"""
-Deserializes components defined in InfrastructureSystems. Parent modules should override
-this by changing the component type and module.
-"""
-function deserialize_components(
-    ::Type{InfrastructureSystemsType},
-    sys::SystemData,
-    raw::NamedTuple,
-)
-    for c_type_sym in get_component_types_raw(SystemData, raw)
-        c_type =
-            getfield(InfrastructureSystems, Symbol(strip_module_name(string(c_type_sym))))
-        for component in get_components_raw(SystemData, c_type, raw)
-            comp = convert_type(c_type, component)
-            add_component!(sys, comp)
-        end
-    end
-
-    return
 end
 
 # Redirect functions to Components and Forecasts
@@ -692,6 +612,18 @@ iterate_components(data::SystemData) = iterate_components(data.components)
 
 get_component(::Type{T}, data::SystemData, args...) where {T} =
     get_component(T, data.components, args...)
+
+function get_component(data::SystemData, uuid::Base.UUID)
+    for component in get_components(InfrastructureSystemsComponent, data)
+        if get_uuid(component) == uuid
+            return component
+        end
+    end
+
+    @error "no component with UUID $uuid is stored"
+    return nothing
+end
+
 function get_components(
     ::Type{T},
     data::SystemData,

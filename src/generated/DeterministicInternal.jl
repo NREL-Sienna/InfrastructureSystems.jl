@@ -38,8 +38,8 @@ function DeterministicInternal(label, resolution, initial_time, time_series_uuid
     DeterministicInternal(label, resolution, initial_time, time_series_uuid, horizon, InfrastructureSystemsInternal(), )
 end
 
-function DeterministicInternal(; label, resolution, initial_time, time_series_uuid, horizon, )
-    DeterministicInternal(label, resolution, initial_time, time_series_uuid, horizon, )
+function DeterministicInternal(; label, resolution, initial_time, time_series_uuid, horizon, internal=InfrastructureSystemsInternal(), )
+    DeterministicInternal(label, resolution, initial_time, time_series_uuid, horizon, internal, )
 end
 
 """Get [`DeterministicInternal`](@ref) `label`."""

@@ -3,15 +3,15 @@ const UNINITIALIZED_PERIOD = Dates.Period(Dates.Minute(0))
 const UNINITIALIZED_HORIZON = 0
 
 """Container for forecasts and their metadata.."""
-mutable struct ForecastMetadata
+mutable struct ForecastMetadata <: InfrastructureSystemsType
     resolution::Dates.Period
     horizon::Int64
 end
 
-function ForecastMetadata()
-    resolution = UNINITIALIZED_PERIOD
-    horizon = UNINITIALIZED_HORIZON
-
+function ForecastMetadata(;
+    resolution = UNINITIALIZED_PERIOD,
+    horizon = UNINITIALIZED_HORIZON,
+)
     return ForecastMetadata(resolution, horizon)
 end
 
@@ -51,12 +51,6 @@ function check_add_forecast!(metadata::ForecastMetadata, forecast::ForecastInter
 
     # This will throw if something is invalid.
     _verify_forecast(metadata, forecast)
-end
-
-function ForecastMetadata(data::NamedTuple)
-    resolution = JSON2.read(JSON2.write(data.resolution), Dates.Period)
-    horizon = data.horizon
-    return ForecastMetadata(initial_time, resolution, horizon)
 end
 
 """Return the horizon for all forecasts."""

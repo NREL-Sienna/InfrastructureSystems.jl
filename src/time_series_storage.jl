@@ -29,12 +29,14 @@ function make_time_series_storage(;
     return storage
 end
 
+const COMPONENT_LABEL_DELIMITER = "__"
+
 function make_component_label(component_uuid::UUIDs.UUID, label::AbstractString)
-    return string(component_uuid) * "_" * label
+    return string(component_uuid) * COMPONENT_LABEL_DELIMITER * label
 end
 
 function deserialize_component_label(component_label::AbstractString)
-    data = split(component_label, "_")
+    data = split(component_label, COMPONENT_LABEL_DELIMITER)
     component = UUIDs.UUID(data[1])
     label = data[2]
     return component, label

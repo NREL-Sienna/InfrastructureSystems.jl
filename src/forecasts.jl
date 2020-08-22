@@ -4,7 +4,7 @@ Abstract type for forecasts that are stored in a system.
 Users never create them or get access to them.
 Stores references to time series data, so a disk read may be required for access.
 """
-abstract type ForecastInternal <: InfrastructureSystemsType end
+abstract type ForecastInternal <: InfrastructureSystemsComponent end
 
 """
 Abstract type for forecasts supplied to users. They are not stored in a system. Instead,
@@ -52,7 +52,6 @@ function set_time_series_storage!(
     storage::Union{Nothing, TimeSeriesStorage},
 )
     if !isnothing(forecasts.time_series_storage) && !isnothing(storage)
-        @show forecasts.time_series_storage
         throw(ArgumentError(
             "The time_series_storage reference is already set. Is this component being " *
             "added to multiple systems?",
@@ -173,37 +172,25 @@ function get_forecast_labels(
     return Vector{String}(collect(labels))
 end
 
-struct ForecastSerializationWrapper
+struct ForecastSerializationWrapper <: InfrastructureSystemsType
     forecast::ForecastInternal
     type::DataType
 end
 
-function JSON2.write(io::IO, forecasts::Forecasts)
-    return JSON2.write(io, encode_for_json(forecasts))
-end
-
-function JSON2.write(forecasts::Forecasts)
-    return JSON2.write(encode_for_json(forecasts))
-end
-
-function encode_for_json(forecasts::Forecasts)
+function serialize(forecasts::Forecasts)
     # Store a flat array of forecasts. Deserialization can unwind it.
-    data = Vector{ForecastSerializationWrapper}()
-    for (key, forecast) in forecasts.data
-        push!(data, ForecastSerializationWrapper(forecast, key.forecast_type))
-    end
-
-    return data
+    return [
+        serialize(ForecastSerializationWrapper(v, k.forecast_type))
+        for (k, v) in forecasts.data
+    ]
 end
 
-function JSON2.read(io::IO, ::Type{Forecasts})
+function deserialize(::Type{Forecasts}, data::Vector)
     forecasts = Forecasts()
-    for raw_forecast in JSON2.read(io)
-        forecast_type = getfield(
-            InfrastructureSystems,
-            Symbol(strip_module_name(string(raw_forecast.type))),
-        )
-        forecast = JSON2.read(JSON2.write(raw_forecast.forecast), forecast_type)
+    for raw_forecast in data
+        forecast_type =
+            getfield(InfrastructureSystems, Symbol(strip_module_name(raw_forecast["type"])))
+        forecast = deserialize(forecast_type, raw_forecast["forecast"])
         add_forecast!(forecasts, forecast)
     end
 

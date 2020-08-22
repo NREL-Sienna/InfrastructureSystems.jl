@@ -1,13 +1,13 @@
 
-struct TestComponent <: InfrastructureSystemsType
-    name::AbstractString
+struct TestComponent <: InfrastructureSystemsComponent
+    name::String
     val::Int
     forecasts::Forecasts
     internal::InfrastructureSystemsInternal
 end
 
-struct AdditionalTestComponent <: InfrastructureSystemsType
-    name::AbstractString
+struct AdditionalTestComponent <: InfrastructureSystemsComponent
+    name::String
     val::Int
     forecasts::Forecasts
     internal::InfrastructureSystemsInternal
@@ -29,13 +29,17 @@ function get_forecasts(component::TestComponent)
     return component.forecasts
 end
 
-function JSON2.read(io::IO, ::Type{TestComponent})
-    data = JSON2.read(io)
+function from_json(io::IO, ::Type{TestComponent})
+    data = JSON3.read(io, Dict)
+    return deserialize(TestComponent, data)
+end
+
+function deserialize(::Type{TestComponent}, data::Dict)
     return TestComponent(
-        data.name,
-        data.val,
-        convert_type(Forecasts, data.forecasts),
-        JSON2.read(JSON2.write(data.internal), InfrastructureSystemsInternal),
+        data["name"],
+        data["val"],
+        deserialize(Forecasts, data["forecasts"]),
+        deserialize(InfrastructureSystemsInternal, data["internal"]),
     )
 end
 

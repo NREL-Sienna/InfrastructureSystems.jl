@@ -42,8 +42,8 @@ function PiecewiseFunctionInternal(label, resolution, initial_time, break_points
     PiecewiseFunctionInternal(label, resolution, initial_time, break_points, time_series_uuid, horizon, InfrastructureSystemsInternal(), )
 end
 
-function PiecewiseFunctionInternal(; label, resolution, initial_time, break_points, time_series_uuid, horizon, )
-    PiecewiseFunctionInternal(label, resolution, initial_time, break_points, time_series_uuid, horizon, )
+function PiecewiseFunctionInternal(; label, resolution, initial_time, break_points, time_series_uuid, horizon, internal=InfrastructureSystemsInternal(), )
+    PiecewiseFunctionInternal(label, resolution, initial_time, break_points, time_series_uuid, horizon, internal, )
 end
 
 """Get [`PiecewiseFunctionInternal`](@ref) `label`."""

@@ -1,6 +1,16 @@
+const TYPE_KEY = "__type"
 
-"""Serializes a InfrastructureSystemsType to a JSON file."""
-function to_json(obj::T, filename::AbstractString) where {T <: InfrastructureSystemsType}
+"""
+Serializes a InfrastructureSystemsType to a JSON file.
+"""
+function to_json(
+    obj::T,
+    filename::AbstractString;
+    force = false,
+) where {T <: InfrastructureSystemsType}
+    if !force && isfile(filename)
+        error("$file already exists. Set force=true to overwrite.")
+    end
     result = open(filename, "w") do io
         return to_json(io, obj)
     end
@@ -9,146 +19,144 @@ function to_json(obj::T, filename::AbstractString) where {T <: InfrastructureSys
     return result
 end
 
-"""Serializes a InfrastructureSystemsType to a JSON string."""
+"""
+Serializes a InfrastructureSystemsType to a JSON string.
+"""
 function to_json(obj::T)::String where {T <: InfrastructureSystemsType}
-    return JSON2.write(obj)
+    return JSON3.write(serialize(obj))
 end
 
-"""JSON Serializes a InfrastructureSystemsType to an IO stream in JSON."""
-function to_json(io::IO, obj::T) where {T <: InfrastructureSystemsType}
-    return JSON2.write(io, obj)
-end
-
-"""Deserializes a InfrastructureSystemsType from a JSON filename."""
+"""
+Deserializes a InfrastructureSystemsType from a JSON filename.
+"""
 function from_json(::Type{T}, filename::String) where {T <: InfrastructureSystemsType}
     return open(filename) do io
         from_json(io, T)
     end
 end
 
-"""Deserializes a InfrastructureSystemsType from String or IO."""
+"""
+Deserializes a InfrastructureSystemsType from String or IO.
+"""
 function from_json(io::Union{IO, String}, ::Type{T}) where {T <: InfrastructureSystemsType}
-    return JSON2.read(io, T)
+    return deserialize(T, JSON3.read(io, Dict))
 end
 
-"""Enables JSON deserialization of TimeSeries.TimeArray.
-The default implementation fails because the data field is defined as an AbstractArray.
-Deserialization can't determine the actual concrete type.
 """
-function JSON2.read(io::IO, ::Type{T}) where {T <: TimeSeries.TimeArray}
-    data = JSON2.read(io)
-    timestamp = [Dates.DateTime(x) for x in data.timestamp]
-    colnames = [Symbol(x) for x in data.colnames]
-    dim2 = length(colnames)
-    dim1 = Int(length(data.values) / dim2)
-
-    for i in eachindex(data.values)
-        data.values[i] = Float64(data.values[i])
+Serialize the Julia value into standard types that can be converted to non-Julia formats,
+such as JSON. In cases where val is an instance of a struct, return a Dict. In cases where
+val is a scalar value, return that value.
+"""
+function serialize(val::T) where {T <: InfrastructureSystemsType}
+    @debug "serialize InfrastructureSystemsType" val T
+    data = Dict{String, Any}()
+    for (field_name, field_type) in zip(fieldnames(T), fieldtypes(T))
+        data[string(field_name)] = serialize(getfield(val, field_name))
     end
 
-    if length(colnames) > 1
-        vals = reshape(data.values, dim1, dim2)
-    else
-        vals = data.values
-    end
-
-    return TimeSeries.TimeArray(timestamp, vals, colnames)
+    return data
 end
 
-"""Enables JSON deserialization of Dates.Period.
-The default implementation fails because the field is defined as abstract.
-Encode the type when serializing so that the correct value can be deserialized.
-"""
-function JSON2.write(resolution::Dates.Period)
-    return JSON2.write(encode_for_json(resolution))
-end
-
-function JSON2.write(io::IO, resolution::Dates.Period)
-    return JSON2.write(io, encode_for_json(resolution))
-end
-
-function encode_for_json(resolution::Dates.Period)
-    return (value = resolution.value, unit = strip_module_name(string(typeof(resolution))))
-end
-
-function JSON2.read(io::IO, ::Type{T}) where {T <: Dates.Period}
-    data = JSON2.read(io)
-    return getfield(Dates, Symbol(data.unit))(data.value)
-end
-
-"""
-The next few methods fix serialization of UUIDs. The underlying type of a UUID is a UInt128.
-JSON2 tries to encode this as a number in JSON. Encoding integers greater than can
-be stored in a signed 64-bit integer sometimes does not work - at least when using the
-JSON2.@pretty option. The number gets converted to a float in scientific notation, and so
-the UUID is truncated and essentially lost. These functions cause JSON2 to encode UUIDs as
-strings and then convert them back during deserialization.
-"""
-
-function JSON2.write(uuid::Base.UUID)
-    return JSON2.write(encode_for_json(uuid))
-end
-
-function JSON2.write(io::IO, uuid::Base.UUID)
-    return JSON2.write(io, encode_for_json(uuid))
-end
-
-function JSON2.read(io::IO, ::Type{Base.UUID})
-    data = JSON2.read(io)
-    return Base.UUID(data.value)
-end
-
-function encode_for_json(uuid::Base.UUID)
-    return (value = string(uuid),)
-end
-
-"""The next set of methods fix serialization for Complex numbers."""
-
-function JSON2.write(value::Complex)
-    return JSON2.write(encode_for_json(value))
-end
-
-function JSON2.write(io::IO, value::Complex)
-    return JSON2.write(io, encode_for_json(value))
-end
-
-function JSON2.read(io::IO, ::Type{Complex})
-    data = JSON2.read(io)
-    return Complex(data.real, data.imag)
-end
-
-function encode_for_json(value::Complex)
-    return (real = real(value), imag = imag(value))
-end
-
-# Refer to docstrings in services.jl.
-
-function JSON2.write(io::IO, forecast::Forecast)
-    return JSON2.write(io, encode_for_json(forecast))
-end
-
-function JSON2.write(forecast::Forecast)
-    return JSON2.write(encode_for_json(forecast))
-end
-
-function encode_for_json(forecast::T) where {T <: Forecast}
-    fields = [x for x in fieldnames(T) if x != :data]
-    vals = []
-
-    for name in fields
-        if name == :data
-            # The timeseries is stored within SystemForecasts.
-            continue
+function serialize(vals::Vector{T}) where {T <: InfrastructureSystemsType}
+    @debug "serialize Vector{InfrastructureSystemsType}" vals T
+    array = Vector{Dict{String, Any}}(undef, length(vals))
+    for (i, val) in enumerate(vals)
+        type = typeof(val)
+        data = Dict{String, Any}()
+        for (field_name, field_type) in zip(fieldnames(type), fieldtypes(type))
+            data[string(field_name)] = serialize(getfield(val, field_name))
         end
-        val = getfield(forecast, name)
-        if val isa InfrastructureSystemsType
-            push!(vals, get_uuid(val))
-        else
-            push!(vals, val)
-        end
+        array[i] = data
     end
 
-    push!(fields, :type)
-    push!(vals, strip_module_name(string(T.name)))
-    return NamedTuple{Tuple(fields)}(vals)
+    return array
+end
+
+# The default implementation allows any scalar type (or collection of scalar types) to
+# work. The JSON library must be able to encode and decode anything passed here.
+
+serialize(val::T) where {T} = val
+
+"""
+Deserialize an object from standard types stored in non-Julia formats, such as JSON, into
+Julia types.
+"""
+function deserialize(::Type{T}, data::Any) where {T <: InfrastructureSystemsType}
+    @debug "deserialize InfrastructureSystemsType" T data
+    vals = Dict{Symbol, Any}()
+    for (field_name, field_type) in zip(fieldnames(T), fieldtypes(T))
+        vals[field_name] = deserialize(field_type, data[string(field_name)])
+    end
+
+    if !isempty(T.parameters)
+        return deserialize_parametric_type(T, InfrastructureSystems, vals)
+    end
+
+    return T(; vals...)
+end
+
+function deserialize(::Type{T}, data::Any) where {T}
+    @debug "deserialize Any" T data
+    return data
+end
+
+function deserialize(::Type{T}, data::Any) where {T <: AbstractFloat}
+    return T(data)
+end
+
+function deserialize(::Type{T}, data::Dict) where {T <: NamedTuple}
+    return T(key = data[string(key)] for key in fieldnames(T))
+end
+
+function deserialize(
+    ::Type{T},
+    data::Union{Nothing, Dict},
+) where {T <: Union{Nothing, NamedTuple}}
+    return isnothing(data) ? nothing : deserialize(T.b, data)
+end
+
+# Enables JSON serialization of Dates.Period.
+# The default implementation fails because the field is defined as abstract.
+# Encode the type when serializing so that the correct value can be deserialized.
+function serialize(resolution::Dates.Period)
+    return Dict(
+        "value" => resolution.value,
+        TYPE_KEY => strip_module_name(typeof(resolution)),
+    )
+end
+
+function deserialize(::Type{Dates.Period}, data::Dict)
+    return getfield(Dates, Symbol(data[TYPE_KEY]))(data["value"])
+end
+
+deserialize(::Type{Dates.DateTime}, val::AbstractString) = Dates.DateTime(val)
+
+# The next methods fix serialization of UUIDs. The underlying type of a UUID is a UInt128.
+# JSON tries to encode this as a number in JSON. Encoding integers greater than can
+# be stored in a signed 64-bit integer sometimes does not work - at least when using
+# JSON3. The number gets converted to a float in scientific notation, and so
+# the UUID is truncated and essentially lost. These functions cause JSON to encode UUIDs as
+# strings and then convert them back during deserialization.
+
+serialize(uuid::Base.UUID) = Dict("value" => string(uuid))
+serialize(uuids::Vector{Base.UUID}) = serialize.(uuids)
+deserialize(::Type{Base.UUID}, data::Dict) = Base.UUID(data["value"])
+
+serialize(value::Complex) = Dict("real" => real(value), "imag" => imag(value))
+deserialize(::Type{Complex}, data::Dict) = Complex(data["real"], data["imag"])
+deserialize(::Type{Complex{T}}, data::Dict) where {T} =
+    Complex(T(data["real"]), T(data["imag"]))
+
+deserialize(::Type{Vector{Symbol}}, data::Vector) = Symbol.(data)
+
+"""
+Deserialize a parametric type. The default implementation strips the parametric types and
+calls the constructor with only the base type.
+"""
+function deserialize_parametric_type(
+    ::Type{T},
+    mod::Module,
+    data::Dict,
+) where {T <: InfrastructureSystemsType}
+    return getfield(mod, Symbol(T.name))(; data...)
 end

@@ -5,7 +5,7 @@ InfrastructureSystems provides a common way of managing component structs in a
 system.
 
 ### Type hierachy
-Make every component a subtype of InfrastructureSystemsType.
+Make every component a subtype of InfrastructureSystemsComponent.
 
 #### Interface requirements
 Implement a `get_name(c::MyComponent)::String` method for every struct.
@@ -29,11 +29,11 @@ end
 
 # Optional
 get_ext(c::MyComponent) = InfrastructureSystems.get_ext(c.ext)
-clear_ext(c::MyComponent) = InfrastructureSystems.clear_ext(c.ext)
+clear_ext!(c::MyComponent) = InfrastructureSystems.clear_ext(c.ext)
 ```
 
 *Notes*:
-- `InfrastructureSystems.get_uuid(obj::InfrastructureSystemsType)` returns the
+- `InfrastructureSystems.get_uuid(obj::InfrastructureSystemsComponent)` returns the
   component UUID.
 - The extension dictionary is not created until the first time `get_ext` is
   called.

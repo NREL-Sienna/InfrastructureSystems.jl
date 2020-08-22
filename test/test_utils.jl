@@ -1,6 +1,6 @@
 
 @testset "Test utility functions" begin
-    concrete_types = IS.get_all_concrete_subtypes(IS.InfrastructureSystemsType)
+    concrete_types = IS.get_all_concrete_subtypes(IS.InfrastructureSystemsComponent)
     @test length([x for x in concrete_types if isconcretetype(x)]) == length(concrete_types)
 end
 
@@ -91,7 +91,7 @@ end
 end
 
 @testset "Test undef component prints" begin
-    v = Vector{IS.InfrastructureSystemsType}(undef, 3)
+    v = Vector{IS.InfrastructureSystemsComponent}(undef, 3)
     @test sprint(show, v) ==
-          "InfrastructureSystems.InfrastructureSystemsType[#undef, #undef, #undef]"
+          "InfrastructureSystems.InfrastructureSystemsComponent[#undef, #undef, #undef]"
 end

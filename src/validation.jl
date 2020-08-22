@@ -1,5 +1,4 @@
 
-import JSON
 import YAML
 
 struct ValidationInfo
@@ -17,16 +16,13 @@ function read_validation_descriptor(filename::AbstractString)
         end
     elseif occursin(r"(\.json)"i, filename)
         data = open(filename) do file
-            # JSON2.read produces NamedTuples recursively. We want dicts. Use JSON instead.
-            JSON.parse(file)
+            JSON3.read(file, Dict)
         end
     else
         error("Filename is not a YAML or JSON file.")
     end
 
-    if data isa Array
-        descriptors = data
-    elseif data isa Dict
+    if data isa Dict
         if haskey(data, "auto_generated_structs")
             descriptors = data["auto_generated_structs"]
         else

@@ -12,11 +12,11 @@
         @test isfile(filename)
         lines = readlines(filename)
         @test length(lines) == 1
-        data = JSON2.read(lines[1])
-        @test data.name == "TestEvent"
-        @test data.val1 == "a"
-        @test data.val2 == 1
-        @test data.val3 == 2.0
+        data = JSON3.read(lines[1], Dict)
+        @test data["name"] == "TestEvent"
+        @test data["val1"] == "a"
+        @test data["val2"] == 1
+        @test data["val3"] == 2.0
 
         rm(filename)
         IS.@record :test InfrastructureSystems.TestEvent("a", 1, 2.0)

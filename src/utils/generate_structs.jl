@@ -42,8 +42,8 @@ function {{constructor_func}}({{#parameters}}{{^internal_default}}{{name}}{{#def
 end
 {{/needs_positional_constructor}}
 
-function {{constructor_func}}(; {{#parameters}}{{^internal_default}}{{name}}{{#default}}={{default}}{{/default}}, {{/internal_default}}{{/parameters}}){{{closing_constructor_text}}}
-    {{constructor_func}}({{#parameters}}{{^internal_default}}{{name}}, {{/internal_default}}{{/parameters}})
+function {{constructor_func}}(; {{#parameters}}{{name}}{{#kwarg_value}}{{{kwarg_value}}}{{/kwarg_value}}, {{/parameters}}){{{closing_constructor_text}}}
+    {{constructor_func}}({{#parameters}}{{name}}, {{/parameters}})
 end
 
 {{#has_null_values}}
@@ -68,11 +68,15 @@ end
 {{#create_docstring}}\"\"\"Set [`{{struct_name}}`](@ref) `{{name}}`.\"\"\"{{/create_docstring}}
 {{setter}}(value::{{struct_name}}, val) = value.{{name}} = val
 {{/setters}}
+
+{{#custom_code}}
+{{{custom_code}}}
+{{/custom_code}}
 """
 
 function read_json_data(filename::String)
     return open(filename) do io
-        data = JSON.parse(io)
+        data = JSON3.read(io, Dict)
         if data isa Array
             return data
         elseif data isa Dict && haskey(data, "auto_generated_structs")
@@ -104,6 +108,7 @@ function generate_structs(directory, data::Vector; print_results = true)
         parameters = Vector{Dict}()
         for field in item["fields"]
             param = field
+            param["struct_name"] = item["struct_name"]
             if haskey(param, "valid_range")
                 if typeof(param["valid_range"]) == Dict{String, Any}
                     param["valid_range"] =
@@ -153,20 +158,26 @@ function generate_structs(directory, data::Vector; print_results = true)
                 push!(unique_setter_functions, setter_name)
             end
 
-            if haskey(param, "internal_default")
+            param["kwarg_value"] = ""
+            if haskey(param, "default")
+                param["kwarg_value"] = "=" * param["default"]
+            elseif haskey(param, "internal_default")
+                param["kwarg_value"] = "=" * string(param["internal_default"])
                 has_internal = true
                 continue
             end
 
-            # This controls whether a kwargs constructor will be generated.
-            if !haskey(param, "null_value")
+            # This controls whether a demo constructor will be generated.
+            if !haskey(param, "null_value") && !haskey(param, "default")
                 item["has_null_values"] = false
             else
+                if !haskey(param, "null_value")
+                    item["null_value"] = param["default"]
+                end
                 if param["data_type"] == "String"
                     param["quotes"] = true
                 end
             end
-            param["struct_name"] = item["struct_name"]
         end
 
         item["parameters"] = parameters

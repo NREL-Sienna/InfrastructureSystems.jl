@@ -142,7 +142,7 @@ function compare_values(x::InMemoryTimeSeriesStorage, y::InMemoryTimeSeriesStora
         record_x = x.data[key]
         record_y = y.data[key]
         if record_x.component_labels != record_y.component_labels
-            @error "component_labels don't match" record_x record_y
+            @error "component_labels don't match" record_x.component_labels record_y.component_labels
             return false
         end
         if TimeSeries.timestamp(record_x.ts.data) != TimeSeries.timestamp(record_y.ts.data)
