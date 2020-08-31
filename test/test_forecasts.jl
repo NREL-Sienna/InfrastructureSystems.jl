@@ -329,7 +329,7 @@ end
 
     component2 = IS.TestComponent("component2", 6)
     IS.add_component!(sys, component2)
-    IS.copy_forecasts!(component, component2)
+    IS.copy_forecasts!(component2, component)
     forecast = IS.get_forecast(IS.Deterministic, component2, initial_time, label)
     @test forecast isa IS.Deterministic
     @test IS.get_initial_time(forecast) == initial_time
@@ -354,7 +354,7 @@ end
     IS.add_component!(sys, component2)
     label2 = "get_val2"
     label_mapping = Dict(label1 => label2)
-    IS.copy_forecasts!(component, component2, label_mapping)
+    IS.copy_forecasts!(component2, component, label_mapping)
     forecast = IS.get_forecast(IS.Deterministic, component2, initial_time, label2)
     @test forecast isa IS.Deterministic
     @test IS.get_initial_time(forecast) == initial_time
@@ -386,7 +386,7 @@ end
     IS.add_component!(sys, component2)
     label2b = "get_val2b"
     label_mapping = Dict(label2a => label2b)
-    IS.copy_forecasts!(component, component2, label_mapping)
+    IS.copy_forecasts!(component2, component, label_mapping)
     forecast = IS.get_forecast(IS.Deterministic, component2, initial_time2, label2b)
     @test forecast isa IS.Deterministic
     @test IS.get_initial_time(forecast) == initial_time2

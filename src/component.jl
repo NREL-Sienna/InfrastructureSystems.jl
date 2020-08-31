@@ -368,8 +368,8 @@ references.
   with src's labels.
 """
 function copy_forecasts!(
-    src::InfrastructureSystemsComponent,
     dst::InfrastructureSystemsComponent,
+    src::InfrastructureSystemsComponent,
     label_mapping::Union{Nothing, Dict{String, String}} = nothing,
 )
     for forecast in iterate_forecasts(ForecastInternal, src)
