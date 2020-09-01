@@ -360,8 +360,8 @@ Efficiently add all forecasts in one component to another by copying the underly
 references.
 
 # Arguments
-- `src::InfrastructureSystemsComponent`: Source component
 - `dst::InfrastructureSystemsComponent`: Destination component
+- `src::InfrastructureSystemsComponent`: Source component
 - `label_mapping::Dict = nothing`: Optionally map src labels to different dst labels.
   If provided and src has a forecast with a label not present in label_mapping, that
   forecast will not copied. If label_mapping is nothing then all forecasts will be copied
