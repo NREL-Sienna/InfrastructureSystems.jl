@@ -4,7 +4,7 @@ Abstract type for forecasts that are stored in a system.
 Users never create them or get access to them.
 Stores references to time series data, so a disk read may be required for access.
 """
-abstract type ForecastInternal <: InfrastructureSystemsComponent end
+abstract type ForecastInternal <: InfrastructureSystemsType end
 
 """
 Abstract type for forecasts supplied to users. They are not stored in a system. Instead,

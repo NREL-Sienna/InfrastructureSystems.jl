@@ -1,4 +1,4 @@
-struct TimeSeriesData <: InfrastructureSystemsComponent
+struct TimeSeriesData <: InfrastructureSystemsType
     data::TimeSeries.TimeArray
     internal::InfrastructureSystemsInternal
 
