@@ -42,8 +42,8 @@ function ScenarioBasedInternal(label, resolution, initial_time, scenario_count, 
     ScenarioBasedInternal(label, resolution, initial_time, scenario_count, time_series_uuid, horizon, InfrastructureSystemsInternal(), )
 end
 
-function ScenarioBasedInternal(; label, resolution, initial_time, scenario_count, time_series_uuid, horizon, )
-    ScenarioBasedInternal(label, resolution, initial_time, scenario_count, time_series_uuid, horizon, )
+function ScenarioBasedInternal(; label, resolution, initial_time, scenario_count, time_series_uuid, horizon, internal=InfrastructureSystemsInternal(), )
+    ScenarioBasedInternal(label, resolution, initial_time, scenario_count, time_series_uuid, horizon, internal, )
 end
 
 """Get [`ScenarioBasedInternal`](@ref) `label`."""

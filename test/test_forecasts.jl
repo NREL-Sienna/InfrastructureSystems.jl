@@ -17,7 +17,7 @@ end
     @test !IS.has_forecasts(component)
 
     file = joinpath(FORECASTS_DIR, "ComponentsAsColumnsNoTime.json")
-    IS.add_forecasts!(IS.InfrastructureSystemsType, data, file)
+    IS.add_forecasts!(IS.InfrastructureSystemsComponent, data, file)
     @test IS.has_forecasts(component)
 
     forecasts = get_all_forecasts(data)
@@ -250,7 +250,7 @@ end
 @testset "Test that remove_component removes forecasts" begin
     data = create_system_data(; with_forecasts = true)
 
-    components = collect(IS.get_components(IS.InfrastructureSystemsType, data))
+    components = collect(IS.get_components(IS.InfrastructureSystemsComponent, data))
     @test length(components) == 1
     component = components[1]
 
@@ -261,7 +261,7 @@ end
 
     IS.remove_component!(data, component)
     @test length(collect(IS.iterate_forecasts(component))) == 0
-    @test length(collect(IS.get_components(IS.InfrastructureSystemsType, data))) == 0
+    @test length(collect(IS.get_components(IS.InfrastructureSystemsComponent, data))) == 0
     @test length(get_all_forecasts(data)) == 0
     @test IS.get_num_time_series(data.time_series_storage) == 0
 end
@@ -293,7 +293,7 @@ end
 
 @testset "Test get subset of forecast" begin
     sys = create_system_data()
-    components = collect(IS.get_components(IS.InfrastructureSystemsType, sys))
+    components = collect(IS.get_components(IS.InfrastructureSystemsComponent, sys))
     @test length(components) == 1
     component = components[1]
 
@@ -315,7 +315,7 @@ end
 
 @testset "Test copy forecasts no label mapping" begin
     sys = create_system_data()
-    components = collect(IS.get_components(IS.InfrastructureSystemsType, sys))
+    components = collect(IS.get_components(IS.InfrastructureSystemsComponent, sys))
     @test length(components) == 1
     component = components[1]
 
@@ -329,7 +329,7 @@ end
 
     component2 = IS.TestComponent("component2", 6)
     IS.add_component!(sys, component2)
-    IS.copy_forecasts!(component, component2)
+    IS.copy_forecasts!(component2, component)
     forecast = IS.get_forecast(IS.Deterministic, component2, initial_time, label)
     @test forecast isa IS.Deterministic
     @test IS.get_initial_time(forecast) == initial_time
@@ -338,7 +338,7 @@ end
 
 @testset "Test copy forecasts label mapping" begin
     sys = create_system_data()
-    components = collect(IS.get_components(IS.InfrastructureSystemsType, sys))
+    components = collect(IS.get_components(IS.InfrastructureSystemsComponent, sys))
     @test length(components) == 1
     component = components[1]
 
@@ -354,7 +354,7 @@ end
     IS.add_component!(sys, component2)
     label2 = "get_val2"
     label_mapping = Dict(label1 => label2)
-    IS.copy_forecasts!(component, component2, label_mapping)
+    IS.copy_forecasts!(component2, component, label_mapping)
     forecast = IS.get_forecast(IS.Deterministic, component2, initial_time, label2)
     @test forecast isa IS.Deterministic
     @test IS.get_initial_time(forecast) == initial_time
@@ -363,7 +363,7 @@ end
 
 @testset "Test copy forecasts label mapping, missing label" begin
     sys = create_system_data()
-    components = collect(IS.get_components(IS.InfrastructureSystemsType, sys))
+    components = collect(IS.get_components(IS.InfrastructureSystemsComponent, sys))
     @test length(components) == 1
     component = components[1]
 
@@ -386,7 +386,7 @@ end
     IS.add_component!(sys, component2)
     label2b = "get_val2b"
     label_mapping = Dict(label2a => label2b)
-    IS.copy_forecasts!(component, component2, label_mapping)
+    IS.copy_forecasts!(component2, component, label_mapping)
     forecast = IS.get_forecast(IS.Deterministic, component2, initial_time2, label2b)
     @test forecast isa IS.Deterministic
     @test IS.get_initial_time(forecast) == initial_time2
@@ -401,7 +401,7 @@ end
 
 function validate_generated_initial_times(
     forecast_type::Type{<:IS.Forecast},
-    component::IS.InfrastructureSystemsType,
+    component::IS.InfrastructureSystemsComponent,
     label::AbstractString,
     horizon::Int,
     initial_times::Vector{Dates.DateTime},
@@ -427,7 +427,7 @@ end
 @testset "Test subset from contiguous forecasts" begin
     sys = create_system_data()
 
-    components = collect(IS.get_components(IS.InfrastructureSystemsType, sys))
+    components = collect(IS.get_components(IS.InfrastructureSystemsComponent, sys))
     @test length(components) == 1
     component = components[1]
 
@@ -480,7 +480,7 @@ end
 
 @testset "Test generate_initial_times" begin
     sys = create_system_data()
-    components = collect(IS.get_components(IS.InfrastructureSystemsType, sys))
+    components = collect(IS.get_components(IS.InfrastructureSystemsComponent, sys))
     @test length(components) == 1
     component = components[1]
 
@@ -571,7 +571,7 @@ end
 @testset "Test generate_initial_times contiguous" begin
     sys = create_system_data()
 
-    components = collect(IS.get_components(IS.InfrastructureSystemsType, sys))
+    components = collect(IS.get_components(IS.InfrastructureSystemsComponent, sys))
     @test length(components) == 1
     component = components[1]
 
@@ -686,7 +686,7 @@ end
 
     @test_throws ArgumentError IS.generate_initial_times(sys, Dates.Hour(3), 6)
 
-    components = collect(IS.get_components(IS.InfrastructureSystemsType, sys))
+    components = collect(IS.get_components(IS.InfrastructureSystemsComponent, sys))
     @test length(components) == 1
     component = components[1]
 
@@ -719,7 +719,7 @@ end
 
     @test_throws ArgumentError IS.generate_initial_times(sys, Dates.Hour(3), 6)
 
-    components = collect(IS.get_components(IS.InfrastructureSystemsType, sys))
+    components = collect(IS.get_components(IS.InfrastructureSystemsComponent, sys))
     @test length(components) == 1
     component = components[1]
 
@@ -751,7 +751,7 @@ end
 @testset "Test generate_initial_times offset from first initial_time" begin
     sys = create_system_data()
 
-    components = collect(IS.get_components(IS.InfrastructureSystemsType, sys))
+    components = collect(IS.get_components(IS.InfrastructureSystemsComponent, sys))
     @test length(components) == 1
     component = components[1]
 
@@ -946,7 +946,7 @@ end
 end
 
 @testset "Add forecast to unsupported struct" begin
-    struct TestComponentNoForecasts <: IS.InfrastructureSystemsType
+    struct TestComponentNoForecasts <: IS.InfrastructureSystemsComponent
         name::AbstractString
         internal::IS.InfrastructureSystemsInternal
     end

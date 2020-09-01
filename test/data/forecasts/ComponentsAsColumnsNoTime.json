@@ -1,7 +1,7 @@
 [
   {
     "simulation": "simulation",
-    "category": "InfrastructureSystemsType",
+    "category": "InfrastructureSystemsComponent",
     "component_name": "Component1",
     "label": "val",
     "scaling_factor": 1,

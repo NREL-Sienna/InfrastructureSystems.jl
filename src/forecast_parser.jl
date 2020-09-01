@@ -13,7 +13,7 @@ mutable struct TimeseriesFileMetadata
     data_file::String  # path to the timeseries data file
     percentiles::Vector{Float64}
     forecast_type::String
-    component::Union{Nothing, InfrastructureSystemsType}  # Calling module must set.
+    component::Union{Nothing, InfrastructureSystemsComponent}  # Calling module must set.
 end
 
 function TimeseriesFileMetadata(
@@ -44,7 +44,7 @@ function read_time_series_metadata(file_path::AbstractString)
     if endswith(file_path, ".json")
         metadata = open(file_path) do io
             metadata = Vector{TimeseriesFileMetadata}()
-            data = JSON.parse(io)
+            data = JSON3.read(io, Array)
             for item in data
                 category = _get_category(item["category"])
                 scaling_factor = item["scaling_factor"]
@@ -113,7 +113,7 @@ end
 
 struct ForecastInfo
     simulation::String
-    component::InfrastructureSystemsType
+    component::InfrastructureSystemsComponent
     label::String  # Component field on which timeseries data is based.
     scaling_factor::Union{String, Float64}
     data::TimeSeries.TimeArray

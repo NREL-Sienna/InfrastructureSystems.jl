@@ -85,7 +85,7 @@ end
     IS.add_component!(container, component)
 
     # by abstract type
-    components = IS.get_components(IS.InfrastructureSystemsType, container)
+    components = IS.get_components(IS.InfrastructureSystemsComponent, container)
     @test length(components) == 1
 
     # by concrete type
@@ -93,8 +93,11 @@ end
     @test length(components) == 1
 
     # by abstract type with filter_func
-    components =
-        IS.get_components(IS.InfrastructureSystemsType, container, x -> (IS.get_val(x) < 5))
+    components = IS.get_components(
+        IS.InfrastructureSystemsComponent,
+        container,
+        x -> (IS.get_val(x) < 5),
+    )
     @test length(components) == 0
 
     # by concrete type
@@ -117,7 +120,7 @@ end
     IS.add_component!(container, same_name_component)
 
     @test_throws ArgumentError IS.get_component(
-        IS.InfrastructureSystemsType,
+        IS.InfrastructureSystemsComponent,
         container,
         "component1",
     )
@@ -129,8 +132,11 @@ end
     component = IS.TestComponent("component1", 5)
     IS.add_component!(container, component)
 
-    components =
-        IS.get_components_by_name(IS.InfrastructureSystemsType, container, "component1")
+    components = IS.get_components_by_name(
+        IS.InfrastructureSystemsComponent,
+        container,
+        "component1",
+    )
     @test length(components) == 1
     @test component.name == "component1"
     @test component.val == 5
@@ -152,7 +158,7 @@ end
     container = IS.Components(IS.InMemoryTimeSeriesStorage())
     component = IS.TestComponent("component1", 5)
     IS.add_component!(container, component)
-    @test length(JSON2.write(container)) > 0
+    @test IS.serialize(container) isa Dict
 end
 
 @testset "Summarize components" begin

@@ -1,5 +1,5 @@
 
-const ComponentsByType = Dict{DataType, Dict{String, <:InfrastructureSystemsType}}
+const ComponentsByType = Dict{DataType, Dict{String, <:InfrastructureSystemsComponent}}
 
 struct Components
     data::ComponentsByType
@@ -18,6 +18,13 @@ function Components(
     return Components(ComponentsByType(), time_series_storage, validation_descriptors)
 end
 
+function serialize(components::Components)
+    # time_series_storage and validation_descriptors are serialized elsewhere.
+    return Dict(
+        string(k) => [serialize(x) for x in values(v)] for (k, v) in components.data
+    )
+end
+
 """
 Add a component.
 
@@ -30,7 +37,8 @@ function add_component!(
     components::Components,
     component::T;
     skip_validation = false,
-) where {T <: InfrastructureSystemsType}
+    deserialization_in_progress = false,
+) where {T <: InfrastructureSystemsComponent}
     component_name = get_name(component)
     if !isconcretetype(T)
         throw(ArgumentError("add_component! only accepts concrete types"))
@@ -52,10 +60,9 @@ function add_component!(
         throw(InvalidValue("Invalid value for $(component)"))
     end
 
-    # TODO: this check doesn't work during deserialization.
-    #if has_forecasts(component)
-    #    throw(ArgumentError("cannot add a component with forecasts: $component"))
-    #end
+    if !deserialization_in_progress && has_forecasts(component)
+        throw(ArgumentError("cannot add a component with forecasts: $component"))
+    end
 
     set_time_series_storage!(component, components.time_series_storage)
     components.data[T][component_name] = component
@@ -79,7 +86,7 @@ Throws ArgumentError if the type is not stored.
 function remove_components!(
     ::Type{T},
     components::Components,
-) where {T <: InfrastructureSystemsType}
+) where {T <: InfrastructureSystemsComponent}
     if !haskey(components.data, T)
         throw(ArgumentError("component $T is not stored"))
     end
@@ -101,7 +108,7 @@ Throws ArgumentError if the component is not stored.
 function remove_component!(
     components::Components,
     component::T,
-) where {T <: InfrastructureSystemsType}
+) where {T <: InfrastructureSystemsComponent}
     return _remove_component!(T, components, get_name(component))
 end
 
@@ -114,7 +121,7 @@ function remove_component!(
     ::Type{T},
     components::Components,
     name::AbstractString,
-) where {T <: InfrastructureSystemsType}
+) where {T <: InfrastructureSystemsComponent}
     return _remove_component!(T, components, name)
 end
 
@@ -122,7 +129,7 @@ function _remove_component!(
     ::Type{T},
     components::Components,
     name::AbstractString,
-) where {T <: InfrastructureSystemsType}
+) where {T <: InfrastructureSystemsComponent}
     if !haskey(components.data, T)
         throw(ArgumentError("component $T is not stored"))
     end
@@ -153,7 +160,7 @@ function get_component(
     ::Type{T},
     components::Components,
     name::AbstractString,
-)::Union{T, Nothing} where {T <: InfrastructureSystemsType}
+)::Union{T, Nothing} where {T <: InfrastructureSystemsComponent}
     if !isconcretetype(T)
         components = get_components_by_name(T, components, name)
         if length(components) > 1
@@ -183,7 +190,7 @@ function get_components_by_name(
     ::Type{T},
     components::Components,
     name::AbstractString,
-)::Vector{T} where {T <: InfrastructureSystemsType}
+)::Vector{T} where {T <: InfrastructureSystemsComponent}
     if isconcretetype(T)
         throw(ArgumentError("get_components_by_name does not support concrete types: $T"))
     end
@@ -218,7 +225,7 @@ function get_components(
     ::Type{T},
     components::Components,
     filter_func::Union{Nothing, Function} = nothing,
-)::FlattenIteratorWrapper{T} where {T <: InfrastructureSystemsType}
+)::FlattenIteratorWrapper{T} where {T <: InfrastructureSystemsComponent}
     if isconcretetype(T)
         components_ = get(components.data, T, nothing)
         if !isnothing(filter_func) && !isnothing(components_)
@@ -278,42 +285,6 @@ function iterate_components_with_forecasts(components::Components)
             end
         end
     end
-end
-
-function JSON2.write(io::IO, components::Components)
-    return JSON2.write(io, encode_for_json(components))
-end
-
-function JSON2.write(components::Components)
-    return JSON2.write(encode_for_json(components))
-end
-
-function encode_for_json(components::Components)
-    # Convert each name-to-value component dictionary to arrays.
-    new_components = Dict{String, Vector{<:InfrastructureSystemsType}}()
-    for (data_type, component_dict) in components.data
-        new_components[strip_module_name(data_type)] = [x for x in values(component_dict)]
-    end
-
-    return new_components
-end
-
-"""
-Return an iterable of component types deserialized from JSON.
-"""
-function get_component_types_raw(::Type{Components}, raw::NamedTuple)
-    return propertynames(raw)
-end
-
-"""
-Return an iterable of components as NamedTuples deserialized from JSON.
-"""
-function get_components_raw(
-    ::Type{Components},
-    ::Type{T},
-    raw::NamedTuple,
-) where {T <: InfrastructureSystemsType}
-    return getproperty(raw, Symbol(strip_module_name(string(T))))
 end
 
 function get_num_components(components::Components)

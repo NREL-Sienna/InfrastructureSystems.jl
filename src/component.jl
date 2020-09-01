@@ -2,7 +2,7 @@ function add_forecast!(
     component::T,
     forecast::ForecastInternal;
     skip_if_present = false,
-) where {T <: InfrastructureSystemsType}
+) where {T <: InfrastructureSystemsComponent}
     component_name = get_name(component)
     container = get_forecasts(component)
     if isnothing(container)
@@ -20,7 +20,7 @@ The caller must also remove the actual time series data.
 """
 function remove_forecast_internal!(
     ::Type{T},
-    component::InfrastructureSystemsType,
+    component::InfrastructureSystemsComponent,
     initial_time::Dates.DateTime,
     label::AbstractString,
 ) where {T <: ForecastInternal}
@@ -28,7 +28,7 @@ function remove_forecast_internal!(
     @debug "Removed forecast from $component:  $initial_time $label."
 end
 
-function clear_forecasts!(component::InfrastructureSystemsType)
+function clear_forecasts!(component::InfrastructureSystemsComponent)
     container = get_forecasts(component)
     if !isnothing(container)
         clear_forecasts!(container)
@@ -41,7 +41,7 @@ Return a forecast for the entire time series range stored for these parameters.
 """
 function get_forecast(
     ::Type{T},
-    component::InfrastructureSystemsType,
+    component::InfrastructureSystemsComponent,
     initial_time::Dates.DateTime,
     label::AbstractString,
 ) where {T <: Forecast}
@@ -58,7 +58,7 @@ The range may span time series arrays as long as those timestamps are contiguous
 """
 function get_forecast(
     ::Type{T},
-    component::InfrastructureSystemsType,
+    component::InfrastructureSystemsComponent,
     initial_time::Dates.DateTime,
     label::AbstractString,
     horizon::Int,
@@ -86,7 +86,7 @@ end
 
 function get_forecast(
     ::Type{T},
-    component::InfrastructureSystemsType,
+    component::InfrastructureSystemsComponent,
     initial_time::Dates.DateTime,
     label::AbstractString,
 ) where {T <: ForecastInternal}
@@ -95,7 +95,7 @@ end
 
 function get_forecast(
     ::Type{T},
-    component::InfrastructureSystemsType,
+    component::InfrastructureSystemsComponent,
     initial_time::Dates.DateTime,
     sys_resolution::Dates.Period,
     sys_horizon::Int,
@@ -155,7 +155,7 @@ end
 
 function _make_forecast(
     ::Type{T},
-    component::InfrastructureSystemsType,
+    component::InfrastructureSystemsComponent,
     start_index::Int,
     len::Int,
     initial_time::Dates.DateTime,
@@ -178,7 +178,7 @@ component field.
 function get_forecast_values(
     ::Type{T},
     mod::Module,
-    component::InfrastructureSystemsType,
+    component::InfrastructureSystemsComponent,
     initial_time::Dates.DateTime,
     label::AbstractString,
 ) where {T <: Forecast}
@@ -188,7 +188,7 @@ end
 
 function get_forecast_values(
     mod::Module,
-    component::InfrastructureSystemsType,
+    component::InfrastructureSystemsComponent,
     forecast::Forecast,
 )
     scaling_factors = get_data(forecast)
@@ -198,14 +198,14 @@ function get_forecast_values(
     return data
 end
 
-function has_forecasts(component::InfrastructureSystemsType)
+function has_forecasts(component::InfrastructureSystemsComponent)
     container = get_forecasts(component)
     return !isnothing(container) && !isempty(container)
 end
 
 function get_forecast_initial_times(
     ::Type{T},
-    component::InfrastructureSystemsType,
+    component::InfrastructureSystemsComponent,
 ) where {T <: Forecast}
     if !has_forecasts(component)
         throw(ArgumentError("$(typeof(component)) does not have forecasts"))
@@ -218,7 +218,7 @@ end
 
 function get_forecast_initial_times(
     ::Type{T},
-    component::InfrastructureSystemsType,
+    component::InfrastructureSystemsComponent,
     label::AbstractString,
 ) where {T <: Forecast}
     if !has_forecasts(component)
@@ -233,7 +233,7 @@ end
 
 function get_forecast_initial_times!(
     initial_times::Set{Dates.DateTime},
-    component::InfrastructureSystemsType,
+    component::InfrastructureSystemsComponent,
 )
     if !has_forecasts(component)
         throw(ArgumentError("$(typeof(component)) does not have forecasts"))
@@ -242,7 +242,7 @@ function get_forecast_initial_times!(
     get_forecast_initial_times!(initial_times, get_forecasts(component))
 end
 
-function get_forecast_initial_times(component::InfrastructureSystemsType)
+function get_forecast_initial_times(component::InfrastructureSystemsComponent)
     if !has_forecasts(component)
         throw(ArgumentError("$(typeof(component)) does not have forecasts"))
     end
@@ -262,14 +262,14 @@ Throws ArgumentError if there are no forecasts stored, interval is not a multipl
 system's forecast resolution, or if the stored forecasts have overlapping timestamps.
 
 # Arguments
-- `component::InfrastructureSystemsType`: Component containing forecasts.
+- `component::InfrastructureSystemsComponent`: Component containing forecasts.
 - `interval::Dates.Period`: Amount of time in between each initial time.
 - `horizon::Int`: Length of each forecast array.
 - `initial_time::Union{Nothing, Dates.DateTime}=nothing`: Start with this time. If nothing,
   use the first initial time.
 """
 function generate_initial_times(
-    component::InfrastructureSystemsType,
+    component::InfrastructureSystemsComponent,
     interval::Dates.Period,
     horizon::Int;
     initial_time::Union{Nothing, Dates.DateTime} = nothing,
@@ -311,7 +311,7 @@ end
 """
 Return true if the forecasts are contiguous.
 """
-function are_forecasts_contiguous(component::InfrastructureSystemsType)
+function are_forecasts_contiguous(component::InfrastructureSystemsComponent)
     existing_initial_times = get_forecast_initial_times(component)
     first_initial_time = existing_initial_times[1]
 
@@ -341,7 +341,7 @@ end
 Throws ArgumentError if the forecasts are not in consecutive order.
 """
 function check_contiguous_forecasts(
-    component::InfrastructureSystemsType,
+    component::InfrastructureSystemsComponent,
     existing_initial_times,
     resolution::Dates.Period,
     horizon::Int,
@@ -360,16 +360,16 @@ Efficiently add all forecasts in one component to another by copying the underly
 references.
 
 # Arguments
-- `src::InfrastructureSystemsType`: Source component
-- `dst::InfrastructureSystemsType`: Destination component
+- `dst::InfrastructureSystemsComponent`: Destination component
+- `src::InfrastructureSystemsComponent`: Source component
 - `label_mapping::Dict = nothing`: Optionally map src labels to different dst labels.
   If provided and src has a forecast with a label not present in label_mapping, that
   forecast will not copied. If label_mapping is nothing then all forecasts will be copied
   with src's labels.
 """
 function copy_forecasts!(
-    src::InfrastructureSystemsType,
-    dst::InfrastructureSystemsType,
+    dst::InfrastructureSystemsComponent,
+    src::InfrastructureSystemsComponent,
     label_mapping::Union{Nothing, Dict{String, String}} = nothing,
 )
     for forecast in iterate_forecasts(ForecastInternal, src)
@@ -396,13 +396,13 @@ function copy_forecasts!(
     end
 end
 
-function get_forecast_keys(component::InfrastructureSystemsType)
+function get_forecast_keys(component::InfrastructureSystemsComponent)
     return keys(get_forecasts(component).data)
 end
 
 function get_forecast_labels(
     ::Type{T},
-    component::InfrastructureSystemsType,
+    component::InfrastructureSystemsComponent,
     initial_time::Dates.DateTime,
 ) where {T <: Forecast}
     return get_forecast_labels(
@@ -412,7 +412,7 @@ function get_forecast_labels(
     )
 end
 
-function get_num_forecasts(component::InfrastructureSystemsType)
+function get_num_forecasts(component::InfrastructureSystemsComponent)
     container = get_forecasts(component)
     if isnothing(container)
         return 0
@@ -421,12 +421,12 @@ function get_num_forecasts(component::InfrastructureSystemsType)
     return length(container.data)
 end
 
-function get_time_series(component::InfrastructureSystemsType, forecast::Forecast)
+function get_time_series(component::InfrastructureSystemsComponent, forecast::Forecast)
     storage = _get_time_series_storage(component)
     return get_time_series(storage, get_time_series_uuid(forecast))
 end
 
-function get_time_series_uuids(component::InfrastructureSystemsType)
+function get_time_series_uuids(component::InfrastructureSystemsComponent)
     container = get_forecasts(component)
 
     return [
@@ -438,7 +438,7 @@ end
 """
 This function must be called when a component is removed from a system.
 """
-function prepare_for_removal!(component::InfrastructureSystemsType)
+function prepare_for_removal!(component::InfrastructureSystemsComponent)
     # Forecasts can only be part of a component when that component is part of a system.
     clear_time_series!(component)
     set_time_series_storage!(component, nothing)
@@ -455,14 +455,14 @@ because it reads time series data from media.
 Call `collect` on the result to get an array.
 
 # Arguments
-- `component::InfrastructureSystemsType`: component from which to get forecasts
+- `component::InfrastructureSystemsComponent`: component from which to get forecasts
 - `filter_func = nothing`: Only return forecasts for which this returns true.
 - `type = nothing`: Only return forecasts with this type.
 - `initial_time = nothing`: Only return forecasts matching this value.
 - `label = nothing`: Only return forecasts matching this value.
 """
 function iterate_forecasts(
-    component::InfrastructureSystemsType,
+    component::InfrastructureSystemsComponent,
     filter_func = nothing;
     type = nothing,
     initial_time = nothing,
@@ -498,7 +498,10 @@ end
 """
 Returns an iterator of ForecastInternal instances attached to the component.
 """
-function iterate_forecasts(::Type{ForecastInternal}, component::InfrastructureSystemsType)
+function iterate_forecasts(
+    ::Type{ForecastInternal},
+    component::InfrastructureSystemsComponent,
+)
     container = get_forecasts(component)
     forecast_keys = sort!(collect(keys(container.data)), by = x -> x.initial_time)
 
@@ -509,7 +512,7 @@ function iterate_forecasts(::Type{ForecastInternal}, component::InfrastructureSy
     end
 end
 
-function clear_time_series!(component::InfrastructureSystemsType)
+function clear_time_series!(component::InfrastructureSystemsComponent)
     storage = _get_time_series_storage(component)
     if !isnothing(storage)
         for (uuid, label) in get_time_series_uuids(component)
@@ -519,7 +522,7 @@ function clear_time_series!(component::InfrastructureSystemsType)
 end
 
 function set_time_series_storage!(
-    component::InfrastructureSystemsType,
+    component::InfrastructureSystemsComponent,
     storage::Union{Nothing, TimeSeriesStorage},
 )
     container = get_forecasts(component)
@@ -528,7 +531,7 @@ function set_time_series_storage!(
     end
 end
 
-function validate_forecast_consistency(component::InfrastructureSystemsType)
+function validate_forecast_consistency(component::InfrastructureSystemsComponent)
     # Initial times for each label must be identical.
     initial_times = Dict{String, Vector{Dates.DateTime}}()
     for key in keys(get_forecasts(component).data)
@@ -556,7 +559,7 @@ function validate_forecast_consistency(component::InfrastructureSystemsType)
     return true
 end
 
-function _get_time_series_storage(component::InfrastructureSystemsType)
+function _get_time_series_storage(component::InfrastructureSystemsComponent)
     container = get_forecasts(component)
     if isnothing(container)
         return nothing

@@ -155,20 +155,6 @@ function _check_parametric_expression(expr::Expr)
     end
 end
 
-"""Converts an object deserialized from JSON into a Julia type, such as NamedTuple,
-to an instance of T. Similar to Base.convert, but not a viable replacement.
-"""
-function convert_type(::Type{T}, data::Any) where {T}
-    # Improvement: implement the conversion logic. Need to recursively convert fieldnames
-    # to fieldtypes, collect the values, and pass them to T(). Also handle literals.
-    # The JSON2 library already handles almost all of the cases.
-    #if data isa AbstractString && T <: AbstractString
-    if T <: AbstractString
-        return T(data)
-    end
-    return JSON2.read(JSON2.write(data), T)
-end
-
 """
 Return true if all publicly exported names in mod are defined.
 """
@@ -205,16 +191,16 @@ function compare_values(x::T, y::T)::Bool where {T}
     if isempty(fields)
         match = x == y
     else
-        for fieldname in fields
-            if T <: Forecasts && fieldname == :time_series_storage
+        for field_name in fields
+            if T <: Forecasts && field_name == :time_series_storage
                 # This gets validated at SystemData. Don't repeat for each component.
                 continue
             end
-            val1 = getfield(x, fieldname)
-            val2 = getfield(y, fieldname)
+            val1 = getfield(x, field_name)
+            val2 = getfield(y, field_name)
             if !isempty(fieldnames(typeof(val1)))
                 if !compare_values(val1, val2)
-                    @debug "values do not match" T fieldname val1 val2
+                    @error "values do not match" T field_name val1 val2
                     match = false
                     break
                 end
@@ -224,7 +210,7 @@ function compare_values(x::T, y::T)::Bool where {T}
                 end
             else
                 if val1 != val2
-                    @debug "values do not match" T fieldname val1 val2
+                    @error "values do not match" T field_name val1 val2
                     match = false
                     break
                 end
@@ -237,13 +223,13 @@ end
 
 function compare_values(x::Vector{T}, y::Vector{T})::Bool where {T}
     if length(x) != length(y)
-        @debug "lengths do not match" T length(x) length(y)
+        @error "lengths do not match" T length(x) length(y)
         return false
     end
 
     for i in range(1, length = length(x))
         if !compare_values(x[i], y[i])
-            @debug "values do not match" typeof(x[i]) i x[i] y[i]
+            @error "values do not match" typeof(x[i]) i x[i] y[i]
             return false
         end
     end
@@ -255,13 +241,13 @@ function compare_values(x::Dict, y::Dict)::Bool
     keys_x = Set(keys(x))
     keys_y = Set(keys(y))
     if keys_x != keys_y
-        @debug "keys don't match" keys_x keys_y
+        @error "keys don't match" keys_x keys_y
         return false
     end
 
     for key in keys_x
         if !compare_values(x[key], y[key])
-            @debug "values do not match" typeof(x[key]) key x[key] y[key]
+            @error "values do not match" typeof(x[key]) key x[key] y[key]
             return false
         end
     end

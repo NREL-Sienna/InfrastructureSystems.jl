@@ -42,8 +42,8 @@ function ProbabilisticInternal(label, resolution, initial_time, percentiles, tim
     ProbabilisticInternal(label, resolution, initial_time, percentiles, time_series_uuid, horizon, InfrastructureSystemsInternal(), )
 end
 
-function ProbabilisticInternal(; label, resolution, initial_time, percentiles, time_series_uuid, horizon, )
-    ProbabilisticInternal(label, resolution, initial_time, percentiles, time_series_uuid, horizon, )
+function ProbabilisticInternal(; label, resolution, initial_time, percentiles, time_series_uuid, horizon, internal=InfrastructureSystemsInternal(), )
+    ProbabilisticInternal(label, resolution, initial_time, percentiles, time_series_uuid, horizon, internal, )
 end
 
 """Get [`ProbabilisticInternal`](@ref) `label`."""

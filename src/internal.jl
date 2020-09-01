@@ -9,13 +9,23 @@ abstract type UnitsData end
     NATURAL_UNITS
 end
 
+const _UNIT_SYSTEM_MAP = Dict(string(x) => x for x in instances(UnitSystem))
+
 mutable struct SystemUnitsSettings <: UnitsData
     base_value::Float64
     unit_system::UnitSystem
 end
 
+function serialize(val::SystemUnitsSettings)
+    Dict("base_value" => val.base_value, "unit_system" => string(val.unit_system))
+end
+
+function deserialize(::Type{SystemUnitsSettings}, data::Dict)
+    SystemUnitsSettings(data["base_value"], _UNIT_SYSTEM_MAP[data["unit_system"]])
+end
+
 """Internal storage common to InfrastructureSystems types."""
-mutable struct InfrastructureSystemsInternal
+mutable struct InfrastructureSystemsInternal <: InfrastructureSystemsType
     uuid::Base.UUID
     units_info::Union{Nothing, UnitsData}
     ext::Union{Nothing, Dict{String, Any}}
@@ -24,8 +34,8 @@ end
 """
 Creates PowerSystemInternal with a new UUID.
 """
-InfrastructureSystemsInternal() =
-    InfrastructureSystemsInternal(UUIDs.uuid4(), nothing, nothing)
+InfrastructureSystemsInternal(; uuid = UUIDs.uuid4(), units_info = nothing, ext = nothing) =
+    InfrastructureSystemsInternal(uuid, units_info, ext)
 
 """
 Creates PowerSystemInternal with an existing UUID.
@@ -47,14 +57,14 @@ end
 """
 Clear any value stored in ext.
 """
-function clear_ext(obj::InfrastructureSystemsInternal)
+function clear_ext!(obj::InfrastructureSystemsInternal)
     obj.ext = nothing
 end
 
 get_uuid(internal::InfrastructureSystemsInternal) = internal.uuid
 
 """
-Gets the UUID for any PowerSystemType.
+Gets the UUID for any InfrastructureSystemsType.
 """
 function get_uuid(obj::InfrastructureSystemsType)
     return get_internal(obj).uuid
@@ -67,29 +77,45 @@ function assign_new_uuid!(obj::InfrastructureSystemsType)
     get_internal(obj).uuid = UUIDs.uuid4()
 end
 
-function JSON2.write(io::IO, internal::InfrastructureSystemsInternal)
-    return JSON2.write(io, encode_for_json(internal))
-end
+function serialize(internal::InfrastructureSystemsInternal)
+    data = Dict{String, Any}()
 
-function JSON2.write(internal::InfrastructureSystemsInternal)
-    return JSON2.write(encode_for_json(internal))
-end
-
-function encode_for_json(internal::InfrastructureSystemsInternal)
-    fields = fieldnames(InfrastructureSystemsInternal)
-    final_fields = Vector{Symbol}()
-    vals = []
-
-    for field in fields
+    for field in fieldnames(InfrastructureSystemsInternal)
         val = getfield(internal, field)
         # reset the units data since this is a struct related to the system the components is
         # added which is resolved later in the de-serialization.
         if val isa UnitsData
             val = nothing
+        else
+            val = serialize(val)
         end
-        push!(vals, val)
-        push!(final_fields, field)
+        data[string(field)] = val
     end
 
-    return NamedTuple{Tuple(final_fields)}(vals)
+    return data
+end
+
+function compare_values(x::InfrastructureSystemsInternal, y::InfrastructureSystemsInternal)
+    match = true
+    for name in fieldnames(InfrastructureSystemsInternal)
+        if name == :ext
+            val1 = getfield(x, name)
+            if val1 isa Dict && isempty(val1)
+                val1 = nothing
+            end
+            val2 = getfield(y, name)
+            if val2 isa Dict && isempty(val2)
+                val2 = nothing
+            end
+            if !compare_values(val1, val2)
+                @error "ext does not match" val1 val2
+                match = false
+            end
+        elseif !compare_values(getfield(x, name), getfield(y, name))
+            @error "InfrastructureSystemsInternal field=$name does not match"
+            match = false
+        end
+    end
+
+    return match
 end

@@ -1,244 +1,247 @@
-[
-  {
-    "struct_name": "DeterministicInternal",
-    "docstring": "A deterministic forecast for a particular data field in a Component.",
-    "fields": [
-      {
-        "name": "label",
-        "data_type": "String",
-        "comment": "label of component parameter forecasted"
-      },
-      {
-        "name": "resolution",
-        "data_type": "Dates.Period"
-      },
-      {
-        "name": "initial_time",
-        "data_type": "Dates.DateTime",
-        "comment": "forecast availability time"
-      },
-      {
-        "name": "time_series_uuid",
-        "data_type": "UUIDs.UUID",
-        "comment": "reference to time series data; timestamp - scalingfactor"
-      },
-      {
-        "name": "horizon",
-        "data_type": "Int",
-        "comment": "length of this forecast"
-      },
-      {
-        "name": "internal",
-        "data_type": "InfrastructureSystemsInternal",
-        "internal_default": "InfrastructureSystemsInternal()"
-      }
-    ],
-    "supertype": "ForecastInternal"
-  },
-  {
-    "struct_name": "Deterministic",
-    "docstring": "A deterministic forecast for a particular data field in a Component.",
-    "fields": [
-      {
-        "name": "label",
-        "data_type": "String",
-        "comment": "label of component parameter forecasted"
-      },
-      {
-        "name": "data",
-        "data_type": "TimeSeries.TimeArray",
-        "comment": "timestamp - scalingfactor"
-      }
-    ],
-    "supertype": "Forecast"
-  },
-  {
-    "struct_name": "ProbabilisticInternal",
-    "docstring": "A Probabilistic forecast for a particular data field in a Component.",
-    "fields": [
-      {
-        "name": "label",
-        "data_type": "String",
-        "comment": "label of component parameter forecasted"
-      },
-      {
-        "name": "resolution",
-        "data_type": "Dates.Period"
-      },
-      {
-        "name": "initial_time",
-        "data_type": "Dates.DateTime",
-        "comment": "forecast availability time"
-      },
-      {
-        "name": "percentiles",
-        "data_type": "Vector{Float64}",
-        "comment": "Percentiles for the probabilistic forecast"
-      },
-      {
-        "name": "time_series_uuid",
-        "data_type": "UUIDs.UUID",
-        "comment": "reference to time series data; timestamp - scalingfactor"
-      },
-      {
-        "name": "horizon",
-        "data_type": "Int",
-        "comment": "length of this forecast"
-      },
-      {
-        "name": "internal",
-        "data_type": "InfrastructureSystemsInternal",
-        "internal_default": "InfrastructureSystemsInternal()"
-      }
-    ],
-    "supertype": "ForecastInternal"
-  },
-  {
-    "struct_name": "Probabilistic",
-    "docstring": "A Probabilistic forecast for a particular data field in a Component.",
-    "fields": [
-      {
-        "name": "label",
-        "data_type": "String",
-        "comment": "label of component parameter forecasted"
-      },
-      {
-        "name": "percentiles",
-        "data_type": "Vector{Float64}",
-        "comment": "Percentiles for the probabilistic forecast"
-      },
-      {
-        "name": "data",
-        "data_type": "TimeSeries.TimeArray",
-        "comment": "timestamp - scalingfactor"
-      }
-    ],
-    "supertype": "Forecast"
-  },
-  {
-    "struct_name": "ScenarioBasedInternal",
-    "docstring": "A Discrete Scenario Based forecast for a particular data field in a Component.",
-    "fields": [
-      {
-        "name": "label",
-        "data_type": "String",
-        "comment": "label of component parameter forecasted"
-      },
-      {
-        "name": "resolution",
-        "data_type": "Dates.Period"
-      },
-      {
-        "name": "initial_time",
-        "data_type": "Dates.DateTime",
-        "comment": "forecast availability time"
-      },
-      {
-        "name": "scenario_count",
-        "data_type": "Int64",
-        "comment": "Number of scenarios"
-      },
-      {
-        "name": "time_series_uuid",
-        "data_type": "UUIDs.UUID",
-        "comment": "reference to time series data; timestamp - scalingfactor"
-      },
-      {
-        "name": "horizon",
-        "data_type": "Int",
-        "comment": "length of this forecast"
-      },
-      {
-        "name": "internal",
-        "data_type": "InfrastructureSystemsInternal",
-        "internal_default": "InfrastructureSystemsInternal()"
-      }
-    ],
-    "supertype": "ForecastInternal"
-  },
-  {
-    "struct_name": "ScenarioBased",
-    "docstring": "A Discrete Scenario Based forecast for a particular data field in a Component.",
-    "fields": [
-      {
-        "name": "label",
-        "data_type": "String",
-        "comment": "label of component parameter forecasted"
-      },
-      {
-        "name": "scenario_count",
-        "data_type": "Int64",
-        "comment": "Number of scenarios"
-      },
-      {
-        "name": "data",
-        "data_type": "TimeSeries.TimeArray",
-        "comment": "timestamp - scalingfactor"
-      }
-    ],
-    "supertype": "Forecast"
-  },
-  {
-    "struct_name": "PiecewiseFunction",
-    "docstring": "A forecast for  piecewise function data field in a Component.",
-    "fields": [
-      {
-        "name": "label",
-        "data_type": "String",
-        "comment": "label of component parameter forecasted"
-      },
-      {
-        "name": "break_points",
-        "data_type": "Int",
-        "comment": "Number of break points"
-      },
-      {
-        "name": "data",
-        "data_type": "TimeSeries.TimeArray",
-        "comment": "timestamp - scalingfactor"
-      }
-    ],
-    "supertype": "Forecast"
-  },
-  {
-    "struct_name": "PiecewiseFunctionInternal",
-    "docstring": "A forecast for piecewise function data field in a Component.",
-    "fields": [
-      {
-        "name": "label",
-        "data_type": "String",
-        "comment": "label of component parameter forecasted"
-      },
-      {
-        "name": "resolution",
-        "data_type": "Dates.Period"
-      },
-      {
-        "name": "initial_time",
-        "data_type": "Dates.DateTime",
-        "comment": "forecast availability time"
-      },
-      {
-        "name": "break_points",
-        "data_type": "Int",
-        "comment": "Number of break points"
-      },
-      {
-        "name": "time_series_uuid",
-        "data_type": "UUIDs.UUID",
-        "comment": "reference to time series data; timestamp - scalingfactor"
-      },
-      {
-        "name": "horizon",
-        "data_type": "Int",
-        "comment": "length of this forecast"
-      },
-      {
-        "name": "internal",
-        "data_type": "InfrastructureSystemsInternal",
-        "internal_default": "InfrastructureSystemsInternal()"
-      }
-    ],
-    "supertype": "ForecastInternal"
-  }
-]
+{
+  "auto_generated_structs": [
+    {
+      "struct_name": "DeterministicInternal",
+      "docstring": "A deterministic forecast for a particular data field in a Component.",
+      "fields": [
+        {
+          "name": "label",
+          "data_type": "String",
+          "comment": "label of component parameter forecasted"
+        },
+        {
+          "name": "resolution",
+          "data_type": "Dates.Period"
+        },
+        {
+          "name": "initial_time",
+          "data_type": "Dates.DateTime",
+          "comment": "forecast availability time"
+        },
+        {
+          "name": "time_series_uuid",
+          "data_type": "UUIDs.UUID",
+          "comment": "reference to time series data; timestamp - scalingfactor"
+        },
+        {
+          "name": "horizon",
+          "data_type": "Int",
+          "comment": "length of this forecast"
+        },
+        {
+          "name": "internal",
+          "data_type": "InfrastructureSystemsInternal",
+          "internal_default": "InfrastructureSystemsInternal()"
+        }
+      ],
+      "supertype": "ForecastInternal"
+    },
+    {
+      "struct_name": "Deterministic",
+      "docstring": "A deterministic forecast for a particular data field in a Component.",
+      "fields": [
+        {
+          "name": "label",
+          "data_type": "String",
+          "comment": "label of component parameter forecasted"
+        },
+        {
+          "name": "data",
+          "data_type": "TimeSeries.TimeArray",
+          "comment": "timestamp - scalingfactor"
+        }
+      ],
+      "supertype": "Forecast"
+    },
+    {
+      "struct_name": "ProbabilisticInternal",
+      "docstring": "A Probabilistic forecast for a particular data field in a Component.",
+      "fields": [
+        {
+          "name": "label",
+          "data_type": "String",
+          "comment": "label of component parameter forecasted"
+        },
+        {
+          "name": "resolution",
+          "data_type": "Dates.Period"
+        },
+        {
+          "name": "initial_time",
+          "data_type": "Dates.DateTime",
+          "comment": "forecast availability time"
+        },
+        {
+          "name": "percentiles",
+          "data_type": "Vector{Float64}",
+          "comment": "Percentiles for the probabilistic forecast"
+        },
+        {
+          "name": "time_series_uuid",
+          "data_type": "UUIDs.UUID",
+          "comment": "reference to time series data; timestamp - scalingfactor"
+        },
+        {
+          "name": "horizon",
+          "data_type": "Int",
+          "comment": "length of this forecast"
+        },
+        {
+          "name": "internal",
+          "data_type": "InfrastructureSystemsInternal",
+          "internal_default": "InfrastructureSystemsInternal()"
+        }
+      ],
+      "supertype": "ForecastInternal"
+    },
+    {
+      "struct_name": "Probabilistic",
+      "docstring": "A Probabilistic forecast for a particular data field in a Component.",
+      "fields": [
+        {
+          "name": "label",
+          "data_type": "String",
+          "comment": "label of component parameter forecasted"
+        },
+        {
+          "name": "percentiles",
+          "data_type": "Vector{Float64}",
+          "comment": "Percentiles for the probabilistic forecast"
+        },
+        {
+          "name": "data",
+          "data_type": "TimeSeries.TimeArray",
+          "comment": "timestamp - scalingfactor"
+        }
+      ],
+      "supertype": "Forecast"
+    },
+    {
+      "struct_name": "ScenarioBasedInternal",
+      "docstring": "A Discrete Scenario Based forecast for a particular data field in a Component.",
+      "fields": [
+        {
+          "name": "label",
+          "data_type": "String",
+          "comment": "label of component parameter forecasted"
+        },
+        {
+          "name": "resolution",
+          "data_type": "Dates.Period"
+        },
+        {
+          "name": "initial_time",
+          "data_type": "Dates.DateTime",
+          "comment": "forecast availability time"
+        },
+        {
+          "name": "scenario_count",
+          "data_type": "Int64",
+          "comment": "Number of scenarios"
+        },
+        {
+          "name": "time_series_uuid",
+          "data_type": "UUIDs.UUID",
+          "comment": "reference to time series data; timestamp - scalingfactor"
+        },
+        {
+          "name": "horizon",
+          "data_type": "Int",
+          "comment": "length of this forecast"
+        },
+        {
+          "name": "internal",
+          "data_type": "InfrastructureSystemsInternal",
+          "internal_default": "InfrastructureSystemsInternal()"
+        }
+      ],
+      "supertype": "ForecastInternal"
+    },
+    {
+      "struct_name": "ScenarioBased",
+      "docstring": "A Discrete Scenario Based forecast for a particular data field in a Component.",
+      "fields": [
+        {
+          "name": "label",
+          "data_type": "String",
+          "comment": "label of component parameter forecasted"
+        },
+        {
+          "name": "scenario_count",
+          "data_type": "Int64",
+          "comment": "Number of scenarios"
+        },
+        {
+          "name": "data",
+          "data_type": "TimeSeries.TimeArray",
+          "comment": "timestamp - scalingfactor"
+        }
+      ],
+      "supertype": "Forecast"
+    },
+    {
+      "struct_name": "PiecewiseFunction",
+      "docstring": "A forecast for  piecewise function data field in a Component.",
+      "fields": [
+        {
+          "name": "label",
+          "data_type": "String",
+          "comment": "label of component parameter forecasted"
+        },
+        {
+          "name": "break_points",
+          "data_type": "Int",
+          "comment": "Number of break points"
+        },
+        {
+          "name": "data",
+          "data_type": "TimeSeries.TimeArray",
+          "comment": "timestamp - scalingfactor"
+        }
+      ],
+      "supertype": "Forecast"
+    },
+    {
+      "struct_name": "PiecewiseFunctionInternal",
+      "docstring": "A forecast for piecewise function data field in a Component.",
+      "fields": [
+        {
+          "name": "label",
+          "data_type": "String",
+          "comment": "label of component parameter forecasted"
+        },
+        {
+          "name": "resolution",
+          "data_type": "Dates.Period"
+        },
+        {
+          "name": "initial_time",
+          "data_type": "Dates.DateTime",
+          "comment": "forecast availability time"
+        },
+        {
+          "name": "break_points",
+          "data_type": "Int",
+          "comment": "Number of break points"
+        },
+        {
+          "name": "time_series_uuid",
+          "data_type": "UUIDs.UUID",
+          "comment": "reference to time series data; timestamp - scalingfactor"
+        },
+        {
+          "name": "horizon",
+          "data_type": "Int",
+          "comment": "length of this forecast"
+        },
+        {
+          "name": "internal",
+          "data_type": "InfrastructureSystemsInternal",
+          "internal_default": "InfrastructureSystemsInternal()"
+        }
+      ],
+      "supertype": "ForecastInternal"
+    }
+  ],
+  "struct_validation_descriptors": []
+}

@@ -23,7 +23,7 @@
     @test length(components) == 0
 
     IS.add_component!(data, component)
-    components = IS.get_components_by_name(IS.InfrastructureSystemsType, data, name)
+    components = IS.get_components_by_name(IS.InfrastructureSystemsComponent, data, name)
     @test length(components) == 1
     @test components[1].name == name
 
