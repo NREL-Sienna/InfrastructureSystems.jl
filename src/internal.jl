@@ -64,9 +64,9 @@ end
 get_uuid(internal::InfrastructureSystemsInternal) = internal.uuid
 
 """
-Gets the UUID for any PowerSystemType.
+Gets the UUID for any InfrastructureSystemsType.
 """
-function get_uuid(obj::InfrastructureSystemsComponent)
+function get_uuid(obj::InfrastructureSystemsType)
     return get_internal(obj).uuid
 end
 
