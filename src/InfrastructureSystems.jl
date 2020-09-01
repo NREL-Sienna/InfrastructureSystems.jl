@@ -32,6 +32,9 @@ Required interface functions for subtypes:
 - get_name()
 - get_internal()
 
+Optional interface functions:
+- get_forecasts()
+
 Subtypes may contain forecasts.
 """
 abstract type InfrastructureSystemsComponent <: InfrastructureSystemsType end
