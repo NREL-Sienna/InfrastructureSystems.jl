@@ -49,27 +49,16 @@ val is a scalar value, return that value.
 """
 function serialize(val::T) where {T <: InfrastructureSystemsType}
     @debug "serialize InfrastructureSystemsType" val T
-    data = Dict{String, Any}()
-    for (field_name, field_type) in zip(fieldnames(T), fieldtypes(T))
-        data[string(field_name)] = serialize(getfield(val, field_name))
-    end
-
-    return data
+    return serialize_struct(val)
 end
 
 function serialize(vals::Vector{T}) where {T <: InfrastructureSystemsType}
     @debug "serialize Vector{InfrastructureSystemsType}" vals T
-    array = Vector{Dict{String, Any}}(undef, length(vals))
-    for (i, val) in enumerate(vals)
-        type = typeof(val)
-        data = Dict{String, Any}()
-        for (field_name, field_type) in zip(fieldnames(type), fieldtypes(type))
-            data[string(field_name)] = serialize(getfield(val, field_name))
-        end
-        array[i] = data
-    end
+    return serialize_struct.(vals)
+end
 
-    return array
+function serialize_struct(val::T) where {T}
+    return Dict(string(name) => serialize(getfield(val, name)) for name in fieldnames(T))
 end
 
 # The default implementation allows any scalar type (or collection of scalar types) to
