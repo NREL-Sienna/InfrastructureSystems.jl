@@ -70,8 +70,12 @@ serialize(val::T) where {T} = val
 Deserialize an object from standard types stored in non-Julia formats, such as JSON, into
 Julia types.
 """
-function deserialize(::Type{T}, data::Any) where {T <: InfrastructureSystemsType}
+function deserialize(::Type{T}, data::Dict) where {T <: InfrastructureSystemsType}
     @debug "deserialize InfrastructureSystemsType" T data
+    return deserialize_struct(T, data)
+end
+
+function deserialize_struct(::Type{T}, data::Dict) where {T}
     vals = Dict{Symbol, Any}()
     for (field_name, field_type) in zip(fieldnames(T), fieldtypes(T))
         vals[field_name] = deserialize(field_type, data[string(field_name)])
