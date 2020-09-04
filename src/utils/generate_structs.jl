@@ -255,6 +255,9 @@ function test_generated_structs(descriptor_file, existing_dir)
             if line1 != line2
                 @error "Generated structs do not match descriptor file" file1 line1 line2
                 matched = false
+                # Every line will now fail. Trying to use system utilities like diff didn't
+                # work well across platforms.
+                break
             end
         end
     end
