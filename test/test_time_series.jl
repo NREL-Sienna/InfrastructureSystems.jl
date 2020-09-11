@@ -266,7 +266,7 @@ end
     @test IS.get_num_time_series(data.time_series_storage) == 0
 end
 
-@testset "Test get_time_series_values" begin
+@testset "Test get_time_series_array" begin
     sys = IS.SystemData()
     name = "Component1"
     component_val = 5
@@ -282,11 +282,11 @@ end
     time_series = IS.get_time_series(IS.Deterministic, component, dates[1], "get_val")
 
     # Test both versions of the function.
-    vals = IS.get_time_series_values(IS, component, time_series)
+    vals = IS.get_time_series_array(IS, component, time_series)
     @test TimeSeries.timestamp(vals) == dates
     @test TimeSeries.values(vals) == data .* component_val
 
-    vals2 = IS.get_time_series_values(IS.Deterministic, IS, component, dates[1], "get_val")
+    vals2 = IS.get_time_series_array(IS.Deterministic, IS, component, dates[1], "get_val")
     @test TimeSeries.timestamp(vals2) == dates
     @test TimeSeries.values(vals2) == data .* component_val
 end

@@ -177,7 +177,7 @@ end
 Return a TimeSeries.TimeArray where the time_series data has been multiplied by the time_seriesed
 component field.
 """
-function get_time_series_values(
+function get_time_series_array(
     ::Type{T},
     mod::Module,
     component::InfrastructureSystemsComponent,
@@ -185,10 +185,10 @@ function get_time_series_values(
     label::AbstractString,
 ) where {T <: TimeSeriesData}
     time_series = get_time_series(T, component, initial_time, label)
-    return get_time_series_values(mod, component, time_series)
+    return get_time_series_array(mod, component, time_series)
 end
 
-function get_time_series_values(
+function get_time_series_array(
     mod::Module,
     component::InfrastructureSystemsComponent,
     time_series::TimeSeriesData,
