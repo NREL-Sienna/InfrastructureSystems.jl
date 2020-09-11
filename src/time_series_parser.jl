@@ -1,22 +1,22 @@
-"""Describes how to construct forecasts from raw timeseries data files."""
-mutable struct TimeseriesFileMetadata
+"""Describes how to construct time_series from raw time series data files."""
+mutable struct TimeSeriesFileMetadata
     simulation::String  # User description of simulation
-    category::String  # String version of abstract type for the forecasted component.
+    category::String  # String version of abstract type for the time_seriesed component.
     # Calling module should determine the actual type.
-    component_name::String  # Name of forecast component
-    label::String  # Accessor function on component for source of timeseries
-    scaling_factor::Union{String, Float64}  # Controls normalization of timeseries.
+    component_name::String  # Name of time_series component
+    label::String  # Accessor function on component for source of time series
+    scaling_factor::Union{String, Float64}  # Controls normalization of time series.
     # Use 1.0 for pre-normalized data.
-    # Use 'Max' to divide the timeseries by the max
+    # Use 'Max' to divide the time series by the max
     #   value in the column.
     # Use any float for a custom scaling factor.
-    data_file::String  # path to the timeseries data file
+    data_file::String  # path to the time series data file
     percentiles::Vector{Float64}
-    forecast_type::String
+    time_series_type::String
     component::Union{Nothing, InfrastructureSystemsComponent}  # Calling module must set.
 end
 
-function TimeseriesFileMetadata(
+function TimeSeriesFileMetadata(
     simulation,
     category,
     component_name,
@@ -24,9 +24,9 @@ function TimeseriesFileMetadata(
     scaling_factor,
     data_file,
     percentiles,
-    forecast_type,
+    time_series_type,
 )
-    return TimeseriesFileMetadata(
+    return TimeSeriesFileMetadata(
         simulation,
         category,
         component_name,
@@ -34,16 +34,16 @@ function TimeseriesFileMetadata(
         scaling_factor,
         data_file,
         percentiles,
-        forecast_type,
+        time_series_type,
         nothing,
     )
 end
 
-"""Reads forecast metadata and fixes relative paths to the data files."""
-function read_time_series_metadata(file_path::AbstractString)
+"""Reads time_series metadata and fixes relative paths to the data files."""
+function read_time_series_file_metadata(file_path::AbstractString)
     if endswith(file_path, ".json")
         metadata = open(file_path) do io
-            metadata = Vector{TimeseriesFileMetadata}()
+            metadata = Vector{TimeSeriesFileMetadata}()
             data = JSON3.read(io, Array)
             for item in data
                 category = _get_category(item["category"])
@@ -53,7 +53,7 @@ function read_time_series_metadata(file_path::AbstractString)
                 end
                 push!(
                     metadata,
-                    TimeseriesFileMetadata(
+                    TimeSeriesFileMetadata(
                         item["simulation"],
                         item["category"],
                         item["component_name"],
@@ -62,7 +62,7 @@ function read_time_series_metadata(file_path::AbstractString)
                         item["data_file"],
                         # Use default values until CDM data is updated.
                         get(item, "percentiles", []),
-                        get(item, "forecast_type", "DeterministicInternal"),
+                        get(item, "time_series_type", "DeterministicMetadata"),
                     ),
                 )
             end
@@ -70,12 +70,12 @@ function read_time_series_metadata(file_path::AbstractString)
         end
     elseif endswith(file_path, ".csv")
         csv = DataFrames.DataFrame(CSV.File(file_path))
-        metadata = Vector{TimeseriesFileMetadata}()
+        metadata = Vector{TimeSeriesFileMetadata}()
         for row in eachrow(csv)
             category = _get_category(row.category)
             push!(
                 metadata,
-                TimeseriesFileMetadata(
+                TimeSeriesFileMetadata(
                     row.simulation,
                     row.category,
                     row.component_name,
@@ -85,7 +85,7 @@ function read_time_series_metadata(file_path::AbstractString)
                     # TODO: update CDM data for the next
                     # two fields.
                     [],
-                    "DeterministicInternal",
+                    "DeterministicMetadata",
                 ),
             )
         end
@@ -111,17 +111,17 @@ function _get_category(category::String)
     return lowercase(category)
 end
 
-struct ForecastInfo
+struct TimeSeriesParserInfo
     simulation::String
     component::InfrastructureSystemsComponent
-    label::String  # Component field on which timeseries data is based.
+    label::String  # Component field on which time series data is based.
     scaling_factor::Union{String, Float64}
     data::TimeSeries.TimeArray
     percentiles::Vector{Float64}
     file_path::String
-    forecast_type::String
+    time_series_type::String
 
-    function ForecastInfo(
+    function TimeSeriesParserInfo(
         simulation,
         component,
         label,
@@ -129,7 +129,7 @@ struct ForecastInfo
         data,
         percentiles,
         file_path,
-        forecast_type,
+        time_series_type,
     )
         new(
             simulation,
@@ -139,68 +139,72 @@ struct ForecastInfo
             data,
             percentiles,
             abspath(file_path),
-            forecast_type,
+            time_series_type,
         )
     end
 end
 
-function ForecastInfo(metadata::TimeseriesFileMetadata, timeseries::TimeSeries.TimeArray)
-    return ForecastInfo(
+function TimeSeriesParserInfo(metadata::TimeSeriesFileMetadata, ta::TimeSeries.TimeArray)
+    return TimeSeriesParserInfo(
         metadata.simulation,
         metadata.component,
         metadata.label,
         metadata.scaling_factor,
-        timeseries,
+        ta,
         metadata.percentiles,
         metadata.data_file,
-        metadata.forecast_type,
+        metadata.time_series_type,
     )
 end
 
-function get_forecast_type(forecast_info::ForecastInfo)
-    return getfield(InfrastructureSystems, Symbol(forecast_info.forecast_type))
+function get_time_series_type(time_series_info::TimeSeriesParserInfo)
+    return getfield(InfrastructureSystems, Symbol(time_series_info.time_series_type))
 end
 
-struct ForecastCache
-    forecasts::Vector{ForecastInfo}
+struct TimeSeriesCache
+    time_series::Vector{TimeSeriesParserInfo}
     data_files::Dict{String, TimeSeries.TimeArray}
 end
 
-function ForecastCache()
-    return ForecastCache(Vector{ForecastInfo}(), Dict{String, TimeSeries.TimeArray}())
+function TimeSeriesCache()
+    return TimeSeriesCache(
+        Vector{TimeSeriesParserInfo}(),
+        Dict{String, TimeSeries.TimeArray}(),
+    )
 end
 
 function handle_scaling_factor(
-    timeseries::TimeSeries.TimeArray,
+    ta::TimeSeries.TimeArray,
     scaling_factor::Union{String, Float64},
 )
     if scaling_factor isa String
         if lowercase(scaling_factor) == "max"
-            max_value = maximum(TimeSeries.values(timeseries))
-            timeseries = timeseries ./ max_value
+            max_value = maximum(TimeSeries.values(ta))
+            ta = ta ./ max_value
             @debug "Normalize by max value" max_value
         else
             throw(DataFormatError("invalid scaling_factor=scaling_factor"))
         end
     elseif scaling_factor != 1.0
-        timeseries = timeseries ./ scaling_factor
+        ta = ta ./ scaling_factor
         @debug "Normalize by custom scaling factor" scaling_factor
     else
-        @debug "forecast is already normalized"
+        @debug "time_series is already normalized"
     end
 
-    return timeseries
+    return ta
 end
 
-function _add_forecast_info!(
-    forecast_cache::ForecastCache,
+function _add_time_series_info!(
+    time_series_cache::TimeSeriesCache,
     data_file::AbstractString,
     component_name::Union{Nothing, String},
 )
-    if !haskey(forecast_cache.data_files, data_file)
-        forecast_cache.data_files[data_file] = read_time_series(data_file, component_name)
-        @debug "Added timeseries file" data_file
+    if !haskey(time_series_cache.data_files, data_file)
+        time_series_cache.data_files[data_file] =
+            read_time_series(data_file, component_name)
+        @debug "Added time series file" data_file
     end
 
-    return forecast_cache.data_files[data_file]
+    return time_series_cache.data_files[data_file]
 end

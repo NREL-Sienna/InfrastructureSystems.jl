@@ -2,19 +2,19 @@
 This file is auto-generated. Do not edit.
 =#
 """
-    mutable struct Deterministic <: Forecast
+    mutable struct Deterministic <: TimeSeriesData
         label::String
         data::TimeSeries.TimeArray
     end
 
-A deterministic forecast for a particular data field in a Component.
+A deterministic time series for a particular data field in a Component.
 
 # Arguments
-- `label::String`: label of component parameter forecasted
+- `label::String`: user-defined label
 - `data::TimeSeries.TimeArray`: timestamp - scalingfactor
 """
-mutable struct Deterministic <: Forecast
-    "label of component parameter forecasted"
+mutable struct Deterministic <: TimeSeriesData
+    "user-defined label"
     label::String
     "timestamp - scalingfactor"
     data::TimeSeries.TimeArray
@@ -34,3 +34,4 @@ get_data(value::Deterministic) = value.data
 set_label!(value::Deterministic, val) = value.label = val
 """Set [`Deterministic`](@ref) `data`."""
 set_data!(value::Deterministic, val) = value.data = val
+

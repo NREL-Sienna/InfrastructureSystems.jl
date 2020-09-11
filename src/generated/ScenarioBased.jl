@@ -2,21 +2,21 @@
 This file is auto-generated. Do not edit.
 =#
 """
-    mutable struct ScenarioBased <: Forecast
+    mutable struct ScenarioBased <: TimeSeriesData
         label::String
         scenario_count::Int64
         data::TimeSeries.TimeArray
     end
 
-A Discrete Scenario Based forecast for a particular data field in a Component.
+A Discrete Scenario Based time series for a particular data field in a Component.
 
 # Arguments
-- `label::String`: label of component parameter forecasted
+- `label::String`: user-defined label
 - `scenario_count::Int64`: Number of scenarios
 - `data::TimeSeries.TimeArray`: timestamp - scalingfactor
 """
-mutable struct ScenarioBased <: Forecast
-    "label of component parameter forecasted"
+mutable struct ScenarioBased <: TimeSeriesData
+    "user-defined label"
     label::String
     "Number of scenarios"
     scenario_count::Int64
@@ -42,3 +42,4 @@ set_label!(value::ScenarioBased, val) = value.label = val
 set_scenario_count!(value::ScenarioBased, val) = value.scenario_count = val
 """Set [`ScenarioBased`](@ref) `data`."""
 set_data!(value::ScenarioBased, val) = value.data = val
+

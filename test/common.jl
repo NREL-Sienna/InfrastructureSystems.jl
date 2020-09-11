@@ -1,23 +1,23 @@
 
-function create_system_data(; with_forecasts = false, time_series_in_memory = false)
+function create_system_data(; with_time_series = false, time_series_in_memory = false)
     data = IS.SystemData(; time_series_in_memory = time_series_in_memory)
 
     name = "Component1"
     component = IS.TestComponent(name, 5)
     IS.add_component!(data, component)
 
-    if with_forecasts
+    if with_time_series
         file = joinpath(FORECASTS_DIR, "ComponentsAsColumnsNoTime.json")
-        IS.add_forecasts!(IS.InfrastructureSystemsComponent, data, file)
+        IS.add_time_series!(IS.InfrastructureSystemsComponent, data, file)
 
-        forecasts = get_all_forecasts(data)
-        @assert length(forecasts) > 0
+        time_series = get_all_time_series(data)
+        @assert length(time_series) > 0
     end
 
     return data
 end
 
-function create_system_data_shared_forecasts(; time_series_in_memory = false)
+function create_system_data_shared_time_series(; time_series_in_memory = false)
     data = IS.SystemData(; time_series_in_memory = time_series_in_memory)
 
     name1 = "Component1"
@@ -28,15 +28,15 @@ function create_system_data_shared_forecasts(; time_series_in_memory = false)
     IS.add_component!(data, component2)
 
     ts_data = create_time_series_data()
-    forecast = IS.DeterministicInternal("get_val", ts_data)
-    IS.add_forecast!(data, component1, forecast, ts_data)
-    IS.add_forecast!(data, component2, forecast, ts_data)
+    time_series = IS.DeterministicMetadata("get_val", ts_data)
+    IS.add_time_series!(data, component1, time_series, ts_data)
+    IS.add_time_series!(data, component2, time_series, ts_data)
 
     return data
 end
 
-function get_all_forecasts(data)
-    return collect(IS.iterate_forecasts(data))
+function get_all_time_series(data)
+    return collect(IS.get_time_series_multiple(data))
 end
 
 function create_time_series_data()
@@ -49,5 +49,5 @@ function create_time_series_data()
     data = collect(1:24)
     component_name = "gen"
     ta = TimeSeries.TimeArray(dates, data, [component_name])
-    return IS.TimeSeriesData(ta)
+    return IS.TimeArrayWrapper(ta)
 end

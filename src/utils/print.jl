@@ -40,67 +40,67 @@ function Base.show(io::IO, ::MIME"text/html", components::Components)
     end
 end
 
-function Base.summary(forecasts::Forecasts)
-    return "$(typeof(forecasts)): $(length(forecasts))"
+function Base.summary(container::TimeSeriesContainer)
+    return "$(typeof(container)): $(length(container))"
 end
 
-function Base.show(io::IO, ::MIME"text/plain", forecasts::Forecasts)
-    println(io, summary(forecasts))
-    for key in keys(forecasts.data)
+function Base.show(io::IO, ::MIME"text/plain", container::TimeSeriesContainer)
+    println(io, summary(container))
+    for key in keys(container.data)
         println(
             io,
-            "$(key.forecast_type): initial_time=$(key.initial_time) label=$(key.label)",
+            "$(key.time_series_type): initial_time=$(key.initial_time) label=$(key.label)",
         )
     end
 end
 
-function Base.summary(forecast::Forecast)
-    return "$(typeof(forecast)) forecast ($length(forecast))"
+function Base.summary(time_series::TimeSeriesData)
+    return "$(typeof(time_series)) time_series ($length(time_series))"
 end
 
-function Base.summary(forecast::ForecastInternal)
-    return "$(typeof(forecast)) forecast"
+function Base.summary(time_series::TimeSeriesMetadata)
+    return "$(typeof(time_series)) time_series"
 end
 
 function Base.show(io::IO, data::SystemData)
     show(io, data.components)
     println(io, "\n")
-    show(io, data.forecast_metadata)
+    show(io, data.time_series_metadata)
 end
 
 function Base.show(io::IO, ::MIME"text/plain", data::SystemData)
     show(io, MIME"text/plain"(), data.components)
     println(io, "\n")
 
-    println(io, "Forecasts")
+    println(io, "TimeSeriesContainer")
     println(io, "=========")
-    res = get_forecasts_resolution(data)
+    res = get_time_series_resolution(data)
     res = res <= Dates.Minute(1) ? Dates.Second(res) : Dates.Minute(res)
     println(io, "Resolution: $(res)")
-    println(io, "Horizon: $(get_forecasts_horizon(data))")
-    initial_times = [string(x) for x in get_forecast_initial_times(data)]
+    println(io, "Horizon: $(get_time_series_horizon(data))")
+    initial_times = [string(x) for x in get_time_series_initial_times(data)]
     println(io, "Initial Times: $(join(initial_times, ", "))")
-    println(io, "Interval: $(get_forecasts_interval(data))")
-    component_count, forecast_count = get_forecast_counts(data)
-    println(io, "Components with Forecasts: $component_count")
-    println(io, "Total Forecasts: $forecast_count")
+    println(io, "Interval: $(get_time_series_interval(data))")
+    component_count, time_series_count = get_time_series_counts(data)
+    println(io, "Components with TimeSeriesContainer: $component_count")
+    println(io, "Total TimeSeriesContainer: $time_series_count")
 end
 
 function Base.show(io::IO, ::MIME"text/html", data::SystemData)
     show(io, MIME"text/html"(), data.components)
     println(io, "\n")
 
-    res = get_forecasts_resolution(data)
+    res = get_time_series_resolution(data)
     res = res <= Dates.Minute(1) ? Dates.Second(res) : Dates.Minute(res)
-    println(io, "<h2>Forecasts</h2>")
+    println(io, "<h2>TimeSeriesContainer</h2>")
     println(io, "<p><b>Resolution</b>: $(res)</p>")
-    println(io, "<p><b>Horizon</b>: $(get_forecasts_horizon(data))</p>")
-    initial_times = [string(x) for x in get_forecast_initial_times(data)]
+    println(io, "<p><b>Horizon</b>: $(get_time_series_horizon(data))</p>")
+    initial_times = [string(x) for x in get_time_series_initial_times(data)]
     println(io, "<p><b>Initial Times</b>: $(join(initial_times, ", "))</p>")
-    println(io, "<p><b>Interval</b>: $(get_forecasts_interval(data))</p>")
-    component_count, forecast_count = get_forecast_counts(data)
-    println(io, "<p><b>Components with Forecasts</b>: $component_count</p>")
-    println(io, "<p><b>Total Forecasts</b>: $forecast_count</p>")
+    println(io, "<p><b>Interval</b>: $(get_time_series_interval(data))</p>")
+    component_count, time_series_count = get_time_series_counts(data)
+    println(io, "<p><b>Components with TimeSeriesContainer</b>: $component_count</p>")
+    println(io, "<p><b>Total TimeSeriesContainer</b>: $time_series_count</p>")
 end
 
 function Base.summary(ist::InfrastructureSystemsComponent)
@@ -114,7 +114,7 @@ function Base.show(io::IO, ::MIME"text/plain", ist::InfrastructureSystemsCompone
     for (name, field_type) in zip(fieldnames(typeof(ist)), fieldtypes(typeof(ist)))
         if field_type <: InfrastructureSystemsInternal
             continue
-        elseif field_type <: Forecasts || field_type <: InfrastructureSystemsType
+        elseif field_type <: TimeSeriesContainer || field_type <: InfrastructureSystemsType
             val = summary(getfield(ist, name))
         elseif field_type <: Vector{<:InfrastructureSystemsComponent}
             val = summary(getfield(ist, name))
@@ -210,8 +210,8 @@ function convert_compound_period(period::Union{Dates.TimePeriod, Dates.DatePerio
     return total
 end
 
-function create_forecasts_df(forecasts::Forecasts)
-    initial_times = _get_forecast_initial_times(forecasts.data)
+function create_time_series_df(container::TimeSeriesContainer)
+    initial_times = _get_time_series_initial_times(container.data)
     dfs = Vector{DataFrames.DataFrame}()
 
     for (i, initial_time) in enumerate(initial_times)
@@ -221,14 +221,15 @@ function create_forecasts_df(forecasts::Forecasts)
         counts = Dict{String, Int}()
         rows = []
 
-        for (key, values) in forecasts.data
+        for (key, values) in container.data
             if key.initial_time != initial_time
                 continue
             end
 
-            type_str = strip_module_name(string(key.forecast_type))
+            type_str = strip_module_name(string(key.time_series_type))
             counts[type_str] = length(values)
-            parents = [strip_module_name(string(x)) for x in supertypes(key.forecast_type)]
+            parents =
+                [strip_module_name(string(x)) for x in supertypes(key.time_series_type)]
             row = (
                 ConcreteType = type_str,
                 SuperTypes = join(parents, " <: "),

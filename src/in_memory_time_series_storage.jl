@@ -3,11 +3,11 @@ const _ComponentLabelReferences = Set{Tuple{UUIDs.UUID, String}}
 
 struct _TimeSeriesRecord
     component_labels::_ComponentLabelReferences
-    ts::TimeSeriesData
+    ta::TimeArrayWrapper
 end
 
-function _TimeSeriesRecord(component_uuid, label, ts)
-    record = _TimeSeriesRecord(_ComponentLabelReferences(), ts)
+function _TimeSeriesRecord(component_uuid, label, ta)
+    record = _TimeSeriesRecord(_ComponentLabelReferences(), ta)
     push!(record.component_labels, (component_uuid, label))
     return record
 end
@@ -43,13 +43,13 @@ function add_time_series!(
     storage::InMemoryTimeSeriesStorage,
     component_uuid::UUIDs.UUID,
     label::AbstractString,
-    ts::TimeSeriesData,
+    ta::TimeArrayWrapper,
     unused = nothing,
 )
-    uuid = get_uuid(ts)
+    uuid = get_uuid(ta)
     if !haskey(storage.data, uuid)
         @debug "Create new time series entry." uuid component_uuid label
-        storage.data[uuid] = _TimeSeriesRecord(component_uuid, label, ts)
+        storage.data[uuid] = _TimeSeriesRecord(component_uuid, label, ta)
     else
         add_time_series_reference!(storage, component_uuid, label, uuid)
     end
@@ -104,10 +104,10 @@ function get_time_series(
     if index != 0
         @assert len != 0
         end_index = index + len - 1
-        return storage.data[uuid].ts.data[index:end_index]
+        return storage.data[uuid].ta.data[index:end_index]
     end
 
-    return storage.data[uuid].ts.data
+    return storage.data[uuid].ta.data
 end
 
 function clear_time_series!(storage::InMemoryTimeSeriesStorage)
@@ -124,8 +124,8 @@ function convert_to_hdf5(storage::InMemoryTimeSeriesStorage, filename::AbstractS
     hdf5_storage = Hdf5TimeSeriesStorage(create_file; filename = filename)
     for record in values(storage.data)
         for pair in record.component_labels
-            columns = TimeSeries.colnames(record.ts.data)
-            add_time_series!(hdf5_storage, pair[1], pair[2], record.ts, columns)
+            columns = TimeSeries.colnames(record.ta.data)
+            add_time_series!(hdf5_storage, pair[1], pair[2], record.ta, columns)
         end
     end
 end
@@ -145,11 +145,11 @@ function compare_values(x::InMemoryTimeSeriesStorage, y::InMemoryTimeSeriesStora
             @error "component_labels don't match" record_x.component_labels record_y.component_labels
             return false
         end
-        if TimeSeries.timestamp(record_x.ts.data) != TimeSeries.timestamp(record_y.ts.data)
+        if TimeSeries.timestamp(record_x.ta.data) != TimeSeries.timestamp(record_y.ta.data)
             @error "timestamps don't match" record_x record_y
             return false
         end
-        if TimeSeries.values(record_x.ts.data) != TimeSeries.values(record_y.ts.data)
+        if TimeSeries.values(record_x.ta.data) != TimeSeries.values(record_y.ta.data)
             @error "values don't match" record_x record_y
             return false
         end

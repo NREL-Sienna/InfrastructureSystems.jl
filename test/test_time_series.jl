@@ -1,55 +1,55 @@
-@testset "Test read_time_series_metadata" begin
+@testset "Test read_time_series_file_metadata" begin
     file = joinpath(FORECASTS_DIR, "ComponentsAsColumnsNoTime.json")
-    forecasts = IS.read_time_series_metadata(file)
-    @test length(forecasts) == 1
+    time_series = IS.read_time_series_file_metadata(file)
+    @test length(time_series) == 1
 
-    for forecast in forecasts
-        @test isfile(forecast.data_file)
+    for time_series in time_series
+        @test isfile(time_series.data_file)
     end
 end
 
-@testset "Test add_forecast from file" begin
+@testset "Test add_time_series from file" begin
     data = IS.SystemData()
 
     name = "Component1"
     component = IS.TestComponent(name, 5)
     IS.add_component!(data, component)
-    @test !IS.has_forecasts(component)
+    @test !IS.has_time_series(component)
 
     file = joinpath(FORECASTS_DIR, "ComponentsAsColumnsNoTime.json")
-    IS.add_forecasts!(IS.InfrastructureSystemsComponent, data, file)
-    @test IS.has_forecasts(component)
+    IS.add_time_series!(IS.InfrastructureSystemsComponent, data, file)
+    @test IS.has_time_series(component)
 
-    forecasts = get_all_forecasts(data)
-    @test length(forecasts) == 1
-    forecast = forecasts[1]
-    @test forecast isa IS.Deterministic
+    all_time_series = get_all_time_series(data)
+    @test length(all_time_series) == 1
+    time_series = all_time_series[1]
+    @test time_series isa IS.Deterministic
 
-    forecast2 = IS.get_forecast(
-        typeof(forecast),
+    time_series2 = IS.get_time_series(
+        typeof(time_series),
         component,
-        IS.get_initial_time(forecast),
-        IS.get_label(forecast),
+        IS.get_initial_time(time_series),
+        IS.get_label(time_series),
     )
-    @test IS.get_horizon(forecast) == IS.get_horizon(forecast2)
-    @test IS.get_initial_time(forecast) == IS.get_initial_time(forecast2)
+    @test IS.get_horizon(time_series) == IS.get_horizon(time_series2)
+    @test IS.get_initial_time(time_series) == IS.get_initial_time(time_series2)
 
-    it = IS.get_initial_time(forecast)
+    it = IS.get_initial_time(time_series)
 
-    forecasts = get_all_forecasts(data)
-    @test length(collect(forecasts)) == 1
+    all_time_series = get_all_time_series(data)
+    @test length(collect(all_time_series)) == 1
 
-    @test IS.get_forecast_initial_times(data) == [it]
+    @test IS.get_time_series_initial_times(data) == [it]
     unique_its = Set{Dates.DateTime}()
-    IS.get_forecast_initial_times!(unique_its, component) == [it]
+    IS.get_time_series_initial_times!(unique_its, component) == [it]
     @test collect(unique_its) == [it]
-    @test IS.get_forecasts_initial_time(data) == it
-    @test IS.get_forecasts_interval(data) == IS.UNINITIALIZED_PERIOD
-    @test IS.get_forecasts_horizon(data) == IS.get_horizon(forecast)
-    @test IS.get_forecasts_resolution(data) == IS.get_resolution(forecast)
+    @test IS.get_time_series_initial_time(data) == it
+    @test IS.get_time_series_interval(data) == IS.UNINITIALIZED_PERIOD
+    @test IS.get_time_series_horizon(data) == IS.get_horizon(time_series)
+    @test IS.get_time_series_resolution(data) == IS.get_resolution(time_series)
 end
 
-@testset "Test add_forecast" begin
+@testset "Test add_time_series" begin
     sys = IS.SystemData()
     name = "Component1"
     component_val = 5
@@ -61,21 +61,21 @@ end
     )
     data = collect(1:24)
     ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
-    forecast = IS.Deterministic("get_val", ta)
-    IS.add_forecast!(sys, component, forecast)
-    forecast = IS.get_forecast(IS.Deterministic, component, dates[1], "get_val")
-    @test forecast isa IS.Deterministic
+    time_series = IS.Deterministic("get_val", ta)
+    IS.add_time_series!(sys, component, time_series)
+    time_series = IS.get_time_series(IS.Deterministic, component, dates[1], "get_val")
+    @test time_series isa IS.Deterministic
 
     name = "Component2"
     component2 = IS.TestComponent(name, component_val)
-    @test_throws ArgumentError IS.add_forecast!(sys, component2, forecast)
+    @test_throws ArgumentError IS.add_time_series!(sys, component2, time_series)
 
     # The component name will exist but not the component.
     component3 = IS.TestComponent(name, component_val)
-    @test_throws ArgumentError IS.add_forecast!(sys, component3, forecast)
+    @test_throws ArgumentError IS.add_time_series!(sys, component3, time_series)
 end
 
-@testset "Test iterate_forecasts" begin
+@testset "Test get_time_series_multiple" begin
     sys = IS.SystemData()
     name = "Component1"
     component_val = 5
@@ -90,28 +90,28 @@ end
     data2 = collect(25:48)
     ta1 = TimeSeries.TimeArray(dates1, data1, [IS.get_name(component)])
     ta2 = TimeSeries.TimeArray(dates2, data2, [IS.get_name(component)])
-    forecast1 = IS.Deterministic("get_val", ta1)
-    forecast2 = IS.Deterministic("get_val", ta2)
-    IS.add_forecast!(sys, component, forecast1)
-    IS.add_forecast!(sys, component, forecast2)
+    time_series1 = IS.Deterministic("get_val", ta1)
+    time_series2 = IS.Deterministic("get_val", ta2)
+    IS.add_time_series!(sys, component, time_series1)
+    IS.add_time_series!(sys, component, time_series2)
 
-    @test length(collect(IS.iterate_forecasts(sys))) == 2
-    @test length(collect(IS.iterate_forecasts(component))) == 2
-    @test length(collect(IS.iterate_forecasts(sys))) == 2
+    @test length(collect(IS.get_time_series_multiple(sys))) == 2
+    @test length(collect(IS.get_time_series_multiple(component))) == 2
+    @test length(collect(IS.get_time_series_multiple(sys))) == 2
 
-    @test length(collect(IS.iterate_forecasts(sys; type = IS.Deterministic))) == 2
-    @test length(collect(IS.iterate_forecasts(sys; type = IS.Probabilistic))) == 0
+    @test length(collect(IS.get_time_series_multiple(sys; type = IS.Deterministic))) == 2
+    @test length(collect(IS.get_time_series_multiple(sys; type = IS.Probabilistic))) == 0
 
-    forecasts = collect(IS.iterate_forecasts(sys; initial_time = initial_time1))
-    @test length(forecasts) == 1
-    @test IS.get_initial_time(forecasts[1]) == initial_time1
-    @test TimeSeries.values(IS.get_data(forecasts[1]))[1] == 1
+    time_series = collect(IS.get_time_series_multiple(sys; initial_time = initial_time1))
+    @test length(time_series) == 1
+    @test IS.get_initial_time(time_series[1]) == initial_time1
+    @test TimeSeries.values(IS.get_data(time_series[1]))[1] == 1
 
-    @test length(collect(IS.iterate_forecasts(sys; label = "get_val"))) == 2
-    @test length(collect(IS.iterate_forecasts(sys; label = "bad_label"))) == 0
+    @test length(collect(IS.get_time_series_multiple(sys; label = "get_val"))) == 2
+    @test length(collect(IS.get_time_series_multiple(sys; label = "bad_label"))) == 0
 
     filter_func = x -> TimeSeries.values(IS.get_data(x))[12] == 12
-    @test length(collect(IS.iterate_forecasts(
+    @test length(collect(IS.get_time_series_multiple(
         sys,
         filter_func;
         initial_time = initial_time2,
@@ -119,7 +119,7 @@ end
 end
 
 # TODO: this is disabled because PowerSystems currently does not set labels correctly.
-#@testset "Test add_forecast bad label" begin
+#@testset "Test add_time_series bad label" begin
 #    sys = IS.SystemData()
 #    name = "Component1"
 #    component_val = 5
@@ -130,11 +130,11 @@ end
 #                    Dates.DateTime("2020-01-01T23:00:00"))
 #    data = collect(1:24)
 #    ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
-#    forecast = IS.Deterministic("bad-label", ta)
-#    @test_throws ArgumentError IS.add_forecast!(sys, component, forecast)
+#    time_series = IS.Deterministic("bad-label", ta)
+#    @test_throws ArgumentError IS.add_time_series!(sys, component, time_series)
 #end
 
-@testset "Test add_forecast from TimeArray" begin
+@testset "Test add_time_series from TimeArray" begin
     sys = IS.SystemData()
     name = "Component1"
     component_val = 5
@@ -146,16 +146,16 @@ end
     )
     data = collect(1:24)
     ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
-    IS.add_forecast!(sys, ta, component, "get_val")
-    forecast = IS.get_forecast(IS.Deterministic, component, dates[1], "get_val")
-    @test forecast isa IS.Deterministic
+    IS.add_time_series!(sys, ta, component, "get_val")
+    time_series = IS.get_time_series(IS.Deterministic, component, dates[1], "get_val")
+    @test time_series isa IS.Deterministic
 end
 
-@testset "Test forecast initial times" begin
+@testset "Test time_series initial times" begin
     sys = IS.SystemData()
 
-    @test_throws ArgumentError IS.get_forecasts_initial_time(sys)
-    @test_throws ArgumentError IS.get_forecasts_last_initial_time(sys)
+    @test_throws ArgumentError IS.get_time_series_initial_time(sys)
+    @test_throws ArgumentError IS.get_time_series_last_initial_time(sys)
 
     dates1 = collect(
         Dates.DateTime("2020-01-01T00:00:00"):Dates.Hour(1):Dates.DateTime("2020-01-01T23:00:00"),
@@ -180,93 +180,93 @@ end
         end
         ta1 = TimeSeries.TimeArray(dates1_, data, [IS.get_name(component)])
         ta2 = TimeSeries.TimeArray(dates2_, data, [IS.get_name(component)])
-        IS.add_forecast!(sys, ta1, component, "get_val")
-        IS.add_forecast!(sys, ta2, component, "get_val")
+        IS.add_time_series!(sys, ta1, component, "get_val")
+        IS.add_time_series!(sys, ta2, component, "get_val")
     end
 
-    initial_times = IS.get_forecast_initial_times(sys)
+    initial_times = IS.get_time_series_initial_times(sys)
     @test length(initial_times) == 4
 
     first_initial_time = dates1[1]
     last_initial_time = dates2[1] + Dates.Hour(1)
-    @test IS.get_forecasts_initial_time(sys) == first_initial_time
-    @test IS.get_forecasts_last_initial_time(sys) == last_initial_time
+    @test IS.get_time_series_initial_time(sys) == first_initial_time
+    @test IS.get_time_series_last_initial_time(sys) == last_initial_time
 
     @test_logs(
         (:error, r"initial times don't match"),
-        @test !IS.validate_forecast_consistency(sys)
+        @test !IS.validate_time_series_consistency(sys)
     )
     @test_logs(
         (:error, r"initial times don't match"),
-        @test_throws IS.DataFormatError !IS.check_forecast_consistency(sys)
+        @test_throws IS.DataFormatError !IS.check_time_series_consistency(sys)
     )
 
-    @test IS.get_forecast_counts(sys) == (2, 4)
+    @test IS.get_time_series_counts(sys) == (2, 4)
 
-    IS.clear_forecasts!(sys)
+    IS.clear_time_series!(sys)
     for component in components
         ta1 = TimeSeries.TimeArray(dates1, data, [IS.get_name(component)])
         ta2 = TimeSeries.TimeArray(dates2, data, [IS.get_name(component)])
-        IS.add_forecast!(sys, ta1, component, "get_val")
-        IS.add_forecast!(sys, ta2, component, "get_val")
+        IS.add_time_series!(sys, ta1, component, "get_val")
+        IS.add_time_series!(sys, ta2, component, "get_val")
     end
 
     expected = [dates1[1], dates2[1]]
     for component in components
-        @test IS.get_forecast_initial_times(IS.Deterministic, component) == expected
+        @test IS.get_time_series_initial_times(IS.Deterministic, component) == expected
     end
 
-    @test IS.validate_forecast_consistency(sys)
-    IS.get_forecasts_interval(sys) == dates2[1] - dates1[1]
+    @test IS.validate_time_series_consistency(sys)
+    IS.get_time_series_interval(sys) == dates2[1] - dates1[1]
 end
 
-@testset "Test remove_forecasts" begin
-    data = create_system_data(; with_forecasts = true)
+@testset "Test remove_time_series" begin
+    data = create_system_data(; with_time_series = true)
     components = collect(IS.iterate_components(data))
     @test length(components) == 1
     component = components[1]
-    forecasts = get_all_forecasts(data)
-    @test length(get_all_forecasts(data)) == 1
+    time_series = get_all_time_series(data)
+    @test length(get_all_time_series(data)) == 1
 
-    forecast = forecasts[1]
-    IS.remove_forecast!(
-        typeof(forecast),
+    time_series = time_series[1]
+    IS.remove_time_series!(
+        typeof(time_series),
         data,
         component,
-        IS.get_initial_time(forecast),
-        IS.get_label(forecast),
+        IS.get_initial_time(time_series),
+        IS.get_label(time_series),
     )
 
-    @test length(get_all_forecasts(data)) == 0
+    @test length(get_all_time_series(data)) == 0
     @test IS.get_num_time_series(data.time_series_storage) == 0
 end
 
-@testset "Test clear_forecasts" begin
-    data = create_system_data(; with_forecasts = true)
-    IS.clear_forecasts!(data)
-    @test length(get_all_forecasts(data)) == 0
+@testset "Test clear_time_series" begin
+    data = create_system_data(; with_time_series = true)
+    IS.clear_time_series!(data)
+    @test length(get_all_time_series(data)) == 0
 end
 
-@testset "Test that remove_component removes forecasts" begin
-    data = create_system_data(; with_forecasts = true)
+@testset "Test that remove_component removes time_series" begin
+    data = create_system_data(; with_time_series = true)
 
     components = collect(IS.get_components(IS.InfrastructureSystemsComponent, data))
     @test length(components) == 1
     component = components[1]
 
-    forecasts = collect(IS.iterate_forecasts(data))
-    @test length(forecasts) == 1
-    forecast = forecasts[1]
+    all_time_series = collect(IS.get_time_series_multiple(data))
+    @test length(all_time_series) == 1
+    time_series = all_time_series[1]
     @test IS.get_num_time_series(data.time_series_storage) == 1
 
     IS.remove_component!(data, component)
-    @test length(collect(IS.iterate_forecasts(component))) == 0
+    @test length(collect(IS.get_time_series_multiple(component))) == 0
     @test length(collect(IS.get_components(IS.InfrastructureSystemsComponent, data))) == 0
-    @test length(get_all_forecasts(data)) == 0
+    @test length(get_all_time_series(data)) == 0
     @test IS.get_num_time_series(data.time_series_storage) == 0
 end
 
-@testset "Test get_forecast_values" begin
+@testset "Test get_time_series_values" begin
     sys = IS.SystemData()
     name = "Component1"
     component_val = 5
@@ -278,20 +278,20 @@ end
     )
     data = collect(1:24)
     ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
-    IS.add_forecast!(sys, ta, component, "get_val")
-    forecast = IS.get_forecast(IS.Deterministic, component, dates[1], "get_val")
+    IS.add_time_series!(sys, ta, component, "get_val")
+    time_series = IS.get_time_series(IS.Deterministic, component, dates[1], "get_val")
 
     # Test both versions of the function.
-    vals = IS.get_forecast_values(IS, component, forecast)
+    vals = IS.get_time_series_values(IS, component, time_series)
     @test TimeSeries.timestamp(vals) == dates
     @test TimeSeries.values(vals) == data .* component_val
 
-    vals2 = IS.get_forecast_values(IS.Deterministic, IS, component, dates[1], "get_val")
+    vals2 = IS.get_time_series_values(IS.Deterministic, IS, component, dates[1], "get_val")
     @test TimeSeries.timestamp(vals2) == dates
     @test TimeSeries.values(vals2) == data .* component_val
 end
 
-@testset "Test get subset of forecast" begin
+@testset "Test get subset of time_series" begin
     sys = create_system_data()
     components = collect(IS.get_components(IS.InfrastructureSystemsComponent, sys))
     @test length(components) == 1
@@ -303,17 +303,17 @@ end
     data = collect(1:24)
 
     ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
-    IS.add_forecast!(sys, ta, component, "get_val")
+    IS.add_time_series!(sys, ta, component, "get_val")
 
-    forecast = IS.get_forecast(IS.Deterministic, component, dates[1], "get_val")
-    @test TimeSeries.timestamp(IS.get_data(forecast))[1] == dates[1]
+    time_series = IS.get_time_series(IS.Deterministic, component, dates[1], "get_val")
+    @test TimeSeries.timestamp(IS.get_data(time_series))[1] == dates[1]
 
-    forecast = IS.get_forecast(IS.Deterministic, component, dates[3], "get_val", 3)
-    @test TimeSeries.timestamp(IS.get_data(forecast))[1] == dates[3]
-    @test length(forecast) == 3
+    time_series = IS.get_time_series(IS.Deterministic, component, dates[3], "get_val", 3)
+    @test TimeSeries.timestamp(IS.get_data(time_series))[1] == dates[3]
+    @test length(time_series) == 3
 end
 
-@testset "Test copy forecasts no label mapping" begin
+@testset "Test copy time_series no label mapping" begin
     sys = create_system_data()
     components = collect(IS.get_components(IS.InfrastructureSystemsComponent, sys))
     @test length(components) == 1
@@ -325,18 +325,18 @@ end
 
     ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
     label = "get_val"
-    IS.add_forecast!(sys, ta, component, label)
+    IS.add_time_series!(sys, ta, component, label)
 
     component2 = IS.TestComponent("component2", 6)
     IS.add_component!(sys, component2)
-    IS.copy_forecasts!(component2, component)
-    forecast = IS.get_forecast(IS.Deterministic, component2, initial_time, label)
-    @test forecast isa IS.Deterministic
-    @test IS.get_initial_time(forecast) == initial_time
-    @test IS.get_label(forecast) == label
+    IS.copy_time_series!(component2, component)
+    time_series = IS.get_time_series(IS.Deterministic, component2, initial_time, label)
+    @test time_series isa IS.Deterministic
+    @test IS.get_initial_time(time_series) == initial_time
+    @test IS.get_label(time_series) == label
 end
 
-@testset "Test copy forecasts label mapping" begin
+@testset "Test copy time_series label mapping" begin
     sys = create_system_data()
     components = collect(IS.get_components(IS.InfrastructureSystemsComponent, sys))
     @test length(components) == 1
@@ -348,20 +348,20 @@ end
 
     ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
     label1 = "get_val1"
-    IS.add_forecast!(sys, ta, component, label1)
+    IS.add_time_series!(sys, ta, component, label1)
 
     component2 = IS.TestComponent("component2", 6)
     IS.add_component!(sys, component2)
     label2 = "get_val2"
     label_mapping = Dict(label1 => label2)
-    IS.copy_forecasts!(component2, component, label_mapping)
-    forecast = IS.get_forecast(IS.Deterministic, component2, initial_time, label2)
-    @test forecast isa IS.Deterministic
-    @test IS.get_initial_time(forecast) == initial_time
-    @test IS.get_label(forecast) == label2
+    IS.copy_time_series!(component2, component, label_mapping)
+    time_series = IS.get_time_series(IS.Deterministic, component2, initial_time, label2)
+    @test time_series isa IS.Deterministic
+    @test IS.get_initial_time(time_series) == initial_time
+    @test IS.get_label(time_series) == label2
 end
 
-@testset "Test copy forecasts label mapping, missing label" begin
+@testset "Test copy time_series label mapping, missing label" begin
     sys = create_system_data()
     components = collect(IS.get_components(IS.InfrastructureSystemsComponent, sys))
     @test length(components) == 1
@@ -379,19 +379,19 @@ end
     ta2 = TimeSeries.TimeArray(dates2, data, [IS.get_name(component)])
     label1 = "get_val1"
     label2a = "get_val2a"
-    IS.add_forecast!(sys, ta1, component, label1)
-    IS.add_forecast!(sys, ta2, component, label2a)
+    IS.add_time_series!(sys, ta1, component, label1)
+    IS.add_time_series!(sys, ta2, component, label2a)
 
     component2 = IS.TestComponent("component2", 6)
     IS.add_component!(sys, component2)
     label2b = "get_val2b"
     label_mapping = Dict(label2a => label2b)
-    IS.copy_forecasts!(component2, component, label_mapping)
-    forecast = IS.get_forecast(IS.Deterministic, component2, initial_time2, label2b)
-    @test forecast isa IS.Deterministic
-    @test IS.get_initial_time(forecast) == initial_time2
-    @test IS.get_label(forecast) == label2b
-    @test_throws ArgumentError IS.get_forecast(
+    IS.copy_time_series!(component2, component, label_mapping)
+    time_series = IS.get_time_series(IS.Deterministic, component2, initial_time2, label2b)
+    @test time_series isa IS.Deterministic
+    @test IS.get_initial_time(time_series) == initial_time2
+    @test IS.get_label(time_series) == label2b
+    @test_throws ArgumentError IS.get_time_series(
         IS.Deterministic,
         component2,
         initial_time2,
@@ -400,7 +400,7 @@ end
 end
 
 function validate_generated_initial_times(
-    forecast_type::Type{<:IS.Forecast},
+    time_series_type::Type{<:IS.TimeSeriesData},
     component::IS.InfrastructureSystemsComponent,
     label::AbstractString,
     horizon::Int,
@@ -412,19 +412,19 @@ function validate_generated_initial_times(
     @test length(initial_times) == exp_length
     for it in initial_times
         @test it == initial_time
-        # Verify all possible forecast ranges.
+        # Verify all possible time_series ranges.
         for i in 2:horizon
-            forecast = IS.get_forecast(forecast_type, component, it, label, i)
-            @test IS.get_horizon(forecast) == i
-            @test IS.get_initial_time(forecast) == it
+            time_series = IS.get_time_series(time_series_type, component, it, label, i)
+            @test IS.get_horizon(time_series) == i
+            @test IS.get_initial_time(time_series) == it
             # This will throw if the resolution isn't consistent throughout.
-            IS.get_resolution(IS.get_data(forecast))
+            IS.get_resolution(IS.get_data(time_series))
         end
         initial_time += interval
     end
 end
 
-@testset "Test subset from contiguous forecasts" begin
+@testset "Test subset from contiguous time_series" begin
     sys = create_system_data()
 
     components = collect(IS.get_components(IS.InfrastructureSystemsComponent, sys))
@@ -446,13 +446,13 @@ end
     ta1 = TimeSeries.TimeArray(dates1, data, [IS.get_name(component)])
     ta2 = TimeSeries.TimeArray(dates2, data, [IS.get_name(component)])
     ta3 = TimeSeries.TimeArray(dates3, data, [IS.get_name(component)])
-    IS.add_forecast!(sys, ta1, component, label)
-    IS.add_forecast!(sys, ta2, component, label)
-    IS.add_forecast!(sys, ta3, component, label)
-    initial_times = IS.get_forecast_initial_times(component)
+    IS.add_time_series!(sys, ta1, component, label)
+    IS.add_time_series!(sys, ta2, component, label)
+    IS.add_time_series!(sys, ta3, component, label)
+    initial_times = IS.get_time_series_initial_times(component)
     @test length(initial_times) == 3
-    @test IS.are_forecasts_contiguous(component)
-    @test IS.are_forecasts_contiguous(sys)
+    @test IS.are_time_series_contiguous(component)
+    @test IS.are_time_series_contiguous(sys)
 
     interval = Dates.Hour(1)
     horizon = 55
@@ -469,7 +469,7 @@ end
     )
 
     invalid_it = Dates.DateTime("2020-01-20T00:00:00")
-    @test_throws ArgumentError IS.get_forecast(
+    @test_throws ArgumentError IS.get_time_series(
         IS.Deterministic,
         component,
         invalid_it,
@@ -491,8 +491,8 @@ end
 
     ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
     label = "get_val"
-    IS.add_forecast!(sys, ta, component, label)
-    initial_times = IS.get_forecast_initial_times(component)
+    IS.add_time_series!(sys, ta, component, label)
+    initial_times = IS.get_time_series_initial_times(component)
     @test length(initial_times) == 1
 
     horizon = 24
@@ -564,7 +564,7 @@ end
         interval,
         5,
     )
-    IS.clear_forecasts!(sys)
+    IS.clear_time_series!(sys)
     @test_throws ArgumentError IS.generate_initial_times(sys, interval, 6)
 end
 
@@ -575,8 +575,8 @@ end
     @test length(components) == 1
     component = components[1]
 
-    @test_throws ArgumentError IS.are_forecasts_contiguous(component)
-    @test_throws ArgumentError IS.are_forecasts_contiguous(sys)
+    @test_throws ArgumentError IS.are_time_series_contiguous(component)
+    @test_throws ArgumentError IS.are_time_series_contiguous(sys)
 
     dates1 = collect(
         Dates.DateTime("2020-01-01T00:00:00"):Dates.Hour(1):Dates.DateTime("2020-01-01T23:00:00"),
@@ -589,12 +589,12 @@ end
     label = "get_val"
     ta1 = TimeSeries.TimeArray(dates1, data, [IS.get_name(component)])
     ta2 = TimeSeries.TimeArray(dates2, data, [IS.get_name(component)])
-    IS.add_forecast!(sys, ta1, component, label)
-    IS.add_forecast!(sys, ta2, component, label)
-    initial_times = IS.get_forecast_initial_times(component)
+    IS.add_time_series!(sys, ta1, component, label)
+    IS.add_time_series!(sys, ta2, component, label)
+    initial_times = IS.get_time_series_initial_times(component)
     @test length(initial_times) == 2
-    @test IS.are_forecasts_contiguous(component)
-    @test IS.are_forecasts_contiguous(sys)
+    @test IS.are_time_series_contiguous(component)
+    @test IS.are_time_series_contiguous(sys)
 
     interval = Dates.Hour(1)
     horizon = 48
@@ -700,18 +700,18 @@ end
 
     ta1 = TimeSeries.TimeArray(dates1, data, [IS.get_name(component)])
     ta2 = TimeSeries.TimeArray(dates2, data, [IS.get_name(component)])
-    IS.add_forecast!(sys, ta1, component, "get_val")
+    IS.add_time_series!(sys, ta1, component, "get_val")
     @test_throws IS.ConflictingInputsError IS.generate_initial_times(
         sys,
         Dates.Minute(30),
         6,
     )
 
-    IS.add_forecast!(sys, ta2, component, "get_val")
+    IS.add_time_series!(sys, ta2, component, "get_val")
     @test_throws ArgumentError IS.generate_initial_times(sys, Dates.Hour(3), 6)
 
-    @test !IS.are_forecasts_contiguous(component)
-    @test !IS.are_forecasts_contiguous(sys)
+    @test !IS.are_time_series_contiguous(component)
+    @test !IS.are_time_series_contiguous(sys)
 end
 
 @testset "Test generate_initial_times non-contiguous" begin
@@ -734,18 +734,18 @@ end
 
     ta1 = TimeSeries.TimeArray(dates1, data, [IS.get_name(component)])
     ta2 = TimeSeries.TimeArray(dates2, data, [IS.get_name(component)])
-    IS.add_forecast!(sys, ta1, component, "get_val")
+    IS.add_time_series!(sys, ta1, component, "get_val")
     @test_throws IS.ConflictingInputsError IS.generate_initial_times(
         sys,
         Dates.Minute(30),
         6,
     )
 
-    IS.add_forecast!(sys, ta2, component, "get_val")
+    IS.add_time_series!(sys, ta2, component, "get_val")
     @test_throws ArgumentError IS.generate_initial_times(sys, Dates.Hour(3), 6)
 
-    @test !IS.are_forecasts_contiguous(component)
-    @test !IS.are_forecasts_contiguous(sys)
+    @test !IS.are_time_series_contiguous(component)
+    @test !IS.are_time_series_contiguous(sys)
 end
 
 @testset "Test generate_initial_times offset from first initial_time" begin
@@ -761,9 +761,9 @@ end
     data = collect(1:24)
 
     ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
-    IS.add_forecast!(sys, ta, component, "get_val")
-    resolution = IS.get_forecasts_resolution(sys)
-    initial_times = IS.get_forecast_initial_times(component)
+    IS.add_time_series!(sys, ta, component, "get_val")
+    resolution = IS.get_time_series_resolution(sys)
+    initial_times = IS.get_time_series_initial_times(component)
     @test length(initial_times) == 1
 
     horizon = 6
@@ -784,7 +784,7 @@ end
     @test actual == expected
 end
 
-@testset "Test component-forecast being added to multiple systems" begin
+@testset "Test component-time_series being added to multiple systems" begin
     sys1 = IS.SystemData()
     sys2 = IS.SystemData()
     name = "Component1"
@@ -796,82 +796,82 @@ end
     )
     data = collect(1:24)
     ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
-    IS.add_forecast!(sys1, ta, component, "get_val")
+    IS.add_time_series!(sys1, ta, component, "get_val")
 
     @test_throws ArgumentError IS.add_component!(sys1, component)
 end
 
-@testset "Summarize forecasts" begin
-    data = create_system_data(; with_forecasts = true)
-    summary(devnull, data.forecast_metadata)
+@testset "Summarize time_series" begin
+    data = create_system_data(; with_time_series = true)
+    summary(devnull, data.time_series_metadata)
 end
 
-@testset "Test forecast forwarding methods" begin
-    data = create_system_data(; with_forecasts = true)
-    forecast = get_all_forecasts(data)[1]
+@testset "Test time_series forwarding methods" begin
+    data = create_system_data(; with_time_series = true)
+    time_series = get_all_time_series(data)[1]
 
     # Iteration
     size = 24
-    @test length(forecast) == size
+    @test length(time_series) == size
     i = 0
-    for x in forecast
+    for x in time_series
         i += 1
     end
     @test i == size
 
     # Indexing
-    @test length(forecast[1:16]) == 16
+    @test length(time_series[1:16]) == 16
 
     # when
-    fcast = IS.when(forecast, TimeSeries.hour, 3)
+    fcast = IS.when(time_series, TimeSeries.hour, 3)
     @test length(fcast) == 1
 end
 
-@testset "Test forecast head" begin
-    data = create_system_data(; with_forecasts = true)
-    forecast = get_all_forecasts(data)[1]
-    fcast = IS.head(forecast)
+@testset "Test time_series head" begin
+    data = create_system_data(; with_time_series = true)
+    time_series = get_all_time_series(data)[1]
+    fcast = IS.head(time_series)
     # head returns a length of 6 by default, but don't hard-code that.
-    @test length(fcast) < length(forecast)
+    @test length(fcast) < length(time_series)
 
-    fcast = IS.head(forecast, 10)
+    fcast = IS.head(time_series, 10)
     @test length(fcast) == 10
 end
 
-@testset "Test forecast tail" begin
-    data = create_system_data(; with_forecasts = true)
-    forecast = get_all_forecasts(data)[1]
-    fcast = IS.tail(forecast)
+@testset "Test time_series tail" begin
+    data = create_system_data(; with_time_series = true)
+    time_series = get_all_time_series(data)[1]
+    fcast = IS.tail(time_series)
     # tail returns a length of 6 by default, but don't hard-code that.
-    @test length(fcast) < length(forecast)
+    @test length(fcast) < length(time_series)
 
-    fcast = IS.head(forecast, 10)
+    fcast = IS.head(time_series, 10)
     @test length(fcast) == 10
 end
 
-@testset "Test forecast from" begin
-    data = create_system_data(; with_forecasts = true)
-    forecast = get_all_forecasts(data)[1]
+@testset "Test time_series from" begin
+    data = create_system_data(; with_time_series = true)
+    time_series = get_all_time_series(data)[1]
     start_time = Dates.DateTime(Dates.today()) + Dates.Hour(3)
-    fcast = IS.from(forecast, start_time)
+    fcast = IS.from(time_series, start_time)
     @test length(fcast) == 21
     @test TimeSeries.timestamp(IS.get_data(fcast))[1] == start_time
 end
 
-@testset "Test forecast from" begin
-    data = create_system_data(; with_forecasts = true)
-    forecast = get_all_forecasts(data)[1]
+@testset "Test time_series from" begin
+    data = create_system_data(; with_time_series = true)
+    time_series = get_all_time_series(data)[1]
     for end_time in (
         Dates.DateTime(Dates.today()) + Dates.Hour(15),
         Dates.DateTime(Dates.today()) + Dates.Hour(15) + Dates.Minute(5),
     )
-        fcast = IS.to(forecast, end_time)
+        fcast = IS.to(time_series, end_time)
         @test length(fcast) == 16
         @test TimeSeries.timestamp(IS.get_data(fcast))[end] <= end_time
     end
 end
 
-@testset "Test ScenarioBased forecasts" begin
+@testset "Test ScenarioBased time_series" begin
     sys = IS.SystemData()
     name = "Component1"
     label = "get_val"
@@ -883,30 +883,31 @@ end
     )
     data = ones(24, 2)
     ta = TimeSeries.TimeArray(dates, data)
-    forecast = IS.ScenarioBased(label, ta)
-    fdata = IS.get_data(forecast)
+    time_series = IS.ScenarioBased(label, ta)
+    fdata = IS.get_data(time_series)
     @test length(TimeSeries.colnames(fdata)) == 2
     @test TimeSeries.timestamp(ta) == TimeSeries.timestamp(fdata)
     @test TimeSeries.values(ta) == TimeSeries.values(fdata)
 
-    IS.add_forecast!(sys, component, forecast)
-    forecast2 = IS.get_forecast(IS.ScenarioBased, component, dates[1], label)
-    @test forecast2 isa IS.ScenarioBased
-    fdata2 = IS.get_data(forecast2)
+    IS.add_time_series!(sys, component, time_series)
+    time_series2 = IS.get_time_series(IS.ScenarioBased, component, dates[1], label)
+    @test time_series2 isa IS.ScenarioBased
+    fdata2 = IS.get_data(time_series2)
     @test length(TimeSeries.colnames(fdata2)) == 2
     @test TimeSeries.timestamp(ta) == TimeSeries.timestamp(fdata2)
     @test TimeSeries.values(ta) == TimeSeries.values(fdata2)
 
-    no_forecast = 3
-    forecast3 = IS.get_forecast(IS.ScenarioBased, component, dates[1], label, no_forecast)
-    @test forecast3 isa IS.ScenarioBased
-    fdata3 = IS.get_data(forecast3)
+    no_time_series = 3
+    time_series3 =
+        IS.get_time_series(IS.ScenarioBased, component, dates[1], label, no_time_series)
+    @test time_series3 isa IS.ScenarioBased
+    fdata3 = IS.get_data(time_series3)
     @test length(TimeSeries.colnames(fdata3)) == 2
-    @test TimeSeries.timestamp(ta)[1:no_forecast] == TimeSeries.timestamp(fdata3)
-    @test TimeSeries.values(ta)[1:no_forecast, :] == TimeSeries.values(fdata3)
+    @test TimeSeries.timestamp(ta)[1:no_time_series] == TimeSeries.timestamp(fdata3)
+    @test TimeSeries.values(ta)[1:no_time_series, :] == TimeSeries.values(fdata3)
 end
 
-@testset "Test PiecewiseFunction forecasts" begin
+@testset "Test PiecewiseFunction time_series" begin
     sys = IS.SystemData()
     name = "Component1"
     label = "get_val"
@@ -921,49 +922,49 @@ end
         (Symbol("cost_bp$(ix)"), Symbol("load_bp$ix")) for ix in 1:2
     ]))
     ta = TimeSeries.TimeArray(dates, data, name)
-    forecast = IS.PiecewiseFunction(label, ta)
-    fdata = IS.get_data(forecast)
+    time_series = IS.PiecewiseFunction(label, ta)
+    fdata = IS.get_data(time_series)
     @test length(TimeSeries.colnames(fdata)) == 4
     @test TimeSeries.timestamp(ta) == TimeSeries.timestamp(fdata)
     @test TimeSeries.values(ta) == TimeSeries.values(fdata)
 
-    IS.add_forecast!(sys, component, forecast)
-    forecast2 = IS.get_forecast(IS.PiecewiseFunction, component, dates[1], label)
-    @test forecast2 isa IS.PiecewiseFunction
-    fdata2 = IS.get_data(forecast2)
+    IS.add_time_series!(sys, component, time_series)
+    time_series2 = IS.get_time_series(IS.PiecewiseFunction, component, dates[1], label)
+    @test time_series2 isa IS.PiecewiseFunction
+    fdata2 = IS.get_data(time_series2)
     @test length(TimeSeries.colnames(fdata2)) == 4
     @test TimeSeries.timestamp(ta) == TimeSeries.timestamp(fdata2)
     @test TimeSeries.values(ta) == TimeSeries.values(fdata2)
 
-    no_forecast = 4
-    forecast3 =
-        IS.get_forecast(IS.PiecewiseFunction, component, dates[1], label, no_forecast)
-    @test forecast3 isa IS.PiecewiseFunction
-    fdata3 = IS.get_data(forecast3)
+    no_time_series = 4
+    time_series3 =
+        IS.get_time_series(IS.PiecewiseFunction, component, dates[1], label, no_time_series)
+    @test time_series3 isa IS.PiecewiseFunction
+    fdata3 = IS.get_data(time_series3)
     @test length(TimeSeries.colnames(fdata3)) == 4
-    @test TimeSeries.timestamp(ta)[1:no_forecast] == TimeSeries.timestamp(fdata3)
-    @test TimeSeries.values(ta)[1:no_forecast, :] == TimeSeries.values(fdata3)
+    @test TimeSeries.timestamp(ta)[1:no_time_series] == TimeSeries.timestamp(fdata3)
+    @test TimeSeries.values(ta)[1:no_time_series, :] == TimeSeries.values(fdata3)
 end
 
-@testset "Add forecast to unsupported struct" begin
-    struct TestComponentNoForecasts <: IS.InfrastructureSystemsComponent
+@testset "Add time_series to unsupported struct" begin
+    struct TestComponentNoTimeSeries <: IS.InfrastructureSystemsComponent
         name::AbstractString
         internal::IS.InfrastructureSystemsInternal
     end
 
-    function TestComponentNoForecasts(name)
-        return TestComponentNoForecasts(name, IS.InfrastructureSystemsInternal())
+    function TestComponentNoTimeSeries(name)
+        return TestComponentNoTimeSeries(name, IS.InfrastructureSystemsInternal())
     end
 
     sys = IS.SystemData()
     name = "component"
-    component = TestComponentNoForecasts(name)
+    component = TestComponentNoTimeSeries(name)
     IS.add_component!(sys, component)
     dates = collect(
         Dates.DateTime("2020-01-01T00:00:00"):Dates.Hour(1):Dates.DateTime("2020-01-01T23:00:00"),
     )
     data = collect(1:24)
     ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
-    forecast = IS.Deterministic("get_val", ta)
-    @test_throws ArgumentError IS.add_forecast!(sys, component, forecast)
+    time_series = IS.Deterministic("get_val", ta)
+    @test_throws ArgumentError IS.add_time_series!(sys, component, time_series)
 end

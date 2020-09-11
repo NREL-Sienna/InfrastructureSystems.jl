@@ -58,8 +58,8 @@ function add_component!(
         throw(InvalidValue("Invalid value for $(component)"))
     end
 
-    if !deserialization_in_progress && has_forecasts(component)
-        throw(ArgumentError("cannot add a component with forecasts: $component"))
+    if !deserialization_in_progress && has_time_series(component)
+        throw(ArgumentError("cannot add a component with time_series: $component"))
     end
 
     set_time_series_storage!(component, components.time_series_storage)
@@ -273,11 +273,11 @@ function iterate_components(components::Components)
     end
 end
 
-function iterate_components_with_forecasts(components::Components)
+function iterate_components_with_time_series(components::Components)
     Channel() do channel
         for comp_dict in values(components.data)
             for component in values(comp_dict)
-                if has_forecasts(component)
+                if has_time_series(component)
                     put!(channel, component)
                 end
             end
@@ -293,58 +293,58 @@ function get_num_components(components::Components)
     return count
 end
 
-function clear_forecasts!(components::Components)
-    for component in iterate_components_with_forecasts(components)
-        clear_forecasts!(component)
+function clear_time_series!(components::Components)
+    for component in iterate_components_with_time_series(components)
+        clear_time_series!(component)
     end
 end
 
-function get_forecast_initial_times(components::Components)::Vector{Dates.DateTime}
+function get_time_series_initial_times(components::Components)::Vector{Dates.DateTime}
     initial_times = Set{Dates.DateTime}()
-    for component in iterate_components_with_forecasts(components)
-        get_forecast_initial_times!(initial_times, component)
+    for component in iterate_components_with_time_series(components)
+        get_time_series_initial_times!(initial_times, component)
     end
 
     return sort!(Vector{Dates.DateTime}(collect(initial_times)))
 end
 
-function get_forecasts_initial_time(components::Components)
-    initial_times = get_forecast_initial_times(components)
+function get_time_series_initial_time(components::Components)
+    initial_times = get_time_series_initial_times(components)
     if isempty(initial_times)
-        throw(ArgumentError("no forecasts are stored"))
+        throw(ArgumentError("no time_series are stored"))
     end
 
     return initial_times[1]
 end
 
-function get_forecasts_last_initial_time(components::Components)
-    initial_times = get_forecast_initial_times(components)
+function get_time_series_last_initial_time(components::Components)
+    initial_times = get_time_series_initial_times(components)
     if isempty(initial_times)
-        throw(ArgumentError("no forecasts are stored"))
+        throw(ArgumentError("no time_series are stored"))
     end
 
     return initial_times[end]
 end
 
 """
-Throws DataFormatError if forecasts have inconsistent parameters.
+Throws DataFormatError if time_series have inconsistent parameters.
 """
-function check_forecast_consistency(components::Components)
-    if !validate_forecast_consistency(components)
-        throw(DataFormatError("forecasts have inconsistent parameters"))
+function check_time_series_consistency(components::Components)
+    if !validate_time_series_consistency(components)
+        throw(DataFormatError("time_series have inconsistent parameters"))
     end
 end
 
-function validate_forecast_consistency(components::Components)
+function validate_time_series_consistency(components::Components)
     # All component initial times must be identical.
-    # We verify resolution and horizon at forecast addition.
+    # We verify resolution and horizon at time_series addition.
     initial_times = nothing
-    for component in iterate_components_with_forecasts(components)
-        if !validate_forecast_consistency(component)
+    for component in iterate_components_with_time_series(components)
+        if !validate_time_series_consistency(component)
             return false
         end
         component_initial_times = Set{Dates.DateTime}()
-        get_forecast_initial_times!(component_initial_times, component)
+        get_time_series_initial_times!(component_initial_times, component)
         if isnothing(initial_times)
             initial_times = component_initial_times
         elseif initial_times != component_initial_times

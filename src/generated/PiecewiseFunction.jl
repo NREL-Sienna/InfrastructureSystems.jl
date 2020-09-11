@@ -2,21 +2,21 @@
 This file is auto-generated. Do not edit.
 =#
 """
-    mutable struct PiecewiseFunction <: Forecast
+    mutable struct PiecewiseFunction <: TimeSeriesData
         label::String
         break_points::Int
         data::TimeSeries.TimeArray
     end
 
-A forecast for  piecewise function data field in a Component.
+A time series for  piecewise function data field in a Component.
 
 # Arguments
-- `label::String`: label of component parameter forecasted
+- `label::String`: user-defined label
 - `break_points::Int`: Number of break points
 - `data::TimeSeries.TimeArray`: timestamp - scalingfactor
 """
-mutable struct PiecewiseFunction <: Forecast
-    "label of component parameter forecasted"
+mutable struct PiecewiseFunction <: TimeSeriesData
+    "user-defined label"
     label::String
     "Number of break points"
     break_points::Int
@@ -42,3 +42,4 @@ set_label!(value::PiecewiseFunction, val) = value.label = val
 set_break_points!(value::PiecewiseFunction, val) = value.break_points = val
 """Set [`PiecewiseFunction`](@ref) `data`."""
 set_data!(value::PiecewiseFunction, val) = value.data = val
+

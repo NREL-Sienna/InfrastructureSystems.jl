@@ -1,11 +1,11 @@
-include("DeterministicInternal.jl")
+include("DeterministicMetadata.jl")
 include("Deterministic.jl")
-include("ProbabilisticInternal.jl")
+include("ProbabilisticMetadata.jl")
 include("Probabilistic.jl")
-include("ScenarioBasedInternal.jl")
+include("ScenarioBasedMetadata.jl")
 include("ScenarioBased.jl")
 include("PiecewiseFunction.jl")
-include("PiecewiseFunctionInternal.jl")
+include("PiecewiseFunctionMetadata.jl")
 
 export get_break_points
 export get_data
