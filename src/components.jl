@@ -18,11 +18,34 @@ function Components(
     return Components(ComponentsByType(), time_series_storage, validation_descriptors)
 end
 
+function get_serialization_key(val)
+    return string(parentmodule(typeof(val))) * "." * string(nameof(typeof(val)))
+end
+
+function get_serialized_type(text)
+    fields = split(text, ".")
+    @assert length(fields) == 2
+    mod = Base.root_module(Base.__toplevel__, Symbol(fields[1]))
+    return getfield(mod, Symbol(fields[2]))
+end
+
 function serialize(components::Components)
     # time_series_storage and validation_descriptors are serialized elsewhere.
-    return Dict(
-        string(k) => [serialize(x) for x in values(v)] for (k, v) in components.data
-    )
+    data = Dict{String, Vector}()
+    for _components in values(components.data)
+        for component in values(_components)
+            # Account for parametric types by storing with the key set to the base type.
+            key = get_serialization_key(component)
+            serialized_components = get(data, key, nothing)
+            if serialized_components === nothing
+                serialized_components = []
+                data[key] = serialized_components
+            end
+            push!(serialized_components, serialize(component))
+        end
+    end
+
+    return data
 end
 
 """
