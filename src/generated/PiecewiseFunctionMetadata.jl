@@ -9,6 +9,7 @@ This file is auto-generated. Do not edit.
         break_points::Int
         time_series_uuid::UUIDs.UUID
         horizon::Int
+        scaling_factor_multiplier::Union{Nothing, Function}
         internal::InfrastructureSystemsInternal
     end
 
@@ -19,8 +20,9 @@ A time series for piecewise function data field in a Component.
 - `resolution::Dates.Period`
 - `initial_time::Dates.DateTime`: time series availability time
 - `break_points::Int`: Number of break points
-- `time_series_uuid::UUIDs.UUID`: reference to time series data; timestamp - scalingfactor
+- `time_series_uuid::UUIDs.UUID`: reference to time series data
 - `horizon::Int`: length of this time series
+- `scaling_factor_multiplier::Union{Nothing, Function}`: Applicable when the time series data are scaling factors. Called on the associated component to convert the values.
 - `internal::InfrastructureSystemsInternal`
 """
 mutable struct PiecewiseFunctionMetadata <: TimeSeriesMetadata
@@ -31,19 +33,21 @@ mutable struct PiecewiseFunctionMetadata <: TimeSeriesMetadata
     initial_time::Dates.DateTime
     "Number of break points"
     break_points::Int
-    "reference to time series data; timestamp - scalingfactor"
+    "reference to time series data"
     time_series_uuid::UUIDs.UUID
     "length of this time series"
     horizon::Int
+    "Applicable when the time series data are scaling factors. Called on the associated component to convert the values."
+    scaling_factor_multiplier::Union{Nothing, Function}
     internal::InfrastructureSystemsInternal
 end
 
-function PiecewiseFunctionMetadata(label, resolution, initial_time, break_points, time_series_uuid, horizon, )
-    PiecewiseFunctionMetadata(label, resolution, initial_time, break_points, time_series_uuid, horizon, InfrastructureSystemsInternal(), )
+function PiecewiseFunctionMetadata(label, resolution, initial_time, break_points, time_series_uuid, horizon, scaling_factor_multiplier=nothing, )
+    PiecewiseFunctionMetadata(label, resolution, initial_time, break_points, time_series_uuid, horizon, scaling_factor_multiplier, InfrastructureSystemsInternal(), )
 end
 
-function PiecewiseFunctionMetadata(; label, resolution, initial_time, break_points, time_series_uuid, horizon, internal=InfrastructureSystemsInternal(), )
-    PiecewiseFunctionMetadata(label, resolution, initial_time, break_points, time_series_uuid, horizon, internal, )
+function PiecewiseFunctionMetadata(; label, resolution, initial_time, break_points, time_series_uuid, horizon, scaling_factor_multiplier=nothing, internal=InfrastructureSystemsInternal(), )
+    PiecewiseFunctionMetadata(label, resolution, initial_time, break_points, time_series_uuid, horizon, scaling_factor_multiplier, internal, )
 end
 
 """Get [`PiecewiseFunctionMetadata`](@ref) `label`."""
@@ -58,6 +62,8 @@ get_break_points(value::PiecewiseFunctionMetadata) = value.break_points
 get_time_series_uuid(value::PiecewiseFunctionMetadata) = value.time_series_uuid
 """Get [`PiecewiseFunctionMetadata`](@ref) `horizon`."""
 get_horizon(value::PiecewiseFunctionMetadata) = value.horizon
+"""Get [`PiecewiseFunctionMetadata`](@ref) `scaling_factor_multiplier`."""
+get_scaling_factor_multiplier(value::PiecewiseFunctionMetadata) = value.scaling_factor_multiplier
 """Get [`PiecewiseFunctionMetadata`](@ref) `internal`."""
 get_internal(value::PiecewiseFunctionMetadata) = value.internal
 
@@ -73,6 +79,8 @@ set_break_points!(value::PiecewiseFunctionMetadata, val) = value.break_points = 
 set_time_series_uuid!(value::PiecewiseFunctionMetadata, val) = value.time_series_uuid = val
 """Set [`PiecewiseFunctionMetadata`](@ref) `horizon`."""
 set_horizon!(value::PiecewiseFunctionMetadata, val) = value.horizon = val
+"""Set [`PiecewiseFunctionMetadata`](@ref) `scaling_factor_multiplier`."""
+set_scaling_factor_multiplier!(value::PiecewiseFunctionMetadata, val) = value.scaling_factor_multiplier = val
 """Set [`PiecewiseFunctionMetadata`](@ref) `internal`."""
 set_internal!(value::PiecewiseFunctionMetadata, val) = value.internal = val
 

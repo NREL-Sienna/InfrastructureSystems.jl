@@ -1,6 +1,6 @@
 
-@testset "Create time series data" begin
-    ts = create_time_series_data()
+@testset "Create time array wrapper" begin
+    ts = create_time_array()
     @test ts.data isa TimeSeries.TimeArray
     @test IS.get_initial_time(ts) isa Dates.DateTime
     @test IS.get_horizon(ts) == 24

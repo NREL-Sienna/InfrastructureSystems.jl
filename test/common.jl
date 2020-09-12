@@ -27,10 +27,10 @@ function create_system_data_shared_time_series(; time_series_in_memory = false)
     IS.add_component!(data, component1)
     IS.add_component!(data, component2)
 
-    ts_data = create_time_series_data()
-    time_series = IS.DeterministicMetadata("get_val", ts_data)
-    IS.add_time_series!(data, component1, time_series, ts_data)
-    IS.add_time_series!(data, component2, time_series, ts_data)
+    ta = create_time_array()
+    ts_metadata = IS.DeterministicMetadata("val", ta, IS.get_val)
+    IS.add_time_series!(data, component1, ts_metadata, ta)
+    IS.add_time_series!(data, component2, ts_metadata, ta)
 
     return data
 end
@@ -39,7 +39,7 @@ function get_all_time_series(data)
     return collect(IS.get_time_series_multiple(data))
 end
 
-function create_time_series_data()
+function create_time_array()
     dates = collect(
         Dates.DateTime("1/1/2020 00:00:00", "d/m/y H:M:S"):Dates.Hour(1):Dates.DateTime(
             "1/1/2020 23:00:00",

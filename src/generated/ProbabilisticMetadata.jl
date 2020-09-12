@@ -9,6 +9,7 @@ This file is auto-generated. Do not edit.
         percentiles::Vector{Float64}
         time_series_uuid::UUIDs.UUID
         horizon::Int
+        scaling_factor_multiplier::Union{Nothing, Function}
         internal::InfrastructureSystemsInternal
     end
 
@@ -19,8 +20,9 @@ A Probabilistic time series for a particular data field in a Component.
 - `resolution::Dates.Period`
 - `initial_time::Dates.DateTime`: time series availability time
 - `percentiles::Vector{Float64}`: Percentiles for the probabilistic time series
-- `time_series_uuid::UUIDs.UUID`: reference to time series data; timestamp - scalingfactor
+- `time_series_uuid::UUIDs.UUID`: reference to time series data
 - `horizon::Int`: length of this time series
+- `scaling_factor_multiplier::Union{Nothing, Function}`: Applicable when the time series data are scaling factors. Called on the associated component to convert the values.
 - `internal::InfrastructureSystemsInternal`
 """
 mutable struct ProbabilisticMetadata <: TimeSeriesMetadata
@@ -31,19 +33,21 @@ mutable struct ProbabilisticMetadata <: TimeSeriesMetadata
     initial_time::Dates.DateTime
     "Percentiles for the probabilistic time series"
     percentiles::Vector{Float64}
-    "reference to time series data; timestamp - scalingfactor"
+    "reference to time series data"
     time_series_uuid::UUIDs.UUID
     "length of this time series"
     horizon::Int
+    "Applicable when the time series data are scaling factors. Called on the associated component to convert the values."
+    scaling_factor_multiplier::Union{Nothing, Function}
     internal::InfrastructureSystemsInternal
 end
 
-function ProbabilisticMetadata(label, resolution, initial_time, percentiles, time_series_uuid, horizon, )
-    ProbabilisticMetadata(label, resolution, initial_time, percentiles, time_series_uuid, horizon, InfrastructureSystemsInternal(), )
+function ProbabilisticMetadata(label, resolution, initial_time, percentiles, time_series_uuid, horizon, scaling_factor_multiplier=nothing, )
+    ProbabilisticMetadata(label, resolution, initial_time, percentiles, time_series_uuid, horizon, scaling_factor_multiplier, InfrastructureSystemsInternal(), )
 end
 
-function ProbabilisticMetadata(; label, resolution, initial_time, percentiles, time_series_uuid, horizon, internal=InfrastructureSystemsInternal(), )
-    ProbabilisticMetadata(label, resolution, initial_time, percentiles, time_series_uuid, horizon, internal, )
+function ProbabilisticMetadata(; label, resolution, initial_time, percentiles, time_series_uuid, horizon, scaling_factor_multiplier=nothing, internal=InfrastructureSystemsInternal(), )
+    ProbabilisticMetadata(label, resolution, initial_time, percentiles, time_series_uuid, horizon, scaling_factor_multiplier, internal, )
 end
 
 """Get [`ProbabilisticMetadata`](@ref) `label`."""
@@ -58,6 +62,8 @@ get_percentiles(value::ProbabilisticMetadata) = value.percentiles
 get_time_series_uuid(value::ProbabilisticMetadata) = value.time_series_uuid
 """Get [`ProbabilisticMetadata`](@ref) `horizon`."""
 get_horizon(value::ProbabilisticMetadata) = value.horizon
+"""Get [`ProbabilisticMetadata`](@ref) `scaling_factor_multiplier`."""
+get_scaling_factor_multiplier(value::ProbabilisticMetadata) = value.scaling_factor_multiplier
 """Get [`ProbabilisticMetadata`](@ref) `internal`."""
 get_internal(value::ProbabilisticMetadata) = value.internal
 
@@ -73,6 +79,8 @@ set_percentiles!(value::ProbabilisticMetadata, val) = value.percentiles = val
 set_time_series_uuid!(value::ProbabilisticMetadata, val) = value.time_series_uuid = val
 """Set [`ProbabilisticMetadata`](@ref) `horizon`."""
 set_horizon!(value::ProbabilisticMetadata, val) = value.horizon = val
+"""Set [`ProbabilisticMetadata`](@ref) `scaling_factor_multiplier`."""
+set_scaling_factor_multiplier!(value::ProbabilisticMetadata, val) = value.scaling_factor_multiplier = val
 """Set [`ProbabilisticMetadata`](@ref) `internal`."""
 set_internal!(value::ProbabilisticMetadata, val) = value.internal = val
 

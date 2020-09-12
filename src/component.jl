@@ -102,7 +102,7 @@ function get_time_series(
     label::AbstractString,
     horizon::Int,
 ) where {T <: TimeSeriesMetadata}
-    time_series_type = time_series_data_to_metadata(T)
+    time_series_type = time_series_metadata_to_data(T)
     @debug "Requested time_series" get_name(component) time_series_type label initial_time horizon
     time_series = Vector{time_series_type}()
     end_time = initial_time + sys_resolution * horizon
@@ -150,7 +150,7 @@ function get_time_series(
 
     @assert times_remaining == 0
 
-    # Run the type-specificc constructor that concatenates time_series.
+    # Run the type-specific constructor that concatenates time_series.
     return time_series_type(time_series)
 end
 
@@ -162,42 +162,99 @@ function _make_time_series(
     initial_time::Dates.DateTime,
     label::AbstractString,
 ) where {T <: TimeSeriesMetadata}
-    time_series =
-        get_time_series(T, get_time_series_container(component), initial_time, label)
-    ts = get_time_series(
+    container = get_time_series_container(component)
+    ts_metadata = get_time_series(T, container, initial_time, label)
+    ta = get_time_series(
         _get_time_series_storage(component),
-        get_time_series_uuid(time_series);
+        get_time_series_uuid(ts_metadata);
         index = start_index,
         len = len,
     )
-    return make_time_series_data(time_series, ts)
+    return make_time_series_data(ts_metadata, ta)
 end
 
 """
-Return a TimeSeries.TimeArray where the time_series data has been multiplied by the time_seriesed
-component field.
+Return a TimeSeries.TimeArray for the given time series parameters.
+
+If the data are scaling factors then the stored scaling_factor_multiplier will be called on
+the component and applied to the data.
 """
 function get_time_series_array(
     ::Type{T},
-    mod::Module,
     component::InfrastructureSystemsComponent,
     initial_time::Dates.DateTime,
     label::AbstractString,
+    horizon::Union{Nothing, Int} = nothing,
 ) where {T <: TimeSeriesData}
-    time_series = get_time_series(T, component, initial_time, label)
-    return get_time_series_array(mod, component, time_series)
+    if horizon === nothing
+        time_series = get_time_series(T, component, initial_time, label)
+    else
+        time_series = get_time_series(T, component, initial_time, label, horizon)
+    end
+
+    return get_time_series_array(component, time_series)
 end
 
 function get_time_series_array(
-    mod::Module,
     component::InfrastructureSystemsComponent,
     time_series::TimeSeriesData,
 )
-    scaling_factors = get_data(time_series)
-    label = get_label(time_series)
-    accessor_func = getfield(mod, Symbol(label))
-    data = scaling_factors .* accessor_func(component)
-    return data
+    ta = get_data(time_series)
+    multiplier = get_scaling_factor_multiplier(time_series)
+    if multiplier === nothing
+        return ta
+    end
+
+    return ta .* multiplier(component)
+end
+
+function get_time_series_timestamps(
+    ::Type{T},
+    component::InfrastructureSystemsComponent,
+    initial_time::Dates.DateTime,
+    label::AbstractString,
+    horizon::Union{Nothing, Int} = nothing,
+) where {T <: TimeSeriesData}
+    return (TimeSeries.timestamp ∘ get_time_series_array)(
+        T,
+        component,
+        initial_time,
+        label,
+        horizon,
+    )
+end
+
+function get_time_series_timestamps(
+    component::InfrastructureSystemsComponent,
+    time_series::TimeSeriesData,
+)
+    return (TimeSeries.timestamp ∘ get_time_series_array)(component, time_series)
+end
+
+"""
+Return an Array of values for the requested time series parameters.
+"""
+function get_time_series_values(
+    ::Type{T},
+    component::InfrastructureSystemsComponent,
+    initial_time::Dates.DateTime,
+    label::AbstractString,
+    horizon::Union{Nothing, Int} = nothing,
+) where {T <: TimeSeriesData}
+    return (TimeSeries.values ∘ get_time_series_array)(
+        T,
+        component,
+        initial_time,
+        label,
+        horizon,
+    )
+end
+
+function get_time_series_values(
+    component::InfrastructureSystemsComponent,
+    time_series::TimeSeriesData,
+)
+    return (TimeSeries.values ∘ get_time_series_array)(component, time_series)
 end
 
 function has_time_series(component::InfrastructureSystemsComponent)
@@ -366,34 +423,51 @@ references.
 - `src::InfrastructureSystemsComponent`: Source component
 - `label_mapping::Dict = nothing`: Optionally map src labels to different dst labels.
   If provided and src has a time_series with a label not present in label_mapping, that
-  time_series will not copied. If label_mapping is nothing then all time_series will be copied
-  with src's labels.
+  time_series will not copied. If label_mapping is nothing then all time_series will be
+  copied with src's labels.
+- `scaling_factor_multiplier_mapping::Dict = nothing`: Optionally map src multipliers to
+  different dst multipliers.  If provided and src has a time_series with a multiplier not
+  present in scaling_factor_multiplier_mapping, that time_series will not copied. If
+  scaling_factor_multiplier_mapping is nothing then all time_series will be copied with
+  src's multipliers.
 """
 function copy_time_series!(
     dst::InfrastructureSystemsComponent,
-    src::InfrastructureSystemsComponent,
+    src::InfrastructureSystemsComponent;
     label_mapping::Union{Nothing, Dict{String, String}} = nothing,
+    scaling_factor_multiplier_mapping::Union{Nothing, Dict{String, String}} = nothing,
 )
-    for time_series in get_time_series_multiple(TimeSeriesMetadata, src)
-        label = get_label(time_series)
+    for ts_metadata in get_time_series_multiple(TimeSeriesMetadata, src)
+        label = get_label(ts_metadata)
         new_label = label
         if !isnothing(label_mapping)
             new_label = get(label_mapping, label, nothing)
             if isnothing(new_label)
-                @debug "Skip copying time_series" label
+                @debug "Skip copying ts_metadata" label
                 continue
             end
-            @debug "Copy time_series with" new_label
+            @debug "Copy ts_metadata with" new_label
         end
-        new_time_series = deepcopy(time_series)
+        multiplier = get_scaling_factor_multiplier(ts_metadata)
+        new_multiplier = multiplier
+        if !isnothing(scaling_factor_multiplier_mapping)
+            new_multiplier = get(scaling_factor_multiplier_mapping, multiplier, nothing)
+            if isnothing(new_multiplier)
+                @debug "Skip copying ts_metadata" multiplier
+                continue
+            end
+            @debug "Copy ts_metadata with" new_multiplier
+        end
+        new_time_series = deepcopy(ts_metadata)
         assign_new_uuid!(new_time_series)
         set_label!(new_time_series, new_label)
+        set_scaling_factor_multiplier!(new_time_series, new_multiplier)
         add_time_series!(dst, new_time_series)
         storage = _get_time_series_storage(dst)
         if isnothing(storage)
             throw(ArgumentError("component does not have time series storage"))
         end
-        ts_uuid = get_time_series_uuid(time_series)
+        ts_uuid = get_time_series_uuid(ts_metadata)
         add_time_series_reference!(storage, get_uuid(dst), new_label, ts_uuid)
     end
 end
@@ -484,7 +558,7 @@ function get_time_series_multiple(
     Channel() do channel
         for key in time_series_keys
             if !isnothing(type) &&
-               !(time_series_data_to_metadata(key.time_series_type) <: type)
+               !(time_series_metadata_to_data(key.time_series_type) <: type)
                 continue
             end
             if !isnothing(initial_time) && key.initial_time != initial_time

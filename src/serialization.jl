@@ -4,6 +4,7 @@ const TYPE_KEY = "type"
 const MODULE_KEY = "module"
 const PARAMETERS_KEY = "parameters"
 const CONSTRUCT_WITH_PARAMETERS_KEY = "construct_with_parameters"
+const FUNCTION_KEY = "function"
 
 """
 Serializes a InfrastructureSystemsType to a JSON file.
@@ -60,6 +61,15 @@ end
 function serialize(vals::Vector{T}) where {T <: InfrastructureSystemsType}
     @debug "serialize Vector{InfrastructureSystemsType}" vals T
     return serialize_struct.(vals)
+end
+
+function serialize(func::Function)
+    return Dict{String, Any}(
+        METADATA_KEY => Dict{String, Any}(
+            FUNCTION_KEY => string(nameof(func)),
+            MODULE_KEY => string(parentmodule(func)),
+        ),
+    )
 end
 
 function serialize_struct(val::T) where {T}
@@ -127,13 +137,26 @@ function deserialize_struct(::Type{T}, data::Dict) where {T}
     for (field_name, field_type) in zip(fieldnames(T), fieldtypes(T))
         val = data[string(field_name)]
         if val isa Dict && haskey(val, METADATA_KEY)
-            vals[field_name] = deserialize(get_type_from_serialization_data(val), val)
+            metadata = get_serialization_metadata(val)
+            if haskey(metadata, FUNCTION_KEY)
+                vals[field_name] = deserialize(Function, val)
+            else
+                vals[field_name] =
+                    deserialize(get_type_from_serialization_metadata(metadata), val)
+            end
         else
             vals[field_name] = deserialize(field_type, val)
         end
     end
 
     return T(; vals...)
+end
+
+function deserialize(::Type{Function}, data::Dict)
+    metadata = data[METADATA_KEY]
+    mod = Base.root_module(Base.__toplevel__, Symbol(metadata[MODULE_KEY]))
+    name = Symbol(metadata[FUNCTION_KEY])
+    return getfield(mod, name)
 end
 
 function deserialize(::Type{T}, data::Any) where {T}
@@ -189,15 +212,3 @@ deserialize(::Type{Complex{T}}, data::Dict) where {T} =
     Complex(T(data["real"]), T(data["imag"]))
 
 deserialize(::Type{Vector{Symbol}}, data::Vector) = Symbol.(data)
-
-"""
-Deserialize a parametric type. The default implementation strips the parametric types and
-calls the constructor with only the base type.
-"""
-function deserialize_parametric_type(
-    ::Type{T},
-    mod::Module,
-    data::Dict,
-) where {T <: InfrastructureSystemsType}
-    return getfield(mod, Symbol(T.name))(; data...)
-end

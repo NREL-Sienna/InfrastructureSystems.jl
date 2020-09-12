@@ -21,12 +21,18 @@
         {
           "name": "time_series_uuid",
           "data_type": "UUIDs.UUID",
-          "comment": "reference to time series data; timestamp - scalingfactor"
+          "comment": "reference to time series data"
         },
         {
           "name": "horizon",
           "data_type": "Int",
           "comment": "length of this time series"
+        },
+        {
+          "name": "scaling_factor_multiplier",
+          "data_type": "Union{Nothing, Function}",
+          "default": "nothing",
+          "comment": "Applicable when the time series data are scaling factors. Called on the associated component to convert the values."
         },
         {
           "name": "internal",
@@ -49,6 +55,12 @@
           "name": "data",
           "data_type": "TimeSeries.TimeArray",
           "comment": "timestamp - scalingfactor"
+        },
+        {
+          "name": "scaling_factor_multiplier",
+          "data_type": "Union{Nothing, Function}",
+          "default": "nothing",
+          "comment": "Applicable when the time series data are scaling factors. Called on the associated component to convert the values."
         }
       ],
       "supertype": "TimeSeriesData"
@@ -79,12 +91,18 @@
         {
           "name": "time_series_uuid",
           "data_type": "UUIDs.UUID",
-          "comment": "reference to time series data; timestamp - scalingfactor"
+          "comment": "reference to time series data"
         },
         {
           "name": "horizon",
           "data_type": "Int",
           "comment": "length of this time series"
+        },
+        {
+          "name": "scaling_factor_multiplier",
+          "data_type": "Union{Nothing, Function}",
+          "default": "nothing",
+          "comment": "Applicable when the time series data are scaling factors. Called on the associated component to convert the values."
         },
         {
           "name": "internal",
@@ -112,6 +130,12 @@
           "name": "data",
           "data_type": "TimeSeries.TimeArray",
           "comment": "timestamp - scalingfactor"
+        },
+        {
+          "name": "scaling_factor_multiplier",
+          "data_type": "Union{Nothing, Function}",
+          "default": "nothing",
+          "comment": "Applicable when the time series data are scaling factors. Called on the associated component to convert the values."
         }
       ],
       "supertype": "TimeSeriesData"
@@ -142,12 +166,18 @@
         {
           "name": "time_series_uuid",
           "data_type": "UUIDs.UUID",
-          "comment": "reference to time series data; timestamp - scalingfactor"
+          "comment": "reference to time series data"
         },
         {
           "name": "horizon",
           "data_type": "Int",
           "comment": "length of this time series"
+        },
+        {
+          "name": "scaling_factor_multiplier",
+          "data_type": "Union{Nothing, Function}",
+          "default": "nothing",
+          "comment": "Applicable when the time series data are scaling factors. Called on the associated component to convert the values."
         },
         {
           "name": "internal",
@@ -175,6 +205,12 @@
           "name": "data",
           "data_type": "TimeSeries.TimeArray",
           "comment": "timestamp - scalingfactor"
+        },
+        {
+          "name": "scaling_factor_multiplier",
+          "data_type": "Union{Nothing, Function}",
+          "default": "nothing",
+          "comment": "Applicable when the time series data are scaling factors. Called on the associated component to convert the values."
         }
       ],
       "supertype": "TimeSeriesData"
@@ -197,6 +233,12 @@
           "name": "data",
           "data_type": "TimeSeries.TimeArray",
           "comment": "timestamp - scalingfactor"
+        },
+        {
+          "name": "scaling_factor_multiplier",
+          "data_type": "Union{Nothing, Function}",
+          "default": "nothing",
+          "comment": "Applicable when the time series data are scaling factors. Called on the associated component to convert the values."
         }
       ],
       "supertype": "TimeSeriesData"
@@ -227,12 +269,18 @@
         {
           "name": "time_series_uuid",
           "data_type": "UUIDs.UUID",
-          "comment": "reference to time series data; timestamp - scalingfactor"
+          "comment": "reference to time series data"
         },
         {
           "name": "horizon",
           "data_type": "Int",
           "comment": "length of this time series"
+        },
+        {
+          "name": "scaling_factor_multiplier",
+          "data_type": "Union{Nothing, Function}",
+          "default": "nothing",
+          "comment": "Applicable when the time series data are scaling factors. Called on the associated component to convert the values."
         },
         {
           "name": "internal",

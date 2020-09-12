@@ -12,7 +12,7 @@ function Deterministic(
         initial_time:resolution:(initial_time + resolution * (time_steps - 1)),
         ones(time_steps),
     )
-    return Deterministic(label, data)
+    return Deterministic(; label = label, data = data)
 end
 
 function Deterministic(time_series::Vector{Deterministic})
@@ -22,7 +22,11 @@ function Deterministic(time_series::Vector{Deterministic})
     data = collect(Iterators.flatten((TimeSeries.values(get_data(x)) for x in time_series)))
     ta = TimeSeries.TimeArray(timestamps, data)
 
-    time_series = Deterministic(get_label(time_series[1]), ta)
+    time_series = Deterministic(
+        label = get_label(time_series[1]),
+        data = ta,
+        scaling_factor_multiplier = time_series[1].scaling_factor_multiplier,
+    )
     @debug "concatenated time_series" time_series
     return time_series
 end
@@ -30,23 +34,36 @@ end
 # TODO: need to make concatenation constructors for Probabilistic
 
 function make_time_series_data(
-    time_series::DeterministicMetadata,
+    ts_metadata::DeterministicMetadata,
     data::TimeSeries.TimeArray,
 )
-    return Deterministic(get_label(time_series), data)
+    return Deterministic(
+        get_label(ts_metadata),
+        data,
+        get_scaling_factor_multiplier(ts_metadata),
+    )
 end
 
 function make_time_series_metadata(time_series::Deterministic, ta::TimeArrayWrapper)
-    return DeterministicMetadata(get_label(time_series), ta)
+    return DeterministicMetadata(
+        get_label(time_series),
+        ta,
+        get_scaling_factor_multiplier(time_series),
+    )
 end
 
-function DeterministicMetadata(label::AbstractString, data::TimeArrayWrapper)
+function DeterministicMetadata(
+    label::AbstractString,
+    data::TimeArrayWrapper,
+    scaling_factor_multiplier = nothing,
+)
     return DeterministicMetadata(
         label,
         get_resolution(data),
         get_initial_time(data),
         get_uuid(data),
         get_horizon(data),
+        scaling_factor_multiplier,
     )
 end
 
@@ -65,7 +82,7 @@ function Probabilistic(
         ones(time_steps, length(percentiles)),
     )
 
-    return Probabilistic(label, percentiles, data)
+    return Probabilistic(; label = label, percentiles = percentiles, data = data)
 end
 
 """
@@ -94,11 +111,11 @@ function Probabilistic(
     percentiles::Vector{Float64},  # percentiles for the probabilistic time_series
     data::TimeSeries.TimeArray,
 )
-    return Probabilistic(label, percentiles, data)
+    return Probabilistic(label = label, percentiles = percentiles, data = data)
 end
 
 function make_time_series_data(
-    time_series::ProbabilisticMetadata,
+    ts_metadata::ProbabilisticMetadata,
     data::TimeSeries.TimeArray,
 )
     return Probabilistic(get_label(time_series), get_percentiles(time_series), data)
@@ -112,14 +129,24 @@ function make_time_series_metadata(time_series::Probabilistic, ta::TimeArrayWrap
         get_percentiles(time_series),
         get_uuid(ta),
         get_horizon(time_series),
+        get_scaling_factor_multiplier(time_series),
     )
 end
 
-function ScenarioBased(label::String, data::TimeSeries.TimeArray)
+function ScenarioBased(
+    label::String,
+    data::TimeSeries.TimeArray,
+    scaling_factor_multiplier = nothing,
+)
     initial_time = TimeSeries.timestamp(data)[1]
     resolution = get_resolution(data)
     scenario_count = length(TimeSeries.colnames(data))
-    return ScenarioBased(label, scenario_count, data)
+    return ScenarioBased(
+        label = label,
+        scenario_count = scenario_count,
+        data = data,
+        scaling_factor_multiplier = scaling_factor_multiplier,
+    )
 end
 
 """
@@ -150,16 +177,20 @@ function ScenarioBased(time_series::Vector{ScenarioBased})
     data = vcat((TimeSeries.values(get_data(x)) for x in time_series)...)
     ta = TimeSeries.TimeArray(timestamps, data, colnames)
 
-    time_series = ScenarioBased(get_label(time_series[1]), ta)
+    time_series = ScenarioBased(
+        get_label(time_series[1]),
+        ta,
+        time_series[1].scaling_factor_multiplier,
+    )
     @debug "concatenated time_series" time_series
     return time_series
 end
 
 function make_time_series_data(
-    time_series::ScenarioBasedMetadata,
+    ts_metadata::ScenarioBasedMetadata,
     data::TimeSeries.TimeArray,
 )
-    return ScenarioBased(get_label(time_series), data)
+    return ScenarioBased(get_label(ts_metadata), data)
 end
 
 function make_time_series_metadata(time_series::ScenarioBased, ta::TimeArrayWrapper)
@@ -170,6 +201,7 @@ function make_time_series_metadata(time_series::ScenarioBased, ta::TimeArrayWrap
         get_scenario_count(time_series),
         get_uuid(ta),
         get_horizon(time_series),
+        get_scaling_factor_multiplier(time_series),
     )
 end
 
@@ -177,7 +209,7 @@ function PiecewiseFunction(label::String, data::TimeSeries.TimeArray)
     initial_time = TimeSeries.timestamp(data)[1]
     resolution = get_resolution(data)
     breakpoints = length(TimeSeries.colnames(data)) / 2
-    return PiecewiseFunction(label, breakpoints, data)
+    return PiecewiseFunction(label = label, break_points = breakpoints, data = data)
 end
 
 """
@@ -200,7 +232,7 @@ function PiecewiseFunction(
         name,
     )
 
-    return PiecewiseFunction(label, break_points, data)
+    return PiecewiseFunction(; label = label, break_points = break_points, data = data)
 end
 
 function PiecewiseFunction(time_series::Vector{PiecewiseFunction})
@@ -212,7 +244,12 @@ function PiecewiseFunction(time_series::Vector{PiecewiseFunction})
     data = vcat((TimeSeries.values(get_data(x)) for x in time_series)...)
     ta = TimeSeries.TimeArray(timestamps, data, colnames)
 
-    time_series = PiecewiseFunction(get_label(time_series[1]), break_points, ta)
+    time_series = PiecewiseFunction(;
+        label = get_label(time_series[1]),
+        break_points = break_points,
+        data = ta,
+        scaling_factor_multiplier = get_scaling_factor_multiplier(time_series[1]),
+    )
     @debug "concatenated time_series" time_series
     return time_series
 end
@@ -221,10 +258,15 @@ get_columns(::Type{PiecewiseFunctionMetadata}, ta::TimeSeries.TimeArray) =
     TimeSeries.colnames(ta)
 
 function make_time_series_data(
-    time_series::PiecewiseFunctionMetadata,
+    ts_metadata::PiecewiseFunctionMetadata,
     data::TimeSeries.TimeArray,
 )
-    return PiecewiseFunction(get_label(time_series), get_break_points(time_series), data)
+    return PiecewiseFunction(
+        label = get_label(ts_metadata),
+        break_points = get_break_points(ts_metadata),
+        data = data,
+        scaling_factor_multiplier = get_scaling_factor_multiplier(ts_metadata),
+    )
 end
 
 function make_time_series_metadata(time_series::PiecewiseFunction, ta::TimeArrayWrapper)
@@ -235,6 +277,7 @@ function make_time_series_metadata(time_series::PiecewiseFunction, ta::TimeArray
         get_break_points(time_series),
         get_uuid(ta),
         get_horizon(time_series),
+        get_scaling_factor_multiplier(time_series),
     )
 end
 
@@ -254,7 +297,7 @@ function time_series_data_to_metadata(::Type{T}) where {T <: TimeSeriesData}
     return time_series_type
 end
 
-function time_series_data_to_metadata(::Type{T}) where {T <: TimeSeriesMetadata}
+function time_series_metadata_to_data(::Type{T}) where {T <: TimeSeriesMetadata}
     if T <: DeterministicMetadata
         time_series_type = Deterministic
     elseif T <: ProbabilisticMetadata

@@ -1,22 +1,33 @@
 """Describes how to construct time_series from raw time series data files."""
 mutable struct TimeSeriesFileMetadata
-    simulation::String  # User description of simulation
-    category::String  # String version of abstract type for the time_seriesed component.
-    # Calling module should determine the actual type.
-    component_name::String  # Name of time_series component
-    label::String  # Accessor function on component for source of time series
-    scaling_factor::Union{String, Float64}  # Controls normalization of time series.
-    # Use 1.0 for pre-normalized data.
-    # Use 'Max' to divide the time series by the max
-    #   value in the column.
-    # Use any float for a custom scaling factor.
-    data_file::String  # path to the time series data file
+    "User description of simulation"
+    simulation::String
+    "String version of abstract type for the time_seriesed component."
+    category::String
+    "Calling module should determine the actual type."
+    "Name of time_series component"
+    component_name::String
+    "User-defined label"
+    label::String
+    "Controls normalization of time series.
+     Use 1.0 for pre-normalized data.
+     Use 'Max' to divide the time series by the max value in the column.
+     Use any float for a custom scaling factor."
+    scaling_factor::Union{String, Float64}
+    "Path to the time series data file"
+    data_file::String
     percentiles::Vector{Float64}
+    time_series_type_module::String
     time_series_type::String
-    component::Union{Nothing, InfrastructureSystemsComponent}  # Calling module must set.
+    "Calling module must set."
+    component::Union{Nothing, InfrastructureSystemsComponent}
+    "Applicable when data are scaling factors. Accessor function on component to apply to
+    values."
+    scaling_factor_multiplier::Union{Nothing, String}
+    scaling_factor_multiplier_module::Union{Nothing, String}
 end
 
-function TimeSeriesFileMetadata(
+function TimeSeriesFileMetadata(;
     simulation,
     category,
     component_name,
@@ -24,7 +35,10 @@ function TimeSeriesFileMetadata(
     scaling_factor,
     data_file,
     percentiles,
+    time_series_type_module,
     time_series_type,
+    scaling_factor_multiplier = nothing,
+    scaling_factor_multiplier_module = nothing,
 )
     return TimeSeriesFileMetadata(
         simulation,
@@ -34,8 +48,11 @@ function TimeSeriesFileMetadata(
         scaling_factor,
         data_file,
         percentiles,
+        time_series_type_module,
         time_series_type,
         nothing,
+        scaling_factor_multiplier,
+        scaling_factor_multiplier_module,
     )
 end
 
@@ -51,18 +68,29 @@ function read_time_series_file_metadata(file_path::AbstractString)
                 if !isa(scaling_factor, AbstractString)
                     scaling_factor = Float64(scaling_factor)
                 end
+                scaling_factor_multiplier =
+                    get(item, "scaling_factor_multiplier", nothing)
+                scaling_factor_multiplier_module =
+                    get(item, "scaling_factor_multiplier_module", nothing)
                 push!(
                     metadata,
-                    TimeSeriesFileMetadata(
-                        item["simulation"],
-                        item["category"],
-                        item["component_name"],
-                        item["label"],
-                        scaling_factor,
-                        item["data_file"],
+                    TimeSeriesFileMetadata(;
+                        simulation = item["simulation"],
+                        category = item["category"],
+                        component_name = item["component_name"],
+                        label = item["label"],
+                        scaling_factor = scaling_factor,
+                        data_file = item["data_file"],
                         # Use default values until CDM data is updated.
-                        get(item, "percentiles", []),
-                        get(item, "time_series_type", "DeterministicMetadata"),
+                        percentiles = get(item, "percentiles", []),
+                        time_series_type_module = get(
+                            item,
+                            "module",
+                            "InfrastructureSystems",
+                        ),
+                        time_series_type = get(item, "type", "Deterministic"),
+                        scaling_factor_multiplier = scaling_factor_multiplier,
+                        scaling_factor_multiplier_module = scaling_factor_multiplier_module,
                     ),
                 )
             end
@@ -73,19 +101,23 @@ function read_time_series_file_metadata(file_path::AbstractString)
         metadata = Vector{TimeSeriesFileMetadata}()
         for row in eachrow(csv)
             category = _get_category(row.category)
+            scaling_factor_multiplier = get(row, :scaling_factor_multiplier, nothing)
+            scaling_factor_multiplier_module =
+                get(row, :scaling_factor_multiplier_module, nothing)
             push!(
                 metadata,
-                TimeSeriesFileMetadata(
-                    row.simulation,
-                    row.category,
-                    row.component_name,
-                    row.label,
-                    row.scaling_factor,
-                    row.data_file,
-                    # TODO: update CDM data for the next
-                    # two fields.
-                    [],
-                    "DeterministicMetadata",
+                TimeSeriesFileMetadata(;
+                    simulation = row.simulation,
+                    category = row.category,
+                    component_name = row.component_name,
+                    label = row.label,
+                    scaling_factor = row.scaling_factor,
+                    data_file = row.data_file,
+                    percentiles = [],
+                    time_series_type_module = get(row, :module, "InfrastructureSystems"),
+                    time_series_type = get(row, :type, "Deterministic"),
+                    scaling_factor_multiplier = scaling_factor_multiplier,
+                    scaling_factor_multiplier_module = scaling_factor_multiplier_module,
                 ),
             )
         end
@@ -111,7 +143,7 @@ function _get_category(category::String)
     return lowercase(category)
 end
 
-struct TimeSeriesParserInfo
+struct TimeSeriesParsedInfo
     simulation::String
     component::InfrastructureSystemsComponent
     label::String  # Component field on which time series data is based.
@@ -119,9 +151,10 @@ struct TimeSeriesParserInfo
     data::TimeSeries.TimeArray
     percentiles::Vector{Float64}
     file_path::String
-    time_series_type::String
+    time_series_type::DataType
+    scaling_factor_multiplier::Union{Nothing, Function}
 
-    function TimeSeriesParserInfo(
+    function TimeSeriesParsedInfo(
         simulation,
         component,
         label,
@@ -130,6 +163,7 @@ struct TimeSeriesParserInfo
         percentiles,
         file_path,
         time_series_type,
+        scaling_factor_multiplier = nothing,
     )
         new(
             simulation,
@@ -140,12 +174,37 @@ struct TimeSeriesParserInfo
             percentiles,
             abspath(file_path),
             time_series_type,
+            scaling_factor_multiplier,
         )
     end
 end
 
-function TimeSeriesParserInfo(metadata::TimeSeriesFileMetadata, ta::TimeSeries.TimeArray)
-    return TimeSeriesParserInfo(
+function TimeSeriesParsedInfo(metadata::TimeSeriesFileMetadata, ta::TimeSeries.TimeArray)
+    mod = Base.root_module(Base.__toplevel__, Symbol(metadata.time_series_type_module))
+    ts_type = time_series_data_to_metadata(getfield(mod, Symbol(metadata.time_series_type)))
+
+    if (
+        metadata.scaling_factor_multiplier === nothing &&
+        metadata.scaling_factor_multiplier_module !== nothing
+    ) || (
+        metadata.scaling_factor_multiplier !== nothing &&
+        metadata.scaling_factor_multiplier_module === nothing
+    )
+        throw(DataFormatError("scaling_factor_multiplier and scaling_factor_multiplier_module must both be set or not set"))
+    end
+
+    if metadata.scaling_factor_multiplier !== nothing
+        multiplier_mod = Base.root_module(
+            Base.__toplevel__,
+            Symbol(metadata.scaling_factor_multiplier_module),
+        )
+        multiplier_func = metadata.scaling_factor_multiplier === nothing ? nothing :
+            getfield(multiplier_mod, Symbol(metadata.scaling_factor_multiplier))
+    else
+        multiplier_func = nothing
+    end
+
+    return TimeSeriesParsedInfo(
         metadata.simulation,
         metadata.component,
         metadata.label,
@@ -153,22 +212,19 @@ function TimeSeriesParserInfo(metadata::TimeSeriesFileMetadata, ta::TimeSeries.T
         ta,
         metadata.percentiles,
         metadata.data_file,
-        metadata.time_series_type,
+        ts_type,
+        multiplier_func,
     )
 end
 
-function get_time_series_type(time_series_info::TimeSeriesParserInfo)
-    return getfield(InfrastructureSystems, Symbol(time_series_info.time_series_type))
-end
-
 struct TimeSeriesCache
-    time_series::Vector{TimeSeriesParserInfo}
+    time_series_infos::Vector{TimeSeriesParsedInfo}
     data_files::Dict{String, TimeSeries.TimeArray}
 end
 
 function TimeSeriesCache()
     return TimeSeriesCache(
-        Vector{TimeSeriesParserInfo}(),
+        Vector{TimeSeriesParsedInfo}(),
         Dict{String, TimeSeries.TimeArray}(),
     )
 end
@@ -196,15 +252,14 @@ function handle_scaling_factor(
 end
 
 function _add_time_series_info!(
-    time_series_cache::TimeSeriesCache,
+    cache::TimeSeriesCache,
     data_file::AbstractString,
     component_name::Union{Nothing, String},
 )
-    if !haskey(time_series_cache.data_files, data_file)
-        time_series_cache.data_files[data_file] =
-            read_time_series(data_file, component_name)
+    if !haskey(cache.data_files, data_file)
+        cache.data_files[data_file] = read_time_series(data_file, component_name)
         @debug "Added time series file" data_file
     end
 
-    return time_series_cache.data_files[data_file]
+    return cache.data_files[data_file]
 end

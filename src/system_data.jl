@@ -5,7 +5,7 @@ const VALIDATION_DESCRIPTOR_FILE = "validation_descriptors.json"
 """
     mutable struct SystemData <: InfrastructureSystemsType
         components::Components
-        time_series_metadata::TimeSeriesParameters
+        time_series_params::TimeSeriesParameters
         validation_descriptors::Vector
         time_series_storage::TimeSeriesStorage
         time_series_storage_file::Union{Nothing, String}
@@ -16,7 +16,7 @@ Container for system components and time series data
 """
 mutable struct SystemData <: InfrastructureSystemsType
     components::Components
-    time_series_metadata::TimeSeriesParameters
+    time_series_params::TimeSeriesParameters
     time_series_storage::TimeSeriesStorage
     validation_descriptors::Vector
     internal::InfrastructureSystemsInternal
@@ -59,7 +59,7 @@ function SystemData(;
 end
 
 function SystemData(
-    time_series_metadata,
+    time_series_params,
     validation_descriptors,
     time_series_storage,
     internal,
@@ -67,7 +67,7 @@ function SystemData(
     components = Components(time_series_storage, validation_descriptors)
     return SystemData(
         components,
-        time_series_metadata,
+        time_series_params,
         time_series_storage,
         validation_descriptors,
         internal,
@@ -99,19 +99,19 @@ Adds time_series from a metadata file or metadata descriptors.
 
 # Arguments
 - `data::SystemData`: system
-- `time_series_metadata::Vector{TimeSeriesFileMetadata}`: metadata for time series
+- `file_metadata::Vector{TimeSeriesFileMetadata}`: metadata for time series
 - `resolution::DateTime.Period=nothing`: skip time_series that don't match this resolution.
 """
 function add_time_series!(
     ::Type{T},
     data::SystemData,
-    time_series_metadata::Vector{TimeSeriesFileMetadata};
+    file_metadata::Vector{TimeSeriesFileMetadata};
     resolution = nothing,
 ) where {T <: InfrastructureSystemsComponent}
-    time_series_cache = TimeSeriesCache()
+    cache = TimeSeriesCache()
 
-    for metadata in time_series_metadata
-        add_time_series!(T, data, time_series_cache, metadata; resolution = resolution)
+    for metadata in file_metadata
+        add_time_series!(T, data, cache, metadata; resolution = resolution)
     end
 end
 
@@ -138,19 +138,19 @@ end
 function add_time_series!(
     data::SystemData,
     component::InfrastructureSystemsComponent,
-    time_series::T,
+    ts_metadata::T,
     ta::TimeArrayWrapper;
     skip_if_present = false,
 ) where {T <: TimeSeriesMetadata}
     _validate_component(data, component)
-    check_add_time_series!(data.time_series_metadata, time_series)
+    check_add_time_series!(data.time_series_params, ts_metadata)
     check_read_only(data.time_series_storage)
-    add_time_series!(component, time_series, skip_if_present = skip_if_present)
+    add_time_series!(component, ts_metadata, skip_if_present = skip_if_present)
     # TODO: can this be atomic with time_series addition?
     add_time_series!(
         data.time_series_storage,
         get_uuid(component),
-        get_label(time_series),
+        get_label(ts_metadata),
         ta,
         get_columns(T, ta.data),
     )
@@ -165,13 +165,21 @@ function add_time_series!(
     data::SystemData,
     filename::AbstractString,
     component::InfrastructureSystemsComponent,
-    label::AbstractString,
+    label::AbstractString;
     scaling_factor::Union{String, Float64} = 1.0,
+    scaling_factor_multiplier::Union{Nothing, Function} = nothing,
 )
     component_name = get_name(component)
-    ts = read_time_series(filename, component_name)
-    time_series = ts[Symbol(component_name)]
-    _add_time_series!(data, component, label, time_series, scaling_factor)
+    ta = read_time_series(filename, component_name)
+    ta_component = ta[Symbol(component_name)]
+    _add_time_series!(
+        data,
+        component,
+        label,
+        ta_component,
+        scaling_factor,
+        scaling_factor_multiplier,
+    )
 end
 
 """
@@ -183,11 +191,19 @@ function add_time_series!(
     data::SystemData,
     ta::TimeSeries.TimeArray,
     component::InfrastructureSystemsComponent,
-    label::AbstractString,
+    label::AbstractString;
     scaling_factor::Union{String, Float64} = 1.0,
+    scaling_factor_multiplier::Union{Nothing, Function} = nothing,
 )
-    time_series = ta[Symbol(get_name(component))]
-    _add_time_series!(data, component, label, time_series, scaling_factor)
+    ta_component = ta[Symbol(get_name(component))]
+    _add_time_series!(
+        data,
+        component,
+        label,
+        ta_component,
+        scaling_factor,
+        scaling_factor_multiplier,
+    )
 end
 
 """
@@ -199,28 +215,35 @@ function add_time_series!(
     data::SystemData,
     df::DataFrames.DataFrame,
     component::InfrastructureSystemsComponent,
-    label::AbstractString,
-    scaling_factor::Union{String, Float64} = 1.0;
+    label::AbstractString;
+    scaling_factor::Union{String, Float64} = 1.0,
+    scaling_factor_multiplier::Union{Nothing, Function} = nothing,
     timestamp = :timestamp,
 )
-    time_series = TimeSeries.TimeArray(df; timestamp = timestamp)
-    add_time_series!(data, time_series, component, label, scaling_factor)
+    ta = TimeSeries.TimeArray(df; timestamp = timestamp)
+    add_time_series!(
+        data,
+        ta,
+        component,
+        label;
+        scaling_factor = scaling_factor,
+        scaling_factor_multiplier = scaling_factor_multiplier,
+    )
 end
 
 function add_time_series!(
     ::Type{T},
     data::SystemData,
-    time_series_cache::TimeSeriesCache,
-    metadata::TimeSeriesFileMetadata;
+    cache::TimeSeriesCache,
+    file_metadata::TimeSeriesFileMetadata;
     resolution = nothing,
 ) where {T <: InfrastructureSystemsComponent}
-    set_component!(metadata, data, InfrastructureSystems)
-    component = metadata.component
+    set_component!(file_metadata, data, InfrastructureSystems)
+    component = file_metadata.component
 
-    time_series, ta =
-        make_time_series!(time_series_cache, metadata; resolution = resolution)
-    if !isnothing(time_series)
-        add_time_series!(data, component, time_series, ta)
+    ts_metadata, ta = make_time_series!(cache, file_metadata; resolution = resolution)
+    if !isnothing(ts_metadata)
+        add_time_series!(data, component, ts_metadata, ta)
     end
 end
 
@@ -234,11 +257,11 @@ function remove_time_series!(
     initial_time::Dates.DateTime,
     label::String,
 ) where {T <: TimeSeriesData}
-    type_ = time_series_data_to_metadata(T)
-    time_series = get_time_series(type_, component, initial_time, label)
+    type = time_series_data_to_metadata(T)
+    time_series = get_time_series(type, component, initial_time, label)
     uuid = get_time_series_uuid(time_series)
     # TODO: can this be atomic?
-    remove_time_series_metadata!(type_, component, initial_time, label)
+    remove_time_series_metadata!(type, component, initial_time, label)
     remove_time_series!(data.time_series_storage, uuid, get_uuid(component), label)
 end
 
@@ -246,16 +269,17 @@ end
 Return a vector of time_series from TimeSeriesFileMetadata.
 
 # Arguments
-- `time_series_metadata::TimeSeriesFileMetadata`: metadata
+- `cache::TimeSeriesCache`: cached data
+- `ts_file_metadata::TimeSeriesFileMetadata`: metadata
 - `resolution::{Nothing, Dates.Period}`: skip any time_series that don't match this resolution
 """
 function make_time_series!(
-    time_series_cache::TimeSeriesCache,
-    time_series_metadata::TimeSeriesFileMetadata;
+    cache::TimeSeriesCache,
+    ts_file_metadata::TimeSeriesFileMetadata;
     resolution = nothing,
 )
-    time_series_info = add_time_series_info!(time_series_cache, time_series_metadata)
-    return _make_time_series(time_series_info, resolution)
+    info = add_time_series_info!(cache, ts_file_metadata)
+    return _make_time_series(info, resolution)
 end
 
 function _add_time_series!(
@@ -264,59 +288,53 @@ function _add_time_series!(
     label::AbstractString,
     time_series::TimeSeries.TimeArray,
     scaling_factor,
+    scaling_factor_multiplier,
 )
     time_series = handle_scaling_factor(time_series, scaling_factor)
     # TODO: This code path needs to accept a metdata file or parameters telling it which
     # type of time_series to create.
     ta = TimeArrayWrapper(time_series)
-    time_series = DeterministicMetadata(label, ta)
-    add_time_series!(data, component, time_series, ta)
+    ts_metadata = DeterministicMetadata(label, ta, scaling_factor_multiplier)
+    add_time_series!(data, component, ts_metadata, ta)
 end
 
-function _make_time_series(time_series_cache::TimeSeriesCache, resolution)
-    time_series = Vector{TimeSeriesData}()
+function _make_time_series(cache::TimeSeriesCache, resolution)
+    time_series_arrays = Vector{TimeSeriesData}()
 
-    for time_series_info in time_series_cache.time_series
-        time_series = _make_time_series(time_series_info)
+    for info in cache.infos
+        time_series = _make_time_series(info, resolution)
         if !isnothing(time_series)
-            push!(time_series, time_series)
+            push!(time_series_arrays, time_series)
         end
     end
 
-    return time_series
+    return time_series_arrays
 end
 
-function _make_time_series(time_series_info::TimeSeriesParserInfo, resolution)
-    len = length(time_series_info.data)
+function _make_time_series(info::TimeSeriesParsedInfo, resolution)
+    len = length(info.data)
     @assert len >= 2
-    timestamps = TimeSeries.timestamp(time_series_info.data)
+    timestamps = TimeSeries.timestamp(info.data)
     res = timestamps[2] - timestamps[1]
     if !isnothing(resolution) && res != resolution
         @debug "Skip time_series with resolution=$res; doesn't match user=$resolution"
         return nothing, nothing
     end
 
-    time_series = time_series_info.data[Symbol(get_name(time_series_info.component))]
-    time_series = handle_scaling_factor(time_series, time_series_info.scaling_factor)
-    time_series_type = get_time_series_type(time_series_info)
-    ta = TimeArrayWrapper(time_series)
-    time_series = time_series_type(time_series_info.label, ta)
-    @debug "Created $time_series"
-    return time_series, ta
+    ta = info.data[Symbol(get_name(info.component))]
+    ta = handle_scaling_factor(ta, info.scaling_factor)
+    ta_wrapper = TimeArrayWrapper(ta)
+    ts_metadata =
+        info.time_series_type(info.label, ta_wrapper, info.scaling_factor_multiplier)
+    @debug "Created $ts_metadata"
+    return ts_metadata, ta_wrapper
 end
 
-function add_time_series_info!(
-    time_series_cache::TimeSeriesCache,
-    metadata::TimeSeriesFileMetadata,
-)
-    time_series = _add_time_series_info!(
-        time_series_cache,
-        metadata.data_file,
-        metadata.component_name,
-    )
-    time_series_info = TimeSeriesParserInfo(metadata, time_series)
-    @debug "Added TimeSeriesParserInfo" metadata
-    return time_series_info
+function add_time_series_info!(cache::TimeSeriesCache, metadata::TimeSeriesFileMetadata)
+    time_series = _add_time_series_info!(cache, metadata.data_file, metadata.component_name)
+    info = TimeSeriesParsedInfo(metadata, time_series)
+    @debug "Added TimeSeriesParsedInfo" metadata
+    return info
 end
 
 """
@@ -422,7 +440,7 @@ end
 function clear_time_series!(data::SystemData)
     clear_time_series!(data.time_series_storage)
     clear_time_series!(data.components)
-    reset_info!(data.time_series_metadata)
+    reset_info!(data.time_series_params)
 end
 
 """
@@ -550,7 +568,7 @@ end
 function serialize(data::SystemData)
     @debug "serialize SystemData"
     json_data = Dict()
-    for field in (:components, :time_series_metadata, :internal)
+    for field in (:components, :time_series_params, :internal)
         json_data[string(field)] = serialize(getfield(data, field))
     end
 
@@ -581,7 +599,7 @@ end
 
 function deserialize(::Type{SystemData}, raw; time_series_read_only = false)
     @debug "deserialize" raw
-    time_series_metadata = deserialize(TimeSeriesParameters, raw["time_series_metadata"])
+    time_series_params = deserialize(TimeSeriesParameters, raw["time_series_params"])
     # The code calling this function must have changed to this directory.
     if !isfile(raw["time_series_storage_file"])
         error("time series file $(raw["time_series_storage_file"]) does not exist")
@@ -605,7 +623,7 @@ function deserialize(::Type{SystemData}, raw; time_series_read_only = false)
     internal = deserialize(InfrastructureSystemsInternal, raw["internal"])
     @debug "deserialize" validation_descriptors time_series_storage internal
     sys = SystemData(
-        time_series_metadata,
+        time_series_params,
         validation_descriptors,
         time_series_storage,
         internal,
@@ -657,10 +675,9 @@ get_time_series_initial_time(data::SystemData) =
     get_time_series_initial_time(data.components)
 get_time_series_last_initial_time(data::SystemData) =
     get_time_series_last_initial_time(data.components)
-get_time_series_horizon(data::SystemData) =
-    get_time_series_horizon(data.time_series_metadata)
+get_time_series_horizon(data::SystemData) = get_time_series_horizon(data.time_series_params)
 get_time_series_resolution(data::SystemData) =
-    get_time_series_resolution(data.time_series_metadata)
+    get_time_series_resolution(data.time_series_params)
 clear_components!(data::SystemData) = clear_components!(data.components)
 check_time_series_consistency(data::SystemData) =
     check_time_series_consistency(data.components)

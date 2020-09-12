@@ -65,7 +65,7 @@ end
 function Base.show(io::IO, data::SystemData)
     show(io, data.components)
     println(io, "\n")
-    show(io, data.time_series_metadata)
+    show(io, data.time_series_params)
 end
 
 function Base.show(io::IO, ::MIME"text/plain", data::SystemData)

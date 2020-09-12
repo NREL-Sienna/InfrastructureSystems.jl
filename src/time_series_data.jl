@@ -58,14 +58,20 @@ end
 Return a time_series truncated starting with timestamp.
 """
 function from(time_series::T, timestamp) where {T <: TimeSeriesData}
-    return T(get_label(time_series), TimeSeries.from(get_data(time_series), timestamp))
+    return T(;
+        label = get_label(time_series),
+        data = TimeSeries.from(get_data(time_series), timestamp),
+    )
 end
 
 """
 Return a time_series truncated after timestamp.
 """
 function to(time_series::T, timestamp) where {T <: TimeSeriesData}
-    return T(get_label(time_series), TimeSeries.to(get_data(time_series), timestamp))
+    return T(;
+        label = get_label(time_series),
+        data = TimeSeries.to(get_data(time_series), timestamp),
+    )
 end
 
 """

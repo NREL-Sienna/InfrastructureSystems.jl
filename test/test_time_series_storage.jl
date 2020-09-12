@@ -3,7 +3,7 @@ function test_add_remove(storage::IS.TimeSeriesStorage)
     name = "component1"
     label = "val"
     component = IS.TestComponent(name, 5)
-    ts = create_time_series_data()
+    ts = create_time_array()
     IS.add_time_series!(storage, IS.get_uuid(component), label, ts)
 
     ts_data = IS.get_time_series(storage, IS.get_uuid(ts))
@@ -31,7 +31,7 @@ function test_add_references(storage::IS.TimeSeriesStorage)
     label = "val"
     component1 = IS.TestComponent("component1", 5)
     component2 = IS.TestComponent("component2", 6)
-    ts = create_time_series_data()
+    ts = create_time_array()
     ts_uuid = IS.get_uuid(ts)
     IS.add_time_series!(storage, IS.get_uuid(component1), label, ts)
     IS.add_time_series_reference!(storage, IS.get_uuid(component2), label, ts_uuid)
@@ -52,7 +52,7 @@ function test_get_subset(storage::IS.TimeSeriesStorage)
     name = "component1"
     label = "val"
     component = IS.TestComponent(name, 1)
-    ts = create_time_series_data()
+    ts = create_time_array()
     IS.add_time_series!(storage, IS.get_uuid(component), label, ts)
     ts_data = IS.get_time_series(storage, IS.get_uuid(ts))
 
@@ -68,7 +68,7 @@ function test_clear(storage::IS.TimeSeriesStorage)
     name = "component1"
     label = "val"
     component = IS.TestComponent(name, 5)
-    ts = create_time_series_data()
+    ts = create_time_array()
     IS.add_time_series!(storage, IS.get_uuid(component), label, ts)
 
     ts_data = IS.get_time_series(storage, IS.get_uuid(ts))
