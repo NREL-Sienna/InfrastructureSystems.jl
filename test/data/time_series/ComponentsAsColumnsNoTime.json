@@ -4,7 +4,7 @@
     "category": "InfrastructureSystemsComponent",
     "component_name": "Component1",
     "label": "val",
-    "scaling_factor": 1,
+    "normalization_factor": 1,
     "data_file": "ComponentsAsColumnsNoTime.csv",
     "type": "Deterministic",
     "module": "InfrastructureSystems"

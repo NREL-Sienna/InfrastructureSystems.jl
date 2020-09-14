@@ -286,7 +286,7 @@ end
         ta,
         component,
         "val";
-        scaling_factor = 1.0,
+        normalization_factor = 1.0,
         scaling_factor_multiplier = IS.get_val,
     )
     time_series = IS.get_time_series(IS.Deterministic, component, dates[1], "val")

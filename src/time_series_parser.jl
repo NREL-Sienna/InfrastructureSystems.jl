@@ -13,7 +13,7 @@ mutable struct TimeSeriesFileMetadata
      Use 1.0 for pre-normalized data.
      Use 'Max' to divide the time series by the max value in the column.
      Use any float for a custom scaling factor."
-    scaling_factor::Union{String, Float64}
+    normalization_factor::Union{String, Float64}
     "Path to the time series data file"
     data_file::String
     percentiles::Vector{Float64}
@@ -32,7 +32,7 @@ function TimeSeriesFileMetadata(;
     category,
     component_name,
     label,
-    scaling_factor,
+    normalization_factor,
     data_file,
     percentiles,
     time_series_type_module,
@@ -45,7 +45,7 @@ function TimeSeriesFileMetadata(;
         category,
         component_name,
         label,
-        scaling_factor,
+        normalization_factor,
         data_file,
         percentiles,
         time_series_type_module,
@@ -64,9 +64,9 @@ function read_time_series_file_metadata(file_path::AbstractString)
             data = JSON3.read(io, Array)
             for item in data
                 category = _get_category(item["category"])
-                scaling_factor = item["scaling_factor"]
-                if !isa(scaling_factor, AbstractString)
-                    scaling_factor = Float64(scaling_factor)
+                normalization_factor = item["normalization_factor"]
+                if !isa(normalization_factor, AbstractString)
+                    normalization_factor = Float64(normalization_factor)
                 end
                 scaling_factor_multiplier =
                     get(item, "scaling_factor_multiplier", nothing)
@@ -79,7 +79,7 @@ function read_time_series_file_metadata(file_path::AbstractString)
                         category = item["category"],
                         component_name = item["component_name"],
                         label = item["label"],
-                        scaling_factor = scaling_factor,
+                        normalization_factor = normalization_factor,
                         data_file = item["data_file"],
                         # Use default values until CDM data is updated.
                         percentiles = get(item, "percentiles", []),
@@ -111,7 +111,7 @@ function read_time_series_file_metadata(file_path::AbstractString)
                     category = row.category,
                     component_name = row.component_name,
                     label = row.label,
-                    scaling_factor = row.scaling_factor,
+                    normalization_factor = row.normalization_factor,
                     data_file = row.data_file,
                     percentiles = [],
                     time_series_type_module = get(row, :module, "InfrastructureSystems"),
@@ -147,7 +147,7 @@ struct TimeSeriesParsedInfo
     simulation::String
     component::InfrastructureSystemsComponent
     label::String  # Component field on which time series data is based.
-    scaling_factor::Union{String, Float64}
+    normalization_factor::Union{String, Float64}
     data::TimeSeries.TimeArray
     percentiles::Vector{Float64}
     file_path::String
@@ -158,7 +158,7 @@ struct TimeSeriesParsedInfo
         simulation,
         component,
         label,
-        scaling_factor,
+        normalization_factor,
         data,
         percentiles,
         file_path,
@@ -169,7 +169,7 @@ struct TimeSeriesParsedInfo
             simulation,
             component,
             label,
-            scaling_factor,
+            normalization_factor,
             data,
             percentiles,
             abspath(file_path),
@@ -208,7 +208,7 @@ function TimeSeriesParsedInfo(metadata::TimeSeriesFileMetadata, ta::TimeSeries.T
         metadata.simulation,
         metadata.component,
         metadata.label,
-        metadata.scaling_factor,
+        metadata.normalization_factor,
         ta,
         metadata.percentiles,
         metadata.data_file,
@@ -231,19 +231,19 @@ end
 
 function handle_scaling_factor(
     ta::TimeSeries.TimeArray,
-    scaling_factor::Union{String, Float64},
+    normalization_factor::Union{String, Float64},
 )
-    if scaling_factor isa String
-        if lowercase(scaling_factor) == "max"
+    if normalization_factor isa String
+        if lowercase(normalization_factor) == "max"
             max_value = maximum(TimeSeries.values(ta))
             ta = ta ./ max_value
             @debug "Normalize by max value" max_value
         else
-            throw(DataFormatError("invalid scaling_factor=scaling_factor"))
+            throw(DataFormatError("invalid normalization_factor=$normalization_factor"))
         end
-    elseif scaling_factor != 1.0
-        ta = ta ./ scaling_factor
-        @debug "Normalize by custom scaling factor" scaling_factor
+    elseif normalization_factor != 1.0
+        ta = ta ./ normalization_factor
+        @debug "Normalize by custom scaling factor" normalization_factor
     else
         @debug "time_series is already normalized"
     end

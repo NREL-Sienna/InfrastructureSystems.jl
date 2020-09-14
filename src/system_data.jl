@@ -159,14 +159,14 @@ end
 """
 Add a time_series from a CSV file.
 
-See [`TimeSeriesFileMetadata`](@ref) for description of scaling_factor.
+See [`TimeSeriesFileMetadata`](@ref) for description of normalization_factor.
 """
 function add_time_series!(
     data::SystemData,
     filename::AbstractString,
     component::InfrastructureSystemsComponent,
     label::AbstractString;
-    scaling_factor::Union{String, Float64} = 1.0,
+    normalization_factor::Union{String, Float64} = 1.0,
     scaling_factor_multiplier::Union{Nothing, Function} = nothing,
 )
     component_name = get_name(component)
@@ -177,7 +177,7 @@ function add_time_series!(
         component,
         label,
         ta_component,
-        scaling_factor,
+        normalization_factor,
         scaling_factor_multiplier,
     )
 end
@@ -185,14 +185,14 @@ end
 """
 Add a time_series to a system from a TimeSeries.TimeArray.
 
-See [`TimeSeriesFileMetadata`](@ref) for description of scaling_factor.
+See [`TimeSeriesFileMetadata`](@ref) for description of normalization_factor.
 """
 function add_time_series!(
     data::SystemData,
     ta::TimeSeries.TimeArray,
     component::InfrastructureSystemsComponent,
     label::AbstractString;
-    scaling_factor::Union{String, Float64} = 1.0,
+    normalization_factor::Union{String, Float64} = 1.0,
     scaling_factor_multiplier::Union{Nothing, Function} = nothing,
 )
     ta_component = ta[Symbol(get_name(component))]
@@ -201,7 +201,7 @@ function add_time_series!(
         component,
         label,
         ta_component,
-        scaling_factor,
+        normalization_factor,
         scaling_factor_multiplier,
     )
 end
@@ -209,14 +209,14 @@ end
 """
 Add a time_series to a system from a DataFrames.DataFrame.
 
-See [`TimeSeriesFileMetadata`](@ref) for description of scaling_factor.
+See [`TimeSeriesFileMetadata`](@ref) for description of normalization_factor.
 """
 function add_time_series!(
     data::SystemData,
     df::DataFrames.DataFrame,
     component::InfrastructureSystemsComponent,
     label::AbstractString;
-    scaling_factor::Union{String, Float64} = 1.0,
+    normalization_factor::Union{String, Float64} = 1.0,
     scaling_factor_multiplier::Union{Nothing, Function} = nothing,
     timestamp = :timestamp,
 )
@@ -226,7 +226,7 @@ function add_time_series!(
         ta,
         component,
         label;
-        scaling_factor = scaling_factor,
+        normalization_factor = normalization_factor,
         scaling_factor_multiplier = scaling_factor_multiplier,
     )
 end
@@ -287,10 +287,10 @@ function _add_time_series!(
     component::InfrastructureSystemsComponent,
     label::AbstractString,
     time_series::TimeSeries.TimeArray,
-    scaling_factor,
+    normalization_factor,
     scaling_factor_multiplier,
 )
-    time_series = handle_scaling_factor(time_series, scaling_factor)
+    time_series = handle_scaling_factor(time_series, normalization_factor)
     # TODO: This code path needs to accept a metdata file or parameters telling it which
     # type of time_series to create.
     ta = TimeArrayWrapper(time_series)
@@ -322,7 +322,7 @@ function _make_time_series(info::TimeSeriesParsedInfo, resolution)
     end
 
     ta = info.data[Symbol(get_name(info.component))]
-    ta = handle_scaling_factor(ta, info.scaling_factor)
+    ta = handle_scaling_factor(ta, info.normalization_factor)
     ta_wrapper = TimeArrayWrapper(ta)
     ts_metadata =
         info.time_series_type(info.label, ta_wrapper, info.scaling_factor_multiplier)
