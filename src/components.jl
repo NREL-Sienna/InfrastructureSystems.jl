@@ -20,9 +20,7 @@ end
 
 function serialize(components::Components)
     # time_series_storage and validation_descriptors are serialized elsewhere.
-    return Dict(
-        string(k) => [serialize(x) for x in values(v)] for (k, v) in components.data
-    )
+    return [serialize(x) for y in values(components.data) for x in values(y)]
 end
 
 """
