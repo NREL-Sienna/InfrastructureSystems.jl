@@ -89,6 +89,10 @@ Return the type information for the serialized struct.
 """
 get_serialization_metadata(data::Dict) = data[METADATA_KEY]
 
+function get_type_from_serialization_data(data::Dict)
+    return get_type_from_serialization_metadata(get_serialization_metadata(data))
+end
+
 function get_type_from_serialization_metadata(metadata::Dict)
     mod = Base.root_module(Base.__toplevel__, Symbol(metadata[MODULE_KEY]))
     base_type = getfield(mod, Symbol(metadata[TYPE_KEY]))
@@ -123,10 +127,7 @@ function deserialize_struct(::Type{T}, data::Dict) where {T}
     for (field_name, field_type) in zip(fieldnames(T), fieldtypes(T))
         val = data[string(field_name)]
         if val isa Dict && haskey(val, METADATA_KEY)
-            vals[field_name] = deserialize(
-                get_type_from_serialization_metadata(get_serialization_metadata(val)),
-                val,
-            )
+            vals[field_name] = deserialize(get_type_from_serialization_data(val), val)
         else
             vals[field_name] = deserialize(field_type, val)
         end
