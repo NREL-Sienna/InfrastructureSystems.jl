@@ -89,11 +89,11 @@ function add_time_series!(
     storage::Hdf5TimeSeriesStorage,
     component_uuid::UUIDs.UUID,
     label::AbstractString,
-    ts::TimeSeriesData,
+    ta::TimeArrayWrapper,
     columns = nothing,
 )
     check_read_only(storage)
-    uuid = string(get_uuid(ts))
+    uuid = string(get_uuid(ta))
     component_label = make_component_label(component_uuid, label)
 
     HDF5.h5open(storage.file_path, "r+") do file
@@ -102,8 +102,8 @@ function add_time_series!(
             HDF5.g_create(root, uuid)
             path = root[uuid]
             @debug "Create new time series entry." uuid component_uuid label
-            path["data"] = TimeSeries.values(ts.data)
-            timestamps = [Dates.datetime2epochms(x) for x in TimeSeries.timestamp(ts.data)]
+            path["data"] = TimeSeries.values(ta.data)
+            timestamps = [Dates.datetime2epochms(x) for x in TimeSeries.timestamp(ta.data)]
             path["timestamps"] = timestamps
             # Storing the UUID as an integer would take less space, but HDF5 library says
             # arrays of 128-bit integers aren't supported.
@@ -155,10 +155,10 @@ function iterate_time_series(storage::Hdf5TimeSeriesStorage)
                 uuid_str = uuid_path[(range.start + 1):end]
                 uuid = UUIDs.UUID(uuid_str)
                 internal = InfrastructureSystemsInternal(uuid)
-                time_series = TimeSeriesData(get_time_series(storage, uuid), internal)
+                ta = TimeArrayWrapper(get_time_series(storage, uuid), internal)
                 for item in HDF5.read(uuid_group["components"])
                     component, label = deserialize_component_label(item)
-                    put!(channel, (component, label, time_series))
+                    put!(channel, (component, label, ta))
                 end
             end
         end

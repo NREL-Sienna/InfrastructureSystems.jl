@@ -105,9 +105,9 @@ documentation.
 
 #### Instructions
 
-1. Add an instance of `InfrastructureSystems.Forecasts` to the component struct.
-2. Implement the method `InfrastructureSystems.get_forecasts` for the
-   component. It must return the Forecasts object.
+1. Add an instance of `InfrastructureSystems.TimeSeriesContainer` to the component struct.
+2. Implement the method `InfrastructureSystems.get_time_series` for the
+   component. It must return the TimeSeriesContainer object.
 
 ### Component container
 InfrastructureSystems provides the `SystemData` struct to store a collection of
@@ -135,9 +135,7 @@ It is recommended but not required that you include this struct within your own
    * `get_component`
    * `get_components`
    * `get_components_by_name`
-   * `add_forecasts!`
-   * `add_forecast!`
-   * `remove_forecast!`
+   * `add_time_series!`
 
 
 ## Logging

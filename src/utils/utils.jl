@@ -123,7 +123,7 @@ function compare_values(x::T, y::T)::Bool where {T}
         match = x == y
     else
         for field_name in fields
-            if T <: Forecasts && field_name == :time_series_storage
+            if T <: TimeSeriesContainer && field_name == :time_series_storage
                 # This gets validated at SystemData. Don't repeat for each component.
                 continue
             end

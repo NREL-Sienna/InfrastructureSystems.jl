@@ -32,13 +32,13 @@ mutable struct InfrastructureSystemsInternal <: InfrastructureSystemsType
 end
 
 """
-Creates PowerSystemInternal with a new UUID.
+Creates InfrastructureSystemsInternal with a new UUID.
 """
 InfrastructureSystemsInternal(; uuid = UUIDs.uuid4(), units_info = nothing, ext = nothing) =
     InfrastructureSystemsInternal(uuid, units_info, ext)
 
 """
-Creates PowerSystemInternal with an existing UUID.
+Creates InfrastructureSystemsInternal with an existing UUID.
 """
 InfrastructureSystemsInternal(u::UUIDs.UUID) =
     InfrastructureSystemsInternal(u, nothing, nothing)

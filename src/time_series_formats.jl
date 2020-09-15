@@ -1,12 +1,12 @@
 
-abstract type TimeseriesFileFormat end
-abstract type TimeseriesFormatPeriodAsColumn <: TimeseriesFileFormat end
-abstract type TimeseriesFormatYMDPeriodAsColumn <: TimeseriesFormatPeriodAsColumn end
-abstract type TimeseriesFormatDateTimePeriodAsColumn <: TimeseriesFormatPeriodAsColumn end
-abstract type TimeseriesFormatPeriodAsHeader <: TimeseriesFileFormat end
-abstract type TimeseriesFormatYMDPeriodAsHeader <: TimeseriesFormatPeriodAsHeader end
-abstract type TimeseriesFormatComponentsAsColumnsNoTime <: TimeseriesFileFormat end
-abstract type TimeseriesFormatDateTimeAsColumn <: TimeseriesFileFormat end
+abstract type TimeSeriesFileFormat end
+abstract type TimeSeriesFormatPeriodAsColumn <: TimeSeriesFileFormat end
+abstract type TimeSeriesFormatYMDPeriodAsColumn <: TimeSeriesFormatPeriodAsColumn end
+abstract type TimeSeriesFormatDateTimePeriodAsColumn <: TimeSeriesFormatPeriodAsColumn end
+abstract type TimeSeriesFormatPeriodAsHeader <: TimeSeriesFileFormat end
+abstract type TimeSeriesFormatYMDPeriodAsHeader <: TimeSeriesFormatPeriodAsHeader end
+abstract type TimeSeriesFormatComponentsAsColumnsNoTime <: TimeSeriesFileFormat end
+abstract type TimeSeriesFormatDateTimeAsColumn <: TimeSeriesFileFormat end
 
 """
 Return a TimeArray from a CSV file.
@@ -15,20 +15,20 @@ Pass component_name when the file does not have the component name in a column h
 """
 function read_time_series(file_path::AbstractString, component_name = nothing; kwargs...)
     if !isfile(file_path)
-        msg = "Timeseries file doesn't exist : $file_path"
+        msg = "TimeSeries file doesn't exist : $file_path"
         throw(DataFormatError(msg))
     end
 
     file = CSV.File(file_path)
     @debug "Read CSV data from $file_path."
 
-    return read_time_series(get_timeseries_format(file), file, component_name; kwargs...)
+    return read_time_series(get_time_series_format(file), file, component_name; kwargs...)
 end
 
 """
-Return the timeseries format used in the CSV file.
+Return the time series format used in the CSV file.
 """
-function get_timeseries_format(file::CSV.File)
+function get_time_series_format(file::CSV.File)
     columns = propertynames(file)
     has_ymd = :Year in columns && :Month in columns && :Day in columns
     has_period = :Period in columns
@@ -36,19 +36,19 @@ function get_timeseries_format(file::CSV.File)
 
     if has_period
         if has_datetime
-            format = TimeseriesFormatDateTimePeriodAsColumn
+            format = TimeSeriesFormatDateTimePeriodAsColumn
         else
-            format = TimeseriesFormatYMDPeriodAsColumn
+            format = TimeSeriesFormatYMDPeriodAsColumn
         end
     elseif has_ymd
-        format = TimeseriesFormatYMDPeriodAsHeader
+        format = TimeSeriesFormatYMDPeriodAsHeader
     elseif has_datetime
-        format = TimeseriesFormatDateTimeAsColumn
+        format = TimeSeriesFormatDateTimeAsColumn
     else
-        format = TimeseriesFormatComponentsAsColumnsNoTime
+        format = TimeSeriesFormatComponentsAsColumnsNoTime
     end
 
-    if format in (TimeseriesFormatYMDPeriodAsColumn, TimeseriesFormatYMDPeriodAsHeader)
+    if format in (TimeSeriesFormatYMDPeriodAsColumn, TimeSeriesFormatYMDPeriodAsHeader)
         if !has_ymd
             throw(DataFormatError("$(file.name) is missing required Year/Month/Day"))
         end
@@ -60,7 +60,7 @@ end
 """
 Return the column names with values (components).
 """
-function get_value_columns(::Type{TimeseriesFormatYMDPeriodAsColumn}, file::CSV.File)
+function get_value_columns(::Type{TimeSeriesFormatYMDPeriodAsColumn}, file::CSV.File)
     return [x for x in propertynames(file) if !in(x, (:Year, :Month, :Day, :Period))]
 end
 
@@ -68,7 +68,7 @@ function get_value_columns(
     ::Type{T},
     file::CSV.File,
 ) where {
-    T <: Union{TimeseriesFormatDateTimePeriodAsColumn, TimeseriesFormatDateTimeAsColumn},
+    T <: Union{TimeSeriesFormatDateTimePeriodAsColumn, TimeSeriesFormatDateTimeAsColumn},
 }
     return [x for x in propertynames(file) if !in(x, (:DateTime, :Period))]
 end
@@ -77,7 +77,7 @@ end
 Return the column names with values.
 """
 function get_value_columns(
-    ::Type{TimeseriesFormatComponentsAsColumnsNoTime},
+    ::Type{TimeSeriesFormatComponentsAsColumnsNoTime},
     file::CSV.File,
 )
     return propertynames(file)
@@ -86,18 +86,18 @@ end
 """
 Return the column names that specify the Period.
 """
-function get_period_columns(::Type{TimeseriesFormatPeriodAsColumn}, file::CSV.File)
+function get_period_columns(::Type{TimeSeriesFormatPeriodAsColumn}, file::CSV.File)
     return [:Period]
 end
 
-function get_period_columns(::Type{TimeseriesFormatYMDPeriodAsHeader}, file::CSV.File)
+function get_period_columns(::Type{TimeSeriesFormatYMDPeriodAsHeader}, file::CSV.File)
     return [x for x in propertynames(file) if !in(x, (:Year, :Month, :Day))]
 end
 
 """
 Return a vector of dicts of unique timestamps and their counts.
 """
-function get_unique_timestamps(::Type{T}, file::CSV.File) where {T <: TimeseriesFileFormat}
+function get_unique_timestamps(::Type{T}, file::CSV.File) where {T <: TimeSeriesFileFormat}
     timestamps = Vector{Dict{String, Any}}()
     new_timestamp = x -> Dict("timestamp" => x, "count" => 1)
 
@@ -126,7 +126,7 @@ end
 Return a Dates.DateTime for the row in the CSV file.
 """
 function get_timestamp(
-    ::Type{TimeseriesFormatYMDPeriodAsColumn},
+    ::Type{TimeSeriesFormatYMDPeriodAsColumn},
     file::CSV.File,
     row_index::Int,
 )
@@ -138,17 +138,17 @@ function get_timestamp(
     file::CSV.File,
     row_index::Int,
 ) where {
-    T <: Union{TimeseriesFormatDateTimePeriodAsColumn, TimeseriesFormatDateTimeAsColumn},
+    T <: Union{TimeSeriesFormatDateTimePeriodAsColumn, TimeSeriesFormatDateTimeAsColumn},
 }
     return Dates.DateTime(file.DateTime[row_index])
 end
 
 function get_timestamp(
-    ::Type{TimeseriesFormatYMDPeriodAsHeader},
+    ::Type{TimeSeriesFormatYMDPeriodAsHeader},
     file::CSV.File,
     row_index::Int,
 )
-    return get_timestamp(TimeseriesFormatYMDPeriodAsColumn, file, row_index)
+    return get_timestamp(TimeSeriesFormatYMDPeriodAsColumn, file, row_index)
 end
 
 """
@@ -161,9 +161,9 @@ function read_time_series(
     file::CSV.File,
     component_name = nothing;
     kwargs...,
-) where {T <: TimeseriesFormatDateTimeAsColumn}
+) where {T <: TimeSeriesFormatDateTimeAsColumn}
     timestamps = Vector{Dates.DateTime}()
-    step = get_step_time(TimeseriesFormatDateTimeAsColumn, file, collect(1:length(file)))
+    step = get_step_time(TimeSeriesFormatDateTimeAsColumn, file, collect(1:length(file)))
 
     # All timestamps must be sequential by step, so we can ignore the timestamps in the
     # file after the first one.
@@ -191,7 +191,7 @@ function read_time_series(
     file::CSV.File,
     component_name = nothing;
     kwargs...,
-) where {T <: TimeseriesFormatPeriodAsColumn}
+) where {T <: TimeSeriesFormatPeriodAsColumn}
     timestamps = Vector{Dates.DateTime}()
     step = get_step_time(T, file, file.Period)
 
@@ -220,7 +220,7 @@ function read_time_series(
     file::CSV.File,
     component_name::AbstractString;
     kwargs...,
-) where {T <: TimeseriesFormatPeriodAsHeader}
+) where {T <: TimeSeriesFormatPeriodAsHeader}
     timestamps = Vector{Dates.DateTime}()
 
     period_cols_as_symbols = get_period_columns(T, file)
@@ -267,7 +267,7 @@ function read_time_series(
     file::CSV.File,
     component_name = nothing;
     kwargs...,
-) where {T <: TimeseriesFormatComponentsAsColumnsNoTime}
+) where {T <: TimeSeriesFormatComponentsAsColumnsNoTime}
     timestamps = Vector{Dates.DateTime}()
     step = get_step_time(T, file)
 
@@ -290,7 +290,7 @@ function get_num_steps(
     ::Type{T},
     file::CSV.File,
     period::AbstractArray,
-) where {T <: TimeseriesFileFormat}
+) where {T <: TimeSeriesFileFormat}
     error("Unsupported time series file format")
 end
 
@@ -301,7 +301,7 @@ function get_num_steps(
     ::Type{T},
     file::CSV.File,
     period::AbstractArray,
-) where {T <: Union{TimeseriesFormatPeriodAsColumn, TimeseriesFormatDateTimeAsColumn}}
+) where {T <: Union{TimeSeriesFormatPeriodAsColumn, TimeSeriesFormatDateTimeAsColumn}}
     timestamps = get_unique_timestamps(T, file)
     return timestamps[1]["count"]
 end
@@ -313,7 +313,7 @@ function get_num_steps(
     ::Type{T},
     file::CSV.File,
     period::AbstractArray,
-) where {T <: TimeseriesFormatPeriodAsHeader}
+) where {T <: TimeSeriesFormatPeriodAsHeader}
     return num_steps = period[end]
 end
 
@@ -324,7 +324,7 @@ function get_step_time(
     ::Type{T},
     file::CSV.File,
     period::AbstractArray,
-) where {T <: TimeseriesFileFormat}
+) where {T <: TimeSeriesFileFormat}
     timestamps = get_unique_timestamps(T, file)
     num_steps = get_num_steps(T, file, period)
 
@@ -353,7 +353,7 @@ end
 function get_step_time(
     ::Type{T},
     file::CSV.File,
-) where {T <: TimeseriesFormatComponentsAsColumnsNoTime}
+) where {T <: TimeSeriesFormatComponentsAsColumnsNoTime}
     resolution = Dates.Day(1)
     num_steps = length(file)
     return calculate_step_time(resolution, num_steps)

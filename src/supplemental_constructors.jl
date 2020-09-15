@@ -1,12 +1,4 @@
 
-function make_public_forecast(forecast::ForecastInternal, d::TimeSeriesData)
-    error("$(typeof(forecast)) must implement make_public_forecast")
-end
-
-function make_internal_forecast(forecast::Forecast)
-    error("$(typeof(forecast)) must implement make_internal_forecast")
-end
-
 """
 Constructs Deterministic after constructing a TimeArray from initial_time and time_steps.
 """
@@ -20,38 +12,58 @@ function Deterministic(
         initial_time:resolution:(initial_time + resolution * (time_steps - 1)),
         ones(time_steps),
     )
-    return Deterministic(label, data)
+    return Deterministic(; label = label, data = data)
 end
 
-function Deterministic(forecasts::Vector{Deterministic})
-    @assert !isempty(forecasts)
+function Deterministic(time_series::Vector{Deterministic})
+    @assert !isempty(time_series)
     timestamps =
-        collect(Iterators.flatten((TimeSeries.timestamp(get_data(x)) for x in forecasts)))
-    data = collect(Iterators.flatten((TimeSeries.values(get_data(x)) for x in forecasts)))
+        collect(Iterators.flatten((TimeSeries.timestamp(get_data(x)) for x in time_series)))
+    data = collect(Iterators.flatten((TimeSeries.values(get_data(x)) for x in time_series)))
     ta = TimeSeries.TimeArray(timestamps, data)
 
-    forecast = Deterministic(get_label(forecasts[1]), ta)
-    @debug "concatenated forecasts" forecast
-    return forecast
+    time_series = Deterministic(
+        label = get_label(time_series[1]),
+        data = ta,
+        scaling_factor_multiplier = time_series[1].scaling_factor_multiplier,
+    )
+    @debug "concatenated time_series" time_series
+    return time_series
 end
 
 # TODO: need to make concatenation constructors for Probabilistic
 
-function make_public_forecast(forecast::DeterministicInternal, data::TimeSeries.TimeArray)
-    return Deterministic(get_label(forecast), data)
+function make_time_series_data(
+    ts_metadata::DeterministicMetadata,
+    data::TimeSeries.TimeArray,
+)
+    return Deterministic(
+        get_label(ts_metadata),
+        data,
+        get_scaling_factor_multiplier(ts_metadata),
+    )
 end
 
-function make_internal_forecast(forecast::Deterministic, ts_data::TimeSeriesData)
-    return DeterministicInternal(get_label(forecast), ts_data)
+function make_time_series_metadata(time_series::Deterministic, ta::TimeArrayWrapper)
+    return DeterministicMetadata(
+        get_label(time_series),
+        ta,
+        get_scaling_factor_multiplier(time_series),
+    )
 end
 
-function DeterministicInternal(label::AbstractString, data::TimeSeriesData)
-    return DeterministicInternal(
+function DeterministicMetadata(
+    label::AbstractString,
+    data::TimeArrayWrapper,
+    scaling_factor_multiplier = nothing,
+)
+    return DeterministicMetadata(
         label,
         get_resolution(data),
         get_initial_time(data),
         get_uuid(data),
         get_horizon(data),
+        scaling_factor_multiplier,
     )
 end
 
@@ -70,16 +82,16 @@ function Probabilistic(
         ones(time_steps, length(percentiles)),
     )
 
-    return Probabilistic(label, percentiles, data)
+    return Probabilistic(; label = label, percentiles = percentiles, data = data)
 end
 
 """
-Constructs Probabilistic Forecast after constructing a TimeArray from initial_time and time_steps.
+Constructs Probabilistic TimeSeriesData after constructing a TimeArray from initial_time and time_steps.
 """
 # TODO: do we need this check still?
 #function Probabilistic(
 #                       label::String,
-#                       percentiles::Vector{Float64},  # percentiles for the probabilistic forecast
+#                       percentiles::Vector{Float64},  # percentiles for the probabilistic time_series
 #                       data::TimeSeries.TimeArray,
 #                      )
 #    if !(length(TimeSeries.colnames(data)) == length(percentiles))
@@ -96,39 +108,52 @@ function Probabilistic(
     label::String,
     resolution::Dates.Period,
     initial_time::Dates.DateTime,
-    percentiles::Vector{Float64},  # percentiles for the probabilistic forecast
+    percentiles::Vector{Float64},  # percentiles for the probabilistic time_series
     data::TimeSeries.TimeArray,
 )
-    return Probabilistic(label, percentiles, data)
+    return Probabilistic(label = label, percentiles = percentiles, data = data)
 end
 
-function make_public_forecast(forecast::ProbabilisticInternal, data::TimeSeries.TimeArray)
-    return Probabilistic(get_label(forecast), get_percentiles(forecast), data)
+function make_time_series_data(
+    ts_metadata::ProbabilisticMetadata,
+    data::TimeSeries.TimeArray,
+)
+    return Probabilistic(get_label(time_series), get_percentiles(time_series), data)
 end
 
-function make_internal_forecast(forecast::Probabilistic, ts_data::TimeSeriesData)
-    return ProbabilisticInternal(
-        get_label(forecast),
-        get_resolution(forecast),
-        get_initial_time(forecast),
-        get_percentiles(forecast),
-        get_uuid(ts_data),
-        get_horizon(forecast),
+function make_time_series_metadata(time_series::Probabilistic, ta::TimeArrayWrapper)
+    return ProbabilisticMetadata(
+        get_label(time_series),
+        get_resolution(time_series),
+        get_initial_time(time_series),
+        get_percentiles(time_series),
+        get_uuid(ta),
+        get_horizon(time_series),
+        get_scaling_factor_multiplier(time_series),
     )
 end
 
-function ScenarioBased(label::String, data::TimeSeries.TimeArray)
+function Scenarios(
+    label::String,
+    data::TimeSeries.TimeArray,
+    scaling_factor_multiplier = nothing,
+)
     initial_time = TimeSeries.timestamp(data)[1]
     resolution = get_resolution(data)
     scenario_count = length(TimeSeries.colnames(data))
-    return ScenarioBased(label, scenario_count, data)
+    return Scenarios(
+        label = label,
+        scenario_count = scenario_count,
+        data = data,
+        scaling_factor_multiplier = scaling_factor_multiplier,
+    )
 end
 
 """
-Constructs ScenarioBased Forecast after constructing a TimeArray from initial_time and
+Constructs Scenarios TimeSeriesData after constructing a TimeArray from initial_time and
 time_steps.
 """
-function ScenarioBased(
+function Scenarios(
     label::String,
     resolution::Dates.Period,
     initial_time::Dates.DateTime,
@@ -140,131 +165,64 @@ function ScenarioBased(
         ones(time_steps, scenario_count),
     )
 
-    return ScenarioBased(label, data)
+    return Scenarios(label, data)
 end
 
-function ScenarioBased(forecasts::Vector{ScenarioBased})
-    @assert !isempty(forecasts)
-    scenario_count = get_scenario_count(forecasts[1])
-    colnames = TimeSeries.colnames(get_data(forecasts[1]))
+function Scenarios(time_series::Vector{Scenarios})
+    @assert !isempty(time_series)
+    scenario_count = get_scenario_count(time_series[1])
+    colnames = TimeSeries.colnames(get_data(time_series[1]))
     timestamps =
-        collect(Iterators.flatten((TimeSeries.timestamp(get_data(x)) for x in forecasts)))
-    data = vcat((TimeSeries.values(get_data(x)) for x in forecasts)...)
+        collect(Iterators.flatten((TimeSeries.timestamp(get_data(x)) for x in time_series)))
+    data = vcat((TimeSeries.values(get_data(x)) for x in time_series)...)
     ta = TimeSeries.TimeArray(timestamps, data, colnames)
 
-    forecast = ScenarioBased(get_label(forecasts[1]), ta)
-    @debug "concatenated forecasts" forecast
-    return forecast
+    time_series =
+        Scenarios(get_label(time_series[1]), ta, time_series[1].scaling_factor_multiplier)
+    @debug "concatenated time_series" time_series
+    return time_series
 end
 
-function make_public_forecast(forecast::ScenarioBasedInternal, data::TimeSeries.TimeArray)
-    return ScenarioBased(get_label(forecast), data)
+function make_time_series_data(ts_metadata::ScenariosMetadata, data::TimeSeries.TimeArray)
+    return Scenarios(get_label(ts_metadata), data)
 end
 
-function make_internal_forecast(forecast::ScenarioBased, ts_data::TimeSeriesData)
-    return ScenarioBasedInternal(
-        get_label(forecast),
-        get_resolution(forecast),
-        get_initial_time(forecast),
-        get_scenario_count(forecast),
-        get_uuid(ts_data),
-        get_horizon(forecast),
+function make_time_series_metadata(time_series::Scenarios, ta::TimeArrayWrapper)
+    return ScenariosMetadata(
+        get_label(time_series),
+        get_resolution(time_series),
+        get_initial_time(time_series),
+        get_scenario_count(time_series),
+        get_uuid(ta),
+        get_horizon(time_series),
+        get_scaling_factor_multiplier(time_series),
     )
 end
 
-function PiecewiseFunction(label::String, data::TimeSeries.TimeArray)
-    initial_time = TimeSeries.timestamp(data)[1]
-    resolution = get_resolution(data)
-    breakpoints = length(TimeSeries.colnames(data)) / 2
-    return PiecewiseFunction(label, breakpoints, data)
-end
-
-"""
-Constructs PiecewiseFunction Forecast after constructing a TimeArray from initial_time and
-time_steps.
-"""
-function PiecewiseFunction(
-    label::String,
-    resolution::Dates.Period,
-    initial_time::Dates.DateTime,
-    break_points::Int,
-    time_steps::Int,
-)
-    name = collect(Iterators.flatten([
-        (Symbol("cost_bp$(ix)"), Symbol("load_bp$ix")) for ix in 1:break_points
-    ]))
-    data = TimeSeries.TimeArray(
-        initial_time:resolution:(initial_time + resolution * (time_steps - 1)),
-        ones(time_steps, break_points),
-        name,
-    )
-
-    return PiecewiseFunction(label, break_points, data)
-end
-
-function PiecewiseFunction(forecasts::Vector{PiecewiseFunction})
-    @assert !isempty(forecasts)
-    break_points = get_break_points(forecasts[1])
-    colnames = TimeSeries.colnames(get_data(forecasts[1]))
-    timestamps =
-        collect(Iterators.flatten((TimeSeries.timestamp(get_data(x)) for x in forecasts)))
-    data = vcat((TimeSeries.values(get_data(x)) for x in forecasts)...)
-    ta = TimeSeries.TimeArray(timestamps, data, colnames)
-
-    forecast = PiecewiseFunction(get_label(forecasts[1]), break_points, ta)
-    @debug "concatenated forecasts" forecast
-    return forecast
-end
-
-get_columns(::Type{PiecewiseFunctionInternal}, ta::TimeSeries.TimeArray) =
-    TimeSeries.colnames(ta)
-
-function make_public_forecast(
-    forecast::PiecewiseFunctionInternal,
-    data::TimeSeries.TimeArray,
-)
-    return PiecewiseFunction(get_label(forecast), get_break_points(forecast), data)
-end
-
-function make_internal_forecast(forecast::PiecewiseFunction, ts_data::TimeSeriesData)
-    return PiecewiseFunctionInternal(
-        get_label(forecast),
-        get_resolution(forecast),
-        get_initial_time(forecast),
-        get_break_points(forecast),
-        get_uuid(ts_data),
-        get_horizon(forecast),
-    )
-end
-
-function forecast_external_to_internal(::Type{T}) where {T <: Forecast}
+function time_series_data_to_metadata(::Type{T}) where {T <: TimeSeriesData}
     if T <: Deterministic
-        forecast_type = DeterministicInternal
+        time_series_type = DeterministicMetadata
     elseif T <: Probabilistic
-        forecast_type = ProbabilisticInternal
-    elseif T <: ScenarioBased
-        forecast_type = ScenarioBasedInternal
-    elseif T <: PiecewiseFunction
-        forecast_type = PiecewiseFunctionInternal
+        time_series_type = ProbabilisticMetadata
+    elseif T <: Scenarios
+        time_series_type = ScenariosMetadata
     else
         @assert false
     end
 
-    return forecast_type
+    return time_series_type
 end
 
-function forecast_internal_to_external(::Type{T}) where {T <: ForecastInternal}
-    if T <: DeterministicInternal
-        forecast_type = Deterministic
-    elseif T <: ProbabilisticInternal
-        forecast_type = Probabilistic
-    elseif T <: ScenarioBasedInternal
-        forecast_type = ScenarioBased
-    elseif T <: PiecewiseFunctionInternal
-        forecast_type = PiecewiseFunction
+function time_series_metadata_to_data(::Type{T}) where {T <: TimeSeriesMetadata}
+    if T <: DeterministicMetadata
+        time_series_type = Deterministic
+    elseif T <: ProbabilisticMetadata
+        time_series_type = Probabilistic
+    elseif T <: ScenariosMetadata
+        time_series_type = Scenarios
     else
         @assert false
     end
 
-    return forecast_type
+    return time_series_type
 end

@@ -153,7 +153,7 @@ function generate_structs(directory, data::Vector; print_results = true)
                     ),
                 )
             end
-            if accessor_name != "internal" && accessor_module == ""
+            if field["name"] != "internal" && accessor_module == ""
                 push!(unique_accessor_functions, accessor_name)
                 push!(unique_setter_functions, setter_name)
             end
