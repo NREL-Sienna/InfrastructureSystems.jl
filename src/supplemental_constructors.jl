@@ -205,82 +205,6 @@ function make_time_series_metadata(time_series::Scenarios, ta::TimeArrayWrapper)
     )
 end
 
-function PiecewiseFunction(label::String, data::TimeSeries.TimeArray)
-    initial_time = TimeSeries.timestamp(data)[1]
-    resolution = get_resolution(data)
-    breakpoints = length(TimeSeries.colnames(data)) / 2
-    return PiecewiseFunction(label = label, break_points = breakpoints, data = data)
-end
-
-"""
-Constructs PiecewiseFunction TimeSeriesData after constructing a TimeArray from initial_time and
-time_steps.
-"""
-function PiecewiseFunction(
-    label::String,
-    resolution::Dates.Period,
-    initial_time::Dates.DateTime,
-    break_points::Int,
-    time_steps::Int,
-)
-    name = collect(Iterators.flatten([
-        (Symbol("cost_bp$(ix)"), Symbol("load_bp$ix")) for ix in 1:break_points
-    ]))
-    data = TimeSeries.TimeArray(
-        initial_time:resolution:(initial_time + resolution * (time_steps - 1)),
-        ones(time_steps, break_points),
-        name,
-    )
-
-    return PiecewiseFunction(; label = label, break_points = break_points, data = data)
-end
-
-function PiecewiseFunction(time_series::Vector{PiecewiseFunction})
-    @assert !isempty(time_series)
-    break_points = get_break_points(time_series[1])
-    colnames = TimeSeries.colnames(get_data(time_series[1]))
-    timestamps =
-        collect(Iterators.flatten((TimeSeries.timestamp(get_data(x)) for x in time_series)))
-    data = vcat((TimeSeries.values(get_data(x)) for x in time_series)...)
-    ta = TimeSeries.TimeArray(timestamps, data, colnames)
-
-    time_series = PiecewiseFunction(;
-        label = get_label(time_series[1]),
-        break_points = break_points,
-        data = ta,
-        scaling_factor_multiplier = get_scaling_factor_multiplier(time_series[1]),
-    )
-    @debug "concatenated time_series" time_series
-    return time_series
-end
-
-get_columns(::Type{PiecewiseFunctionMetadata}, ta::TimeSeries.TimeArray) =
-    TimeSeries.colnames(ta)
-
-function make_time_series_data(
-    ts_metadata::PiecewiseFunctionMetadata,
-    data::TimeSeries.TimeArray,
-)
-    return PiecewiseFunction(
-        label = get_label(ts_metadata),
-        break_points = get_break_points(ts_metadata),
-        data = data,
-        scaling_factor_multiplier = get_scaling_factor_multiplier(ts_metadata),
-    )
-end
-
-function make_time_series_metadata(time_series::PiecewiseFunction, ta::TimeArrayWrapper)
-    return PiecewiseFunctionMetadata(
-        get_label(time_series),
-        get_resolution(time_series),
-        get_initial_time(time_series),
-        get_break_points(time_series),
-        get_uuid(ta),
-        get_horizon(time_series),
-        get_scaling_factor_multiplier(time_series),
-    )
-end
-
 function time_series_data_to_metadata(::Type{T}) where {T <: TimeSeriesData}
     if T <: Deterministic
         time_series_type = DeterministicMetadata
@@ -288,8 +212,6 @@ function time_series_data_to_metadata(::Type{T}) where {T <: TimeSeriesData}
         time_series_type = ProbabilisticMetadata
     elseif T <: Scenarios
         time_series_type = ScenariosMetadata
-    elseif T <: PiecewiseFunction
-        time_series_type = PiecewiseFunctionMetadata
     else
         @assert false
     end
@@ -304,8 +226,6 @@ function time_series_metadata_to_data(::Type{T}) where {T <: TimeSeriesMetadata}
         time_series_type = Probabilistic
     elseif T <: ScenariosMetadata
         time_series_type = Scenarios
-    elseif T <: PiecewiseFunctionMetadata
-        time_series_type = PiecewiseFunction
     else
         @assert false
     end

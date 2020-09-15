@@ -917,45 +917,6 @@ end
     @test TimeSeries.values(ta)[1:no_time_series, :] == TimeSeries.values(fdata3)
 end
 
-@testset "Test PiecewiseFunction time_series" begin
-    sys = IS.SystemData()
-    name = "Component1"
-    label = "val"
-    component = IS.TestComponent(name, 5)
-    IS.add_component!(sys, component)
-
-    dates = collect(
-        Dates.DateTime("2020-01-01T00:00:00"):Dates.Hour(1):Dates.DateTime("2020-01-01T23:00:00"),
-    )
-    data = ones(24, 4)
-    name = collect(Iterators.flatten([
-        (Symbol("cost_bp$(ix)"), Symbol("load_bp$ix")) for ix in 1:2
-    ]))
-    ta = TimeSeries.TimeArray(dates, data, name)
-    time_series = IS.PiecewiseFunction(label, ta)
-    fdata = IS.get_data(time_series)
-    @test length(TimeSeries.colnames(fdata)) == 4
-    @test TimeSeries.timestamp(ta) == TimeSeries.timestamp(fdata)
-    @test TimeSeries.values(ta) == TimeSeries.values(fdata)
-
-    IS.add_time_series!(sys, component, time_series)
-    time_series2 = IS.get_time_series(IS.PiecewiseFunction, component, dates[1], label)
-    @test time_series2 isa IS.PiecewiseFunction
-    fdata2 = IS.get_data(time_series2)
-    @test length(TimeSeries.colnames(fdata2)) == 4
-    @test TimeSeries.timestamp(ta) == TimeSeries.timestamp(fdata2)
-    @test TimeSeries.values(ta) == TimeSeries.values(fdata2)
-
-    no_time_series = 4
-    time_series3 =
-        IS.get_time_series(IS.PiecewiseFunction, component, dates[1], label, no_time_series)
-    @test time_series3 isa IS.PiecewiseFunction
-    fdata3 = IS.get_data(time_series3)
-    @test length(TimeSeries.colnames(fdata3)) == 4
-    @test TimeSeries.timestamp(ta)[1:no_time_series] == TimeSeries.timestamp(fdata3)
-    @test TimeSeries.values(ta)[1:no_time_series, :] == TimeSeries.values(fdata3)
-end
-
 @testset "Add time_series to unsupported struct" begin
     struct TestComponentNoTimeSeries <: IS.InfrastructureSystemsComponent
         name::AbstractString

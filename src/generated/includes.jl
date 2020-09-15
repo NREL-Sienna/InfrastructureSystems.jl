@@ -4,10 +4,7 @@ include("ProbabilisticMetadata.jl")
 include("Probabilistic.jl")
 include("ScenariosMetadata.jl")
 include("Scenarios.jl")
-include("PiecewiseFunction.jl")
-include("PiecewiseFunctionMetadata.jl")
 
-export get_break_points
 export get_data
 export get_horizon
 export get_initial_time
@@ -18,7 +15,6 @@ export get_resolution
 export get_scaling_factor_multiplier
 export get_scenario_count
 export get_time_series_uuid
-export set_break_points!
 export set_data!
 export set_horizon!
 export set_initial_time!
