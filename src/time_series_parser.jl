@@ -2,7 +2,7 @@
 mutable struct TimeSeriesFileMetadata
     "User description of simulation"
     simulation::String
-    "String version of abstract type for the time_seriesed component."
+    "String version of abstract type for the component associated with the time series."
     category::String
     "Calling module should determine the actual type."
     "Name of time_series component"
