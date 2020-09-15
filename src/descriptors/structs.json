@@ -63,6 +63,7 @@
           "comment": "Applicable when the time series data are scaling factors. Called on the associated component to convert the values."
         }
       ],
+      "custom_code": "Deterministic(label, data) = Determinstic(label = label, data = data)",
       "supertype": "TimeSeriesData"
     },
     {
@@ -138,6 +139,7 @@
           "comment": "Applicable when the time series data are scaling factors. Called on the associated component to convert the values."
         }
       ],
+      "custom_code": "Probabilistic(label, percentiles, data) = Probabilistic(label = label, data = data, percentiles = percentiles)",
       "supertype": "TimeSeriesData"
     },
     {

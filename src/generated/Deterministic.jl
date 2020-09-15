@@ -43,3 +43,4 @@ set_data!(value::Deterministic, val) = value.data = val
 """Set [`Deterministic`](@ref) `scaling_factor_multiplier`."""
 set_scaling_factor_multiplier!(value::Deterministic, val) = value.scaling_factor_multiplier = val
 
+Deterministic(label, data) = Determinstic(label = label, data = data)

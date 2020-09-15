@@ -51,3 +51,4 @@ set_data!(value::Probabilistic, val) = value.data = val
 """Set [`Probabilistic`](@ref) `scaling_factor_multiplier`."""
 set_scaling_factor_multiplier!(value::Probabilistic, val) = value.scaling_factor_multiplier = val
 
+Probabilistic(label, percentiles, data) = Probabilistic(label = label, data = data, percentiles = percentiles)
