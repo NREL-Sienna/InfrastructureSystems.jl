@@ -78,7 +78,7 @@ end
 Adds time_series from a metadata file or metadata descriptors.
 
 # Arguments
-- `::Type{T}`: time_seriesed component type; may be abstract
+- `::Type{T}`: type of the component associated with time series data; may be abstract
 - `data::SystemData`: system
 - `metadata_file::AbstractString`: metadata file for time series
   that includes an array of TimeSeriesFileMetadata instances or a vector.

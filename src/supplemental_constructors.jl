@@ -133,7 +133,7 @@ function make_time_series_metadata(time_series::Probabilistic, ta::TimeArrayWrap
     )
 end
 
-function ScenarioBased(
+function Scenarios(
     label::String,
     data::TimeSeries.TimeArray,
     scaling_factor_multiplier = nothing,
@@ -141,7 +141,7 @@ function ScenarioBased(
     initial_time = TimeSeries.timestamp(data)[1]
     resolution = get_resolution(data)
     scenario_count = length(TimeSeries.colnames(data))
-    return ScenarioBased(
+    return Scenarios(
         label = label,
         scenario_count = scenario_count,
         data = data,
@@ -150,10 +150,10 @@ function ScenarioBased(
 end
 
 """
-Constructs ScenarioBased TimeSeriesData after constructing a TimeArray from initial_time and
+Constructs Scenarios TimeSeriesData after constructing a TimeArray from initial_time and
 time_steps.
 """
-function ScenarioBased(
+function Scenarios(
     label::String,
     resolution::Dates.Period,
     initial_time::Dates.DateTime,
@@ -165,10 +165,10 @@ function ScenarioBased(
         ones(time_steps, scenario_count),
     )
 
-    return ScenarioBased(label, data)
+    return Scenarios(label, data)
 end
 
-function ScenarioBased(time_series::Vector{ScenarioBased})
+function Scenarios(time_series::Vector{Scenarios})
     @assert !isempty(time_series)
     scenario_count = get_scenario_count(time_series[1])
     colnames = TimeSeries.colnames(get_data(time_series[1]))
@@ -177,7 +177,7 @@ function ScenarioBased(time_series::Vector{ScenarioBased})
     data = vcat((TimeSeries.values(get_data(x)) for x in time_series)...)
     ta = TimeSeries.TimeArray(timestamps, data, colnames)
 
-    time_series = ScenarioBased(
+    time_series = Scenarios(
         get_label(time_series[1]),
         ta,
         time_series[1].scaling_factor_multiplier,
@@ -187,14 +187,14 @@ function ScenarioBased(time_series::Vector{ScenarioBased})
 end
 
 function make_time_series_data(
-    ts_metadata::ScenarioBasedMetadata,
+    ts_metadata::ScenariosMetadata,
     data::TimeSeries.TimeArray,
 )
-    return ScenarioBased(get_label(ts_metadata), data)
+    return Scenarios(get_label(ts_metadata), data)
 end
 
-function make_time_series_metadata(time_series::ScenarioBased, ta::TimeArrayWrapper)
-    return ScenarioBasedMetadata(
+function make_time_series_metadata(time_series::Scenarios, ta::TimeArrayWrapper)
+    return ScenariosMetadata(
         get_label(time_series),
         get_resolution(time_series),
         get_initial_time(time_series),
@@ -286,8 +286,8 @@ function time_series_data_to_metadata(::Type{T}) where {T <: TimeSeriesData}
         time_series_type = DeterministicMetadata
     elseif T <: Probabilistic
         time_series_type = ProbabilisticMetadata
-    elseif T <: ScenarioBased
-        time_series_type = ScenarioBasedMetadata
+    elseif T <: Scenarios
+        time_series_type = ScenariosMetadata
     elseif T <: PiecewiseFunction
         time_series_type = PiecewiseFunctionMetadata
     else
@@ -302,8 +302,8 @@ function time_series_metadata_to_data(::Type{T}) where {T <: TimeSeriesMetadata}
         time_series_type = Deterministic
     elseif T <: ProbabilisticMetadata
         time_series_type = Probabilistic
-    elseif T <: ScenarioBasedMetadata
-        time_series_type = ScenarioBased
+    elseif T <: ScenariosMetadata
+        time_series_type = Scenarios
     elseif T <: PiecewiseFunctionMetadata
         time_series_type = PiecewiseFunction
     else

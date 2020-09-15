@@ -881,7 +881,7 @@ end
     end
 end
 
-@testset "Test ScenarioBased time_series" begin
+@testset "Test Scenarios time_series" begin
     sys = IS.SystemData()
     name = "Component1"
     label = "val"
@@ -893,15 +893,15 @@ end
     )
     data = ones(24, 2)
     ta = TimeSeries.TimeArray(dates, data)
-    time_series = IS.ScenarioBased(label, ta)
+    time_series = IS.Scenarios(label, ta)
     fdata = IS.get_data(time_series)
     @test length(TimeSeries.colnames(fdata)) == 2
     @test TimeSeries.timestamp(ta) == TimeSeries.timestamp(fdata)
     @test TimeSeries.values(ta) == TimeSeries.values(fdata)
 
     IS.add_time_series!(sys, component, time_series)
-    time_series2 = IS.get_time_series(IS.ScenarioBased, component, dates[1], label)
-    @test time_series2 isa IS.ScenarioBased
+    time_series2 = IS.get_time_series(IS.Scenarios, component, dates[1], label)
+    @test time_series2 isa IS.Scenarios
     fdata2 = IS.get_data(time_series2)
     @test length(TimeSeries.colnames(fdata2)) == 2
     @test TimeSeries.timestamp(ta) == TimeSeries.timestamp(fdata2)
@@ -909,8 +909,8 @@ end
 
     no_time_series = 3
     time_series3 =
-        IS.get_time_series(IS.ScenarioBased, component, dates[1], label, no_time_series)
-    @test time_series3 isa IS.ScenarioBased
+        IS.get_time_series(IS.Scenarios, component, dates[1], label, no_time_series)
+    @test time_series3 isa IS.Scenarios
     fdata3 = IS.get_data(time_series3)
     @test length(TimeSeries.colnames(fdata3)) == 2
     @test TimeSeries.timestamp(ta)[1:no_time_series] == TimeSeries.timestamp(fdata3)

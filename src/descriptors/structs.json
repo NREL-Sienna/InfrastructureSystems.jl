@@ -141,7 +141,7 @@
       "supertype": "TimeSeriesData"
     },
     {
-      "struct_name": "ScenarioBasedMetadata",
+      "struct_name": "ScenariosMetadata",
       "docstring": "A Discrete Scenario Based time series for a particular data field in a Component.",
       "fields": [
         {
@@ -188,7 +188,7 @@
       "supertype": "TimeSeriesMetadata"
     },
     {
-      "struct_name": "ScenarioBased",
+      "struct_name": "Scenarios",
       "docstring": "A Discrete Scenario Based time series for a particular data field in a Component.",
       "fields": [
         {
