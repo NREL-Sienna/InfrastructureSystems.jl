@@ -177,19 +177,13 @@ function Scenarios(time_series::Vector{Scenarios})
     data = vcat((TimeSeries.values(get_data(x)) for x in time_series)...)
     ta = TimeSeries.TimeArray(timestamps, data, colnames)
 
-    time_series = Scenarios(
-        get_label(time_series[1]),
-        ta,
-        time_series[1].scaling_factor_multiplier,
-    )
+    time_series =
+        Scenarios(get_label(time_series[1]), ta, time_series[1].scaling_factor_multiplier)
     @debug "concatenated time_series" time_series
     return time_series
 end
 
-function make_time_series_data(
-    ts_metadata::ScenariosMetadata,
-    data::TimeSeries.TimeArray,
-)
+function make_time_series_data(ts_metadata::ScenariosMetadata, data::TimeSeries.TimeArray)
     return Scenarios(get_label(ts_metadata), data)
 end
 
