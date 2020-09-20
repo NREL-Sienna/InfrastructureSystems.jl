@@ -381,6 +381,6 @@ function copy_file(src::AbstractString, dst::AbstractString)
     if Sys.iswindows()
         return run(`copy /Y $(src) $(dst)`)
     else
-        return run(`cp -f $(stc) $(dst)`)
+        return run(`cp -f $(src) $(dst)`)
     end
 end
