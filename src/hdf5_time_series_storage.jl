@@ -76,9 +76,7 @@ function from_file(
     else
         file_path, io = mktemp()
         close(io)
-        run(
-            `cp -f $(filename) $(file_path)`
-            )
+        run(`cp -f $(filename) $(file_path)`)
     end
     storage = Hdf5TimeSeriesStorage(false; filename = file_path, read_only = read_only)
     @info "Loaded time series from storage file existing=$filename new=$(storage.file_path)"
