@@ -45,7 +45,9 @@ end
 function serialize(storage::TimeSeriesStorage, file_path::AbstractString)
     if storage isa Hdf5TimeSeriesStorage
         # The data is currently in a temp file, so we can just make a copy.
-        cp(get_file_path(storage), file_path; force = true)
+        run(
+        `cp -f $(get_file_path(storage)) $(file_path)`
+        )
     elseif storage isa InMemoryTimeSeriesStorage
         convert_to_hdf5(storage, file_path)
     else
