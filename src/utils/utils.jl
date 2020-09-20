@@ -374,3 +374,13 @@ macro forward(sender, receiver, exclusions = Symbol[])
     end
     return esc(out)
 end
+
+# This function is used instead of cp given
+# https://github.com/JuliaLang/julia/issues/30723
+function copy_file(src::AbstractString, dst::AbstractString)
+    if Sys.iswindows()
+        return run(`copy /Y $(src) $(dst)`)
+    else
+        return run(`cp -f $(stc) $(dst)`)
+    end
+end
