@@ -384,7 +384,7 @@ function copy_file(src::AbstractString, dst::AbstractString)
         if Sys.iswindows()
             run(`cmd /c copy /Y $(src) $(dst)`)
         else
-            rethrow(e)
+            rethrow()
         end
     end
     return
