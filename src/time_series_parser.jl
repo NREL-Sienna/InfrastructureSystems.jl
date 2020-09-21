@@ -224,7 +224,8 @@ function TimeSeriesParsedInfo(metadata::TimeSeriesFileMetadata, ta::TimeSeries.T
             Base.__toplevel__,
             Symbol(metadata.scaling_factor_multiplier_module),
         )
-        multiplier_func = metadata.scaling_factor_multiplier === nothing ? nothing :
+        multiplier_func =
+            metadata.scaling_factor_multiplier === nothing ? nothing :
             getfield(multiplier_mod, Symbol(metadata.scaling_factor_multiplier))
     else
         multiplier_func = nothing
