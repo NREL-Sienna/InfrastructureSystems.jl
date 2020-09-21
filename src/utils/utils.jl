@@ -378,9 +378,14 @@ end
 # This function is used instead of cp given
 # https://github.com/JuliaLang/julia/issues/30723
 function copy_file(src::AbstractString, dst::AbstractString)
-    if Sys.iswindows()
-        return run(`cmd /c copy /Y $(src) $(dst)`)
-    else
-        return run(`cp -f $(src) $(dst)`)
+    try
+        run(`cp -f $(src) $(dst)`)
+    catch e
+        if Sys.iswindows()
+            run(`cmd /c copy /Y $(src) $(dst)`)
+        else
+            return e
+        end
     end
+    return
 end
