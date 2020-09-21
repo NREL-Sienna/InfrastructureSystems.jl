@@ -1,5 +1,14 @@
 # InfrastructureSystems
 
+## 0.15.5
+
+- Change implementation of file copy
+
+## 0.15.4 
+
+- Bump TimeSeries
+- Add basic documentation
+
 ## 0.15.3
 
 - Fix priting of components
