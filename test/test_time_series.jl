@@ -61,19 +61,55 @@ end
     )
     data = collect(1:24)
     ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
-    time_series =
-        IS.Deterministic(label = "val", data = ta, scaling_factor_multiplier = IS.get_val)
-    IS.add_time_series!(sys, component, time_series)
-    time_series = IS.get_time_series(IS.Deterministic, component, dates[1], "val")
-    @test time_series isa IS.Deterministic
+    label = "val"
+    ts = IS.Deterministic(label = label, data = ta, scaling_factor_multiplier = IS.get_val)
+    IS.add_time_series!(sys, component, ts)
+    ts = IS.get_time_series(IS.Deterministic, component, dates[1], label)
+    @test ts isa IS.Deterministic
 
     name = "Component2"
     component2 = IS.TestComponent(name, component_val)
-    @test_throws ArgumentError IS.add_time_series!(sys, component2, time_series)
+    @test_throws ArgumentError IS.add_time_series!(sys, component2, ts)
 
     # The component name will exist but not the component.
     component3 = IS.TestComponent(name, component_val)
-    @test_throws ArgumentError IS.add_time_series!(sys, component3, time_series)
+    @test_throws ArgumentError IS.add_time_series!(sys, component3, ts)
+end
+
+@testset "Test add_time_series multiple components" begin
+    sys = IS.SystemData()
+    components = []
+    len = 3
+    for i in 1:len
+        component = IS.TestComponent(string(i), i)
+        IS.add_component!(sys, component)
+        push!(components, component)
+    end
+
+    initial_time = Dates.DateTime("2020-01-01T00:00:00")
+    end_time = Dates.DateTime("2020-01-01T23:00:00")
+    dates = collect(initial_time:Dates.Hour(1):end_time)
+    data = collect(1:24)
+    ta = TimeSeries.TimeArray(dates, data, ["1"])
+    label = "val"
+    ts = IS.Deterministic(label = label, data = ta, scaling_factor_multiplier = IS.get_val)
+    IS.add_time_series!(sys, components, ts)
+
+    hash_ta_main = nothing
+    for i in 1:len
+        component = IS.get_component(IS.TestComponent, sys, string(i))
+        ts = IS.get_time_series(IS.Deterministic, component, initial_time, label)
+        hash_ta = hash(get_data(ts))
+        if i == 1
+            hash_ta_main = hash_ta
+        else
+            @test hash_ta == hash_ta_main
+        end
+    end
+
+    ts_storage = sys.time_series_storage
+    @test ts_storage isa IS.Hdf5TimeSeriesStorage
+    @test IS.get_num_time_series(ts_storage) == 1
 end
 
 @testset "Test get_time_series_multiple" begin
@@ -149,8 +185,10 @@ end
     )
     data = collect(1:24)
     ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
-    IS.add_time_series!(sys, ta, component, "val"; scaling_factor_multiplier = IS.get_val)
-    time_series = IS.get_time_series(IS.Deterministic, component, dates[1], "val")
+    label = "val"
+    ts = IS.Deterministic(label, ta; scaling_factor_multiplier = IS.get_val)
+    IS.add_time_series!(sys, component, ts)
+    time_series = IS.get_time_series(IS.Deterministic, component, dates[1], label)
     @test time_series isa IS.Deterministic
 end
 
@@ -169,6 +207,7 @@ end
     data = collect(1:24)
     components = []
 
+    label = "val"
     for i in 1:2
         name = "Component" * string(i)
         component = IS.TestComponent(name, i)
@@ -183,8 +222,10 @@ end
         end
         ta1 = TimeSeries.TimeArray(dates1_, data, [IS.get_name(component)])
         ta2 = TimeSeries.TimeArray(dates2_, data, [IS.get_name(component)])
-        IS.add_time_series!(sys, ta1, component, "val")
-        IS.add_time_series!(sys, ta2, component, "val")
+        ts1 = IS.Deterministic(label, ta1)
+        ts2 = IS.Deterministic(label, ta2)
+        IS.add_time_series!(sys, component, ts1)
+        IS.add_time_series!(sys, component, ts2)
     end
 
     initial_times = IS.get_time_series_initial_times(sys)
@@ -210,8 +251,10 @@ end
     for component in components
         ta1 = TimeSeries.TimeArray(dates1, data, [IS.get_name(component)])
         ta2 = TimeSeries.TimeArray(dates2, data, [IS.get_name(component)])
-        IS.add_time_series!(sys, ta1, component, "val")
-        IS.add_time_series!(sys, ta2, component, "val")
+        ts1 = IS.Deterministic(label, ta1)
+        ts2 = IS.Deterministic(label, ta2)
+        IS.add_time_series!(sys, component, ts1)
+        IS.add_time_series!(sys, component, ts2)
     end
 
     expected = [dates1[1], dates2[1]]
@@ -281,22 +324,22 @@ end
     )
     data = collect(1:24)
     ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
-    IS.add_time_series!(
-        sys,
-        ta,
-        component,
-        "val";
+    label = "val"
+    ts = IS.Deterministic(
+        label,
+        ta;
         normalization_factor = 1.0,
         scaling_factor_multiplier = IS.get_val,
     )
-    time_series = IS.get_time_series(IS.Deterministic, component, dates[1], "val")
+    IS.add_time_series!(sys, component, ts)
+    time_series = IS.get_time_series(IS.Deterministic, component, dates[1], label)
 
     # Test both versions of the function.
     vals = IS.get_time_series_array(component, time_series)
     @test TimeSeries.timestamp(vals) == dates
     @test TimeSeries.values(vals) == data .* component_val
 
-    vals2 = IS.get_time_series_array(IS.Deterministic, component, dates[1], "val")
+    vals2 = IS.get_time_series_array(IS.Deterministic, component, dates[1], label)
     @test TimeSeries.timestamp(vals2) == dates
     @test TimeSeries.values(vals2) == data .* component_val
 end
@@ -313,12 +356,14 @@ end
     data = collect(1:24)
 
     ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
-    IS.add_time_series!(sys, ta, component, "val")
+    label = "val"
+    ts = IS.Deterministic(label, ta)
+    IS.add_time_series!(sys, component, ts)
 
-    time_series = IS.get_time_series(IS.Deterministic, component, dates[1], "val")
+    time_series = IS.get_time_series(IS.Deterministic, component, dates[1], label)
     @test TimeSeries.timestamp(IS.get_data(time_series))[1] == dates[1]
 
-    time_series = IS.get_time_series(IS.Deterministic, component, dates[3], "val", 3)
+    time_series = IS.get_time_series(IS.Deterministic, component, dates[3], label, 3)
     @test TimeSeries.timestamp(IS.get_data(time_series))[1] == dates[3]
     @test length(time_series) == 3
 end
@@ -335,7 +380,8 @@ end
 
     ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
     label = "val"
-    IS.add_time_series!(sys, ta, component, label)
+    ts = IS.Deterministic(label, ta)
+    IS.add_time_series!(sys, component, ts)
 
     component2 = IS.TestComponent("component2", 6)
     IS.add_component!(sys, component2)
@@ -358,7 +404,8 @@ end
 
     ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
     label1 = "val1"
-    IS.add_time_series!(sys, ta, component, label1)
+    ts = IS.Deterministic(label1, ta)
+    IS.add_time_series!(sys, component, ts)
 
     component2 = IS.TestComponent("component2", 6)
     IS.add_component!(sys, component2)
@@ -389,8 +436,10 @@ end
     ta2 = TimeSeries.TimeArray(dates2, data, [IS.get_name(component)])
     label1 = "val1"
     label2a = "val2a"
-    IS.add_time_series!(sys, ta1, component, label1)
-    IS.add_time_series!(sys, ta2, component, label2a)
+    ts1 = IS.Deterministic(label1, ta1)
+    ts2 = IS.Deterministic(label2a, ta2)
+    IS.add_time_series!(sys, component, ts1)
+    IS.add_time_series!(sys, component, ts2)
 
     component2 = IS.TestComponent("component2", 6)
     IS.add_component!(sys, component2)
@@ -456,9 +505,12 @@ end
     ta1 = TimeSeries.TimeArray(dates1, data, [IS.get_name(component)])
     ta2 = TimeSeries.TimeArray(dates2, data, [IS.get_name(component)])
     ta3 = TimeSeries.TimeArray(dates3, data, [IS.get_name(component)])
-    IS.add_time_series!(sys, ta1, component, label)
-    IS.add_time_series!(sys, ta2, component, label)
-    IS.add_time_series!(sys, ta3, component, label)
+    ts1 = IS.Deterministic(label, ta1)
+    ts2 = IS.Deterministic(label, ta2)
+    ts3 = IS.Deterministic(label, ta3)
+    IS.add_time_series!(sys, component, ts1)
+    IS.add_time_series!(sys, component, ts2)
+    IS.add_time_series!(sys, component, ts3)
     initial_times = IS.get_time_series_initial_times(component)
     @test length(initial_times) == 3
     @test IS.are_time_series_contiguous(component)
@@ -501,7 +553,8 @@ end
 
     ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
     label = "val"
-    IS.add_time_series!(sys, ta, component, label)
+    ts = IS.Deterministic(label, ta)
+    IS.add_time_series!(sys, component, ts)
     initial_times = IS.get_time_series_initial_times(component)
     @test length(initial_times) == 1
 
@@ -599,8 +652,10 @@ end
     label = "val"
     ta1 = TimeSeries.TimeArray(dates1, data, [IS.get_name(component)])
     ta2 = TimeSeries.TimeArray(dates2, data, [IS.get_name(component)])
-    IS.add_time_series!(sys, ta1, component, label)
-    IS.add_time_series!(sys, ta2, component, label)
+    ts1 = IS.Deterministic(label, ta1)
+    ts2 = IS.Deterministic(label, ta2)
+    IS.add_time_series!(sys, component, ts1)
+    IS.add_time_series!(sys, component, ts2)
     initial_times = IS.get_time_series_initial_times(component)
     @test length(initial_times) == 2
     @test IS.are_time_series_contiguous(component)
@@ -710,14 +765,17 @@ end
 
     ta1 = TimeSeries.TimeArray(dates1, data, [IS.get_name(component)])
     ta2 = TimeSeries.TimeArray(dates2, data, [IS.get_name(component)])
-    IS.add_time_series!(sys, ta1, component, "val")
+    label = "val"
+    ts1 = IS.Deterministic(label, ta1)
+    ts2 = IS.Deterministic(label, ta2)
+    IS.add_time_series!(sys, component, ts1)
     @test_throws IS.ConflictingInputsError IS.generate_initial_times(
         sys,
         Dates.Minute(30),
         6,
     )
 
-    IS.add_time_series!(sys, ta2, component, "val")
+    IS.add_time_series!(sys, component, ts2)
     @test_throws ArgumentError IS.generate_initial_times(sys, Dates.Hour(3), 6)
 
     @test !IS.are_time_series_contiguous(component)
@@ -744,14 +802,17 @@ end
 
     ta1 = TimeSeries.TimeArray(dates1, data, [IS.get_name(component)])
     ta2 = TimeSeries.TimeArray(dates2, data, [IS.get_name(component)])
-    IS.add_time_series!(sys, ta1, component, "val")
+    label = "val"
+    ts1 = IS.Deterministic(label, ta1)
+    ts2 = IS.Deterministic(label, ta2)
+    IS.add_time_series!(sys, component, ts1)
     @test_throws IS.ConflictingInputsError IS.generate_initial_times(
         sys,
         Dates.Minute(30),
         6,
     )
 
-    IS.add_time_series!(sys, ta2, component, "val")
+    IS.add_time_series!(sys, component, ts2)
     @test_throws ArgumentError IS.generate_initial_times(sys, Dates.Hour(3), 6)
 
     @test !IS.are_time_series_contiguous(component)
@@ -771,7 +832,9 @@ end
     data = collect(1:24)
 
     ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
-    IS.add_time_series!(sys, ta, component, "val")
+    label = "val"
+    ts = IS.Deterministic(label, ta)
+    IS.add_time_series!(sys, component, ts)
     resolution = IS.get_time_series_resolution(sys)
     initial_times = IS.get_time_series_initial_times(component)
     @test length(initial_times) == 1
@@ -806,7 +869,9 @@ end
     )
     data = collect(1:24)
     ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
-    IS.add_time_series!(sys1, ta, component, "val")
+    label = "val"
+    ts = IS.Deterministic(label, ta)
+    IS.add_time_series!(sys1, component, ts)
 
     @test_throws ArgumentError IS.add_component!(sys1, component)
 end

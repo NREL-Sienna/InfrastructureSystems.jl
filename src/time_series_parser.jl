@@ -143,11 +143,37 @@ function _get_category(category::String)
     return lowercase(category)
 end
 
+@scoped_enum NormalizationType begin
+    MAX
+end
+
+const NormalizationFactor = Union{Float64, NormalizationTypes.NormalizationType}
+
+function handle_normalization_factor(
+    ta::TimeSeries.TimeArray,
+    normalization_factor::NormalizationFactor,
+)
+    if normalization_factor isa NormalizationTypes.NormalizationType
+        max_value = maximum(TimeSeries.values(ta))
+        ta = ta ./ max_value
+        @debug "Normalize by max value" max_value
+    else
+        if normalization_factor != 1.0
+            ta = ta ./ normalization_factor
+            @debug "Normalize by custom scaling factor" normalization_factor
+        else
+            @debug "time_series is already normalized"
+        end
+    end
+
+    return ta
+end
+
 struct TimeSeriesParsedInfo
     simulation::String
     component::InfrastructureSystemsComponent
     label::String  # Component field on which time series data is based.
-    normalization_factor::Union{String, Float64}
+    normalization_factor::NormalizationFactor
     data::TimeSeries.TimeArray
     percentiles::Vector{Float64}
     file_path::String
@@ -204,11 +230,22 @@ function TimeSeriesParsedInfo(metadata::TimeSeriesFileMetadata, ta::TimeSeries.T
         multiplier_func = nothing
     end
 
+    if metadata.normalization_factor isa String
+        if lowercase(metadata.normalization_factor) == "max"
+            normalization_factor = NormalizationTypes.MAX
+        else
+            factor = metadata.normalization_factor
+            throw(DataFormatError("unsupported normalization_factor {factor}"))
+        end
+    else
+        normalization_factor = metadata.normalization_factor
+    end
+
     return TimeSeriesParsedInfo(
         metadata.simulation,
         metadata.component,
         metadata.label,
-        metadata.normalization_factor,
+        normalization_factor,
         ta,
         metadata.percentiles,
         metadata.data_file,
@@ -227,28 +264,6 @@ function TimeSeriesCache()
         Vector{TimeSeriesParsedInfo}(),
         Dict{String, TimeSeries.TimeArray}(),
     )
-end
-
-function handle_scaling_factor(
-    ta::TimeSeries.TimeArray,
-    normalization_factor::Union{String, Float64},
-)
-    if normalization_factor isa String
-        if lowercase(normalization_factor) == "max"
-            max_value = maximum(TimeSeries.values(ta))
-            ta = ta ./ max_value
-            @debug "Normalize by max value" max_value
-        else
-            throw(DataFormatError("invalid normalization_factor=$normalization_factor"))
-        end
-    elseif normalization_factor != 1.0
-        ta = ta ./ normalization_factor
-        @debug "Normalize by custom scaling factor" normalization_factor
-    else
-        @debug "time_series is already normalized"
-    end
-
-    return ta
 end
 
 function _add_time_series_info!(
