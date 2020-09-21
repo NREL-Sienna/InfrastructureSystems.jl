@@ -379,7 +379,7 @@ end
 # https://github.com/JuliaLang/julia/issues/30723
 function copy_file(src::AbstractString, dst::AbstractString)
     if Sys.iswindows()
-        return run(`cmd copy /Y $(src) $(dst)`)
+        return run(`cmd /c copy /Y $(src) $(dst)`)
     else
         return run(`cp -f $(src) $(dst)`)
     end
