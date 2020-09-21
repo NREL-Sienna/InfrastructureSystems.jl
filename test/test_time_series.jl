@@ -99,7 +99,7 @@ end
     for i in 1:len
         component = IS.get_component(IS.TestComponent, sys, string(i))
         ts = IS.get_time_series(IS.Deterministic, component, initial_time, label)
-        hash_ta = hash(get_data(ts))
+        hash_ta = hash(IS.get_data(ts))
         if i == 1
             hash_ta_main = hash_ta
         else
