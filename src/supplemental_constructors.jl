@@ -1,5 +1,5 @@
 """
-Construct Deterministic from a TimeArray or DataFrame.
+Construct TimeSeriesData from a TimeArray or DataFrame.
 
 # Arguments
 - `label::AbstractString`: user-defined label
@@ -12,7 +12,7 @@ Construct Deterministic from a TimeArray or DataFrame.
 - `timestamp = :timestamp`: If a DataFrame is passed then this must be the column name that
   contains timestamps.
 """
-function Deterministic(
+function TimeSeriesData(
     label::AbstractString,
     data::Union{TimeSeries.TimeArray, DataFrames.DataFrame};
     normalization_factor::NormalizationFactor = 1.0,
@@ -28,11 +28,11 @@ function Deterministic(
     end
 
     ta = handle_normalization_factor(ta, normalization_factor)
-    return Deterministic(label, ta, scaling_factor_multiplier)
+    return TimeSeriesData(label, ta, scaling_factor_multiplier)
 end
 
 """
-Construct Deterministic from a CSV file. The file must have a column that is the name of the
+Construct TimeSeriesData from a CSV file. The file must have a column that is the name of the
 component.
 
 # Arguments
@@ -44,7 +44,7 @@ component.
   factors then this function will be called on the component and applied to the data when
   [`get_time_series_array`](@ref) is called.
 """
-function Deterministic(
+function TimeSeriesData(
     label::AbstractString,
     filename::AbstractString,
     component::InfrastructureSystemsComponent;
@@ -54,14 +54,14 @@ function Deterministic(
     component_name = get_name(component)
     ta = read_time_series(filename, component_name)
     ta = handle_normalization_factor(ta[Symbol(component_name)], normalization_factor)
-    return Deterministic(label, ta, scaling_factor_multiplier)
+    return TimeSeriesData(label, ta, scaling_factor_multiplier)
 end
 
 """
-Construct Deterministic after constructing a TimeArray from `initial_time` and
+Construct TimeSeriesData after constructing a TimeArray from `initial_time` and
 `time_steps`.
 """
-function Deterministic(
+function TimeSeriesData(
     label::String,
     resolution::Dates.Period,
     initial_time::Dates.DateTime,
@@ -71,10 +71,10 @@ function Deterministic(
         initial_time:resolution:(initial_time + resolution * (time_steps - 1)),
         ones(time_steps),
     )
-    return Deterministic(; label = label, data = data)
+    return TimeSeriesData(; label = label, data = data)
 end
 
-function Deterministic(time_series::Vector{Deterministic})
+function TimeSeriesData(time_series::Vector{TimeSeriesData})
     @assert !isempty(time_series)
     timestamps =
         collect(Iterators.flatten((TimeSeries.timestamp(get_data(x)) for x in time_series)))
@@ -88,6 +88,70 @@ function Deterministic(time_series::Vector{Deterministic})
     )
     @debug "concatenated time_series" time_series
     return time_series
+end
+
+function make_time_series_metadata(time_series::TimeSeriesData, ta::TimeArrayWrapper)
+    return TimeSeriesDataMetadata(
+        get_label(time_series),
+        ta,
+        get_scaling_factor_multiplier(time_series),
+    )
+end
+
+function TimeSeriesDataMetadata(
+    label::AbstractString,
+    data::TimeArrayWrapper,
+    scaling_factor_multiplier = nothing,
+)
+    return TimeSeriesDataMetadata(
+        label,
+        get_resolution(data),
+        get_initial_time(data),
+        get_uuid(data),
+        length(data),
+        scaling_factor_multiplier,
+    )
+end
+
+"""
+Construct Deterministic from a Dict of TimeArrays, DataFrames or Arrays.
+
+# Arguments
+- `label::AbstractString`: user-defined label
+- `data::Union{Dict{Dates.DateTime, Any}, DataStructures.SortedDict.Dict{Dates.DateTime, Any}}`: time series data. The values in the dictionary should be TimeSeries.TimeArray or be able to be converted
+- `normalization_factor::NormalizationFactor = 1.0`: optional normalization factor to apply
+  to each data entry
+- `scaling_factor_multiplier::Union{Nothing, Function} = nothing`: If the data are scaling
+  factors then this function will be called on the component and applied to the data when
+  [`get_time_series_array`](@ref) is called.
+- `timestamp = :timestamp`: If the values are DataFrames is passed then this must be the column name that
+  contains timestamps.
+- `resolution = nothing : If the values are a Matrix or a Vector, then this must be the resolution of the forecast in Dates.Period`
+"""
+function Deterministic(
+    label::AbstractString,
+    data::Union{Dict{Dates.DateTime, Any}, DataStructures.SortedDict.Dict{Dates.DateTime, Any}};
+    normalization_factor::NormalizationFactor = 1.0,
+    scaling_factor_multiplier::Union{Nothing, Function} = nothing,
+    timestamp = :timestamp,
+    resolution::Union{Dates.Period, nothing} = nothing
+)
+    for (k, v) in data
+        if v isa DataFrames.DataFrame
+            data[k] = TimeSeries.TimeArray(v; timestamp = timestamp)
+        elseif v isa TimeSeries.TimeArray
+            continue
+        else
+            try
+                data[k] = TimeSeries.TimeArray(range(k, length = length(v), step = resolution))
+            catch e
+                throw(ArgumentError("The values in the data dict can't be converted to TimeArrays. Resulting error: $e"))
+            end
+        end
+    end
+
+    ta = handle_normalization_factor(ta, normalization_factor)
+    return Deterministic(label, ta, scaling_factor_multiplier)
 end
 
 # TODO: need to make concatenation constructors for Probabilistic
@@ -122,29 +186,6 @@ function DeterministicMetadata(
         get_initial_time(data),
         get_uuid(data),
         get_horizon(data),
-        scaling_factor_multiplier,
-    )
-end
-
-function make_time_series_metadata(time_series::TimeSeriesData, ta::TimeArrayWrapper)
-    return TimeSeriesDataMetadata(
-        get_label(time_series),
-        ta,
-        get_scaling_factor_multiplier(time_series),
-    )
-end
-
-function TimeSeriesDataMetadata(
-    label::AbstractString,
-    data::TimeArrayWrapper,
-    scaling_factor_multiplier = nothing,
-)
-    return TimeSeriesDataMetadata(
-        label,
-        get_resolution(data),
-        get_initial_time(data),
-        get_uuid(data),
-        length(data),
         scaling_factor_multiplier,
     )
 end
@@ -281,7 +322,7 @@ function make_time_series_metadata(time_series::Scenarios, ta::TimeArrayWrapper)
     )
 end
 
-function time_series_data_to_metadata(::Type{T}) where {T <: TimeSeriesData}
+function time_series_data_to_metadata(::Type{T}) where {T <: AbstractTimeSeriesData}
     if T <: Deterministic
         time_series_type = DeterministicMetadata
     elseif T <: Probabilistic
