@@ -39,6 +39,7 @@ function _verify_time_series(params::TimeSeriesParameters, time_series::TimeSeri
             "horizon $(params.horizon)",
         ))
     end
+    return
 end
 
 function check_add_time_series!(params::TimeSeriesParameters, ts::TimeSeriesMetadata)
@@ -50,7 +51,30 @@ function check_add_time_series!(params::TimeSeriesParameters, ts::TimeSeriesMeta
 
     # This will throw if something is invalid.
     _verify_time_series(params, ts)
+    return
 end
+
+function _verify_time_series(params::TimeSeriesParameters, time_series::TimeSeriesDataMetadata)
+    if time_series.resolution != params.resolution
+        throw(DataFormatError(
+            "time series resolution $(time_series.resolution) does not match system " *
+            "resolution $(params.resolution)",
+        ))
+    end
+    return
+end
+
+function check_add_time_series!(params::TimeSeriesParameters, ts::TimeSeriesDataMetadata)
+    if is_uninitialized(params)
+        # This is the first time_series added.
+        params.resolution = ts.resolution
+    end
+
+    # This will throw if something is invalid.
+    _verify_time_series(params, ts)
+    return
+end
+
 
 """Return the horizon for all time_series."""
 get_time_series_horizon(time_series::TimeSeriesParameters) = time_series.horizon
