@@ -1,6 +1,65 @@
+"""
+Construct Deterministic from a TimeArray or DataFrame.
+
+# Arguments
+- `label::AbstractString`: user-defined label
+- `data::Union{TimeSeries.TimeArray, DataFrames.DataFrame}`: time series data
+- `normalization_factor::NormalizationFactor = 1.0`: optional normalization factor to apply
+  to each data entry
+- `scaling_factor_multiplier::Union{Nothing, Function} = nothing`: If the data are scaling
+  factors then this function will be called on the component and applied to the data when
+  [`get_time_series_array`](@ref) is called.
+- `timestamp = :timestamp`: If a DataFrame is passed then this must be the column name that
+  contains timestamps.
+"""
+function Deterministic(
+    label::AbstractString,
+    data::Union{TimeSeries.TimeArray, DataFrames.DataFrame};
+    normalization_factor::NormalizationFactor = 1.0,
+    scaling_factor_multiplier::Union{Nothing, Function} = nothing,
+    timestamp = :timestamp,
+)
+    if data isa DataFrames.DataFrame
+        ta = TimeSeries.TimeArray(data; timestamp = timestamp)
+    elseif data isa TimeSeries.TimeArray
+        ta = data
+    else
+        error("fatal: $(typeof(data))")
+    end
+
+    ta = handle_normalization_factor(ta, normalization_factor)
+    return Deterministic(label, ta, scaling_factor_multiplier)
+end
 
 """
-Constructs Deterministic after constructing a TimeArray from initial_time and time_steps.
+Construct Deterministic from a CSV file. The file must have a column that is the name of the
+component.
+
+# Arguments
+- `label::AbstractString`: user-defined label
+- `filename::AbstractString`: name of CSV file containing data
+- `normalization_factor::NormalizationFactor = 1.0`: optional normalization factor to apply
+  to each data entry
+- `scaling_factor_multiplier::Union{Nothing, Function} = nothing`: If the data are scaling
+  factors then this function will be called on the component and applied to the data when
+  [`get_time_series_array`](@ref) is called.
+"""
+function Deterministic(
+    label::AbstractString,
+    filename::AbstractString,
+    component::InfrastructureSystemsComponent;
+    normalization_factor::NormalizationFactor = 1.0,
+    scaling_factor_multiplier::Union{Nothing, Function} = nothing,
+)
+    component_name = get_name(component)
+    ta = read_time_series(filename, component_name)
+    ta = handle_normalization_factor(ta[Symbol(component_name)], normalization_factor)
+    return Deterministic(label, ta, scaling_factor_multiplier)
+end
+
+"""
+Construct Deterministic after constructing a TimeArray from `initial_time` and
+`time_steps`.
 """
 function Deterministic(
     label::String,

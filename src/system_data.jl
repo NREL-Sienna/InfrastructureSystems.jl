@@ -95,7 +95,7 @@ function add_time_series!(
 end
 
 """
-Adds time_series from a metadata file or metadata descriptors.
+Adds time series data from a metadata file or metadata descriptors.
 
 # Arguments
 - `data::SystemData`: system
@@ -116,13 +116,14 @@ function add_time_series!(
 end
 
 """
-Add a time_series.
+Add time series data to a component.
 
 # Arguments
-- `data::SystemData`: infrastructure
-- `time_series`: Any object of subtype time_series
+- `data::SystemData`: SystemData
+- `component::InfrastructureSystemsComponent`: will store the time series reference
+- `time_series::TimeSeriesData`: Any object of subtype TimeSeriesData
 
-Throws ArgumentError if the time_series's component is not stored in the system.
+Throws ArgumentError if the component is not stored in the system.
 
 """
 function add_time_series!(
@@ -133,6 +134,27 @@ function add_time_series!(
     ta = TimeArrayWrapper(get_data(time_series))
     ts_metadata = make_time_series_metadata(time_series, ta)
     add_time_series!(data, component, ts_metadata, ta)
+end
+
+"""
+Add the same time series data to multiple components.
+
+# Arguments
+- `data::SystemData`: SystemData
+- `components`: iterable of components that will store the same time series reference
+- `time_series::TimeSeriesData`: Any object of subtype TimeSeriesData
+
+This is significantly more efficent than calling add_time_series! for each component
+individually with the same data because in this case, only one time series array is stored.
+
+Throws ArgumentError if a component is not stored in the system.
+"""
+function add_time_series!(data::SystemData, components, time_series::TimeSeriesData)
+    ta = TimeArrayWrapper(get_data(time_series))
+    ts_metadata = make_time_series_metadata(time_series, ta)
+    for component in components
+        add_time_series!(data, component, ts_metadata, ta)
+    end
 end
 
 function add_time_series!(
@@ -153,81 +175,6 @@ function add_time_series!(
         get_label(ts_metadata),
         ta,
         get_columns(T, ta.data),
-    )
-end
-
-"""
-Add a time_series from a CSV file.
-
-See [`TimeSeriesFileMetadata`](@ref) for description of normalization_factor.
-"""
-function add_time_series!(
-    data::SystemData,
-    filename::AbstractString,
-    component::InfrastructureSystemsComponent,
-    label::AbstractString;
-    normalization_factor::Union{String, Float64} = 1.0,
-    scaling_factor_multiplier::Union{Nothing, Function} = nothing,
-)
-    component_name = get_name(component)
-    ta = read_time_series(filename, component_name)
-    ta_component = ta[Symbol(component_name)]
-    _add_time_series!(
-        data,
-        component,
-        label,
-        ta_component,
-        normalization_factor,
-        scaling_factor_multiplier,
-    )
-end
-
-"""
-Add a time_series to a system from a TimeSeries.TimeArray.
-
-See [`TimeSeriesFileMetadata`](@ref) for description of normalization_factor.
-"""
-function add_time_series!(
-    data::SystemData,
-    ta::TimeSeries.TimeArray,
-    component::InfrastructureSystemsComponent,
-    label::AbstractString;
-    normalization_factor::Union{String, Float64} = 1.0,
-    scaling_factor_multiplier::Union{Nothing, Function} = nothing,
-)
-    ta_component = ta[Symbol(get_name(component))]
-    _add_time_series!(
-        data,
-        component,
-        label,
-        ta_component,
-        normalization_factor,
-        scaling_factor_multiplier,
-    )
-end
-
-"""
-Add a time_series to a system from a DataFrames.DataFrame.
-
-See [`TimeSeriesFileMetadata`](@ref) for description of normalization_factor.
-"""
-function add_time_series!(
-    data::SystemData,
-    df::DataFrames.DataFrame,
-    component::InfrastructureSystemsComponent,
-    label::AbstractString;
-    normalization_factor::Union{String, Float64} = 1.0,
-    scaling_factor_multiplier::Union{Nothing, Function} = nothing,
-    timestamp = :timestamp,
-)
-    ta = TimeSeries.TimeArray(df; timestamp = timestamp)
-    add_time_series!(
-        data,
-        ta,
-        component,
-        label;
-        normalization_factor = normalization_factor,
-        scaling_factor_multiplier = scaling_factor_multiplier,
     )
 end
 
@@ -290,7 +237,7 @@ function _add_time_series!(
     normalization_factor,
     scaling_factor_multiplier,
 )
-    time_series = handle_scaling_factor(time_series, normalization_factor)
+    time_series = handle_normalization_factor(time_series, normalization_factor)
     # TODO: This code path needs to accept a metdata file or parameters telling it which
     # type of time_series to create.
     ta = TimeArrayWrapper(time_series)
@@ -322,7 +269,7 @@ function _make_time_series(info::TimeSeriesParsedInfo, resolution)
     end
 
     ta = info.data[Symbol(get_name(info.component))]
-    ta = handle_scaling_factor(ta, info.normalization_factor)
+    ta = handle_normalization_factor(ta, info.normalization_factor)
     ta_wrapper = TimeArrayWrapper(ta)
     ts_metadata =
         info.time_series_type(info.label, ta_wrapper, info.scaling_factor_multiplier)
