@@ -121,7 +121,7 @@ Add time series data to a component.
 # Arguments
 - `data::SystemData`: SystemData
 - `component::InfrastructureSystemsComponent`: will store the time series reference
-- `time_series::TimeSeriesData`: Any object of subtype TimeSeriesData
+- `time_series::AbstractTimeSeriesData`: Any object of subtype AbstractTimeSeriesData
 
 Throws ArgumentError if the component is not stored in the system.
 
@@ -129,7 +129,7 @@ Throws ArgumentError if the component is not stored in the system.
 function add_time_series!(
     data::SystemData,
     component::InfrastructureSystemsComponent,
-    time_series::TimeSeriesData,
+    time_series::AbstractTimeSeriesData,
 )
     ta = TimeArrayWrapper(get_data(time_series))
     ts_metadata = make_time_series_metadata(time_series, ta)
@@ -142,14 +142,14 @@ Add the same time series data to multiple components.
 # Arguments
 - `data::SystemData`: SystemData
 - `components`: iterable of components that will store the same time series reference
-- `time_series::TimeSeriesData`: Any object of subtype TimeSeriesData
+- `time_series::AbstractTimeSeriesData`: Any object of subtype AbstractTimeSeriesData
 
 This is significantly more efficent than calling add_time_series! for each component
 individually with the same data because in this case, only one time series array is stored.
 
 Throws ArgumentError if a component is not stored in the system.
 """
-function add_time_series!(data::SystemData, components, time_series::TimeSeriesData)
+function add_time_series!(data::SystemData, components, time_series::AbstractTimeSeriesData)
     ta = TimeArrayWrapper(get_data(time_series))
     ts_metadata = make_time_series_metadata(time_series, ta)
     for component in components
@@ -203,7 +203,7 @@ function remove_time_series!(
     component::InfrastructureSystemsComponent,
     initial_time::Dates.DateTime,
     label::String,
-) where {T <: TimeSeriesData}
+) where {T <: AbstractTimeSeriesData}
     type = time_series_data_to_metadata(T)
     time_series = get_time_series(type, component, initial_time, label)
     uuid = get_time_series_uuid(time_series)
@@ -246,7 +246,7 @@ function _add_time_series!(
 end
 
 function _make_time_series(cache::TimeSeriesCache, resolution)
-    time_series_arrays = Vector{TimeSeriesData}()
+    time_series_arrays = Vector{AbstractTimeSeriesData}()
 
     for info in cache.infos
         time_series = _make_time_series(info, resolution)
@@ -391,7 +391,7 @@ function clear_time_series!(data::SystemData)
 end
 
 """
-Returns an iterator of TimeSeriesData instances attached to the system.
+Returns an iterator of AbstractTimeSeriesData instances attached to the system.
 
 Note that passing a filter function can be much slower than the other filtering parameters
 because it reads time series data from media.

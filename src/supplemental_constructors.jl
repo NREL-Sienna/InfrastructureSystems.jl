@@ -145,7 +145,7 @@ function Probabilistic(
 end
 
 """
-Constructs Probabilistic TimeSeriesData after constructing a TimeArray from initial_time and time_steps.
+Constructs Probabilistic AbstractTimeSeriesData after constructing a TimeArray from initial_time and time_steps.
 """
 # TODO: do we need this check still?
 #function Probabilistic(
@@ -209,7 +209,7 @@ function Scenarios(
 end
 
 """
-Constructs Scenarios TimeSeriesData after constructing a TimeArray from initial_time and
+Constructs Scenarios AbstractTimeSeriesData after constructing a TimeArray from initial_time and
 time_steps.
 """
 function Scenarios(
@@ -258,7 +258,7 @@ function make_time_series_metadata(time_series::Scenarios, ta::TimeArrayWrapper)
     )
 end
 
-function time_series_data_to_metadata(::Type{T}) where {T <: TimeSeriesData}
+function time_series_data_to_metadata(::Type{T}) where {T <: AbstractTimeSeriesData}
     if T <: Deterministic
         time_series_type = DeterministicMetadata
     elseif T <: Probabilistic

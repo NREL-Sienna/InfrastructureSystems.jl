@@ -1,32 +1,11 @@
-"""
-Abstract type for time_series that are stored in a system.
-Users never create them or get access to them.
-Stores references to time series data, so a disk read may be required for access.
-"""
-abstract type TimeSeriesMetadata <: InfrastructureSystemsType end
-
-"""
-Abstract type for time_series supplied to users. They are not stored in a system. Instead,
-they are generated on demand for the user.
-Users can create them. The system will convert them to a subtype of TimeSeriesMetadata for
-storage.
-Time series data is stored as a field, so reads will always be from memory.
-"""
-abstract type TimeSeriesData <: Any end
-
-get_horizon(time_series::TimeSeriesData) = length(get_data(time_series))
 get_initial_time(time_series::TimeSeriesData) =
     TimeSeries.timestamp(get_data(time_series))[1]
-get_scaling_factors(time_series::TimeSeriesData) = get_data(time_series)
 
 function get_resolution(time_series::TimeSeriesData)
     data = get_data(time_series)
     return TimeSeries.timestamp(data)[2] - TimeSeries.timestamp(data)[1]
 end
 
-function Base.length(time_series::TimeSeriesData)
-    return get_horizon(time_series)
-end
 
 function Base.getindex(time_series::TimeSeriesData, args...)
     return _split_time_series(time_series, getindex(get_data(time_series), args...))

@@ -459,7 +459,7 @@ end
 end
 
 function validate_generated_initial_times(
-    time_series_type::Type{<:IS.TimeSeriesData},
+    time_series_type::Type{<:IS.AbstractTimeSeriesData},
     component::IS.InfrastructureSystemsComponent,
     label::AbstractString,
     horizon::Int,

@@ -44,7 +44,7 @@ function get_time_series(
     component::InfrastructureSystemsComponent,
     initial_time::Dates.DateTime,
     label::AbstractString,
-) where {T <: TimeSeriesData}
+) where {T <: AbstractTimeSeriesData}
     time_series_type = time_series_data_to_metadata(T)
     time_series = get_time_series(time_series_type, component, initial_time, label)
     storage = _get_time_series_storage(component)
@@ -62,7 +62,7 @@ function get_time_series(
     initial_time::Dates.DateTime,
     label::AbstractString,
     horizon::Int,
-) where {T <: TimeSeriesData}
+) where {T <: AbstractTimeSeriesData}
     if !has_time_series(component)
         throw(ArgumentError("no time_series are stored in $component"))
     end
@@ -185,7 +185,7 @@ function get_time_series_array(
     initial_time::Dates.DateTime,
     label::AbstractString,
     horizon::Union{Nothing, Int} = nothing,
-) where {T <: TimeSeriesData}
+) where {T <: AbstractTimeSeriesData}
     if horizon === nothing
         time_series = get_time_series(T, component, initial_time, label)
     else
@@ -197,7 +197,7 @@ end
 
 function get_time_series_array(
     component::InfrastructureSystemsComponent,
-    time_series::TimeSeriesData,
+    time_series::AbstractTimeSeriesData,
 )
     ta = get_data(time_series)
     multiplier = get_scaling_factor_multiplier(time_series)
@@ -214,7 +214,7 @@ function get_time_series_timestamps(
     initial_time::Dates.DateTime,
     label::AbstractString,
     horizon::Union{Nothing, Int} = nothing,
-) where {T <: TimeSeriesData}
+) where {T <: AbstractTimeSeriesData}
     return (TimeSeries.timestamp ∘ get_time_series_array)(
         T,
         component,
@@ -226,7 +226,7 @@ end
 
 function get_time_series_timestamps(
     component::InfrastructureSystemsComponent,
-    time_series::TimeSeriesData,
+    time_series::AbstractTimeSeriesData,
 )
     return (TimeSeries.timestamp ∘ get_time_series_array)(component, time_series)
 end
@@ -240,7 +240,7 @@ function get_time_series_values(
     initial_time::Dates.DateTime,
     label::AbstractString,
     horizon::Union{Nothing, Int} = nothing,
-) where {T <: TimeSeriesData}
+) where {T <: AbstractTimeSeriesData}
     return (TimeSeries.values ∘ get_time_series_array)(
         T,
         component,
@@ -252,7 +252,7 @@ end
 
 function get_time_series_values(
     component::InfrastructureSystemsComponent,
-    time_series::TimeSeriesData,
+    time_series::AbstractTimeSeriesData,
 )
     return (TimeSeries.values ∘ get_time_series_array)(component, time_series)
 end
@@ -265,7 +265,7 @@ end
 function get_time_series_initial_times(
     ::Type{T},
     component::InfrastructureSystemsComponent,
-) where {T <: TimeSeriesData}
+) where {T <: AbstractTimeSeriesData}
     if !has_time_series(component)
         throw(ArgumentError("$(typeof(component)) does not have time_series"))
     end
@@ -279,7 +279,7 @@ function get_time_series_initial_times(
     ::Type{T},
     component::InfrastructureSystemsComponent,
     label::AbstractString,
-) where {T <: TimeSeriesData}
+) where {T <: AbstractTimeSeriesData}
     if !has_time_series(component)
         throw(ArgumentError("$(typeof(component)) does not have time_series"))
     end
@@ -480,7 +480,7 @@ function get_time_series_labels(
     ::Type{T},
     component::InfrastructureSystemsComponent,
     initial_time::Dates.DateTime,
-) where {T <: TimeSeriesData}
+) where {T <: AbstractTimeSeriesData}
     return get_time_series_labels(
         time_series_data_to_metadata(T),
         get_time_series_container(component),
@@ -499,7 +499,7 @@ end
 
 function get_time_series(
     component::InfrastructureSystemsComponent,
-    time_series::TimeSeriesData,
+    time_series::AbstractTimeSeriesData,
 )
     storage = _get_time_series_storage(component)
     return get_time_series(storage, get_time_series_uuid(time_series))
@@ -527,7 +527,7 @@ function prepare_for_removal!(component::InfrastructureSystemsComponent)
 end
 
 """
-Returns an iterator of TimeSeriesData instances attached to the component.
+Returns an iterator of AbstractTimeSeriesData instances attached to the component.
 
 Note that passing a filter function can be much slower than the other filtering parameters
 because it reads time series data from media.
