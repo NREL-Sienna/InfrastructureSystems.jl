@@ -130,11 +130,11 @@ Construct Deterministic from a Dict of TimeArrays, DataFrames or Arrays.
 """
 function Deterministic(
     label::AbstractString,
-    data::Union{Dict{Dates.DateTime, Any}, DataStructures.SortedDict.Dict{Dates.DateTime, Any}};
+    data::Union{Dict{Dates.DateTime, Any}, DataStructures.SortedDict{Dates.DateTime, Any}};
     normalization_factor::NormalizationFactor = 1.0,
     scaling_factor_multiplier::Union{Nothing, Function} = nothing,
     timestamp = :timestamp,
-    resolution::Union{Dates.Period, nothing} = nothing
+    resolution::Union{Dates.Period, Nothing} = nothing
 )
     for (k, v) in data
         if v isa DataFrames.DataFrame
