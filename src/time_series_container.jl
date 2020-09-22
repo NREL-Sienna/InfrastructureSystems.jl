@@ -1,6 +1,5 @@
 struct TimeSeriesKey
     time_series_type::Type{<:TimeSeriesMetadata}
-    initial_time::Dates.DateTime
     label::String
 end
 
@@ -40,7 +39,7 @@ function add_time_series!(
     time_series::T;
     skip_if_present = false,
 ) where {T <: TimeSeriesMetadata}
-    key = TimeSeriesKey(T, get_initial_time(time_series), get_label(time_series))
+    key = TimeSeriesKey(T, get_label(time_series))
     if haskey(container.data, key)
         if skip_if_present
             @warn "time_series $key is already present, skipping overwrite"
@@ -58,7 +57,7 @@ function remove_time_series!(
     initial_time::Dates.DateTime,
     label::AbstractString,
 ) where {T <: TimeSeriesMetadata}
-    key = TimeSeriesKey(T, initial_time, label)
+    key = TimeSeriesKey(T, label)
     if !haskey(container.data, key)
         throw(ArgumentError("time_series $key is not stored"))
     end
@@ -76,7 +75,7 @@ function get_time_series(
     initial_time::Dates.DateTime,
     label::AbstractString,
 ) where {T <: TimeSeriesMetadata}
-    key = TimeSeriesKey(T, initial_time, label)
+    key = TimeSeriesKey(T, label)
     if !haskey(container.data, key)
         throw(ArgumentError("time_series $key is not stored"))
     end
