@@ -126,6 +126,29 @@ function DeterministicMetadata(
     )
 end
 
+function make_time_series_metadata(time_series::TimeSeriesData, ta::TimeArrayWrapper)
+    return TimeSeriesDataMetadata(
+        get_label(time_series),
+        ta,
+        get_scaling_factor_multiplier(time_series),
+    )
+end
+
+function TimeSeriesDataMetadata(
+    label::AbstractString,
+    data::TimeArrayWrapper,
+    scaling_factor_multiplier = nothing,
+)
+    return TimeSeriesDataMetadata(
+        label,
+        get_resolution(data),
+        get_initial_time(data),
+        get_uuid(data),
+        length(data),
+        scaling_factor_multiplier,
+    )
+end
+
 """
 Constructs Probabilistic after constructing a TimeArray from initial_time and time_steps.
 """
@@ -145,7 +168,7 @@ function Probabilistic(
 end
 
 """
-Constructs Probabilistic AbstractTimeSeriesData after constructing a TimeArray from initial_time and time_steps.
+Constructs Probabilistic TimeSeriesData after constructing a TimeArray from initial_time and time_steps.
 """
 # TODO: do we need this check still?
 #function Probabilistic(
@@ -209,7 +232,7 @@ function Scenarios(
 end
 
 """
-Constructs Scenarios AbstractTimeSeriesData after constructing a TimeArray from initial_time and
+Constructs Scenarios TimeSeriesData after constructing a TimeArray from initial_time and
 time_steps.
 """
 function Scenarios(
@@ -258,13 +281,15 @@ function make_time_series_metadata(time_series::Scenarios, ta::TimeArrayWrapper)
     )
 end
 
-function time_series_data_to_metadata(::Type{T}) where {T <: AbstractTimeSeriesData}
+function time_series_data_to_metadata(::Type{T}) where {T <: TimeSeriesData}
     if T <: Deterministic
         time_series_type = DeterministicMetadata
     elseif T <: Probabilistic
         time_series_type = ProbabilisticMetadata
     elseif T <: Scenarios
         time_series_type = ScenariosMetadata
+    elseif T <: TimeSeriesData
+        time_series_type = TimeSeriesMetadata
     else
         @assert false
     end
