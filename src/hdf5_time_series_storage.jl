@@ -85,6 +85,20 @@ end
 
 get_file_path(storage::Hdf5TimeSeriesStorage) = storage.file_path
 
+function _time_array_wrapper_to_array(ta::TimeArrayWrapper)
+    # TODO: Implement for more dimensions
+    return hcat(TimeSeries.values.(values(ta.data))...)
+end
+
+function _time_array_wrapper_to_timestamps(ta::TimeArrayWrapper)
+    # TODO: Implement for more dimensions
+    time_stamps = Matrix{Int}(undef, length(keys(ta.data)), length(first(values(ta.data))))
+    for (ix, v) in enumerate(values(ta.data))
+        time_stamps[ix, :] .= [Dates.datetime2epochms(x) for x in TimeSeries.timestamp(v)]
+    end
+    return time_stamps
+end
+
 function add_time_series!(
     storage::Hdf5TimeSeriesStorage,
     component_uuid::UUIDs.UUID,
@@ -102,9 +116,8 @@ function add_time_series!(
             HDF5.g_create(root, uuid)
             path = root[uuid]
             @debug "Create new time series entry." uuid component_uuid label
-            path["data"] = TimeSeries.values(ta.data)
-            timestamps = [Dates.datetime2epochms(x) for x in TimeSeries.timestamp(ta.data)]
-            path["timestamps"] = timestamps
+            path["data"] =  _time_array_wrapper_to_array(ta)
+            path["timestamps"] = _time_array_wrapper_to_timestamps(ta)
             # Storing the UUID as an integer would take less space, but HDF5 library says
             # arrays of 128-bit integers aren't supported.
             path["components"] = [component_label]
