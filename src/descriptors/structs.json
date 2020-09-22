@@ -14,8 +14,13 @@
           "data_type": "Dates.Period"
         },
         {
-          "name": "initial_time",
+          "name": "initial_time_stamp",
           "data_type": "Dates.DateTime",
+          "comment": "time series availability time"
+        },
+        {
+          "name": "interval",
+          "data_type": "Dates.Period",
           "comment": "time series availability time"
         },
         {
@@ -80,8 +85,13 @@
           "data_type": "Dates.Period"
         },
         {
-          "name": "initial_time",
+          "name": "initial_time_stamp",
           "data_type": "Dates.DateTime",
+          "comment": "time series availability time"
+        },
+        {
+          "name": "interval",
+          "data_type": "Dates.Period",
           "comment": "time series availability time"
         },
         {
@@ -156,8 +166,13 @@
           "data_type": "Dates.Period"
         },
         {
-          "name": "initial_time",
+          "name": "initial_time_stamp",
           "data_type": "Dates.DateTime",
+          "comment": "time series availability time"
+        },
+        {
+          "name": "interval",
+          "data_type": "Dates.Period",
           "comment": "time series availability time"
         },
         {
