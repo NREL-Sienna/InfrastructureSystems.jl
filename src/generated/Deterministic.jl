@@ -2,9 +2,9 @@
 This file is auto-generated. Do not edit.
 =#
 """
-    mutable struct Deterministic <: TimeSeriesData
+    mutable struct Deterministic <: Forecast
         label::String
-        data::TimeSeries.TimeArray
+        data::Dict{Dates.DateTime, TimeSeries.TimeArray}
         scaling_factor_multiplier::Union{Nothing, Function}
     end
 
@@ -12,14 +12,14 @@ A deterministic time series for a particular data field in a Component.
 
 # Arguments
 - `label::String`: user-defined label
-- `data::TimeSeries.TimeArray`: timestamp - scalingfactor
+- `data::Dict{Dates.DateTime, TimeSeries.TimeArray}`: timestamp - scalingfactor
 - `scaling_factor_multiplier::Union{Nothing, Function}`: Applicable when the time series data are scaling factors. Called on the associated component to convert the values.
 """
-mutable struct Deterministic <: TimeSeriesData
+mutable struct Deterministic <: Forecast
     "user-defined label"
     label::String
     "timestamp - scalingfactor"
-    data::TimeSeries.TimeArray
+    data::Dict{Dates.DateTime, TimeSeries.TimeArray}
     "Applicable when the time series data are scaling factors. Called on the associated component to convert the values."
     scaling_factor_multiplier::Union{Nothing, Function}
 end
