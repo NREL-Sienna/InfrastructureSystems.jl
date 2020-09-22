@@ -49,5 +49,5 @@ function create_time_array()
     data = collect(1:24)
     component_name = "gen"
     ta = TimeSeries.TimeArray(dates, data, [component_name])
-    return IS.TimeArrayWrapper(ta)
+    return IS.TimeArrayContainer(ta)
 end

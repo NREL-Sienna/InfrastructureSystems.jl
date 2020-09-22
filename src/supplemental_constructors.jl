@@ -90,7 +90,7 @@ function TimeSeriesData(time_series::Vector{TimeSeriesData})
     return time_series
 end
 
-function make_time_series_metadata(time_series::TimeSeriesData, ta::TimeArrayWrapper)
+function make_time_series_metadata(time_series::TimeSeriesData, ta::TimeArrayContainer)
     return TimeSeriesDataMetadata(
         get_label(time_series),
         ta,
@@ -100,7 +100,7 @@ end
 
 function TimeSeriesDataMetadata(
     label::AbstractString,
-    data::TimeArrayWrapper,
+    data::TimeArrayContainer,
     scaling_factor_multiplier = nothing,
 )
     return TimeSeriesDataMetadata(
@@ -167,7 +167,7 @@ function make_time_series_data(
     )
 end
 
-function make_time_series_metadata(time_series::Deterministic, ta::TimeArrayWrapper)
+function make_time_series_metadata(time_series::Deterministic, ta::TimeArrayContainer)
     return DeterministicMetadata(
         get_label(time_series),
         ta,
@@ -177,13 +177,14 @@ end
 
 function DeterministicMetadata(
     label::AbstractString,
-    data::TimeArrayWrapper,
+    data::TimeArrayContainer,
     scaling_factor_multiplier = nothing,
 )
     return DeterministicMetadata(
         label,
         get_resolution(data),
         get_initial_time(data),
+        get_interval(data),
         get_uuid(data),
         get_horizon(data),
         scaling_factor_multiplier,
@@ -244,7 +245,7 @@ function make_time_series_data(
     return Probabilistic(get_label(time_series), get_percentiles(time_series), data)
 end
 
-function make_time_series_metadata(time_series::Probabilistic, ta::TimeArrayWrapper)
+function make_time_series_metadata(time_series::Probabilistic, ta::TimeArrayContainer)
     return ProbabilisticMetadata(
         get_label(time_series),
         get_resolution(time_series),
@@ -310,7 +311,7 @@ function make_time_series_data(ts_metadata::ScenariosMetadata, data::TimeSeries.
     return Scenarios(get_label(ts_metadata), data)
 end
 
-function make_time_series_metadata(time_series::Scenarios, ta::TimeArrayWrapper)
+function make_time_series_metadata(time_series::Scenarios, ta::TimeArrayContainer)
     return ScenariosMetadata(
         get_label(time_series),
         get_resolution(time_series),

@@ -85,12 +85,12 @@ end
 
 get_file_path(storage::Hdf5TimeSeriesStorage) = storage.file_path
 
-function _time_array_wrapper_to_array(ta::TimeArrayWrapper)
+function _time_array_wrapper_to_array(ta::TimeArrayContainer)
     # TODO: Implement for more dimensions
     return hcat(TimeSeries.values.(values(ta.data))...)
 end
 
-function _time_array_wrapper_to_timestamps(ta::TimeArrayWrapper)
+function _time_array_wrapper_to_timestamps(ta::TimeArrayContainer)
     # TODO: Implement for more dimensions
     time_stamps = Matrix{Int}(undef, length(keys(ta.data)), length(first(values(ta.data))))
     for (ix, v) in enumerate(values(ta.data))
@@ -103,7 +103,7 @@ function add_time_series!(
     storage::Hdf5TimeSeriesStorage,
     component_uuid::UUIDs.UUID,
     label::AbstractString,
-    ta::TimeArrayWrapper,
+    ta::TimeArrayContainer,
     columns = nothing,
 )
     check_read_only(storage)
@@ -168,7 +168,7 @@ function iterate_time_series(storage::Hdf5TimeSeriesStorage)
                 uuid_str = uuid_path[(range.start + 1):end]
                 uuid = UUIDs.UUID(uuid_str)
                 internal = InfrastructureSystemsInternal(uuid)
-                ta = TimeArrayWrapper(get_time_series(storage, uuid), internal)
+                ta = TimeArrayContainer(get_time_series(storage, uuid), internal)
                 for item in HDF5.read(uuid_group["components"])
                     component, label = deserialize_component_label(item)
                     put!(channel, (component, label, ta))
