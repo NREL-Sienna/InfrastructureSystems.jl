@@ -8,6 +8,7 @@ import Dates
 import JSON3
 import PrettyTables
 import TimeSeries
+import DataStructures
 
 using DocStringExtensions
 
@@ -75,7 +76,6 @@ include("hdf5_time_series_storage.jl")
 include("abstract_time_series.jl")
 include("forecasts.jl")
 include("in_memory_time_series_storage.jl")
-include("time_series_data.jl")
 include("time_series_container.jl")
 include("time_series_parameters.jl")
 include("time_series_parser.jl")
@@ -83,14 +83,15 @@ include("time_series_formats.jl")
 include("component.jl")
 include("components.jl")
 include("generated/includes.jl")
-include("time_series_data.jl")
 include("supplemental_constructors.jl")
 include("results.jl")
 include("serialization.jl")
 include("system_data.jl")
+include("time_series_data.jl")
 include("validation.jl")
 include("utils/print.jl")
 include("utils/test.jl")
 include("units.jl")
+
 
 end # module
