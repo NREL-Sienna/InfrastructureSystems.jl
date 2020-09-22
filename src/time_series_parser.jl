@@ -150,6 +150,16 @@ end
 const NormalizationFactor = Union{Float64, NormalizationTypes.NormalizationType}
 
 function handle_normalization_factor(
+    data::AbstractDict,
+    normalization_factor::NormalizationFactor,
+)
+    for (k, v) in data
+        data[k] = handle_normalization_factor(v, normalization_factor)
+    end
+    return data
+end
+
+function handle_normalization_factor(
     ta::TimeSeries.TimeArray,
     normalization_factor::NormalizationFactor,
 )
