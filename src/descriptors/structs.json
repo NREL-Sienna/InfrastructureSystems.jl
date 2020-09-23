@@ -24,6 +24,11 @@
           "comment": "time series availability time"
         },
         {
+          "name": "count",
+          "data_type": "Int",
+          "comment": "time series availability time"
+        },
+        {
           "name": "time_series_uuid",
           "data_type": "UUIDs.UUID",
           "comment": "reference to time series data"
@@ -92,6 +97,11 @@
         {
           "name": "interval",
           "data_type": "Dates.Period",
+          "comment": "time series availability time"
+        },
+        {
+          "name": "count",
+          "data_type": "Int",
           "comment": "time series availability time"
         },
         {
@@ -179,6 +189,11 @@
           "name": "scenario_count",
           "data_type": "Int64",
           "comment": "Number of scenarios"
+        },
+        {
+          "name": "count",
+          "data_type": "Int",
+          "comment": "time series availability time"
         },
         {
           "name": "time_series_uuid",

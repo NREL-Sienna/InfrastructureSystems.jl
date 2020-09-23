@@ -7,6 +7,7 @@ include("Scenarios.jl")
 include("TimeSeriesDataMetadata.jl")
 include("TimeSeriesData.jl")
 
+export get_count
 export get_data
 export get_horizon
 export get_initial_time
@@ -19,6 +20,7 @@ export get_resolution
 export get_scaling_factor_multiplier
 export get_scenario_count
 export get_time_series_uuid
+export set_count!
 export set_data!
 export set_horizon!
 export set_initial_time!
