@@ -54,7 +54,6 @@ end
 function remove_time_series!(
     ::Type{T},
     container::TimeSeriesContainer,
-    initial_time::Dates.DateTime,
     label::AbstractString,
 ) where {T <: TimeSeriesMetadata}
     key = TimeSeriesKey(T, label)
@@ -72,7 +71,6 @@ end
 function get_time_series(
     ::Type{T},
     container::TimeSeriesContainer,
-    initial_time::Dates.DateTime,
     label::AbstractString,
 ) where {T <: TimeSeriesMetadata}
     key = TimeSeriesKey(T, label)
