@@ -349,7 +349,7 @@ function time_series_data_to_metadata(::Type{T}) where {T <: AbstractTimeSeriesD
     elseif T <: Scenarios
         time_series_type = ScenariosMetadata
     elseif T <: TimeSeriesData
-        time_series_type = TimeSeriesMetadata
+        time_series_type = TimeSeriesDataMetadata
     else
         @assert false
     end
