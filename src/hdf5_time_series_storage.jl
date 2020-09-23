@@ -88,7 +88,12 @@ get_file_path(storage::Hdf5TimeSeriesStorage) = storage.file_path
 function _time_array_wrapper_to_array(ta::TimeArrayContainer)
     # TODO: Implement for more dimensions.
     # TODO: Is this storing the data efficiently?
-    return hcat(TimeSeries.values.(values(ta.data))...)
+    if length(ta.data) == 1
+        @show size(TimeSeries.values(first(values(ta.data))))
+        return TimeSeries.values(first(values(ta.data)))
+    else length(ta.data) > 1
+        return hcat(TimeSeries.values.(values(ta.data))...)
+    end
 end
 
 function add_time_series!(
@@ -205,9 +210,10 @@ end
 
 function get_time_series(
     storage::Hdf5TimeSeriesStorage,
-    uuid::UUIDs.UUID;
-    index = 0,
-    len = 0,
+    uuid::UUIDs.UUID,
+    index::Int,
+    len::Int,
+    count::Int,
 )::DataStructures.SortedDict{Dates.DateTime, TimeSeries.TimeArray}
     return HDF5.h5open(storage.file_path, "r") do file
         root = _get_root(storage, file)
@@ -229,25 +235,35 @@ function get_time_series(
         if !HDF5.exists(HDF5.attrs(path), "interval")
             @assert HDF5.read(HDF5.attrs(path)["count"]) == 1
             @debug "reconstructing a contigouos time series"
-            if len == 0 && index == 0
+            if len == length && index == 1
                 data = HDF5.read(path["data"])
                 time_stamps = range(initial_time_stamp; length = length, step = resolution)
-            elseif len == 0 && index != 0
+            elseif len >= length && index > 1
+                @show len length
+                @warn("The data is length $(length)")
                 data = path["data"][index:length]
                 time_stamps_ = range(initial_time_stamp; length = length, step = resolution)
                 time_stamps = time_stamps_[index:end]
-            elseif len != 0 && index != 0
+            elseif len <= length
                 end_index = index + len - 1
                 data = path["data"][index:end_index]
                 time_stamps_ = range(initial_time_stamp; length = length, step = resolution)
                 time_stamps = time_stamps_[index:end_index]
+            else
+                @assert false
             end
             #Making a Dict prevents type instability in the return of the function
-            return DataStructures.SortedDict(time_stamps[1] => _make_time_array(time_stamps, data, columns))
+            return DataStructures.SortedDict(
+                time_stamps[1] => _make_time_array(time_stamps, data, columns),
+            )
         elseif HDF5.exists(HDF5.attrs(path), "interval")
+            @debug "reconstructing a overlapping forecast time series"
             data = DataStructures.SortedDict{Dates.DateTime, TimeSeries.TimeArray}()
             interval = Dates.Millisecond(HDF5.read(HDF5.attrs(path)["interval"]))
-            count = HDF5.read(HDF5.attrs(path)["count"])
+            stored_count = HDF5.read(HDF5.attrs(path)["count"])
+            if count > stored_count
+                throw(ArgumentError("More Forecasts requested $count than the total stored $stored_count"))
+            end
             initial_times = range(initial_time_stamp; length = count, step = interval)
             horizon = (len == 0) ? length : len
             for i in 0:(count - 1)
