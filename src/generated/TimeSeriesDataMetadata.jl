@@ -76,3 +76,4 @@ set_scaling_factor_multiplier!(value::TimeSeriesDataMetadata, val) = value.scali
 """Set [`TimeSeriesDataMetadata`](@ref) `internal`."""
 set_internal!(value::TimeSeriesDataMetadata, val) = value.internal = val
 
+get_horizon(val::TimeSeriesDataMetadata) = get_length(val)

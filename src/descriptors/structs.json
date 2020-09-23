@@ -249,7 +249,7 @@
     },
     {
       "struct_name": "TimeSeriesDataMetadata",
-      "docstring": "A TimeSeries Data object in a.",
+      "docstring": "A TimeSeries Data object in contigous form.",
       "fields": [
         {
           "name": "label",
@@ -287,7 +287,8 @@
           "internal_default": "InfrastructureSystemsInternal()"
         }
       ],
-      "supertype": "TimeSeriesMetadata"
+      "supertype": "TimeSeriesMetadata",
+      "custom_code": "get_horizon(val::TimeSeriesDataMetadata) = get_length(val)"
     },
     {
       "struct_name": "TimeSeriesData",
