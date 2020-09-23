@@ -90,6 +90,18 @@ function TimeSeriesData(time_series::Vector{TimeSeriesData})
     return time_series
 end
 
+function make_time_series_data(
+    ts_metadata::TimeSeriesDataMetadata,
+    data::DataStructures.SortedDict{Dates.DateTime, TimeSeries.TimeArray},
+)
+    @assert length(data) == 1
+    return TimeSeriesData(
+        get_label(ts_metadata),
+        first(values(data)),
+        get_scaling_factor_multiplier(ts_metadata),
+    )
+end
+
 function make_time_series_metadata(time_series::TimeSeriesData, ta::TimeArrayContainer)
     return TimeSeriesDataMetadata(
         get_label(time_series),
@@ -134,7 +146,7 @@ function Deterministic(
     normalization_factor::NormalizationFactor = 1.0,
     scaling_factor_multiplier::Union{Nothing, Function} = nothing,
     timestamp = :timestamp,
-    resolution::Union{Dates.Period, Nothing} = nothing
+    resolution::Union{Dates.Period, Nothing} = nothing,
 )
     for (k, v) in data
         if v isa DataFrames.DataFrame
@@ -143,7 +155,8 @@ function Deterministic(
             continue
         else
             try
-                data[k] = TimeSeries.TimeArray(range(k, length = length(v), step = resolution))
+                data[k] =
+                    TimeSeries.TimeArray(range(k, length = length(v), step = resolution))
             catch e
                 throw(ArgumentError("The values in the data dict can't be converted to TimeArrays. Resulting error: $e"))
             end
@@ -158,7 +171,7 @@ end
 
 function make_time_series_data(
     ts_metadata::DeterministicMetadata,
-    data::TimeSeries.TimeArray,
+    data::DataStructures.SortedDict{Dates.DateTime, TimeSeries.TimeArray},
 )
     return Deterministic(
         get_label(ts_metadata),
@@ -185,6 +198,7 @@ function DeterministicMetadata(
         get_resolution(data),
         get_initial_time(data),
         get_interval(data),
+        get_count(data),
         get_uuid(data),
         get_horizon(data),
         scaling_factor_multiplier,
@@ -240,7 +254,7 @@ end
 
 function make_time_series_data(
     ts_metadata::ProbabilisticMetadata,
-    data::TimeSeries.TimeArray,
+    data::DataStructures.SortedDict{Dates.DateTime, TimeSeries.TimeArray},
 )
     return Probabilistic(get_label(time_series), get_percentiles(time_series), data)
 end
@@ -250,6 +264,8 @@ function make_time_series_metadata(time_series::Probabilistic, ta::TimeArrayCont
         get_label(time_series),
         get_resolution(time_series),
         get_initial_time(time_series),
+        get_interval(data),
+        get_count(data),
         get_percentiles(time_series),
         get_uuid(ta),
         get_horizon(time_series),
@@ -259,7 +275,7 @@ end
 
 function Scenarios(
     label::String,
-    data::TimeSeries.TimeArray,
+    data::DataStructures.SortedDict{Dates.DateTime, TimeSeries.TimeArray},
     scaling_factor_multiplier = nothing,
 )
     initial_time = TimeSeries.timestamp(data)[1]
@@ -316,7 +332,9 @@ function make_time_series_metadata(time_series::Scenarios, ta::TimeArrayContaine
         get_label(time_series),
         get_resolution(time_series),
         get_initial_time(time_series),
+        get_interval(data),
         get_scenario_count(time_series),
+        get_count(data),
         get_uuid(ta),
         get_horizon(time_series),
         get_scaling_factor_multiplier(time_series),
