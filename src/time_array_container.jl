@@ -13,16 +13,21 @@ struct TimeArrayContainer <: InfrastructureSystemsType
 end
 
 function TimeArrayContainer(data::TimeSeries.TimeArray)
-    data_= Dict(first(TimeSeries.timestamp(data)) => data)
+    data_ = Dict(first(TimeSeries.timestamp(data)) => data)
     return TimeArrayContainer(data_, InfrastructureSystemsInternal())
 end
 
-function TimeArrayContainer(data::DataStructures.SortedDict{Dates.DateTime, TimeSeries.TimeArray})
+function TimeArrayContainer(
+    data::DataStructures.SortedDict{Dates.DateTime, TimeSeries.TimeArray},
+)
     return TimeArrayContainer(data, InfrastructureSystemsInternal())
 end
 
 function TimeArrayContainer(data::Dict{Dates.DateTime, TimeSeries.TimeArray})
-    return TimeArrayContainer(DataStructures.SortedDict(data...), InfrastructureSystemsInternal())
+    return TimeArrayContainer(
+        DataStructures.SortedDict(data...),
+        InfrastructureSystemsInternal(),
+    )
 end
 
 get_internal(data) = data.internal
@@ -39,13 +44,15 @@ end
 Base.length(ta::TimeArrayContainer) = length(first(values(ta.data)))
 # TODO: Not super efficient for now.
 get_initial_time(ta::TimeArrayContainer) = collect(keys(ta.data))[1]
-get_horizon(ta::TimeArrayContainer) = length(first(values(ta.data)))
+get_horizon(ta::TimeArrayContainer) = length(ta)
 get_resolution(ta::TimeArrayContainer) =
-    TimeSeries.timestamp(first(values(ta.data)))[2] - TimeSeries.timestamp(first(values(ta.data)))[1]
+    TimeSeries.timestamp(first(values(ta.data)))[2] -
+    TimeSeries.timestamp(first(values(ta.data)))[1]
 function get_interval(ta::TimeArrayContainer)
     if length(ta.data) < 2
-        throw(ArgumentError("get_interval is an invalid operation for contingous data"))
+        throw(ArgumentError("get_interval is an invalid operation for continguous data"))
     end
     keys_ = collect(keys(ta.data))
     return keys_[2] - keys_[1]
 end
+get_count(ta::TimeArrayContainer) = length(ta.data)
