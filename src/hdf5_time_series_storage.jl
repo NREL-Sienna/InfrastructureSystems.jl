@@ -86,17 +86,9 @@ end
 get_file_path(storage::Hdf5TimeSeriesStorage) = storage.file_path
 
 function _time_array_wrapper_to_array(ta::TimeArrayContainer)
-    # TODO: Implement for more dimensions
+    # TODO: Implement for more dimensions.
+    # TODO: Is this storing the data efficiently?
     return hcat(TimeSeries.values.(values(ta.data))...)
-end
-
-function _time_array_wrapper_to_timestamps(ta::TimeArrayContainer)
-    # TODO: Implement for more dimensions
-    time_stamps = Matrix{Int}(undef, length(keys(ta.data)), length(first(values(ta.data))))
-    for (ix, v) in enumerate(values(ta.data))
-        time_stamps[ix, :] .= [Dates.datetime2epochms(x) for x in TimeSeries.timestamp(v)]
-    end
-    return time_stamps
 end
 
 function add_time_series!(
@@ -116,8 +108,16 @@ function add_time_series!(
             HDF5.g_create(root, uuid)
             path = root[uuid]
             @debug "Create new time series entry." uuid component_uuid label
-            path["data"] =  _time_array_wrapper_to_array(ta)
-            path["timestamps"] = _time_array_wrapper_to_timestamps(ta)
+            path["data"] = _time_array_wrapper_to_array(ta)
+            HDF5.attrs(path)["initial_time"] = Dates.datetime2epochms(get_initial_time(ta))
+            if length(ta.data) > 1
+                HDF5.attrs(path)["interval"] =
+                    time_period_conversion(get_interval(ta)).value
+            end
+            HDF5.attrs(path)["length"] = length(ta)
+            HDF5.attrs(path)["count"] = get_count(ta)
+            HDF5.attrs(path)["resolution"] =
+                time_period_conversion(get_resolution(ta)).value
             # Storing the UUID as an integer would take less space, but HDF5 library says
             # arrays of 128-bit integers aren't supported.
             path["components"] = [component_label]
@@ -195,43 +195,71 @@ function remove_time_series!(
     end
 end
 
+function _make_time_array(timestamps, data, columns::Union{Vector{Symbol}, Nothing})
+    if columns === nothing
+        return TimeSeries.TimeArray(timestamps, data)
+    else
+        return TimeSeries.TimeArray(timestamps, data, columns)
+    end
+end
+
 function get_time_series(
     storage::Hdf5TimeSeriesStorage,
     uuid::UUIDs.UUID;
     index = 0,
     len = 0,
-)::TimeSeries.TimeArray
+)::DataStructures.SortedDict{Dates.DateTime, TimeSeries.TimeArray}
     return HDF5.h5open(storage.file_path, "r") do file
         root = _get_root(storage, file)
         path = _get_time_series_path(root, uuid)
-
-        if index == 0
-            data = HDF5.read(path["data"])
-            timestamps = HDF5.read(path["timestamps"])
-        else
-            @assert len != 0
-            end_index = index + len - 1
-            # HDF5.readmmap could be faster in many cases than this. However, experiments
-            # resulted in various crashes if we tried to close the file before references
-            # to the array data were garbage collected. May need to consult with the
-            # Julia HDF5 library maintainers about that.
-            sz_tuple = size(path["data"])
-            if length(sz_tuple) == 1
-                data = path["data"][index:end_index]
-            else
-                data = path["data"][index:end_index, 1:sz_tuple[2]]
-            end
-            timestamps = path["timestamps"][index:end_index]
-        end
-
-        # If the user set column names, return them. Otherwise, let TimeArray pick them.
-        dtimestamps = [Dates.epochms2datetime(x) for x in timestamps]
+        initial_time_stamp_ = HDF5.read(HDF5.attrs(path)["initial_time"])
+        initial_time_stamp = Dates.epochms2datetime(initial_time_stamp_)
+        resolution = Dates.Millisecond(HDF5.read(HDF5.attrs(path)["resolution"]))
+        length = HDF5.read(HDF5.attrs(path)["length"])
         if HDF5.exists(HDF5.attrs(path), "columns")
             columns = Symbol.(HDF5.read(HDF5.attrs(path)["columns"]))
-            return TimeSeries.TimeArray(dtimestamps, data, columns)
+        else
+            columns = nothing
         end
 
-        return TimeSeries.TimeArray(dtimestamps, data)
+        # HDF5.readmmap could be faster in many cases than this. However, experiments
+        # resulted in various crashes if we tried to close the file before references
+        # to the array data were garbage collected. May need to consult with the
+        # Julia HDF5 library maintainers about that.
+        if !HDF5.exists(HDF5.attrs(path), "interval")
+            @assert HDF5.read(HDF5.attrs(path)["count"]) == 1
+            @debug "reconstructing a contigouos time series"
+            if len == 0 && index == 0
+                data = HDF5.read(path["data"])
+                time_stamps = range(initial_time_stamp; length = length, step = resolution)
+            elseif len == 0 && index != 0
+                data = path["data"][index:length]
+                time_stamps_ = range(initial_time_stamp; length = length, step = resolution)
+                time_stamps = time_stamps_[index:end]
+            elseif len != 0 && index != 0
+                end_index = index + len - 1
+                data = path["data"][index:end_index]
+                time_stamps_ = range(initial_time_stamp; length = length, step = resolution)
+                time_stamps = time_stamps_[index:end_index]
+            end
+            #Making a Dict prevents type instability in the return of the function
+            return DataStructures.SortedDict(time_stamps[1] => _make_time_array(time_stamps, data, columns))
+        elseif HDF5.exists(HDF5.attrs(path), "interval")
+            data = DataStructures.SortedDict{Dates.DateTime, TimeSeries.TimeArray}()
+            interval = Dates.Millisecond(HDF5.read(HDF5.attrs(path)["interval"]))
+            count = HDF5.read(HDF5.attrs(path)["count"])
+            initial_times = range(initial_time_stamp; length = count, step = interval)
+            horizon = (len == 0) ? length : len
+            for i in 0:(count - 1)
+                ini_time = initial_times[index + i]
+                time_stamps = range(ini_time; length = horizon, step = resolution)
+                ts_data = path["data"][1:horizon, index + i]
+                data[ini_time] = _make_time_array(time_stamps, ts_data, columns)
+            end
+            return data
+        else
+            @error("HDF5 data has unsupported format")
+        end
     end
 end
 
