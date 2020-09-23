@@ -174,8 +174,8 @@ function add_time_series!(
         get_uuid(component),
         get_label(ts_metadata),
         ta,
-         nothing,
-         # TODO: Remove this
+        nothing,
+        # TODO: Do something with the columns
         #get_columns(T, ta.data),
     )
 end
