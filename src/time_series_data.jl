@@ -6,7 +6,6 @@ function get_resolution(time_series::TimeSeriesData)
     return TimeSeries.timestamp(data)[2] - TimeSeries.timestamp(data)[1]
 end
 
-
 function Base.getindex(time_series::TimeSeriesData, args...)
     return _split_time_series(time_series, getindex(get_data(time_series), args...))
 end
