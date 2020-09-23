@@ -1,5 +1,5 @@
 """
-Construct TimeSeriesData from a TimeArray or DataFrame.
+Construct SingleTimeSeries from a TimeArray or DataFrame.
 
 # Arguments
 - `label::AbstractString`: user-defined label
@@ -12,7 +12,7 @@ Construct TimeSeriesData from a TimeArray or DataFrame.
 - `timestamp = :timestamp`: If a DataFrame is passed then this must be the column name that
   contains timestamps.
 """
-function TimeSeriesData(
+function SingleTimeSeries(
     label::AbstractString,
     data::Union{TimeSeries.TimeArray, DataFrames.DataFrame};
     normalization_factor::NormalizationFactor = 1.0,
@@ -28,11 +28,11 @@ function TimeSeriesData(
     end
 
     ta = handle_normalization_factor(ta, normalization_factor)
-    return TimeSeriesData(label, ta, scaling_factor_multiplier)
+    return SingleTimeSeries(label, ta, scaling_factor_multiplier)
 end
 
 """
-Construct TimeSeriesData from a CSV file. The file must have a column that is the name of the
+Construct SingleTimeSeries from a CSV file. The file must have a column that is the name of the
 component.
 
 # Arguments
@@ -44,7 +44,7 @@ component.
   factors then this function will be called on the component and applied to the data when
   [`get_time_series_array`](@ref) is called.
 """
-function TimeSeriesData(
+function SingleTimeSeries(
     label::AbstractString,
     filename::AbstractString,
     component::InfrastructureSystemsComponent;
@@ -54,14 +54,14 @@ function TimeSeriesData(
     component_name = get_name(component)
     ta = read_time_series(filename, component_name)
     ta = handle_normalization_factor(ta[Symbol(component_name)], normalization_factor)
-    return TimeSeriesData(label, ta, scaling_factor_multiplier)
+    return SingleTimeSeries(label, ta, scaling_factor_multiplier)
 end
 
 """
-Construct TimeSeriesData after constructing a TimeArray from `initial_time` and
+Construct SingleTimeSeries after constructing a TimeArray from `initial_time` and
 `time_steps`.
 """
-function TimeSeriesData(
+function SingleTimeSeries(
     label::String,
     resolution::Dates.Period,
     initial_time::Dates.DateTime,
@@ -71,10 +71,10 @@ function TimeSeriesData(
         initial_time:resolution:(initial_time + resolution * (time_steps - 1)),
         ones(time_steps),
     )
-    return TimeSeriesData(; label = label, data = data)
+    return SingleTimeSeries(; label = label, data = data)
 end
 
-function TimeSeriesData(time_series::Vector{TimeSeriesData})
+function SingleTimeSeries(time_series::Vector{SingleTimeSeries})
     @assert !isempty(time_series)
     timestamps =
         collect(Iterators.flatten((TimeSeries.timestamp(get_data(x)) for x in time_series)))
@@ -91,31 +91,31 @@ function TimeSeriesData(time_series::Vector{TimeSeriesData})
 end
 
 function make_time_series_data(
-    ts_metadata::TimeSeriesDataMetadata,
+    ts_metadata::SingleTimeSeriesMetadata,
     data::DataStructures.SortedDict{Dates.DateTime, TimeSeries.TimeArray},
 )
     @assert length(data) == 1
-    return TimeSeriesData(
+    return SingleTimeSeries(
         get_label(ts_metadata),
         first(values(data)),
         get_scaling_factor_multiplier(ts_metadata),
     )
 end
 
-function make_time_series_metadata(time_series::TimeSeriesData, ta::TimeArrayContainer)
-    return TimeSeriesDataMetadata(
+function make_time_series_metadata(time_series::SingleTimeSeries, ta::TimeArrayContainer)
+    return SingleTimeSeriesMetadata(
         get_label(time_series),
         ta,
         get_scaling_factor_multiplier(time_series),
     )
 end
 
-function TimeSeriesDataMetadata(
+function SingleTimeSeriesMetadata(
     label::AbstractString,
     data::TimeArrayContainer,
     scaling_factor_multiplier = nothing,
 )
-    return TimeSeriesDataMetadata(
+    return SingleTimeSeriesMetadata(
         label,
         get_resolution(data),
         get_initial_time(data),
@@ -224,7 +224,7 @@ function Probabilistic(
 end
 
 """
-Constructs Probabilistic TimeSeriesData after constructing a TimeArray from initial_time and time_steps.
+Constructs Probabilistic SingleTimeSeries after constructing a TimeArray from initial_time and time_steps.
 """
 # TODO: do we need this check still?
 #function Probabilistic(
@@ -290,7 +290,7 @@ function Scenarios(
 end
 
 """
-Constructs Scenarios TimeSeriesData after constructing a TimeArray from initial_time and
+Constructs Scenarios SingleTimeSeries after constructing a TimeArray from initial_time and
 time_steps.
 """
 function Scenarios(
@@ -341,15 +341,15 @@ function make_time_series_metadata(time_series::Scenarios, ta::TimeArrayContaine
     )
 end
 
-function time_series_data_to_metadata(::Type{T}) where {T <: AbstractTimeSeriesData}
+function time_series_data_to_metadata(::Type{T}) where {T <: TimeSeriesData}
     if T <: Deterministic
         time_series_type = DeterministicMetadata
     elseif T <: Probabilistic
         time_series_type = ProbabilisticMetadata
     elseif T <: Scenarios
         time_series_type = ScenariosMetadata
-    elseif T <: TimeSeriesData
-        time_series_type = TimeSeriesDataMetadata
+    elseif T <: SingleTimeSeries
+        time_series_type = SingleTimeSeriesMetadata
     else
         @assert false
     end

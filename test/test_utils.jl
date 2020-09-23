@@ -7,19 +7,19 @@ end
 @testset "Test strip_module_name" begin
     @test IS.strip_module_name("PowerSystems.HydroDispatch") == "HydroDispatch"
 
-    @test IS.strip_module_name("InfrastructureSystems.TimeSeriesData{PowerSystems.HydroDispatch}") ==
-          "TimeSeriesData{PowerSystems.HydroDispatch}"
+    @test IS.strip_module_name("InfrastructureSystems.SingleTimeSeries{PowerSystems.HydroDispatch}") ==
+          "SingleTimeSeries{PowerSystems.HydroDispatch}"
 
-    @test IS.strip_module_name("TimeSeriesData{PowerSystems.HydroDispatch}") ==
-          "TimeSeriesData{PowerSystems.HydroDispatch}"
+    @test IS.strip_module_name("SingleTimeSeries{PowerSystems.HydroDispatch}") ==
+          "SingleTimeSeries{PowerSystems.HydroDispatch}"
 end
 
 @testset "Test strip_parametric_type" begin
-    @test IS.strip_parametric_type("TimeSeriesData{PowerSystems.HydroDispatch}") ==
-          "TimeSeriesData"
+    @test IS.strip_parametric_type("SingleTimeSeries{PowerSystems.HydroDispatch}") ==
+          "SingleTimeSeries"
 
-    @test IS.strip_parametric_type("InfrastructureSystems.TimeSeriesData{PowerSystems.HydroDispatch}") ==
-          "InfrastructureSystems.TimeSeriesData"
+    @test IS.strip_parametric_type("InfrastructureSystems.SingleTimeSeries{PowerSystems.HydroDispatch}") ==
+          "InfrastructureSystems.SingleTimeSeries"
 end
 
 @testset "Test exported names" begin

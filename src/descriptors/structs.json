@@ -248,7 +248,7 @@
       "supertype": "Forecast"
     },
     {
-      "struct_name": "TimeSeriesDataMetadata",
+      "struct_name": "SingleTimeSeriesMetadata",
       "docstring": "A TimeSeries Data object in contigous form.",
       "fields": [
         {
@@ -288,10 +288,10 @@
         }
       ],
       "supertype": "TimeSeriesMetadata",
-      "custom_code": "get_horizon(val::TimeSeriesDataMetadata) = get_length(val)"
+      "custom_code": "get_horizon(val::SingleTimeSeriesMetadata) = get_length(val)"
     },
     {
-      "struct_name": "TimeSeriesData",
+      "struct_name": "SingleTimeSeries",
       "docstring": "A deterministic time series for a particular data field in a Component.",
       "fields": [
         {
@@ -311,8 +311,8 @@
           "comment": "Applicable when the time series data are scaling factors. Called on the associated component to convert the values."
         }
       ],
-      "custom_code": "TimeSeriesData(label, data) = TimeSeriesData(label = label, data = data)",
-      "supertype": "AbstractTimeSeriesData"
+      "custom_code": "SingleTimeSeries(label, data) = SingleTimeSeries(label = label, data = data)",
+      "supertype": "ContiguousTimeSeries"
     }
   ],
   "struct_validation_descriptors": []

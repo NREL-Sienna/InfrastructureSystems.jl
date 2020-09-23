@@ -56,7 +56,7 @@ end
 
 function _verify_time_series(
     params::TimeSeriesParameters,
-    time_series::TimeSeriesDataMetadata,
+    time_series::SingleTimeSeriesMetadata,
 )
     if time_series.resolution != params.resolution
         throw(DataFormatError(
@@ -67,7 +67,7 @@ function _verify_time_series(
     return
 end
 
-function check_add_time_series!(params::TimeSeriesParameters, ts::TimeSeriesDataMetadata)
+function check_add_time_series!(params::TimeSeriesParameters, ts::SingleTimeSeriesMetadata)
     if is_uninitialized(params)
         # This is the first time_series added.
         params.resolution = ts.resolution

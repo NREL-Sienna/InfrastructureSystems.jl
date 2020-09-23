@@ -23,7 +23,7 @@ end
     all_time_series = get_all_time_series(data)
     @test length(all_time_series) == 1
     time_series = all_time_series[1]
-    @test time_series isa IS.TimeSeriesData
+    @test time_series isa IS.SingleTimeSeries
 
     time_series2 = IS.get_time_series(
         typeof(time_series),
@@ -62,10 +62,10 @@ end
     data = collect(1:24)
     ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
     label = "val"
-    ts = IS.TimeSeriesData(label = label, data = ta, scaling_factor_multiplier = IS.get_val)
+    ts = IS.SingleTimeSeries(label = label, data = ta, scaling_factor_multiplier = IS.get_val)
     IS.add_time_series!(sys, component, ts)
-    ts = IS.get_time_series(IS.TimeSeriesData, component, dates[1], label)
-    @test ts isa IS.TimeSeriesData
+    ts = IS.get_time_series(IS.SingleTimeSeries, component, dates[1], label)
+    @test ts isa IS.SingleTimeSeries
 
     name = "Component2"
     component2 = IS.TestComponent(name, component_val)
@@ -92,13 +92,13 @@ end
     data = collect(1:24)
     ta = TimeSeries.TimeArray(dates, data, ["1"])
     label = "val"
-    ts = IS.TimeSeriesData(label = label, data = ta, scaling_factor_multiplier = IS.get_val)
+    ts = IS.SingleTimeSeries(label = label, data = ta, scaling_factor_multiplier = IS.get_val)
     IS.add_time_series!(sys, components, ts)
 
     hash_ta_main = nothing
     for i in 1:len
         component = IS.get_component(IS.TestComponent, sys, string(i))
-        ts = IS.get_time_series(IS.TimeSeriesData, component, initial_time, label)
+        ts = IS.get_time_series(IS.SingleTimeSeries, component, initial_time, label)
         hash_ta = hash(IS.get_data(ts))
         if i == 1
             hash_ta_main = hash_ta
@@ -128,9 +128,9 @@ end
     ta1 = TimeSeries.TimeArray(dates1, data1, [IS.get_name(component)])
     ta2 = TimeSeries.TimeArray(dates2, data2, [IS.get_name(component)])
     time_series1 =
-        IS.TimeSeriesData(label = "val", data = ta1, scaling_factor_multiplier = IS.get_val)
+        IS.SingleTimeSeries(label = "val", data = ta1, scaling_factor_multiplier = IS.get_val)
     time_series2 =
-        IS.TimeSeriesData(label = "val", data = ta2, scaling_factor_multiplier = IS.get_val)
+        IS.SingleTimeSeries(label = "val", data = ta2, scaling_factor_multiplier = IS.get_val)
     IS.add_time_series!(sys, component, time_series1)
     IS.add_time_series!(sys, component, time_series2)
 
@@ -138,7 +138,7 @@ end
     @test length(collect(IS.get_time_series_multiple(component))) == 2
     @test length(collect(IS.get_time_series_multiple(sys))) == 2
 
-    @test length(collect(IS.get_time_series_multiple(sys; type = IS.TimeSeriesData))) == 2
+    @test length(collect(IS.get_time_series_multiple(sys; type = IS.SingleTimeSeries))) == 2
     @test length(collect(IS.get_time_series_multiple(sys; type = IS.Probabilistic))) == 0
 
     time_series = collect(IS.get_time_series_multiple(sys; initial_time = initial_time1))
@@ -169,7 +169,7 @@ end
 #                    Dates.DateTime("2020-01-01T23:00:00"))
 #    data = collect(1:24)
 #    ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
-#    time_series = IS.TimeSeriesData("bad-label", ta)
+#    time_series = IS.SingleTimeSeries("bad-label", ta)
 #    @test_throws ArgumentError IS.add_time_series!(sys, component, time_series)
 #end
 
@@ -186,10 +186,10 @@ end
     data = collect(1:24)
     ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
     label = "val"
-    ts = IS.TimeSeriesData(label, ta; scaling_factor_multiplier = IS.get_val)
+    ts = IS.SingleTimeSeries(label, ta; scaling_factor_multiplier = IS.get_val)
     IS.add_time_series!(sys, component, ts)
-    time_series = IS.get_time_series(IS.TimeSeriesData, component, dates[1], label)
-    @test time_series isa IS.TimeSeriesData
+    time_series = IS.get_time_series(IS.SingleTimeSeries, component, dates[1], label)
+    @test time_series isa IS.SingleTimeSeries
 end
 
 @testset "Test time_series initial times" begin
@@ -222,8 +222,8 @@ end
         end
         ta1 = TimeSeries.TimeArray(dates1_, data, [IS.get_name(component)])
         ta2 = TimeSeries.TimeArray(dates2_, data, [IS.get_name(component)])
-        ts1 = IS.TimeSeriesData(label, ta1)
-        ts2 = IS.TimeSeriesData(label, ta2)
+        ts1 = IS.SingleTimeSeries(label, ta1)
+        ts2 = IS.SingleTimeSeries(label, ta2)
         IS.add_time_series!(sys, component, ts1)
         IS.add_time_series!(sys, component, ts2)
     end
@@ -251,15 +251,15 @@ end
     for component in components
         ta1 = TimeSeries.TimeArray(dates1, data, [IS.get_name(component)])
         ta2 = TimeSeries.TimeArray(dates2, data, [IS.get_name(component)])
-        ts1 = IS.TimeSeriesData(label, ta1)
-        ts2 = IS.TimeSeriesData(label, ta2)
+        ts1 = IS.SingleTimeSeries(label, ta1)
+        ts2 = IS.SingleTimeSeries(label, ta2)
         IS.add_time_series!(sys, component, ts1)
         IS.add_time_series!(sys, component, ts2)
     end
 
     expected = [dates1[1], dates2[1]]
     for component in components
-        @test IS.get_time_series_initial_times(IS.TimeSeriesData, component) == expected
+        @test IS.get_time_series_initial_times(IS.SingleTimeSeries, component) == expected
     end
 
     @test IS.validate_time_series_consistency(sys)
@@ -325,21 +325,21 @@ end
     data = collect(1:24)
     ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
     label = "val"
-    ts = IS.TimeSeriesData(
+    ts = IS.SingleTimeSeries(
         label,
         ta;
         normalization_factor = 1.0,
         scaling_factor_multiplier = IS.get_val,
     )
     IS.add_time_series!(sys, component, ts)
-    time_series = IS.get_time_series(IS.TimeSeriesData, component, dates[1], label)
+    time_series = IS.get_time_series(IS.SingleTimeSeries, component, dates[1], label)
 
     # Test both versions of the function.
     vals = IS.get_time_series_array(component, time_series)
     @test TimeSeries.timestamp(vals) == dates
     @test TimeSeries.values(vals) == data .* component_val
 
-    vals2 = IS.get_time_series_array(IS.TimeSeriesData, component, dates[1], label)
+    vals2 = IS.get_time_series_array(IS.SingleTimeSeries, component, dates[1], label)
     @test TimeSeries.timestamp(vals2) == dates
     @test TimeSeries.values(vals2) == data .* component_val
 end
@@ -357,13 +357,13 @@ end
 
     ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
     label = "val"
-    ts = IS.TimeSeriesData(label, ta)
+    ts = IS.SingleTimeSeries(label, ta)
     IS.add_time_series!(sys, component, ts)
 
-    time_series = IS.get_time_series(IS.TimeSeriesData, component, dates[1], label)
+    time_series = IS.get_time_series(IS.SingleTimeSeries, component, dates[1], label)
     @test TimeSeries.timestamp(IS.get_data(time_series))[1] == dates[1]
 
-    time_series = IS.get_time_series(IS.TimeSeriesData, component, dates[3], label, 3)
+    time_series = IS.get_time_series(IS.SingleTimeSeries, component, dates[3], label, 3)
     @test TimeSeries.timestamp(IS.get_data(time_series))[1] == dates[3]
     @test length(time_series) == 3
 end
@@ -380,14 +380,14 @@ end
 
     ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
     label = "val"
-    ts = IS.TimeSeriesData(label, ta)
+    ts = IS.SingleTimeSeries(label, ta)
     IS.add_time_series!(sys, component, ts)
 
     component2 = IS.TestComponent("component2", 6)
     IS.add_component!(sys, component2)
     IS.copy_time_series!(component2, component)
-    time_series = IS.get_time_series(IS.TimeSeriesData, component2, initial_time, label)
-    @test time_series isa IS.TimeSeriesData
+    time_series = IS.get_time_series(IS.SingleTimeSeries, component2, initial_time, label)
+    @test time_series isa IS.SingleTimeSeries
     @test IS.get_initial_time(time_series) == initial_time
     @test IS.get_label(time_series) == label
 end
@@ -404,7 +404,7 @@ end
 
     ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
     label1 = "val1"
-    ts = IS.TimeSeriesData(label1, ta)
+    ts = IS.SingleTimeSeries(label1, ta)
     IS.add_time_series!(sys, component, ts)
 
     component2 = IS.TestComponent("component2", 6)
@@ -412,8 +412,8 @@ end
     label2 = "val2"
     label_mapping = Dict(label1 => label2)
     IS.copy_time_series!(component2, component; label_mapping = label_mapping)
-    time_series = IS.get_time_series(IS.TimeSeriesData, component2, initial_time, label2)
-    @test time_series isa IS.TimeSeriesData
+    time_series = IS.get_time_series(IS.SingleTimeSeries, component2, initial_time, label2)
+    @test time_series isa IS.SingleTimeSeries
     @test IS.get_initial_time(time_series) == initial_time
     @test IS.get_label(time_series) == label2
 end
@@ -436,8 +436,8 @@ end
     ta2 = TimeSeries.TimeArray(dates2, data, [IS.get_name(component)])
     label1 = "val1"
     label2a = "val2a"
-    ts1 = IS.TimeSeriesData(label1, ta1)
-    ts2 = IS.TimeSeriesData(label2a, ta2)
+    ts1 = IS.SingleTimeSeries(label1, ta1)
+    ts2 = IS.SingleTimeSeries(label2a, ta2)
     IS.add_time_series!(sys, component, ts1)
     IS.add_time_series!(sys, component, ts2)
 
@@ -446,12 +446,12 @@ end
     label2b = "val2b"
     label_mapping = Dict(label2a => label2b)
     IS.copy_time_series!(component2, component; label_mapping = label_mapping)
-    time_series = IS.get_time_series(IS.TimeSeriesData, component2, initial_time2, label2b)
-    @test time_series isa IS.TimeSeriesData
+    time_series = IS.get_time_series(IS.SingleTimeSeries, component2, initial_time2, label2b)
+    @test time_series isa IS.SingleTimeSeries
     @test IS.get_initial_time(time_series) == initial_time2
     @test IS.get_label(time_series) == label2b
     @test_throws ArgumentError IS.get_time_series(
-        IS.TimeSeriesData,
+        IS.SingleTimeSeries,
         component2,
         initial_time2,
         label2a,
@@ -459,7 +459,7 @@ end
 end
 
 function validate_generated_initial_times(
-    time_series_type::Type{<:IS.AbstractTimeSeriesData},
+    time_series_type::Type{<:IS.TimeSeriesData},
     component::IS.InfrastructureSystemsComponent,
     label::AbstractString,
     horizon::Int,
@@ -505,9 +505,9 @@ end
     ta1 = TimeSeries.TimeArray(dates1, data, [IS.get_name(component)])
     ta2 = TimeSeries.TimeArray(dates2, data, [IS.get_name(component)])
     ta3 = TimeSeries.TimeArray(dates3, data, [IS.get_name(component)])
-    ts1 = IS.TimeSeriesData(label, ta1)
-    ts2 = IS.TimeSeriesData(label, ta2)
-    ts3 = IS.TimeSeriesData(label, ta3)
+    ts1 = IS.SingleTimeSeries(label, ta1)
+    ts2 = IS.SingleTimeSeries(label, ta2)
+    ts3 = IS.SingleTimeSeries(label, ta3)
     IS.add_time_series!(sys, component, ts1)
     IS.add_time_series!(sys, component, ts2)
     IS.add_time_series!(sys, component, ts3)
@@ -520,7 +520,7 @@ end
     horizon = 55
     initial_times = IS.generate_initial_times(component, interval, horizon)
     validate_generated_initial_times(
-        IS.TimeSeriesData,
+        IS.SingleTimeSeries,
         component,
         label,
         horizon,
@@ -532,7 +532,7 @@ end
 
     invalid_it = Dates.DateTime("2020-01-20T00:00:00")
     @test_throws ArgumentError IS.get_time_series(
-        IS.TimeSeriesData,
+        IS.SingleTimeSeries,
         component,
         invalid_it,
         label,
@@ -553,7 +553,7 @@ end
 
     ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
     label = "val"
-    ts = IS.TimeSeriesData(label, ta)
+    ts = IS.SingleTimeSeries(label, ta)
     IS.add_time_series!(sys, component, ts)
     initial_times = IS.get_time_series_initial_times(component)
     @test length(initial_times) == 1
@@ -562,7 +562,7 @@ end
     interval = Dates.Hour(1)
     initial_times = IS.generate_initial_times(component, interval, horizon)
     validate_generated_initial_times(
-        IS.TimeSeriesData,
+        IS.SingleTimeSeries,
         component,
         label,
         horizon,
@@ -576,7 +576,7 @@ end
     interval = Dates.Hour(1)
     initial_times = IS.generate_initial_times(component, interval, horizon)
     validate_generated_initial_times(
-        IS.TimeSeriesData,
+        IS.SingleTimeSeries,
         component,
         label,
         horizon,
@@ -590,7 +590,7 @@ end
     interval = Dates.Hour(3)
     initial_times = IS.generate_initial_times(component, interval, horizon)
     validate_generated_initial_times(
-        IS.TimeSeriesData,
+        IS.SingleTimeSeries,
         component,
         label,
         horizon,
@@ -604,7 +604,7 @@ end
     interval = Dates.Hour(4)
     initial_times = IS.generate_initial_times(component, interval, horizon)
     validate_generated_initial_times(
-        IS.TimeSeriesData,
+        IS.SingleTimeSeries,
         component,
         label,
         horizon,
@@ -618,7 +618,7 @@ end
     horizon = 6
     initial_times = IS.generate_initial_times(sys, interval, horizon)
     validate_generated_initial_times(
-        IS.TimeSeriesData,
+        IS.SingleTimeSeries,
         component,
         label,
         horizon,
@@ -652,8 +652,8 @@ end
     label = "val"
     ta1 = TimeSeries.TimeArray(dates1, data, [IS.get_name(component)])
     ta2 = TimeSeries.TimeArray(dates2, data, [IS.get_name(component)])
-    ts1 = IS.TimeSeriesData(label, ta1)
-    ts2 = IS.TimeSeriesData(label, ta2)
+    ts1 = IS.SingleTimeSeries(label, ta1)
+    ts2 = IS.SingleTimeSeries(label, ta2)
     IS.add_time_series!(sys, component, ts1)
     IS.add_time_series!(sys, component, ts2)
     initial_times = IS.get_time_series_initial_times(component)
@@ -665,7 +665,7 @@ end
     horizon = 48
     initial_times = IS.generate_initial_times(component, interval, horizon)
     validate_generated_initial_times(
-        IS.TimeSeriesData,
+        IS.SingleTimeSeries,
         component,
         label,
         horizon,
@@ -679,7 +679,7 @@ end
     interval = Dates.Hour(1)
     initial_times = IS.generate_initial_times(component, interval, horizon)
     validate_generated_initial_times(
-        IS.TimeSeriesData,
+        IS.SingleTimeSeries,
         component,
         label,
         horizon,
@@ -693,7 +693,7 @@ end
     interval = Dates.Hour(1)
     initial_times = IS.generate_initial_times(component, interval, horizon)
     validate_generated_initial_times(
-        IS.TimeSeriesData,
+        IS.SingleTimeSeries,
         component,
         label,
         horizon,
@@ -707,7 +707,7 @@ end
     interval = Dates.Hour(3)
     initial_times = IS.generate_initial_times(component, interval, horizon)
     validate_generated_initial_times(
-        IS.TimeSeriesData,
+        IS.SingleTimeSeries,
         component,
         label,
         horizon,
@@ -721,7 +721,7 @@ end
     interval = Dates.Hour(4)
     initial_times = IS.generate_initial_times(component, interval, horizon)
     validate_generated_initial_times(
-        IS.TimeSeriesData,
+        IS.SingleTimeSeries,
         component,
         label,
         horizon,
@@ -735,7 +735,7 @@ end
     horizon = 6
     initial_times = IS.generate_initial_times(sys, interval, horizon)
     validate_generated_initial_times(
-        IS.TimeSeriesData,
+        IS.SingleTimeSeries,
         component,
         label,
         horizon,
@@ -766,8 +766,8 @@ end
     ta1 = TimeSeries.TimeArray(dates1, data, [IS.get_name(component)])
     ta2 = TimeSeries.TimeArray(dates2, data, [IS.get_name(component)])
     label = "val"
-    ts1 = IS.TimeSeriesData(label, ta1)
-    ts2 = IS.TimeSeriesData(label, ta2)
+    ts1 = IS.SingleTimeSeries(label, ta1)
+    ts2 = IS.SingleTimeSeries(label, ta2)
     IS.add_time_series!(sys, component, ts1)
     @test_throws IS.ConflictingInputsError IS.generate_initial_times(
         sys,
@@ -803,8 +803,8 @@ end
     ta1 = TimeSeries.TimeArray(dates1, data, [IS.get_name(component)])
     ta2 = TimeSeries.TimeArray(dates2, data, [IS.get_name(component)])
     label = "val"
-    ts1 = IS.TimeSeriesData(label, ta1)
-    ts2 = IS.TimeSeriesData(label, ta2)
+    ts1 = IS.SingleTimeSeries(label, ta1)
+    ts2 = IS.SingleTimeSeries(label, ta2)
     IS.add_time_series!(sys, component, ts1)
     @test_throws IS.ConflictingInputsError IS.generate_initial_times(
         sys,
@@ -833,7 +833,7 @@ end
 
     ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
     label = "val"
-    ts = IS.TimeSeriesData(label, ta)
+    ts = IS.SingleTimeSeries(label, ta)
     IS.add_time_series!(sys, component, ts)
     resolution = IS.get_time_series_resolution(sys)
     initial_times = IS.get_time_series_initial_times(component)
@@ -870,7 +870,7 @@ end
     data = collect(1:24)
     ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
     label = "val"
-    ts = IS.TimeSeriesData(label, ta)
+    ts = IS.SingleTimeSeries(label, ta)
     IS.add_time_series!(sys1, component, ts)
 
     @test_throws ArgumentError IS.add_component!(sys1, component)
@@ -1001,6 +1001,6 @@ end
     )
     data = collect(1:24)
     ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
-    time_series = IS.TimeSeriesData(label = "val", data = ta)
+    time_series = IS.SingleTimeSeries(label = "val", data = ta)
     @test_throws ArgumentError IS.add_time_series!(sys, component, time_series)
 end

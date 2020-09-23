@@ -52,7 +52,9 @@ function get_interval(ta::TimeArrayContainer)
     if length(ta.data) < 2
         throw(ArgumentError("get_interval is an invalid operation for continguous data"))
     end
-    keys_ = collect(keys(ta.data))
-    return keys_[2] - keys_[1]
+    k = keys(ta.data)
+    first_key, state = iterate(k)
+    second_key, state = iterate(k, state)
+    return second_key - first_key
 end
 get_count(ta::TimeArrayContainer) = length(ta.data)

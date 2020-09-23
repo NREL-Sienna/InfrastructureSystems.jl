@@ -51,7 +51,7 @@ function Base.show(io::IO, ::MIME"text/plain", container::TimeSeriesContainer)
     end
 end
 
-function Base.summary(time_series::AbstractTimeSeriesData)
+function Base.summary(time_series::TimeSeriesData)
     return "$(typeof(time_series)) time_series ($length(time_series))"
 end
 

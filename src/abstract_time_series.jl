@@ -12,4 +12,4 @@ Users can create them. The system will convert them to a subtype of TimeSeriesMe
 storage.
 Time series data is stored as a field, so reads will always be from memory.
 """
-abstract type AbstractTimeSeriesData <: Any end
+abstract type TimeSeriesData end

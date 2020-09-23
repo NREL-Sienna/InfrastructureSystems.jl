@@ -1,4 +1,4 @@
-abstract type Forecast <: AbstractTimeSeriesData end
+abstract type Forecast <: TimeSeriesData end
 
 get_label(value::Forecast) = value.label
 get_percentiles(value::Forecast) = value.percentiles

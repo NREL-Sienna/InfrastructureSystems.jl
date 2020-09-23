@@ -221,7 +221,7 @@ function get_time_series(
         initial_time_stamp_ = HDF5.read(HDF5.attrs(path)["initial_time"])
         initial_time_stamp = Dates.epochms2datetime(initial_time_stamp_)
         resolution = Dates.Millisecond(HDF5.read(HDF5.attrs(path)["resolution"]))
-        length = HDF5.read(HDF5.attrs(path)["length"])
+        series_length = HDF5.read(HDF5.attrs(path)["length"])
         if HDF5.exists(HDF5.attrs(path), "columns")
             columns = Symbol.(HDF5.read(HDF5.attrs(path)["columns"]))
         else
@@ -232,23 +232,17 @@ function get_time_series(
         # resulted in various crashes if we tried to close the file before references
         # to the array data were garbage collected. May need to consult with the
         # Julia HDF5 library maintainers about that.
+        # TODO: Consider case Interval_ms = 0 if contigous instead of not existing
         if !HDF5.exists(HDF5.attrs(path), "interval")
             @assert HDF5.read(HDF5.attrs(path)["count"]) == 1
             @debug "reconstructing a contigouos time series"
-            if len == length && index == 1
+            time_stamps = range(initial_time_stamp; length = series_length, step = resolution)
+            if len == series_length && index == 1
                 data = HDF5.read(path["data"])
-                time_stamps = range(initial_time_stamp; length = length, step = resolution)
-            elseif len >= length && index > 1
-                @show len length
-                @warn("The data is length $(length)")
-                data = path["data"][index:length]
-                time_stamps_ = range(initial_time_stamp; length = length, step = resolution)
-                time_stamps = time_stamps_[index:end]
-            elseif len <= length
+            elseif len <= series_length
                 end_index = index + len - 1
                 data = path["data"][index:end_index]
-                time_stamps_ = range(initial_time_stamp; length = length, step = resolution)
-                time_stamps = time_stamps_[index:end_index]
+                time_stamps = time_stamps[index:end_index]
             else
                 @assert false
             end
@@ -264,8 +258,8 @@ function get_time_series(
             if count > stored_count
                 throw(ArgumentError("More Forecasts requested $count than the total stored $stored_count"))
             end
-            initial_times = range(initial_time_stamp; length = count, step = interval)
-            horizon = (len == 0) ? length : len
+            initial_times = range(initial_time_stamp; length = stored_count, step = interval)
+            horizon = (len == 0) ? series_length : len
             for i in 0:(count - 1)
                 ini_time = initial_times[index + i]
                 time_stamps = range(ini_time; length = horizon, step = resolution)
