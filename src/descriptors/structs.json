@@ -312,7 +312,7 @@
         }
       ],
       "custom_code": "SingleTimeSeries(label, data) = SingleTimeSeries(label = label, data = data)",
-      "supertype": "ContiguousTimeSeries"
+      "supertype": "StaticTimeSeries"
     }
   ],
   "struct_validation_descriptors": []

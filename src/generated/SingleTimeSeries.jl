@@ -2,7 +2,7 @@
 This file is auto-generated. Do not edit.
 =#
 """
-    mutable struct SingleTimeSeries <: ContiguousTimeSeries
+    mutable struct SingleTimeSeries <: StaticTimeSeries
         label::String
         data::TimeSeries.TimeArray
         scaling_factor_multiplier::Union{Nothing, Function}
@@ -15,7 +15,7 @@ A deterministic time series for a particular data field in a Component.
 - `data::TimeSeries.TimeArray`: timestamp - scalingfactor
 - `scaling_factor_multiplier::Union{Nothing, Function}`: Applicable when the time series data are scaling factors. Called on the associated component to convert the values.
 """
-mutable struct SingleTimeSeries <: ContiguousTimeSeries
+mutable struct SingleTimeSeries <: StaticTimeSeries
     "user-defined label"
     label::String
     "timestamp - scalingfactor"
