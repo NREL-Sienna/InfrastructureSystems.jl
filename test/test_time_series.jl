@@ -18,7 +18,7 @@
         ),
     )
 
-    forecast = IS.Deterministic(data = data, label = "test")
+    forecast = IS.Deterministic(data = data, resolution =, label = "test")
     IS.add_time_series!(sys, component, forecast)
     # This still returns a forecast object. Requires update of the interfaces
     var1 = IS.get_time_series(IS.Deterministic, component, initial_time, "test")

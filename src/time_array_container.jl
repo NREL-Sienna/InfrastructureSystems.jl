@@ -43,7 +43,7 @@ function TimeDataContainer(data::Dict{Dates.DateTime, <:TimeSeries.TimeArray})
 end
 
 function TimeDataContainer(data::TimeSeries.TimeArray)
-    @show _data = Dict(first(TimeSeries.timestamp(data)) => data)
+    _data = Dict(first(TimeSeries.timestamp(data)) => data)
     return TimeDataContainer(_data)
 end
 

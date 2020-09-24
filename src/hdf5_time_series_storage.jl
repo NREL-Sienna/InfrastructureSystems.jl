@@ -189,7 +189,6 @@ function remove_time_series!(
     end
 end
 
-
 function get_time_series(
     storage::Hdf5TimeSeriesStorage,
     uuid::UUIDs.UUID,
@@ -225,12 +224,12 @@ function get_time_series(
                 @assert false
             end
             #Making a Dict prevents type instability in the return of the function
-            return DataStructures.SortedDict(
+            return SortedDict(
                 time_stamps[1] => TimeSeries.TimeArray(time_stamps, data),
             )
         else
             @debug "reconstructing a overlapping forecast time series"
-            data = DataStructures.SortedDict{Dates.DateTime, TimeSeries.TimeArray}()
+            data = SortedDict{Dates.DateTime, TimeSeries.TimeArray}()
             interval = Dates.Millisecond(HDF5.read(HDF5.attrs(path)["interval"]))
             stored_count = HDF5.read(HDF5.attrs(path)["count"])
             if count > stored_count
