@@ -50,7 +50,7 @@ function _get_forecast_index_no(
     interval = get_interval(ts_metadata)
     index = Int(range / interval) + 1
 
-    if !(horizon === nothing) && horizon > get_horizon(ts_metadata)
+    if horizon !== nothing && horizon > get_horizon(ts_metadata)
         throw(ArgumentError("The requested horizon is longer than data $(get_horizon(ts_metadata))"))
     end
 
@@ -99,12 +99,12 @@ function get_time_series(
     time_series_type = time_series_data_to_metadata(T)
     time_series_metadata = get_time_series(time_series_type, component, label)
     storage = _get_time_series_storage(component)
-    if !(horizon === nothing) && horizon > get_horizon(time_series_metadata)
+    if horizon !== nothing && horizon > get_horizon(time_series_metadata)
         throw(ArgumentError("The horizon selected $horizon excedess the data available"))
     end
     index = _get_forecast_index_no(initial_time, time_series_metadata, count, horizon)
-    horizon_ = (horizon === nothing) ? get_horizon(time_series_metadata) : horizon
-    ts = get_time_series(storage, get_time_series_uuid(time_series_metadata), index, horizon_, count)
+    _horizon = (horizon === nothing) ? get_horizon(time_series_metadata) : horizon
+    ts = get_time_series(storage, get_time_series_uuid(time_series_metadata), index, _horizon, count)
     return make_time_series_data(time_series_metadata, ts)
 end
 

@@ -15,8 +15,8 @@ end
 
 function TimeDataContainer(data::TimeSeries.TimeArray)
     resolution = TimeSeries.timestamp(data)[2] - TimeSeries.timestamp(data)[1]
-    data_ = Dict(first(TimeSeries.timestamp(data)) => TimeSeries.values(data))
-    return TimeDataContainer(data_, resolution, InfrastructureSystemsInternal())
+    _data =Dict(first(TimeSeries.timestamp(data)) => TimeSeries.values(data))
+    return TimeDataContainer(_data, resolution, InfrastructureSystemsInternal())
 end
 
 function TimeDataContainer(
@@ -32,8 +32,8 @@ function TimeDataContainer(
     ta = first(values(data))
     resolution = TimeSeries.timestamp(ta)[2] - TimeSeries.timestamp(ta)[1]
     ta_values = TimeSeries.values.(values(data))
-    data_ = DataStructures.SortedDict(keys(data) .=> ta_values)
-    return TimeDataContainer(data_, resolution)
+    _data =DataStructures.SortedDict(keys(data) .=> ta_values)
+    return TimeDataContainer(_data, resolution)
 end
 
 function TimeDataContainer(data::Dict{Dates.DateTime, TimeSeries.TimeArray})

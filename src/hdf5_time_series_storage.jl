@@ -217,8 +217,8 @@ function get_time_series(
     return HDF5.h5open(storage.file_path, "r") do file
         root = _get_root(storage, file)
         path = _get_time_series_path(root, uuid)
-        initial_time_stamp_ = HDF5.read(HDF5.attrs(path)["initial_time"])
-        initial_time_stamp = Dates.epochms2datetime(initial_time_stamp_)
+        _initial_time_stamp = HDF5.read(HDF5.attrs(path)["initial_time"])
+        initial_time_stamp = Dates.epochms2datetime(_initial_time_stamp)
         resolution = Dates.Millisecond(HDF5.read(HDF5.attrs(path)["resolution"]))
         series_length = HDF5.read(HDF5.attrs(path)["length"])
         if HDF5.exists(HDF5.attrs(path), "columns")
@@ -267,7 +267,7 @@ function get_time_series(
             end
             return data
         else
-            @error("HDF5 data has unsupported format")
+            error("HDF5 data has unsupported format")
         end
     end
 end
