@@ -1,32 +1,44 @@
 struct TimeArrayContainer <: InfrastructureSystemsType
-    data::DataStructures.SortedDict{Dates.DateTime, TimeSeries.TimeArray}
+    data::DataStructures.SortedDict{Dates.DateTime, Vector{Float64}}
+    resolution::Dates.Period
     internal::InfrastructureSystemsInternal
 
-    function TimeArrayContainer(data, internal)
+    function TimeArrayContainer(data, resolution, internal)
         for v in values(data)
             if length(v) < 2
                 throw(ArgumentError("time array length must be at least 2"))
             end
         end
-        return new(data, internal)
+        return new(data, resolution, internal)
     end
 end
 
 function TimeArrayContainer(data::TimeSeries.TimeArray)
-    data_ = Dict(first(TimeSeries.timestamp(data)) => data)
-    return TimeArrayContainer(data_, InfrastructureSystemsInternal())
+    resolution = TimeSeries.timestamp(data)[2] - TimeSeries.timestamp(data)[1]
+    data_ = Dict(first(TimeSeries.timestamp(data)) => TimeSeries.values(data))
+    return TimeArrayContainer(data_, resolution, InfrastructureSystemsInternal())
+end
+
+function TimeArrayContainer(
+    data::DataStructures.SortedDict{Dates.DateTime, Vector{Float64}},
+    resolution::Dates.Period
+)
+    return TimeArrayContainer(data, resolution, InfrastructureSystemsInternal())
 end
 
 function TimeArrayContainer(
     data::DataStructures.SortedDict{Dates.DateTime, TimeSeries.TimeArray},
 )
-    return TimeArrayContainer(data, InfrastructureSystemsInternal())
+    ta = first(values(data))
+    resolution = TimeSeries.timestamp(ta)[2] - TimeSeries.timestamp(ta)[1]
+    ta_values = TimeSeries.values.(values(data))
+    data_ = DataStructures.SortedDict(keys(data) .=> ta_values)
+    return TimeArrayContainer(data_, resolution)
 end
 
 function TimeArrayContainer(data::Dict{Dates.DateTime, TimeSeries.TimeArray})
     return TimeArrayContainer(
         DataStructures.SortedDict(data...),
-        InfrastructureSystemsInternal(),
     )
 end
 
@@ -42,12 +54,9 @@ function Base.show(io::IO, ::MIME"text/plain", ta::TimeArrayContainer)
 end
 
 Base.length(ta::TimeArrayContainer) = length(first(values(ta.data)))
-# TODO: Not super efficient for now.
 get_initial_time(ta::TimeArrayContainer) = collect(keys(ta.data))[1]
 get_horizon(ta::TimeArrayContainer) = length(ta)
-get_resolution(ta::TimeArrayContainer) =
-    TimeSeries.timestamp(first(values(ta.data)))[2] -
-    TimeSeries.timestamp(first(values(ta.data)))[1]
+get_resolution(ta::TimeArrayContainer) = ta.resolution
 function get_interval(ta::TimeArrayContainer)
     if length(ta.data) < 2
         throw(ArgumentError("get_interval is an invalid operation for continguous data"))
