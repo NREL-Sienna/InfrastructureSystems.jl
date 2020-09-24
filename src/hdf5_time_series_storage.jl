@@ -240,7 +240,7 @@ function get_time_series(
             return DataStructures.SortedDict(
                 time_stamps[1] => _make_time_array(time_stamps, data, columns),
             )
-        elseif HDF5.exists(HDF5.attrs(path), "interval")
+        else
             @debug "reconstructing a overlapping forecast time series"
             data = DataStructures.SortedDict{Dates.DateTime, TimeSeries.TimeArray}()
             interval = Dates.Millisecond(HDF5.read(HDF5.attrs(path)["interval"]))
