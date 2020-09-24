@@ -224,9 +224,7 @@ function get_time_series(
                 @assert false
             end
             #Making a Dict prevents type instability in the return of the function
-            return SortedDict(
-                time_stamps[1] => TimeSeries.TimeArray(time_stamps, data),
-            )
+            return SortedDict(time_stamps[1] => TimeSeries.TimeArray(time_stamps, data))
         else
             @debug "reconstructing a overlapping forecast time series"
             data = SortedDict{Dates.DateTime, TimeSeries.TimeArray}()

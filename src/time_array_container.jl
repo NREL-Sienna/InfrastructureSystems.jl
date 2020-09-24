@@ -28,9 +28,7 @@ function TimeDataContainer(
     return TimeDataContainer(data, resolution, InfrastructureSystemsInternal())
 end
 
-function TimeDataContainer(
-    data::SortedDict{Dates.DateTime, <:TimeSeries.TimeArray},
-)
+function TimeDataContainer(data::SortedDict{Dates.DateTime, <:TimeSeries.TimeArray})
     ta = first(values(data))
     resolution = TimeSeries.timestamp(ta)[2] - TimeSeries.timestamp(ta)[1]
     ta_values = TimeSeries.values.(values(data))
