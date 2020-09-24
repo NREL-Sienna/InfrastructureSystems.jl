@@ -1,6 +1,5 @@
 struct TimeSeriesKey
     time_series_type::Type{<:TimeSeriesMetadata}
-    initial_time::Dates.DateTime
     label::String
 end
 
@@ -40,7 +39,7 @@ function add_time_series!(
     time_series::T;
     skip_if_present = false,
 ) where {T <: TimeSeriesMetadata}
-    key = TimeSeriesKey(T, get_initial_time(time_series), get_label(time_series))
+    key = TimeSeriesKey(T, get_label(time_series))
     if haskey(container.data, key)
         if skip_if_present
             @warn "time_series $key is already present, skipping overwrite"
@@ -55,10 +54,9 @@ end
 function remove_time_series!(
     ::Type{T},
     container::TimeSeriesContainer,
-    initial_time::Dates.DateTime,
     label::AbstractString,
 ) where {T <: TimeSeriesMetadata}
-    key = TimeSeriesKey(T, initial_time, label)
+    key = TimeSeriesKey(T, label)
     if !haskey(container.data, key)
         throw(ArgumentError("time_series $key is not stored"))
     end
@@ -73,10 +71,9 @@ end
 function get_time_series(
     ::Type{T},
     container::TimeSeriesContainer,
-    initial_time::Dates.DateTime,
     label::AbstractString,
 ) where {T <: TimeSeriesMetadata}
-    key = TimeSeriesKey(T, initial_time, label)
+    key = TimeSeriesKey(T, label)
     if !haskey(container.data, key)
         throw(ArgumentError("time_series $key is not stored"))
     end
@@ -84,27 +81,28 @@ function get_time_series(
     return container.data[key]
 end
 
-function get_time_series_initial_times(container::TimeSeriesContainer)
-    initial_times = Set{Dates.DateTime}()
-    for key in keys(container.data)
-        push!(initial_times, key.initial_time)
-    end
+function get_time_series_initial_times(ts_metadata::TimeSeriesMetadata)
+    initial_time_stamp = get_initial_time_stamp(ts_metadata)
+    interval = get_interval(ts_metadata)
+    count = get_count(ts_metadata)
+    return collect(range(initial_time_stamp; length = count, step = interval))
+end
 
-    return sort!(Vector{Dates.DateTime}(collect(initial_times)))
+function get_time_series_initial_times(container::TimeSeriesContainer)
+    ts_metadata = first(values(container.data))
+    return get_time_series_initial_times(ts_metadata)
 end
 
 function get_time_series_initial_times(
     ::Type{T},
     container::TimeSeriesContainer,
 ) where {T <: TimeSeriesMetadata}
-    initial_times = Set{Dates.DateTime}()
-    for key in keys(container.data)
+    for (key, ts_metadata) in keys(container.data)
         if key.time_series_type <: T
-            push!(initial_times, key.initial_time)
+            return get_time_series_initial_times(ts_metadata)
         end
     end
-
-    return sort!(Vector{Dates.DateTime}(collect(initial_times)))
+    return Vector{Dates.DateTime}()
 end
 
 function get_time_series_initial_times(
@@ -112,33 +110,30 @@ function get_time_series_initial_times(
     container::TimeSeriesContainer,
     label::AbstractString,
 ) where {T <: TimeSeriesMetadata}
-    initial_times = Set{Dates.DateTime}()
-    for key in keys(container.data)
-        if key.time_series_type <: T && key.label == label
-            push!(initial_times, key.initial_time)
-        end
+    ts_metadata = get(container.data, TimeSeriesKey(T, label), nothing)
+    if ts_metadata === nothing
+        return Vector{Dates.DateTime}()
+    else
+        return get_time_series_initial_times(ts_metadata)
     end
-
-    return sort!(Vector{Dates.DateTime}(collect(initial_times)))
 end
 
 function get_time_series_initial_times!(
     initial_times::Set{Dates.DateTime},
     container::TimeSeriesContainer,
 )
-    for key in keys(container.data)
-        push!(initial_times, key.initial_time)
+    for ts_medatadata in values(container.data)
+        push!(initial_times, get_time_series_initial_times(ts_medatadata)...)
     end
 end
 
 function get_time_series_labels(
     ::Type{T},
     container::TimeSeriesContainer,
-    initial_time::Dates.DateTime,
 ) where {T <: TimeSeriesMetadata}
     labels = Set{String}()
     for key in keys(container.data)
-        if key.time_series_type <: T && key.initial_time == initial_time
+        if key.time_series_type <: T
             push!(labels, key.label)
         end
     end

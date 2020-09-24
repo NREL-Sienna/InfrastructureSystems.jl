@@ -89,7 +89,7 @@ function add_time_series!(
     storage::Hdf5TimeSeriesStorage,
     component_uuid::UUIDs.UUID,
     label::AbstractString,
-    ta::TimeArrayWrapper,
+    ta::TimeDataContainer,
     columns = nothing,
 )
     check_read_only(storage)
@@ -102,9 +102,16 @@ function add_time_series!(
             HDF5.g_create(root, uuid)
             path = root[uuid]
             @debug "Create new time series entry." uuid component_uuid label
-            path["data"] = TimeSeries.values(ta.data)
-            timestamps = [Dates.datetime2epochms(x) for x in TimeSeries.timestamp(ta.data)]
-            path["timestamps"] = timestamps
+            path["data"] = get_array_for_hdf(ta)
+            HDF5.attrs(path)["initial_time"] = Dates.datetime2epochms(get_initial_time(ta))
+            if length(ta.data) > 1
+                HDF5.attrs(path)["interval"] =
+                    time_period_conversion(get_interval(ta)).value
+            end
+            HDF5.attrs(path)["length"] = length(ta)
+            HDF5.attrs(path)["count"] = get_count(ta)
+            HDF5.attrs(path)["resolution"] =
+                time_period_conversion(get_resolution(ta)).value
             # Storing the UUID as an integer would take less space, but HDF5 library says
             # arrays of 128-bit integers aren't supported.
             path["components"] = [component_label]
@@ -155,7 +162,7 @@ function iterate_time_series(storage::Hdf5TimeSeriesStorage)
                 uuid_str = uuid_path[(range.start + 1):end]
                 uuid = UUIDs.UUID(uuid_str)
                 internal = InfrastructureSystemsInternal(uuid)
-                ta = TimeArrayWrapper(get_time_series(storage, uuid), internal)
+                ta = TimeDataContainer(get_time_series(storage, uuid), internal)
                 for item in HDF5.read(uuid_group["components"])
                     component, label = deserialize_component_label(item)
                     put!(channel, (component, label, ta))
@@ -184,41 +191,60 @@ end
 
 function get_time_series(
     storage::Hdf5TimeSeriesStorage,
-    uuid::UUIDs.UUID;
-    index = 0,
-    len = 0,
-)::TimeSeries.TimeArray
+    uuid::UUIDs.UUID,
+    index::Int,
+    len::Int,
+    count::Int,
+)
     return HDF5.h5open(storage.file_path, "r") do file
         root = _get_root(storage, file)
         path = _get_time_series_path(root, uuid)
+        _initial_time_stamp = HDF5.read(HDF5.attrs(path)["initial_time"])
+        initial_time_stamp = Dates.epochms2datetime(_initial_time_stamp)
+        resolution = Dates.Millisecond(HDF5.read(HDF5.attrs(path)["resolution"]))
+        series_length = HDF5.read(HDF5.attrs(path)["length"])
 
-        if index == 0
-            data = HDF5.read(path["data"])
-            timestamps = HDF5.read(path["timestamps"])
-        else
-            @assert len != 0
-            end_index = index + len - 1
-            # HDF5.readmmap could be faster in many cases than this. However, experiments
-            # resulted in various crashes if we tried to close the file before references
-            # to the array data were garbage collected. May need to consult with the
-            # Julia HDF5 library maintainers about that.
-            sz_tuple = size(path["data"])
-            if length(sz_tuple) == 1
+        # HDF5.readmmap could be faster in many cases than this. However, experiments
+        # resulted in various crashes if we tried to close the file before references
+        # to the array data were garbage collected. May need to consult with the
+        # Julia HDF5 library maintainers about that.
+        # TODO: Consider case Interval_ms = 0 if contigous instead of not existing
+        if !HDF5.exists(HDF5.attrs(path), "interval")
+            @assert HDF5.read(HDF5.attrs(path)["count"]) == 1
+            @debug "reconstructing a contigouos time series"
+            time_stamps =
+                range(initial_time_stamp; length = series_length, step = resolution)
+            if len == series_length && index == 1
+                data = HDF5.read(path["data"])
+            elseif len <= series_length
+                end_index = min(index + len - 1, series_length)
                 data = path["data"][index:end_index]
+                time_stamps = time_stamps[index:end_index]
             else
-                data = path["data"][index:end_index, 1:sz_tuple[2]]
+                @assert false
             end
-            timestamps = path["timestamps"][index:end_index]
+            #Making a Dict prevents type instability in the return of the function
+            return SortedDict(time_stamps[1] => TimeSeries.TimeArray(time_stamps, data))
+        else
+            @debug "reconstructing a overlapping forecast time series"
+            data = SortedDict{Dates.DateTime, TimeSeries.TimeArray}()
+            interval = Dates.Millisecond(HDF5.read(HDF5.attrs(path)["interval"]))
+            stored_count = HDF5.read(HDF5.attrs(path)["count"])
+            if count > stored_count
+                throw(ArgumentError("More Forecasts requested $count than the total stored $stored_count"))
+            end
+            initial_times =
+                range(initial_time_stamp; length = stored_count, step = interval)
+            horizon = (len == 0) ? series_length : len
+            data_read = path["data"][1:horizon, index:(index + count - 1)]
+            for i in 1:count
+                ini_time = initial_times[index + i]
+                ts_data = data_read[:, i]
+                time_stamps = range(ini_time; length = horizon, step = resolution)
+                data[ini_time] = TimeSeries.TimeArray(time_stamps, ts_data)
+            end
+            return data
         end
-
-        # If the user set column names, return them. Otherwise, let TimeArray pick them.
-        dtimestamps = [Dates.epochms2datetime(x) for x in timestamps]
-        if HDF5.exists(HDF5.attrs(path), "columns")
-            columns = Symbol.(HDF5.read(HDF5.attrs(path)["columns"]))
-            return TimeSeries.TimeArray(dtimestamps, data, columns)
-        end
-
-        return TimeSeries.TimeArray(dtimestamps, data)
     end
 end
 

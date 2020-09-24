@@ -131,7 +131,7 @@ function add_time_series!(
     component::InfrastructureSystemsComponent,
     time_series::TimeSeriesData,
 )
-    ta = TimeArrayWrapper(get_data(time_series))
+    ta = TimeDataContainer(get_data(time_series))
     ts_metadata = make_time_series_metadata(time_series, ta)
     add_time_series!(data, component, ts_metadata, ta)
 end
@@ -150,7 +150,7 @@ individually with the same data because in this case, only one time series array
 Throws ArgumentError if a component is not stored in the system.
 """
 function add_time_series!(data::SystemData, components, time_series::TimeSeriesData)
-    ta = TimeArrayWrapper(get_data(time_series))
+    ta = TimeDataContainer(get_data(time_series))
     ts_metadata = make_time_series_metadata(time_series, ta)
     for component in components
         add_time_series!(data, component, ts_metadata, ta)
@@ -161,7 +161,7 @@ function add_time_series!(
     data::SystemData,
     component::InfrastructureSystemsComponent,
     ts_metadata::T,
-    ta::TimeArrayWrapper;
+    ta::TimeDataContainer;
     skip_if_present = false,
 ) where {T <: TimeSeriesMetadata}
     _validate_component(data, component)
@@ -174,7 +174,9 @@ function add_time_series!(
         get_uuid(component),
         get_label(ts_metadata),
         ta,
-        get_columns(T, ta.data),
+        nothing,
+        # TODO: Do something with the columns
+        #get_columns(T, ta.data),
     )
 end
 
@@ -240,7 +242,7 @@ function _add_time_series!(
     time_series = handle_normalization_factor(time_series, normalization_factor)
     # TODO: This code path needs to accept a metdata file or parameters telling it which
     # type of time_series to create.
-    ta = TimeArrayWrapper(time_series)
+    ta = TimeDataContainer(time_series)
     ts_metadata = DeterministicMetadata(label, ta, scaling_factor_multiplier)
     add_time_series!(data, component, ts_metadata, ta)
 end
@@ -270,7 +272,7 @@ function _make_time_series(info::TimeSeriesParsedInfo, resolution)
 
     ta = info.data[Symbol(get_name(info.component))]
     ta = handle_normalization_factor(ta, info.normalization_factor)
-    ta_wrapper = TimeArrayWrapper(ta)
+    ta_wrapper = TimeDataContainer(ta)
     ts_metadata =
         info.time_series_type(info.label, ta_wrapper, info.scaling_factor_multiplier)
     @debug "Created $ts_metadata"

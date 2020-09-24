@@ -8,6 +8,7 @@ import Dates
 import JSON3
 import PrettyTables
 import TimeSeries
+using DataStructures: SortedDict
 
 using DocStringExtensions
 
@@ -69,18 +70,21 @@ include("utils/lazy_dict_from_iterator.jl")
 include("utils/logging.jl")
 include("utils/stdout_redirector.jl")
 include("utils/utils.jl")
-include("time_array_wrapper.jl")
+include("time_array_container.jl")
 include("time_series_storage.jl")
 include("hdf5_time_series_storage.jl")
+include("abstract_time_series.jl")
+include("forecasts.jl")
+include("static_time_series.jl")
 include("in_memory_time_series_storage.jl")
-include("time_series_data.jl")
 include("time_series_container.jl")
-include("time_series_parameters.jl")
 include("time_series_parser.jl")
 include("time_series_formats.jl")
-include("component.jl")
 include("components.jl")
 include("generated/includes.jl")
+include("component.jl")
+include("single_time_series_data.jl")
+include("time_series_parameters.jl")
 include("supplemental_constructors.jl")
 include("results.jl")
 include("serialization.jl")

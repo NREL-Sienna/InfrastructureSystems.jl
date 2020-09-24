@@ -14,8 +14,18 @@
           "data_type": "Dates.Period"
         },
         {
-          "name": "initial_time",
+          "name": "initial_time_stamp",
           "data_type": "Dates.DateTime",
+          "comment": "time series availability time"
+        },
+        {
+          "name": "interval",
+          "data_type": "Dates.Period",
+          "comment": "time series availability time"
+        },
+        {
+          "name": "count",
+          "data_type": "Int",
           "comment": "time series availability time"
         },
         {
@@ -40,10 +50,248 @@
           "internal_default": "InfrastructureSystemsInternal()"
         }
       ],
-      "supertype": "TimeSeriesMetadata"
+      "supertype": "ForecastMetadata"
     },
     {
       "struct_name": "Deterministic",
+      "docstring": "A deterministic time series for a particular data field in a Component.",
+      "fields": [
+        {
+          "name": "label",
+          "data_type": "String",
+          "comment": "user-defined label"
+        },
+        {
+          "name": "data",
+          "data_type": "SortedDict{Dates.DateTime, TimeSeries.TimeArray}",
+          "comment": "timestamp - scalingfactor"
+        },
+        {
+          "name": "scaling_factor_multiplier",
+          "data_type": "Union{Nothing, Function}",
+          "default": "nothing",
+          "comment": "Applicable when the time series data are scaling factors. Called on the associated component to convert the values."
+        }
+      ],
+      "custom_code": "Deterministic(label, data) = Determinstic(label = label, data = data)",
+      "supertype": "Forecast"
+    },
+    {
+      "struct_name": "ProbabilisticMetadata",
+      "docstring": "A Probabilistic time series for a particular data field in a Component.",
+      "fields": [
+        {
+          "name": "label",
+          "data_type": "String",
+          "comment": "user-defined label"
+        },
+        {
+          "name": "resolution",
+          "data_type": "Dates.Period"
+        },
+        {
+          "name": "initial_time_stamp",
+          "data_type": "Dates.DateTime",
+          "comment": "time series availability time"
+        },
+        {
+          "name": "interval",
+          "data_type": "Dates.Period",
+          "comment": "time series availability time"
+        },
+        {
+          "name": "count",
+          "data_type": "Int",
+          "comment": "time series availability time"
+        },
+        {
+          "name": "percentiles",
+          "data_type": "Vector{Float64}",
+          "comment": "Percentiles for the probabilistic time series"
+        },
+        {
+          "name": "time_series_uuid",
+          "data_type": "UUIDs.UUID",
+          "comment": "reference to time series data"
+        },
+        {
+          "name": "horizon",
+          "data_type": "Int",
+          "comment": "length of this time series"
+        },
+        {
+          "name": "scaling_factor_multiplier",
+          "data_type": "Union{Nothing, Function}",
+          "default": "nothing",
+          "comment": "Applicable when the time series data are scaling factors. Called on the associated component to convert the values."
+        },
+        {
+          "name": "internal",
+          "data_type": "InfrastructureSystemsInternal",
+          "internal_default": "InfrastructureSystemsInternal()"
+        }
+      ],
+      "supertype": "ForecastMetadata"
+    },
+    {
+      "struct_name": "Probabilistic",
+      "docstring": "A Probabilistic time series for a particular data field in a Component.",
+      "fields": [
+        {
+          "name": "label",
+          "data_type": "String",
+          "comment": "user-defined label"
+        },
+        {
+          "name": "percentiles",
+          "data_type": "Vector{Float64}",
+          "comment": "Percentiles for the probabilistic time series"
+        },
+        {
+          "name": "data",
+          "data_type": "SortedDict{Dates.DateTime, TimeSeries.TimeArray}",
+          "comment": "timestamp - scalingfactor"
+        },
+        {
+          "name": "scaling_factor_multiplier",
+          "data_type": "Union{Nothing, Function}",
+          "default": "nothing",
+          "comment": "Applicable when the time series data are scaling factors. Called on the associated component to convert the values."
+        }
+      ],
+      "custom_code": "Probabilistic(label, percentiles, data) = Probabilistic(label = label, data = data, percentiles = percentiles)",
+      "supertype": "Forecast"
+    },
+    {
+      "struct_name": "ScenariosMetadata",
+      "docstring": "A Discrete Scenario Based time series for a particular data field in a Component.",
+      "fields": [
+        {
+          "name": "label",
+          "data_type": "String",
+          "comment": "user-defined label"
+        },
+        {
+          "name": "resolution",
+          "data_type": "Dates.Period"
+        },
+        {
+          "name": "initial_time_stamp",
+          "data_type": "Dates.DateTime",
+          "comment": "time series availability time"
+        },
+        {
+          "name": "interval",
+          "data_type": "Dates.Period",
+          "comment": "time series availability time"
+        },
+        {
+          "name": "scenario_count",
+          "data_type": "Int64",
+          "comment": "Number of scenarios"
+        },
+        {
+          "name": "count",
+          "data_type": "Int",
+          "comment": "time series availability time"
+        },
+        {
+          "name": "time_series_uuid",
+          "data_type": "UUIDs.UUID",
+          "comment": "reference to time series data"
+        },
+        {
+          "name": "horizon",
+          "data_type": "Int",
+          "comment": "length of this time series"
+        },
+        {
+          "name": "scaling_factor_multiplier",
+          "data_type": "Union{Nothing, Function}",
+          "default": "nothing",
+          "comment": "Applicable when the time series data are scaling factors. Called on the associated component to convert the values."
+        },
+        {
+          "name": "internal",
+          "data_type": "InfrastructureSystemsInternal",
+          "internal_default": "InfrastructureSystemsInternal()"
+        }
+      ],
+      "supertype": "ForecastMetadata"
+    },
+    {
+      "struct_name": "Scenarios",
+      "docstring": "A Discrete Scenario Based time series for a particular data field in a Component.",
+      "fields": [
+        {
+          "name": "label",
+          "data_type": "String",
+          "comment": "user-defined label"
+        },
+        {
+          "name": "scenario_count",
+          "data_type": "Int64",
+          "comment": "Number of scenarios"
+        },
+        {
+          "name": "data",
+          "data_type": "SortedDict{Dates.DateTime, TimeSeries.TimeArray}",
+          "comment": "timestamp - scalingfactor"
+        },
+        {
+          "name": "scaling_factor_multiplier",
+          "data_type": "Union{Nothing, Function}",
+          "default": "nothing",
+          "comment": "Applicable when the time series data are scaling factors. Called on the associated component to convert the values."
+        }
+      ],
+      "supertype": "Forecast"
+    },
+    {
+      "struct_name": "SingleTimeSeriesMetadata",
+      "docstring": "A TimeSeries Data object in contigous form.",
+      "fields": [
+        {
+          "name": "label",
+          "data_type": "String",
+          "comment": "user-defined label"
+        },
+        {
+          "name": "resolution",
+          "data_type": "Dates.Period"
+        },
+        {
+          "name": "initial_time",
+          "data_type": "Dates.DateTime",
+          "comment": "time series availability time"
+        },
+        {
+          "name": "time_series_uuid",
+          "data_type": "UUIDs.UUID",
+          "comment": "reference to time series data"
+        },
+        {
+          "name": "length",
+          "data_type": "Int",
+          "comment": "length of this time series"
+        },
+        {
+          "name": "scaling_factor_multiplier",
+          "data_type": "Union{Nothing, Function}",
+          "default": "nothing",
+          "comment": "Applicable when the time series data are scaling factors. Called on the associated component to convert the values."
+        },
+        {
+          "name": "internal",
+          "data_type": "InfrastructureSystemsInternal",
+          "internal_default": "InfrastructureSystemsInternal()"
+        }
+      ],
+      "supertype": "StaticTimeSeriesMetadata",
+      "custom_code": "get_horizon(val::SingleTimeSeriesMetadata) = get_length(val)"
+    },
+    {
+      "struct_name": "SingleTimeSeries",
       "docstring": "A deterministic time series for a particular data field in a Component.",
       "fields": [
         {
@@ -63,159 +311,8 @@
           "comment": "Applicable when the time series data are scaling factors. Called on the associated component to convert the values."
         }
       ],
-      "custom_code": "Deterministic(label, data) = Determinstic(label = label, data = data)",
-      "supertype": "TimeSeriesData"
-    },
-    {
-      "struct_name": "ProbabilisticMetadata",
-      "docstring": "A Probabilistic time series for a particular data field in a Component.",
-      "fields": [
-        {
-          "name": "label",
-          "data_type": "String",
-          "comment": "user-defined label"
-        },
-        {
-          "name": "resolution",
-          "data_type": "Dates.Period"
-        },
-        {
-          "name": "initial_time",
-          "data_type": "Dates.DateTime",
-          "comment": "time series availability time"
-        },
-        {
-          "name": "percentiles",
-          "data_type": "Vector{Float64}",
-          "comment": "Percentiles for the probabilistic time series"
-        },
-        {
-          "name": "time_series_uuid",
-          "data_type": "UUIDs.UUID",
-          "comment": "reference to time series data"
-        },
-        {
-          "name": "horizon",
-          "data_type": "Int",
-          "comment": "length of this time series"
-        },
-        {
-          "name": "scaling_factor_multiplier",
-          "data_type": "Union{Nothing, Function}",
-          "default": "nothing",
-          "comment": "Applicable when the time series data are scaling factors. Called on the associated component to convert the values."
-        },
-        {
-          "name": "internal",
-          "data_type": "InfrastructureSystemsInternal",
-          "internal_default": "InfrastructureSystemsInternal()"
-        }
-      ],
-      "supertype": "TimeSeriesMetadata"
-    },
-    {
-      "struct_name": "Probabilistic",
-      "docstring": "A Probabilistic time series for a particular data field in a Component.",
-      "fields": [
-        {
-          "name": "label",
-          "data_type": "String",
-          "comment": "user-defined label"
-        },
-        {
-          "name": "percentiles",
-          "data_type": "Vector{Float64}",
-          "comment": "Percentiles for the probabilistic time series"
-        },
-        {
-          "name": "data",
-          "data_type": "TimeSeries.TimeArray",
-          "comment": "timestamp - scalingfactor"
-        },
-        {
-          "name": "scaling_factor_multiplier",
-          "data_type": "Union{Nothing, Function}",
-          "default": "nothing",
-          "comment": "Applicable when the time series data are scaling factors. Called on the associated component to convert the values."
-        }
-      ],
-      "custom_code": "Probabilistic(label, percentiles, data) = Probabilistic(label = label, data = data, percentiles = percentiles)",
-      "supertype": "TimeSeriesData"
-    },
-    {
-      "struct_name": "ScenariosMetadata",
-      "docstring": "A Discrete Scenario Based time series for a particular data field in a Component.",
-      "fields": [
-        {
-          "name": "label",
-          "data_type": "String",
-          "comment": "user-defined label"
-        },
-        {
-          "name": "resolution",
-          "data_type": "Dates.Period"
-        },
-        {
-          "name": "initial_time",
-          "data_type": "Dates.DateTime",
-          "comment": "time series availability time"
-        },
-        {
-          "name": "scenario_count",
-          "data_type": "Int64",
-          "comment": "Number of scenarios"
-        },
-        {
-          "name": "time_series_uuid",
-          "data_type": "UUIDs.UUID",
-          "comment": "reference to time series data"
-        },
-        {
-          "name": "horizon",
-          "data_type": "Int",
-          "comment": "length of this time series"
-        },
-        {
-          "name": "scaling_factor_multiplier",
-          "data_type": "Union{Nothing, Function}",
-          "default": "nothing",
-          "comment": "Applicable when the time series data are scaling factors. Called on the associated component to convert the values."
-        },
-        {
-          "name": "internal",
-          "data_type": "InfrastructureSystemsInternal",
-          "internal_default": "InfrastructureSystemsInternal()"
-        }
-      ],
-      "supertype": "TimeSeriesMetadata"
-    },
-    {
-      "struct_name": "Scenarios",
-      "docstring": "A Discrete Scenario Based time series for a particular data field in a Component.",
-      "fields": [
-        {
-          "name": "label",
-          "data_type": "String",
-          "comment": "user-defined label"
-        },
-        {
-          "name": "scenario_count",
-          "data_type": "Int64",
-          "comment": "Number of scenarios"
-        },
-        {
-          "name": "data",
-          "data_type": "TimeSeries.TimeArray",
-          "comment": "timestamp - scalingfactor"
-        },
-        {
-          "name": "scaling_factor_multiplier",
-          "data_type": "Union{Nothing, Function}",
-          "default": "nothing",
-          "comment": "Applicable when the time series data are scaling factors. Called on the associated component to convert the values."
-        }
-      ],
-      "supertype": "TimeSeriesData"
+      "custom_code": "SingleTimeSeries(label, data) = SingleTimeSeries(label = label, data = data)",
+      "supertype": "StaticTimeSeries"
     }
   ],
   "struct_validation_descriptors": []

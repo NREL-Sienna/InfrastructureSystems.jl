@@ -36,61 +36,93 @@ function clear_time_series!(component::InfrastructureSystemsComponent)
     end
 end
 
+function _get_index(
+    start_time::Union{Nothing, Dates.DateTime},
+    ts_metadata::ForecastMetadata,
+    count::Int,
+    len::Union{Nothing, Int},
+)
+    if initial_time < get_initial_time_stamp(ts_metadata)
+        throw(ArgumentError("The requested initial_time $initial_time is invalid. The value is earlier than $(get_initial_time(ts_metadata))"))
+    end
+    if start_time === nothing
+        index = 1
+    else
+        range = initial_time - get_initial_time_stamp(ts_metadata)
+        interval = get_interval(ts_metadata)
+        index = Int(range / interval) + 1
+    end
+
+    if len !== nothing && len > get_horizon(ts_metadata)
+        throw(ArgumentError("The requested len is longer than data $(get_horizon(ts_metadata))"))
+    end
+
+    if index + count - 1 <= get_count(ts_metadata)
+        return index
+    else
+        throw(ArgumentError("The requested initial_time $initial_time and count $count are invalid does not exist in the data"))
+    end
+end
+
+function _get_index(
+    start_time::Union{Nothing, Dates.DateTime},
+    ts_metadata::StaticTimeSeriesMetadata,
+    ::Int,
+    len::Union{Nothing, Int},
+)
+    if start_time < get_initial_time(ts_metadata)
+        throw(ArgumentError("The requested initial_time $start_time is invalid. The value is earlier than $(get_initial_time(ts_metadata))"))
+    end
+    range = start_time - get_initial_time(ts_metadata)
+    resolution = get_resolution(ts_metadata)
+    index = Int(range / resolution) + 1
+    len = (len === nothing) ? 0 : len
+    if index + len <= get_length(ts_metadata)
+        return index
+    else
+        throw(ArgumentError("The requested initial_time $start_time and length $len are invalid does not exist in the data"))
+    end
+    return
+end
+
 """
 Return a time_series for the entire time series range stored for these parameters.
 """
 function get_time_series(
     ::Type{T},
     component::InfrastructureSystemsComponent,
-    initial_time::Dates.DateTime,
     label::AbstractString,
-) where {T <: TimeSeriesData}
-    time_series_type = time_series_data_to_metadata(T)
-    time_series = get_time_series(time_series_type, component, initial_time, label)
-    storage = _get_time_series_storage(component)
-    ts = get_time_series(storage, get_time_series_uuid(time_series))
-    return make_time_series_data(time_series, ts)
-end
-
-"""
-Return a time_series for a subset of the time series range stored for these parameters.
-The range may span time series arrays as long as those timestamps are contiguous.
-"""
-function get_time_series(
-    ::Type{T},
-    component::InfrastructureSystemsComponent,
-    initial_time::Dates.DateTime,
-    label::AbstractString,
-    horizon::Int,
+    start_time::Union{Nothing, Dates.DateTime} = nothing;
+    len::Union{Nothing, Int} = nothing,
+    count::Int = 1,
 ) where {T <: TimeSeriesData}
     if !has_time_series(component)
-        throw(ArgumentError("no time_series are stored in $component"))
+        throw(ArgumentError("no forecasts are stored in $component"))
     end
-
-    first_time_series = iterate(get_time_series_multiple(TimeSeriesMetadata, component))[1]
-    resolution = get_resolution(first_time_series)
-    sys_horizon = get_horizon(first_time_series)
-
-    time_series = get_time_series(
-        time_series_data_to_metadata(T),
-        component,
-        initial_time,
-        resolution,
-        sys_horizon,
-        label,
-        horizon,
+    time_series_type = time_series_data_to_metadata(T)
+    time_series_metadata = get_time_series(time_series_type, component, label)
+    storage = _get_time_series_storage(component)
+    if len !== nothing && len > get_horizon(time_series_metadata)
+        throw(ArgumentError("The length selected $len excedess the data available"))
+    end
+    index = _get_index(start_time, time_series_metadata, count, len)
+    _len = (len === nothing) ? get_horizon(time_series_metadata) : len
+    ts = get_time_series(
+        storage,
+        get_time_series_uuid(time_series_metadata),
+        index,
+        _len,
+        count,
     )
-
-    return time_series
+    return make_time_series_data(time_series_metadata, ts)
 end
 
 function get_time_series(
     ::Type{T},
     component::InfrastructureSystemsComponent,
-    initial_time::Dates.DateTime,
     label::AbstractString,
 ) where {T <: TimeSeriesMetadata}
-    return get_time_series(T, get_time_series_container(component), initial_time, label)
+    return get_time_series(T, get_time_series_container(component), label)
 end
 
 function get_time_series(
@@ -163,7 +195,7 @@ function _make_time_series(
     label::AbstractString,
 ) where {T <: TimeSeriesMetadata}
     container = get_time_series_container(component)
-    ts_metadata = get_time_series(T, container, initial_time, label)
+    ts_metadata = get_time_series(T, container, label)
     ta = get_time_series(
         _get_time_series_storage(component),
         get_time_series_uuid(ts_metadata);

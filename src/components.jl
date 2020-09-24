@@ -89,13 +89,13 @@ function remove_components!(
         throw(ArgumentError("component $T is not stored"))
     end
 
-    components_ = pop!(components.data, T)
-    for component in values(components_)
+    _components = pop!(components.data, T)
+    for component in values(_components)
         prepare_for_removal!(component)
     end
 
     @debug "Removed all components of type" T
-    return values(components_)
+    return values(_components)
 end
 
 """
@@ -193,17 +193,17 @@ function get_components_by_name(
         throw(ArgumentError("get_components_by_name does not support concrete types: $T"))
     end
 
-    components_ = Vector{T}()
+    _components = Vector{T}()
     for key in keys(components.data)
         if key <: T
             component = get_component(key, components, name)
             if !isnothing(component)
-                push!(components_, component)
+                push!(_components, component)
             end
         end
     end
 
-    return components_
+    return _components
 end
 
 """
@@ -225,26 +225,26 @@ function get_components(
     filter_func::Union{Nothing, Function} = nothing,
 )::FlattenIteratorWrapper{T} where {T <: InfrastructureSystemsComponent}
     if isconcretetype(T)
-        components_ = get(components.data, T, nothing)
-        if !isnothing(filter_func) && !isnothing(components_)
+        _components = get(components.data, T, nothing)
+        if !isnothing(filter_func) && !isnothing(_components)
             _filter_func = x -> filter_func(x.second)
-            components_ = values(filter(_filter_func, components_))
+            _components = values(filter(_filter_func, _components))
         end
-        if isnothing(components_)
+        if isnothing(_components)
             iter = FlattenIteratorWrapper(T, Vector{Base.ValueIterator}([]))
         else
             iter =
-                FlattenIteratorWrapper(T, Vector{Base.ValueIterator}([values(components_)]))
+                FlattenIteratorWrapper(T, Vector{Base.ValueIterator}([values(_components)]))
         end
     else
         types = [x for x in keys(components.data) if x <: T]
         if isnothing(filter_func)
-            components_ = [values(components.data[x]) for x in types]
+            _components = [values(components.data[x]) for x in types]
         else
             _filter_func = x -> filter_func(x.second)
-            components_ = [values(filter(_filter_func, components.data[x])) for x in types]
+            _components = [values(filter(_filter_func, components.data[x])) for x in types]
         end
-        iter = FlattenIteratorWrapper(T, components_)
+        iter = FlattenIteratorWrapper(T, _components)
     end
 
     @assert eltype(iter) == T

@@ -2,10 +2,12 @@
 This file is auto-generated. Do not edit.
 =#
 """
-    mutable struct DeterministicMetadata <: TimeSeriesMetadata
+    mutable struct DeterministicMetadata <: ForecastMetadata
         label::String
         resolution::Dates.Period
-        initial_time::Dates.DateTime
+        initial_time_stamp::Dates.DateTime
+        interval::Dates.Period
+        count::Int
         time_series_uuid::UUIDs.UUID
         horizon::Int
         scaling_factor_multiplier::Union{Nothing, Function}
@@ -17,18 +19,24 @@ A deterministic time series for a particular data field in a Component.
 # Arguments
 - `label::String`: user-defined label
 - `resolution::Dates.Period`
-- `initial_time::Dates.DateTime`: time series availability time
+- `initial_time_stamp::Dates.DateTime`: time series availability time
+- `interval::Dates.Period`: time series availability time
+- `count::Int`: time series availability time
 - `time_series_uuid::UUIDs.UUID`: reference to time series data
 - `horizon::Int`: length of this time series
 - `scaling_factor_multiplier::Union{Nothing, Function}`: Applicable when the time series data are scaling factors. Called on the associated component to convert the values.
 - `internal::InfrastructureSystemsInternal`
 """
-mutable struct DeterministicMetadata <: TimeSeriesMetadata
+mutable struct DeterministicMetadata <: ForecastMetadata
     "user-defined label"
     label::String
     resolution::Dates.Period
     "time series availability time"
-    initial_time::Dates.DateTime
+    initial_time_stamp::Dates.DateTime
+    "time series availability time"
+    interval::Dates.Period
+    "time series availability time"
+    count::Int
     "reference to time series data"
     time_series_uuid::UUIDs.UUID
     "length of this time series"
@@ -38,20 +46,24 @@ mutable struct DeterministicMetadata <: TimeSeriesMetadata
     internal::InfrastructureSystemsInternal
 end
 
-function DeterministicMetadata(label, resolution, initial_time, time_series_uuid, horizon, scaling_factor_multiplier=nothing, )
-    DeterministicMetadata(label, resolution, initial_time, time_series_uuid, horizon, scaling_factor_multiplier, InfrastructureSystemsInternal(), )
+function DeterministicMetadata(label, resolution, initial_time_stamp, interval, count, time_series_uuid, horizon, scaling_factor_multiplier=nothing, )
+    DeterministicMetadata(label, resolution, initial_time_stamp, interval, count, time_series_uuid, horizon, scaling_factor_multiplier, InfrastructureSystemsInternal(), )
 end
 
-function DeterministicMetadata(; label, resolution, initial_time, time_series_uuid, horizon, scaling_factor_multiplier=nothing, internal=InfrastructureSystemsInternal(), )
-    DeterministicMetadata(label, resolution, initial_time, time_series_uuid, horizon, scaling_factor_multiplier, internal, )
+function DeterministicMetadata(; label, resolution, initial_time_stamp, interval, count, time_series_uuid, horizon, scaling_factor_multiplier=nothing, internal=InfrastructureSystemsInternal(), )
+    DeterministicMetadata(label, resolution, initial_time_stamp, interval, count, time_series_uuid, horizon, scaling_factor_multiplier, internal, )
 end
 
 """Get [`DeterministicMetadata`](@ref) `label`."""
 get_label(value::DeterministicMetadata) = value.label
 """Get [`DeterministicMetadata`](@ref) `resolution`."""
 get_resolution(value::DeterministicMetadata) = value.resolution
-"""Get [`DeterministicMetadata`](@ref) `initial_time`."""
-get_initial_time(value::DeterministicMetadata) = value.initial_time
+"""Get [`DeterministicMetadata`](@ref) `initial_time_stamp`."""
+get_initial_time_stamp(value::DeterministicMetadata) = value.initial_time_stamp
+"""Get [`DeterministicMetadata`](@ref) `interval`."""
+get_interval(value::DeterministicMetadata) = value.interval
+"""Get [`DeterministicMetadata`](@ref) `count`."""
+get_count(value::DeterministicMetadata) = value.count
 """Get [`DeterministicMetadata`](@ref) `time_series_uuid`."""
 get_time_series_uuid(value::DeterministicMetadata) = value.time_series_uuid
 """Get [`DeterministicMetadata`](@ref) `horizon`."""
@@ -65,8 +77,12 @@ get_internal(value::DeterministicMetadata) = value.internal
 set_label!(value::DeterministicMetadata, val) = value.label = val
 """Set [`DeterministicMetadata`](@ref) `resolution`."""
 set_resolution!(value::DeterministicMetadata, val) = value.resolution = val
-"""Set [`DeterministicMetadata`](@ref) `initial_time`."""
-set_initial_time!(value::DeterministicMetadata, val) = value.initial_time = val
+"""Set [`DeterministicMetadata`](@ref) `initial_time_stamp`."""
+set_initial_time_stamp!(value::DeterministicMetadata, val) = value.initial_time_stamp = val
+"""Set [`DeterministicMetadata`](@ref) `interval`."""
+set_interval!(value::DeterministicMetadata, val) = value.interval = val
+"""Set [`DeterministicMetadata`](@ref) `count`."""
+set_count!(value::DeterministicMetadata, val) = value.count = val
 """Set [`DeterministicMetadata`](@ref) `time_series_uuid`."""
 set_time_series_uuid!(value::DeterministicMetadata, val) = value.time_series_uuid = val
 """Set [`DeterministicMetadata`](@ref) `horizon`."""

@@ -28,7 +28,7 @@ function create_system_data_shared_time_series(; time_series_in_memory = false)
     IS.add_component!(data, component2)
 
     ta = create_time_array()
-    ts_metadata = IS.DeterministicMetadata("val", ta, IS.get_val)
+    ts_metadata = IS.SingleTimeSeriesMetadata("val", ta, IS.get_val)
     IS.add_time_series!(data, component1, ts_metadata, ta)
     IS.add_time_series!(data, component2, ts_metadata, ta)
 
@@ -49,5 +49,5 @@ function create_time_array()
     data = collect(1:24)
     component_name = "gen"
     ta = TimeSeries.TimeArray(dates, data, [component_name])
-    return IS.TimeArrayWrapper(ta)
+    return IS.TimeDataContainer(ta)
 end

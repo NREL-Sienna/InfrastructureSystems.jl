@@ -2,10 +2,10 @@
 This file is auto-generated. Do not edit.
 =#
 """
-    mutable struct Probabilistic <: TimeSeriesData
+    mutable struct Probabilistic <: Forecast
         label::String
         percentiles::Vector{Float64}
-        data::TimeSeries.TimeArray
+        data::SortedDict{Dates.DateTime, TimeSeries.TimeArray}
         scaling_factor_multiplier::Union{Nothing, Function}
     end
 
@@ -14,16 +14,16 @@ A Probabilistic time series for a particular data field in a Component.
 # Arguments
 - `label::String`: user-defined label
 - `percentiles::Vector{Float64}`: Percentiles for the probabilistic time series
-- `data::TimeSeries.TimeArray`: timestamp - scalingfactor
+- `data::SortedDict{Dates.DateTime, TimeSeries.TimeArray}`: timestamp - scalingfactor
 - `scaling_factor_multiplier::Union{Nothing, Function}`: Applicable when the time series data are scaling factors. Called on the associated component to convert the values.
 """
-mutable struct Probabilistic <: TimeSeriesData
+mutable struct Probabilistic <: Forecast
     "user-defined label"
     label::String
     "Percentiles for the probabilistic time series"
     percentiles::Vector{Float64}
     "timestamp - scalingfactor"
-    data::TimeSeries.TimeArray
+    data::SortedDict{Dates.DateTime, TimeSeries.TimeArray}
     "Applicable when the time series data are scaling factors. Called on the associated component to convert the values."
     scaling_factor_multiplier::Union{Nothing, Function}
 end
