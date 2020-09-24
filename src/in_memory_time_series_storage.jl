@@ -3,7 +3,7 @@ const _ComponentLabelReferences = Set{Tuple{UUIDs.UUID, String}}
 
 struct _TimeSeriesRecord
     component_labels::_ComponentLabelReferences
-    ta::TimeArrayContainer
+    ta::TimeDataContainer
 end
 
 function _TimeSeriesRecord(component_uuid, label, ta)
@@ -43,7 +43,7 @@ function add_time_series!(
     storage::InMemoryTimeSeriesStorage,
     component_uuid::UUIDs.UUID,
     label::AbstractString,
-    ta::TimeArrayContainer,
+    ta::TimeDataContainer,
     unused = nothing,
 )
     uuid = get_uuid(ta)

@@ -102,7 +102,7 @@ function make_time_series_data(
     )
 end
 
-function make_time_series_metadata(time_series::SingleTimeSeries, ta::TimeArrayContainer)
+function make_time_series_metadata(time_series::SingleTimeSeries, ta::TimeDataContainer)
     return SingleTimeSeriesMetadata(
         get_label(time_series),
         ta,
@@ -112,7 +112,7 @@ end
 
 function SingleTimeSeriesMetadata(
     label::AbstractString,
-    data::TimeArrayContainer,
+    data::TimeDataContainer,
     scaling_factor_multiplier = nothing,
 )
     return SingleTimeSeriesMetadata(
@@ -180,7 +180,7 @@ function make_time_series_data(
     )
 end
 
-function make_time_series_metadata(time_series::Deterministic, ta::TimeArrayContainer)
+function make_time_series_metadata(time_series::Deterministic, ta::TimeDataContainer)
     return DeterministicMetadata(
         get_label(time_series),
         ta,
@@ -190,7 +190,7 @@ end
 
 function DeterministicMetadata(
     label::AbstractString,
-    data::TimeArrayContainer,
+    data::TimeDataContainer,
     scaling_factor_multiplier = nothing,
 )
     return DeterministicMetadata(
@@ -259,7 +259,7 @@ function make_time_series_data(
     return Probabilistic(get_label(time_series), get_percentiles(time_series), data)
 end
 
-function make_time_series_metadata(time_series::Probabilistic, ta::TimeArrayContainer)
+function make_time_series_metadata(time_series::Probabilistic, ta::TimeDataContainer)
     return ProbabilisticMetadata(
         get_label(time_series),
         get_resolution(time_series),
@@ -327,7 +327,7 @@ function make_time_series_data(ts_metadata::ScenariosMetadata, data::TimeSeries.
     return Scenarios(get_label(ts_metadata), data)
 end
 
-function make_time_series_metadata(time_series::Scenarios, ta::TimeArrayContainer)
+function make_time_series_metadata(time_series::Scenarios, ta::TimeDataContainer)
     return ScenariosMetadata(
         get_label(time_series),
         get_resolution(time_series),
