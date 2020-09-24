@@ -89,7 +89,6 @@ function _time_array_wrapper_to_array(ta::TimeArrayContainer)
     # TODO: Implement for more dimensions.
     # TODO: Is this storing the data efficiently?
     if length(ta.data) == 1
-        @show size(TimeSeries.values(first(values(ta.data))))
         return TimeSeries.values(first(values(ta.data)))
     else length(ta.data) > 1
         return hcat(TimeSeries.values.(values(ta.data))...)
