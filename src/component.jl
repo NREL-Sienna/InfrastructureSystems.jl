@@ -38,29 +38,46 @@ end
 
 function _get_forecast_index_no(
     initial_time::Dates.DateTime,
-    ts_metadata::TimeSeriesMetadata,
+    ts_metadata::ForecastMetadata,
+    count::Int,
+    horizon::Union{Nothing, Int}
+
 )
+    if initial_time < get_initial_time_stamp(ts_metadata)
+        throw(ArgumentError("The requested initial_time $initial_time is invalid. The value is earlier than $(get_initial_time(ts_metadata))"))
+    end
     range = initial_time - get_initial_time_stamp(ts_metadata)
     interval = get_interval(ts_metadata)
     index = Int(range / interval) + 1
-    if index <= get_count(ts_metadata)
+
+    if !(horizon === nothing) && horizon > get_horizon(ts_metadata)
+        throw(ArgumentError("The requested horizon is longer than data $(get_horizon(ts_metadata))"))
+    end
+
+    if index + count - 1 <= get_count(ts_metadata)
         return index
     else
-        throw(ArgumentError("The requested initial_time $initial_time does not exist in the data"))
+        throw(ArgumentError("The requested initial_time $initial_time and count $count are invalid does not exist in the data"))
     end
 end
 
 function _get_forecast_index_no(
     initial_time::Dates.DateTime,
-    ts_metadata::SingleTimeSeriesMetadata,
+    ts_metadata::StaticTimeSeriesMetadata,
+    ::Int,
+    horizon::Union{Nothing, Int}
 )
+    if initial_time < get_initial_time(ts_metadata)
+        throw(ArgumentError("The requested initial_time $initial_time is invalid. The value is earlier than $(get_initial_time(ts_metadata))"))
+    end
     range = initial_time - get_initial_time(ts_metadata)
-    interval = get_resolution(ts_metadata)
-    index = Int(range / interval) + 1
-    if index <= get_length(ts_metadata)
+    resolution = get_resolution(ts_metadata)
+    index = Int(range / resolution) + 1
+    horizon = (horizon === nothing) ? 0 : horizon
+    if index + horizon <= get_length(ts_metadata)
         return index
     else
-        throw(ArgumentError("The requested initial_time $initial_time does not exist in the data"))
+        throw(ArgumentError("The requested initial_time $initial_time and horizon $horizon are invalid does not exist in the data"))
     end
     return
 end
@@ -82,7 +99,10 @@ function get_time_series(
     time_series_type = time_series_data_to_metadata(T)
     time_series_metadata = get_time_series(time_series_type, component, label)
     storage = _get_time_series_storage(component)
-    index = _get_forecast_index_no(initial_time, time_series_metadata)
+    if !(horizon === nothing) && horizon > get_horizon(time_series_metadata)
+        throw(ArgumentError("The horizon selected $horizon excedess the data available"))
+    end
+    index = _get_forecast_index_no(initial_time, time_series_metadata, count, horizon)
     horizon_ = (horizon === nothing) ? get_horizon(time_series_metadata) : horizon
     ts = get_time_series(storage, get_time_series_uuid(time_series_metadata), index, horizon_, count)
     return make_time_series_data(time_series_metadata, ts)
