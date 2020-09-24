@@ -189,13 +189,6 @@ function remove_time_series!(
     end
 end
 
-function _make_time_array(timestamps, data, columns::Union{Vector{Symbol}, Nothing})
-    if columns === nothing
-        return TimeSeries.TimeArray(timestamps, data)
-    else
-        return TimeSeries.TimeArray(timestamps, data, columns)
-    end
-end
 
 function get_time_series(
     storage::Hdf5TimeSeriesStorage,
@@ -211,11 +204,6 @@ function get_time_series(
         initial_time_stamp = Dates.epochms2datetime(_initial_time_stamp)
         resolution = Dates.Millisecond(HDF5.read(HDF5.attrs(path)["resolution"]))
         series_length = HDF5.read(HDF5.attrs(path)["length"])
-        if HDF5.exists(HDF5.attrs(path), "columns")
-            columns = Symbol.(HDF5.read(HDF5.attrs(path)["columns"]))
-        else
-            columns = nothing
-        end
 
         # HDF5.readmmap could be faster in many cases than this. However, experiments
         # resulted in various crashes if we tried to close the file before references
@@ -238,7 +226,7 @@ function get_time_series(
             end
             #Making a Dict prevents type instability in the return of the function
             return DataStructures.SortedDict(
-                time_stamps[1] => _make_time_array(time_stamps, data, columns),
+                time_stamps[1] => TimeSeries.TimeArray(time_stamps, data),
             )
         else
             @debug "reconstructing a overlapping forecast time series"
@@ -256,7 +244,7 @@ function get_time_series(
                 ini_time = initial_times[index + i]
                 ts_data = data_read[:, i]
                 time_stamps = range(ini_time; length = horizon, step = resolution)
-                data[ini_time] = _make_time_array(time_stamps, ts_data, columns)
+                data[ini_time] = TimeSeries.TimeArray(time_stamps, ts_data)
             end
             return data
         end
