@@ -251,10 +251,11 @@ function get_time_series(
             initial_times =
                 range(initial_time_stamp; length = stored_count, step = interval)
             horizon = (len == 0) ? series_length : len
-            for i in 0:(count - 1)
+            data_read = path["data"][1:horizon, index:(index + count - 1)]
+            for i in 1:count
                 ini_time = initial_times[index + i]
+                ts_data = data_read[:, i]
                 time_stamps = range(ini_time; length = horizon, step = resolution)
-                ts_data = path["data"][1:horizon, index + i]
                 data[ini_time] = _make_time_array(time_stamps, ts_data, columns)
             end
             return data
