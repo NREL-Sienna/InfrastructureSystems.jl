@@ -8,7 +8,7 @@ import Dates
 import JSON3
 import PrettyTables
 import TimeSeries
-import DataStructures
+using DataStructures : SortedDict
 
 using DocStringExtensions
 

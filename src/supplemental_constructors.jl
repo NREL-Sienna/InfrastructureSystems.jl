@@ -92,7 +92,7 @@ end
 
 function make_time_series_data(
     ts_metadata::SingleTimeSeriesMetadata,
-    data::DataStructures.SortedDict{Dates.DateTime, <:TimeSeries.TimeArray},
+    data::SortedDict{Dates.DateTime, <:TimeSeries.TimeArray},
 )
     @assert length(data) == 1
     return SingleTimeSeries(
@@ -130,7 +130,7 @@ Construct Deterministic from a Dict of TimeArrays, DataFrames or Arrays.
 
 # Arguments
 - `label::AbstractString`: user-defined label
-- `data::Union{Dict{Dates.DateTime, Any}, DataStructures.SortedDict.Dict{Dates.DateTime, Any}}`: time series data. The values in the dictionary should be TimeSeries.TimeArray or be able to be converted
+- `data::Union{Dict{Dates.DateTime, Any}, SortedDict.Dict{Dates.DateTime, Any}}`: time series data. The values in the dictionary should be TimeSeries.TimeArray or be able to be converted
 - `normalization_factor::NormalizationFactor = 1.0`: optional normalization factor to apply
   to each data entry
 - `scaling_factor_multiplier::Union{Nothing, Function} = nothing`: If the data are scaling
@@ -142,7 +142,7 @@ Construct Deterministic from a Dict of TimeArrays, DataFrames or Arrays.
 """
 function Deterministic(
     label::AbstractString,
-    data::Union{Dict{Dates.DateTime, Any}, DataStructures.SortedDict{Dates.DateTime, Any}};
+    data::Union{Dict{Dates.DateTime, Any}, SortedDict{Dates.DateTime, Any}};
     normalization_factor::NormalizationFactor = 1.0,
     scaling_factor_multiplier::Union{Nothing, Function} = nothing,
     timestamp = :timestamp,
@@ -171,7 +171,7 @@ end
 
 function make_time_series_data(
     ts_metadata::DeterministicMetadata,
-    data::DataStructures.SortedDict{Dates.DateTime, TimeSeries.TimeArray},
+    data::SortedDict{Dates.DateTime, TimeSeries.TimeArray},
 )
     return Deterministic(
         get_label(ts_metadata),
@@ -254,7 +254,7 @@ end
 
 function make_time_series_data(
     ts_metadata::ProbabilisticMetadata,
-    data::DataStructures.SortedDict{Dates.DateTime, TimeSeries.TimeArray},
+    data::SortedDict{Dates.DateTime, TimeSeries.TimeArray},
 )
     return Probabilistic(get_label(time_series), get_percentiles(time_series), data)
 end
@@ -275,7 +275,7 @@ end
 
 function Scenarios(
     label::String,
-    data::DataStructures.SortedDict{Dates.DateTime, TimeSeries.TimeArray},
+    data::SortedDict{Dates.DateTime, TimeSeries.TimeArray},
     scaling_factor_multiplier = nothing,
 )
     initial_time = TimeSeries.timestamp(data)[1]

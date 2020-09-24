@@ -5,7 +5,7 @@ This file is auto-generated. Do not edit.
     mutable struct Probabilistic <: Forecast
         label::String
         percentiles::Vector{Float64}
-        data::Dict{Dates.DateTime, TimeSeries.TimeArray}
+        data::SortedDict{Dates.DateTime, TimeSeries.TimeArray}
         scaling_factor_multiplier::Union{Nothing, Function}
     end
 
@@ -14,7 +14,7 @@ A Probabilistic time series for a particular data field in a Component.
 # Arguments
 - `label::String`: user-defined label
 - `percentiles::Vector{Float64}`: Percentiles for the probabilistic time series
-- `data::Dict{Dates.DateTime, TimeSeries.TimeArray}`: timestamp - scalingfactor
+- `data::SortedDict{Dates.DateTime, TimeSeries.TimeArray}`: timestamp - scalingfactor
 - `scaling_factor_multiplier::Union{Nothing, Function}`: Applicable when the time series data are scaling factors. Called on the associated component to convert the values.
 """
 mutable struct Probabilistic <: Forecast
@@ -23,7 +23,7 @@ mutable struct Probabilistic <: Forecast
     "Percentiles for the probabilistic time series"
     percentiles::Vector{Float64}
     "timestamp - scalingfactor"
-    data::Dict{Dates.DateTime, TimeSeries.TimeArray}
+    data::SortedDict{Dates.DateTime, TimeSeries.TimeArray}
     "Applicable when the time series data are scaling factors. Called on the associated component to convert the values."
     scaling_factor_multiplier::Union{Nothing, Function}
 end

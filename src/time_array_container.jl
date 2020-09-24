@@ -1,9 +1,13 @@
 struct TimeDataContainer <: InfrastructureSystemsType
-    data::DataStructures.SortedDict{Dates.DateTime, Array}
+    data::SortedDict{Dates.DateTime, Array}
     resolution::Dates.Period
     internal::InfrastructureSystemsInternal
 
-    function TimeDataContainer(data::DataStructures.SortedDict{Dates.DateTime, Array{T, N}}, resolution::Dates.Period, internal::InfrastructureSystemsInternal) where {T , N}
+    function TimeDataContainer(
+        data::SortedDict{Dates.DateTime, Array{T, N}},
+        resolution::Dates.Period,
+        internal::InfrastructureSystemsInternal,
+    ) where {T, N}
         series_length = length(first(values(data)))
         for (k, v) in data
             if length(v) < 2
@@ -18,24 +22,24 @@ struct TimeDataContainer <: InfrastructureSystemsType
 end
 
 function TimeDataContainer(
-    data::DataStructures.SortedDict{Dates.DateTime, Array{T, N}},
+    data::SortedDict{Dates.DateTime, Array{T, N}},
     resolution::Dates.Period,
-) where {T , N}
+) where {T, N}
     return TimeDataContainer(data, resolution, InfrastructureSystemsInternal())
 end
 
 function TimeDataContainer(
-    data::DataStructures.SortedDict{Dates.DateTime, <:TimeSeries.TimeArray},
+    data::SortedDict{Dates.DateTime, <:TimeSeries.TimeArray},
 )
     ta = first(values(data))
     resolution = TimeSeries.timestamp(ta)[2] - TimeSeries.timestamp(ta)[1]
     ta_values = TimeSeries.values.(values(data))
-    _data = DataStructures.SortedDict(keys(data) .=> ta_values)
+    _data = SortedDict(keys(data) .=> ta_values)
     return TimeDataContainer(_data, resolution)
 end
 
 function TimeDataContainer(data::Dict{Dates.DateTime, <:TimeSeries.TimeArray})
-    return TimeDataContainer(DataStructures.SortedDict(data...),)
+    return TimeDataContainer(SortedDict(data...),)
 end
 
 function TimeDataContainer(data::TimeSeries.TimeArray)

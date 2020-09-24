@@ -63,7 +63,7 @@
         },
         {
           "name": "data",
-          "data_type": "Dict{Dates.DateTime, TimeSeries.TimeArray}",
+          "data_type": "SortedDict{Dates.DateTime, TimeSeries.TimeArray}",
           "comment": "timestamp - scalingfactor"
         },
         {
@@ -149,7 +149,7 @@
         },
         {
           "name": "data",
-          "data_type": "Dict{Dates.DateTime, TimeSeries.TimeArray}",
+          "data_type": "SortedDict{Dates.DateTime, TimeSeries.TimeArray}",
           "comment": "timestamp - scalingfactor"
         },
         {
@@ -235,7 +235,7 @@
         },
         {
           "name": "data",
-          "data_type": "Dict{Dates.DateTime, TimeSeries.TimeArray}",
+          "data_type": "SortedDict{Dates.DateTime, TimeSeries.TimeArray}",
           "comment": "timestamp - scalingfactor"
         },
         {
