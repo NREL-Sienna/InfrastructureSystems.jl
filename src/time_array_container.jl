@@ -1,15 +1,15 @@
 struct TimeDataContainer <: InfrastructureSystemsType
-    data::DataStructures.SortedDict{Dates.DateTime, Array}
+    data::DataStructures.SortedDict{Dates.DateTime, <:Array}
     resolution::Dates.Period
     internal::InfrastructureSystemsInternal
 
-    function TimeDataContainer(data, resolution, internal)
+    function TimeDataContainer(data::DataStructures.SortedDict{Dates.DateTime, <:Array{Float64, N}}, resolution::Dates.Period, internal::InfrastructureSystemsInternal) where N
         series_length = length(first(values(data)))
-        for (k, v) in values(data)
+        for (k, v) in data
             if length(v) < 2
-                throw(ArgumentError("array length must be at least 2"))
+                throw(ArgumentError("data array length must be at least 2"))
             end
-            if length(v) != series_element_length
+            if length(v) != series_length
                 throw(ArgumentError("array lengths don't match. Failed timestamp $k"))
             end
         end
@@ -17,21 +17,15 @@ struct TimeDataContainer <: InfrastructureSystemsType
     end
 end
 
-function TimeDataContainer(data::TimeSeries.TimeArray)
-    resolution = TimeSeries.timestamp(data)[2] - TimeSeries.timestamp(data)[1]
-    _data = Dict(first(TimeSeries.timestamp(data)) => TimeSeries.values(data))
-    return TimeDataContainer(_data, resolution, InfrastructureSystemsInternal())
-end
-
 function TimeDataContainer(
-    data::DataStructures.SortedDict{Dates.DateTime, Array},
+    data::DataStructures.SortedDict{Dates.DateTime, <:Array{Float64, N}},
     resolution::Dates.Period,
-)
+) where N
     return TimeDataContainer(data, resolution, InfrastructureSystemsInternal())
 end
 
 function TimeDataContainer(
-    data::DataStructures.SortedDict{Dates.DateTime, TimeSeries.TimeArray},
+    data::DataStructures.SortedDict{Dates.DateTime, <:TimeSeries.TimeArray},
 )
     ta = first(values(data))
     resolution = TimeSeries.timestamp(ta)[2] - TimeSeries.timestamp(ta)[1]
@@ -40,8 +34,13 @@ function TimeDataContainer(
     return TimeDataContainer(_data, resolution)
 end
 
-function TimeDataContainer(data::Dict{Dates.DateTime, TimeSeries.TimeArray})
+function TimeDataContainer(data::Dict{Dates.DateTime, <:TimeSeries.TimeArray})
     return TimeDataContainer(DataStructures.SortedDict(data...),)
+end
+
+function TimeDataContainer(data::TimeSeries.TimeArray)
+    @show _data = Dict(first(TimeSeries.timestamp(data)) => data)
+    return TimeDataContainer(_data)
 end
 
 get_internal(data) = data.internal

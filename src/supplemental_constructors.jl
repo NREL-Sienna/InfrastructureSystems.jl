@@ -92,7 +92,7 @@ end
 
 function make_time_series_data(
     ts_metadata::SingleTimeSeriesMetadata,
-    data::DataStructures.SortedDict{Dates.DateTime, TimeSeries.TimeArray},
+    data::DataStructures.SortedDict{Dates.DateTime, <:TimeSeries.TimeArray},
 )
     @assert length(data) == 1
     return SingleTimeSeries(
