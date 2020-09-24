@@ -72,7 +72,6 @@ function get_array_for_hdf(ta::TimeDataContainer)
     if length(ta.data) == 1
         return TimeSeries.values(first(values(ta.data)))
     else
-        length(ta.data) > 1
         return hcat(TimeSeries.values.(values(ta.data))...)
     end
 end
