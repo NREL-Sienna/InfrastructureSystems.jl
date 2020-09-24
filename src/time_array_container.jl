@@ -4,9 +4,13 @@ struct TimeDataContainer <: InfrastructureSystemsType
     internal::InfrastructureSystemsInternal
 
     function TimeDataContainer(data, resolution, internal)
-        for v in values(data)
+        series_length = length(first(values(data)))
+        for (k, v) in values(data)
             if length(v) < 2
-                throw(ArgumentError("time array length must be at least 2"))
+                throw(ArgumentError("array length must be at least 2"))
+            end
+            if length(v) != series_element_length
+                throw(ArgumentError("array lengths don't match. Failed timestamp $k"))
             end
         end
         return new(data, resolution, internal)
