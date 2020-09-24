@@ -258,8 +258,6 @@ function get_time_series(
                 data[ini_time] = _make_time_array(time_stamps, ts_data, columns)
             end
             return data
-        else
-            error("HDF5 data has unsupported format")
         end
     end
 end
