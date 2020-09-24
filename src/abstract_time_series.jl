@@ -5,6 +5,10 @@ Stores references to time series data, so a disk read may be required for access
 """
 abstract type TimeSeriesMetadata <: InfrastructureSystemsType end
 
+abstract type ForecastMetadata <: TimeSeriesMetadata end
+
+abstract type StaticTimeSeriesMetadata <: TimeSeriesMetadata end
+
 """
 Abstract type for time_series supplied to users. They are not stored in a system. Instead,
 they are generated on demand for the user.

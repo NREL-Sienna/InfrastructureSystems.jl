@@ -50,7 +50,7 @@
           "internal_default": "InfrastructureSystemsInternal()"
         }
       ],
-      "supertype": "TimeSeriesMetadata"
+      "supertype": "ForecastMetadata"
     },
     {
       "struct_name": "Deterministic",
@@ -131,7 +131,7 @@
           "internal_default": "InfrastructureSystemsInternal()"
         }
       ],
-      "supertype": "TimeSeriesMetadata"
+      "supertype": "ForecastMetadata"
     },
     {
       "struct_name": "Probabilistic",
@@ -217,7 +217,7 @@
           "internal_default": "InfrastructureSystemsInternal()"
         }
       ],
-      "supertype": "TimeSeriesMetadata"
+      "supertype": "ForecastMetadata"
     },
     {
       "struct_name": "Scenarios",
@@ -287,7 +287,7 @@
           "internal_default": "InfrastructureSystemsInternal()"
         }
       ],
-      "supertype": "TimeSeriesMetadata",
+      "supertype": "StaticTimeSeriesMetadata",
       "custom_code": "get_horizon(val::SingleTimeSeriesMetadata) = get_length(val)"
     },
     {

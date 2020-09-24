@@ -2,7 +2,7 @@
 This file is auto-generated. Do not edit.
 =#
 """
-    mutable struct ProbabilisticMetadata <: TimeSeriesMetadata
+    mutable struct ProbabilisticMetadata <: ForecastMetadata
         label::String
         resolution::Dates.Period
         initial_time_stamp::Dates.DateTime
@@ -29,7 +29,7 @@ A Probabilistic time series for a particular data field in a Component.
 - `scaling_factor_multiplier::Union{Nothing, Function}`: Applicable when the time series data are scaling factors. Called on the associated component to convert the values.
 - `internal::InfrastructureSystemsInternal`
 """
-mutable struct ProbabilisticMetadata <: TimeSeriesMetadata
+mutable struct ProbabilisticMetadata <: ForecastMetadata
     "user-defined label"
     label::String
     resolution::Dates.Period
