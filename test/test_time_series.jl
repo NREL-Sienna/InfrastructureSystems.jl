@@ -7,10 +7,16 @@
     initial_time = Dates.DateTime("2020-09-01")
     other_time = initial_time + Dates.Hour(1)
 
-    data = Dict(initial_time => TimeSeries.TimeArray(range(initial_time; length = 24, step = Dates.Hour(1)), ones(24)),
-                other_time => TimeSeries.TimeArray(range(other_time; length = 24, step = Dates.Hour(1)), ones(24))
-                )
-
+    data = Dict(
+        initial_time => TimeSeries.TimeArray(
+            range(initial_time; length = 24, step = Dates.Hour(1)),
+            ones(24),
+        ),
+        other_time => TimeSeries.TimeArray(
+            range(other_time; length = 24, step = Dates.Hour(1)),
+            ones(24),
+        ),
+    )
 
     forecast = IS.Deterministic(data = data, label = "test")
     IS.add_time_series!(sys, component, forecast)
@@ -22,8 +28,20 @@
     var3 = IS.get_time_series(IS.Deterministic, component, other_time, "test")
     @test length(var2.data) == 2
     # Throws errors
-    @test_throws ArgumentError IS.get_time_series(IS.Deterministic, component, initial_time, "test"; count = 3)
-    @test_throws ArgumentError IS.get_time_series(IS.Deterministic, component, other_time, "test"; count = 2)
+    @test_throws ArgumentError IS.get_time_series(
+        IS.Deterministic,
+        component,
+        initial_time,
+        "test";
+        count = 3,
+    )
+    @test_throws ArgumentError IS.get_time_series(
+        IS.Deterministic,
+        component,
+        other_time,
+        "test";
+        count = 2,
+    )
 end
 
 @testset "Test add SingleTimeSeries" begin
@@ -35,20 +53,51 @@ end
     initial_time = Dates.DateTime("2020-09-01")
     other_time = initial_time + Dates.Hour(1)
 
-    data = TimeSeries.TimeArray(range(initial_time; length = 365, step = Dates.Hour(1)), ones(365))
+    data = TimeSeries.TimeArray(
+        range(initial_time; length = 365, step = Dates.Hour(1)),
+        ones(365),
+    )
     data = IS.SingleTimeSeries(data = data, label = "test_c")
-    IS.add_time_series!(sys, component, data);
-    ts1 = IS.get_time_series(IS.SingleTimeSeries, component, initial_time, "test_c"; horizon = 12)
+    IS.add_time_series!(sys, component, data)
+    ts1 = IS.get_time_series(
+        IS.SingleTimeSeries,
+        component,
+        initial_time,
+        "test_c";
+        horizon = 12,
+    )
     @test length(IS.get_data(ts1)) == 12
-    ts2 = IS.get_time_series(IS.SingleTimeSeries, component, initial_time + Dates.Day(1), "test_c"; horizon = 12)
+    ts2 = IS.get_time_series(
+        IS.SingleTimeSeries,
+        component,
+        initial_time + Dates.Day(1),
+        "test_c";
+        horizon = 12,
+    )
     @test length(IS.get_data(ts2)) == 12
-    ts3 = IS.get_time_series(IS.SingleTimeSeries, component, initial_time + Dates.Day(1), "test_c")
+    ts3 = IS.get_time_series(
+        IS.SingleTimeSeries,
+        component,
+        initial_time + Dates.Day(1),
+        "test_c",
+    )
     @test length(IS.get_data(ts3)) == 341
     #Throws errors
-    @test_throws ArgumentError IS.get_time_series(IS.SingleTimeSeries, component, initial_time, "test_c"; horizon = 1200)
-    @test_throws ArgumentError IS.get_time_series(IS.SingleTimeSeries, component, initial_time - Dates.Day(10), "test_c"; horizon = 12)
+    @test_throws ArgumentError IS.get_time_series(
+        IS.SingleTimeSeries,
+        component,
+        initial_time,
+        "test_c";
+        horizon = 1200,
+    )
+    @test_throws ArgumentError IS.get_time_series(
+        IS.SingleTimeSeries,
+        component,
+        initial_time - Dates.Day(10),
+        "test_c";
+        horizon = 12,
+    )
 end
-
 
 #=
 @testset "Test read_time_series_file_metadata" begin
