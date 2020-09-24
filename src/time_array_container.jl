@@ -65,3 +65,14 @@ function get_interval(ta::TimeDataContainer)
     return second_key - first_key
 end
 get_count(ta::TimeDataContainer) = length(ta.data)
+
+function get_array_for_hdf(ta::TimeDataContainer)
+    # TODO: Implement for more dimensions.
+    # TODO: Is this storing the data efficiently?
+    if length(ta.data) == 1
+        return TimeSeries.values(first(values(ta.data)))
+    else
+        length(ta.data) > 1
+        return hcat(TimeSeries.values.(values(ta.data))...)
+    end
+end

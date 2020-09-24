@@ -85,17 +85,6 @@ end
 
 get_file_path(storage::Hdf5TimeSeriesStorage) = storage.file_path
 
-function _time_array_wrapper_to_array(ta::TimeDataContainer)
-    # TODO: Implement for more dimensions.
-    # TODO: Is this storing the data efficiently?
-    if length(ta.data) == 1
-        return TimeSeries.values(first(values(ta.data)))
-    else
-        length(ta.data) > 1
-        return hcat(TimeSeries.values.(values(ta.data))...)
-    end
-end
-
 function add_time_series!(
     storage::Hdf5TimeSeriesStorage,
     component_uuid::UUIDs.UUID,
@@ -113,7 +102,7 @@ function add_time_series!(
             HDF5.g_create(root, uuid)
             path = root[uuid]
             @debug "Create new time series entry." uuid component_uuid label
-            path["data"] = _time_array_wrapper_to_array(ta)
+            path["data"] = get_array_for_hdf(ta)
             HDF5.attrs(path)["initial_time"] = Dates.datetime2epochms(get_initial_time(ta))
             if length(ta.data) > 1
                 HDF5.attrs(path)["interval"] =
