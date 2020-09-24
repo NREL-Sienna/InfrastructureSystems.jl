@@ -41,7 +41,9 @@ end
     ts1 = IS.get_time_series(IS.SingleTimeSeries, component, initial_time, "test_c"; horizon = 12)
     @test length(IS.get_data(ts1)) == 12
     ts2 = IS.get_time_series(IS.SingleTimeSeries, component, initial_time + Dates.Day(1), "test_c"; horizon = 12)
+    @test length(IS.get_data(ts2)) == 12
     ts3 = IS.get_time_series(IS.SingleTimeSeries, component, initial_time + Dates.Day(1), "test_c")
+    @test length(IS.get_data(ts3)) == 341
     #Throws errors
     @test_throws ArgumentError IS.get_time_series(IS.SingleTimeSeries, component, initial_time, "test_c"; horizon = 1200)
     @test_throws ArgumentError IS.get_time_series(IS.SingleTimeSeries, component, initial_time - Dates.Day(10), "test_c"; horizon = 12)
