@@ -62,7 +62,11 @@ end
     data = collect(1:24)
     ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
     label = "val"
-    ts = IS.SingleTimeSeries(label = label, data = ta, scaling_factor_multiplier = IS.get_val)
+    ts = IS.SingleTimeSeries(
+        label = label,
+        data = ta,
+        scaling_factor_multiplier = IS.get_val,
+    )
     IS.add_time_series!(sys, component, ts)
     ts = IS.get_time_series(IS.SingleTimeSeries, component, dates[1], label)
     @test ts isa IS.SingleTimeSeries
@@ -92,7 +96,11 @@ end
     data = collect(1:24)
     ta = TimeSeries.TimeArray(dates, data, ["1"])
     label = "val"
-    ts = IS.SingleTimeSeries(label = label, data = ta, scaling_factor_multiplier = IS.get_val)
+    ts = IS.SingleTimeSeries(
+        label = label,
+        data = ta,
+        scaling_factor_multiplier = IS.get_val,
+    )
     IS.add_time_series!(sys, components, ts)
 
     hash_ta_main = nothing
@@ -127,10 +135,16 @@ end
     data2 = collect(25:48)
     ta1 = TimeSeries.TimeArray(dates1, data1, [IS.get_name(component)])
     ta2 = TimeSeries.TimeArray(dates2, data2, [IS.get_name(component)])
-    time_series1 =
-        IS.SingleTimeSeries(label = "val", data = ta1, scaling_factor_multiplier = IS.get_val)
-    time_series2 =
-        IS.SingleTimeSeries(label = "val", data = ta2, scaling_factor_multiplier = IS.get_val)
+    time_series1 = IS.SingleTimeSeries(
+        label = "val",
+        data = ta1,
+        scaling_factor_multiplier = IS.get_val,
+    )
+    time_series2 = IS.SingleTimeSeries(
+        label = "val",
+        data = ta2,
+        scaling_factor_multiplier = IS.get_val,
+    )
     IS.add_time_series!(sys, component, time_series1)
     IS.add_time_series!(sys, component, time_series2)
 
@@ -446,7 +460,8 @@ end
     label2b = "val2b"
     label_mapping = Dict(label2a => label2b)
     IS.copy_time_series!(component2, component; label_mapping = label_mapping)
-    time_series = IS.get_time_series(IS.SingleTimeSeries, component2, initial_time2, label2b)
+    time_series =
+        IS.get_time_series(IS.SingleTimeSeries, component2, initial_time2, label2b)
     @test time_series isa IS.SingleTimeSeries
     @test IS.get_initial_time(time_series) == initial_time2
     @test IS.get_label(time_series) == label2b

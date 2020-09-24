@@ -40,8 +40,7 @@ function _get_forecast_index_no(
     initial_time::Dates.DateTime,
     ts_metadata::ForecastMetadata,
     count::Int,
-    horizon::Union{Nothing, Int}
-
+    horizon::Union{Nothing, Int},
 )
     if initial_time < get_initial_time_stamp(ts_metadata)
         throw(ArgumentError("The requested initial_time $initial_time is invalid. The value is earlier than $(get_initial_time(ts_metadata))"))
@@ -65,7 +64,7 @@ function _get_forecast_index_no(
     initial_time::Dates.DateTime,
     ts_metadata::StaticTimeSeriesMetadata,
     ::Int,
-    horizon::Union{Nothing, Int}
+    horizon::Union{Nothing, Int},
 )
     if initial_time < get_initial_time(ts_metadata)
         throw(ArgumentError("The requested initial_time $initial_time is invalid. The value is earlier than $(get_initial_time(ts_metadata))"))
@@ -91,7 +90,7 @@ function get_time_series(
     initial_time::Dates.DateTime,
     label::AbstractString;
     horizon::Union{Nothing, Int} = nothing,
-    count::Int = 1
+    count::Int = 1,
 ) where {T <: TimeSeriesData}
     if !has_time_series(component)
         throw(ArgumentError("no forecasts are stored in $component"))
@@ -104,10 +103,15 @@ function get_time_series(
     end
     index = _get_forecast_index_no(initial_time, time_series_metadata, count, horizon)
     _horizon = (horizon === nothing) ? get_horizon(time_series_metadata) : horizon
-    ts = get_time_series(storage, get_time_series_uuid(time_series_metadata), index, _horizon, count)
+    ts = get_time_series(
+        storage,
+        get_time_series_uuid(time_series_metadata),
+        index,
+        _horizon,
+        count,
+    )
     return make_time_series_data(time_series_metadata, ts)
 end
-
 
 function get_time_series(
     ::Type{T},

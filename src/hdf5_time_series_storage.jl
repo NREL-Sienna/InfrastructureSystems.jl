@@ -90,7 +90,8 @@ function _time_array_wrapper_to_array(ta::TimeDataContainer)
     # TODO: Is this storing the data efficiently?
     if length(ta.data) == 1
         return TimeSeries.values(first(values(ta.data)))
-    else length(ta.data) > 1
+    else
+        length(ta.data) > 1
         return hcat(TimeSeries.values.(values(ta.data))...)
     end
 end
@@ -235,7 +236,8 @@ function get_time_series(
         if !HDF5.exists(HDF5.attrs(path), "interval")
             @assert HDF5.read(HDF5.attrs(path)["count"]) == 1
             @debug "reconstructing a contigouos time series"
-            time_stamps = range(initial_time_stamp; length = series_length, step = resolution)
+            time_stamps =
+                range(initial_time_stamp; length = series_length, step = resolution)
             if len == series_length && index == 1
                 data = HDF5.read(path["data"])
             elseif len <= series_length
@@ -257,7 +259,8 @@ function get_time_series(
             if count > stored_count
                 throw(ArgumentError("More Forecasts requested $count than the total stored $stored_count"))
             end
-            initial_times = range(initial_time_stamp; length = stored_count, step = interval)
+            initial_times =
+                range(initial_time_stamp; length = stored_count, step = interval)
             horizon = (len == 0) ? series_length : len
             for i in 0:(count - 1)
                 ini_time = initial_times[index + i]

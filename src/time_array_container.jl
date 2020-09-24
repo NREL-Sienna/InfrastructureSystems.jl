@@ -15,13 +15,13 @@ end
 
 function TimeDataContainer(data::TimeSeries.TimeArray)
     resolution = TimeSeries.timestamp(data)[2] - TimeSeries.timestamp(data)[1]
-    _data =Dict(first(TimeSeries.timestamp(data)) => TimeSeries.values(data))
+    _data = Dict(first(TimeSeries.timestamp(data)) => TimeSeries.values(data))
     return TimeDataContainer(_data, resolution, InfrastructureSystemsInternal())
 end
 
 function TimeDataContainer(
     data::DataStructures.SortedDict{Dates.DateTime, Vector{Float64}},
-    resolution::Dates.Period
+    resolution::Dates.Period,
 )
     return TimeDataContainer(data, resolution, InfrastructureSystemsInternal())
 end
@@ -32,14 +32,12 @@ function TimeDataContainer(
     ta = first(values(data))
     resolution = TimeSeries.timestamp(ta)[2] - TimeSeries.timestamp(ta)[1]
     ta_values = TimeSeries.values.(values(data))
-    _data =DataStructures.SortedDict(keys(data) .=> ta_values)
+    _data = DataStructures.SortedDict(keys(data) .=> ta_values)
     return TimeDataContainer(_data, resolution)
 end
 
 function TimeDataContainer(data::Dict{Dates.DateTime, TimeSeries.TimeArray})
-    return TimeDataContainer(
-        DataStructures.SortedDict(data...),
-    )
+    return TimeDataContainer(DataStructures.SortedDict(data...),)
 end
 
 get_internal(data) = data.internal
