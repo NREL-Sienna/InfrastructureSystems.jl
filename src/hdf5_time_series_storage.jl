@@ -214,7 +214,7 @@ function get_time_series(
     index::Int,
     len::Int,
     count::Int,
-)::DataStructures.SortedDict{Dates.DateTime, TimeSeries.TimeArray}
+)
     return HDF5.h5open(storage.file_path, "r") do file
         root = _get_root(storage, file)
         path = _get_time_series_path(root, uuid)
