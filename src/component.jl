@@ -42,7 +42,12 @@ function _get_forecast_index_no(
 )
     range = initial_time - get_initial_time_stamp(ts_metadata)
     interval = get_interval(ts_metadata)
-    return max(1, Int(range / interval))
+    index = Int(range / interval) + 1
+    if index <= get_count(ts_metadata)
+        return index
+    else
+        throw(ArgumentError("The requested initial_time $initial_time does not exist in the data"))
+    end
 end
 
 function _get_forecast_index_no(
@@ -51,7 +56,13 @@ function _get_forecast_index_no(
 )
     range = initial_time - get_initial_time(ts_metadata)
     interval = get_resolution(ts_metadata)
-    return max(1, Int(range / interval))
+    index = Int(range / interval) + 1
+    if index <= get_length(ts_metadata)
+        return index
+    else
+        throw(ArgumentError("The requested initial_time $initial_time does not exist in the data"))
+    end
+    return
 end
 
 """

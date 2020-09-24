@@ -85,7 +85,7 @@ end
 
 get_file_path(storage::Hdf5TimeSeriesStorage) = storage.file_path
 
-function _time_array_wrapper_to_array(ta::TimeArrayContainer)
+function _time_array_wrapper_to_array(ta::TimeDataContainer)
     # TODO: Implement for more dimensions.
     # TODO: Is this storing the data efficiently?
     if length(ta.data) == 1
@@ -99,7 +99,7 @@ function add_time_series!(
     storage::Hdf5TimeSeriesStorage,
     component_uuid::UUIDs.UUID,
     label::AbstractString,
-    ta::TimeArrayContainer,
+    ta::TimeDataContainer,
     columns = nothing,
 )
     check_read_only(storage)
@@ -172,7 +172,7 @@ function iterate_time_series(storage::Hdf5TimeSeriesStorage)
                 uuid_str = uuid_path[(range.start + 1):end]
                 uuid = UUIDs.UUID(uuid_str)
                 internal = InfrastructureSystemsInternal(uuid)
-                ta = TimeArrayContainer(get_time_series(storage, uuid), internal)
+                ta = TimeDataContainer(get_time_series(storage, uuid), internal)
                 for item in HDF5.read(uuid_group["components"])
                     component, label = deserialize_component_label(item)
                     put!(channel, (component, label, ta))
@@ -239,7 +239,7 @@ function get_time_series(
             if len == series_length && index == 1
                 data = HDF5.read(path["data"])
             elseif len <= series_length
-                end_index = index + len - 1
+                end_index = min(index + len - 1, series_length)
                 data = path["data"][index:end_index]
                 time_stamps = time_stamps[index:end_index]
             else
