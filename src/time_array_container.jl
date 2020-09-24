@@ -1,5 +1,5 @@
 struct TimeDataContainer <: InfrastructureSystemsType
-    data::DataStructures.SortedDict{Dates.DateTime, Vector{Float64}}
+    data::DataStructures.SortedDict{Dates.DateTime, Array}
     resolution::Dates.Period
     internal::InfrastructureSystemsInternal
 
@@ -20,7 +20,7 @@ function TimeDataContainer(data::TimeSeries.TimeArray)
 end
 
 function TimeDataContainer(
-    data::DataStructures.SortedDict{Dates.DateTime, Vector{Float64}},
+    data::DataStructures.SortedDict{Dates.DateTime, Array},
     resolution::Dates.Period,
 )
     return TimeDataContainer(data, resolution, InfrastructureSystemsInternal())
