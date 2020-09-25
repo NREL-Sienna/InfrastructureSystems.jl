@@ -30,7 +30,7 @@ Return a TimeDataContainer from a CSV file.
 
 Pass component_name when the file does not have the component name in a column header.
 """
-function read_forecast_from_CSV(file_path::AbstractString, resolution::Dates.Period)
+function read_forecast_from_csv(file_path::AbstractString, resolution::Dates.Period)
     if !isfile(file_path)
         msg = "TimeSeries file doesn't exist : $file_path"
         throw(DataFormatError(msg))
