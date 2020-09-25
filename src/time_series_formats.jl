@@ -25,7 +25,6 @@ function read_time_series(file_path::AbstractString, component_name = nothing; k
     return read_time_series(get_time_series_format(file), file, component_name; kwargs...)
 end
 
-
 """
 Return a TimeDataContaier from a CSV file.
 
