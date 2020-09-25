@@ -75,9 +75,10 @@ function Base.show(io::IO, ::MIME"text/plain", data::SystemData)
     res = res <= Dates.Minute(1) ? Dates.Second(res) : Dates.Minute(res)
     println(io, "Resolution: $(res)")
     println(io, "Horizon: $(get_time_series_horizon(data))")
-    initial_times = [string(x) for x in get_time_series_initial_times(data)]
-    println(io, "Initial Times: $(join(initial_times, ", "))")
-    println(io, "Interval: $(get_time_series_interval(data))")
+    # TODO DT: broken
+    #initial_times = [string(x) for x in get_time_series_initial_times(data)]
+    #println(io, "Initial Times: $(join(initial_times, ", "))")
+    #println(io, "Interval: $(get_time_series_interval(data))")
     component_count, time_series_count = get_time_series_counts(data)
     println(io, "Components with TimeSeriesContainer: $component_count")
     println(io, "Total TimeSeriesContainer: $time_series_count")

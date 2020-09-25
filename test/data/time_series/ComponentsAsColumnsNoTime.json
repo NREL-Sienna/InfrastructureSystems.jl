@@ -6,7 +6,7 @@
     "name": "val",
     "normalization_factor": 1,
     "data_file": "ComponentsAsColumnsNoTime.csv",
-    "type": "Deterministic",
+    "type": "SingleTimeSeries",
     "module": "InfrastructureSystems"
   }
 ]

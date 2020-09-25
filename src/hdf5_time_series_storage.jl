@@ -100,20 +100,20 @@ function add_time_series!(
         if !HDF5.exists(root, uuid)
             HDF5.g_create(root, uuid)
             path = root[uuid]
-            @debug "Create new time series entry." uuid component_uuid name
             data = get_array_for_hdf(ts)
             path["data"] = data
-            HDF5.attrs(path)["initial_time"] =
-                Dates.datetime2epochms(get_initial_timestamp(ts))
+            initial_time = get_initial_timestamp(ts)
+            resolution = get_resolution(ts)
+            HDF5.attrs(path)["initial_time"] = Dates.datetime2epochms(initial_time)
             if ts isa Forecast
-                HDF5.attrs(path)["interval"] =
-                    time_period_conversion(get_interval(ts)).value
+                interval = get_interval(ts)
+                HDF5.attrs(path)["interval"] = time_period_conversion(interval).value
             end
-            HDF5.attrs(path)["resolution"] =
-                time_period_conversion(get_resolution(ts)).value
+            HDF5.attrs(path)["resolution"] = time_period_conversion(resolution).value
             # Storing the UUID as an integer would take less space, but HDF5 library says
             # arrays of 128-bit integers aren't supported.
             path["components"] = [component_name]
+            @debug "Create new time series entry." uuid component_uuid name initial_time
         else
             path = root[uuid]
             @debug "Add reference to existing time series entry." uuid component_uuid name
@@ -178,26 +178,6 @@ function remove_time_series!(
 end
 
 function get_time_series(
-    ts::StaticTimeSeries,
-    storage::Hdf5TimeSeriesStorage,
-    uuid::UUIDs.UUID,
-    row_index::Int,
-    column_index::Int,
-    num_rows::Int,
-    num_columns::Int,
-) end
-
-function get_time_series(
-    ts::Forecast,
-    storage::Hdf5TimeSeriesStorage,
-    uuid::UUIDs.UUID,
-    row_index::Int,
-    column_index::Int,
-    num_rows::Int,
-    num_columns::Int,
-) end
-
-function get_time_series(
     storage::Hdf5TimeSeriesStorage,
     uuid::UUIDs.UUID,
     row_index::Int,
@@ -221,7 +201,7 @@ function get_time_series(
         if !HDF5.exists(HDF5.attrs(path), "interval")
             @assert length(sz_tuple) == 1
             @debug "reconstructing a contiguous time series"
-            start_time = initial_timestamp + resolution * row_index
+            start_time = initial_timestamp + resolution * (row_index - 1)
             end_index = row_index + num_rows - 1
             data = path["data"][row_index:end_index]
             return TimeSeries.TimeArray(
