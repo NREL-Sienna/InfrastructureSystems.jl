@@ -3,11 +3,11 @@ const _ComponentLabelReferences = Set{Tuple{UUIDs.UUID, String}}
 
 struct _TimeSeriesRecord
     component_labels::_ComponentLabelReferences
-    ta::TimeDataContainer
+    ts::TimeSeriesData
 end
 
-function _TimeSeriesRecord(component_uuid, label, ta)
-    record = _TimeSeriesRecord(_ComponentLabelReferences(), ta)
+function _TimeSeriesRecord(component_uuid, label, ts)
+    record = _TimeSeriesRecord(_ComponentLabelReferences(), ts)
     push!(record.component_labels, (component_uuid, label))
     return record
 end
@@ -43,13 +43,13 @@ function add_time_series!(
     storage::InMemoryTimeSeriesStorage,
     component_uuid::UUIDs.UUID,
     label::AbstractString,
-    ta::TimeDataContainer,
+    ts::TimeSeriesData,
     unused = nothing,
 )
-    uuid = get_uuid(ta)
+    uuid = get_uuid(ts)
     if !haskey(storage.data, uuid)
         @debug "Create new time series entry." uuid component_uuid label
-        storage.data[uuid] = _TimeSeriesRecord(component_uuid, label, ta)
+        storage.data[uuid] = _TimeSeriesRecord(component_uuid, label, ts)
     else
         add_time_series_reference!(storage, component_uuid, label, uuid)
     end

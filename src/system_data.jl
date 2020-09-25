@@ -131,9 +131,9 @@ function add_time_series!(
     component::InfrastructureSystemsComponent,
     time_series::TimeSeriesData,
 )
-    ta = TimeDataContainer(get_data(time_series))
-    ts_metadata = make_time_series_metadata(time_series, ta)
-    add_time_series!(data, component, ts_metadata, ta)
+    metadata_type = time_series_data_to_metadata(typeof(time_series))
+    ts_metadata = metadata_type(time_series)
+    _add_time_series!(data, component, ts_metadata, time_series)
 end
 
 """
@@ -150,18 +150,18 @@ individually with the same data because in this case, only one time series array
 Throws ArgumentError if a component is not stored in the system.
 """
 function add_time_series!(data::SystemData, components, time_series::TimeSeriesData)
-    ta = TimeDataContainer(get_data(time_series))
-    ts_metadata = make_time_series_metadata(time_series, ta)
+    metadata_type = time_series_data_to_metadata(typeof(time_series))
+    ts_metadata = metadata_type(time_series)
     for component in components
-        add_time_series!(data, component, ts_metadata, ta)
+        add_time_series!(data, component, ts_metadata)
     end
 end
 
-function add_time_series!(
+function _add_time_series!(
     data::SystemData,
     component::InfrastructureSystemsComponent,
     ts_metadata::T,
-    ta::TimeDataContainer;
+    ts::TimeSeriesData;
     skip_if_present = false,
 ) where {T <: TimeSeriesMetadata}
     _validate_component(data, component)
@@ -173,10 +173,7 @@ function add_time_series!(
         data.time_series_storage,
         get_uuid(component),
         get_label(ts_metadata),
-        ta,
-        nothing,
-        # TODO: Do something with the columns
-        #get_columns(T, ta.data),
+        ts,
     )
 end
 
@@ -242,9 +239,8 @@ function _add_time_series!(
     time_series = handle_normalization_factor(time_series, normalization_factor)
     # TODO: This code path needs to accept a metdata file or parameters telling it which
     # type of time_series to create.
-    ta = TimeDataContainer(time_series)
-    ts_metadata = DeterministicMetadata(label, ta, scaling_factor_multiplier)
-    add_time_series!(data, component, ts_metadata, ta)
+    ts_metadata = DeterministicMetadata(label, time_series, scaling_factor_multiplier)
+    _add_time_series!(data, component, ts_metadata, time_series)
 end
 
 function _make_time_series(cache::TimeSeriesCache, resolution)
@@ -272,11 +268,9 @@ function _make_time_series(info::TimeSeriesParsedInfo, resolution)
 
     ta = info.data[Symbol(get_name(info.component))]
     ta = handle_normalization_factor(ta, info.normalization_factor)
-    ta_wrapper = TimeDataContainer(ta)
-    ts_metadata =
-        info.time_series_type(info.label, ta_wrapper, info.scaling_factor_multiplier)
+    ts_metadata = info.time_series_type(info.label, ta, info.scaling_factor_multiplier)
     @debug "Created $ts_metadata"
-    return ts_metadata, ta_wrapper
+    return ts_metadata, ta
 end
 
 function add_time_series_info!(cache::TimeSeriesCache, metadata::TimeSeriesFileMetadata)

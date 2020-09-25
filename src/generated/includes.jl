@@ -12,7 +12,6 @@ export get_data
 export get_horizon
 export get_initial_time
 export get_initial_time_stamp
-export get_internal
 export get_interval
 export get_label
 export get_length
@@ -26,7 +25,6 @@ export set_data!
 export set_horizon!
 export set_initial_time!
 export set_initial_time_stamp!
-export set_internal!
 export set_interval!
 export set_label!
 export set_length!

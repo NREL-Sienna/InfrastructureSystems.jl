@@ -106,21 +106,23 @@ function get_time_series(
         throw(ArgumentError("no forecasts are stored in $component"))
     end
 
-    type = time_series_data_to_metadata(T)
-    ts_metadata = get_time_series(type, component, label)
+    metadata_type = time_series_data_to_metadata(T)
+    ts_metadata = get_time_series(metadata_type, component, label)
     start_time = _check_start_time(start_time, ts_metadata)
     row_index, len = _get_row_index(start_time, len, ts_metadata)
     column_index = _get_column_index(start_time, count, ts_metadata)
     storage = _get_time_series_storage(component)
-    ts = get_time_series(
-        storage,
-        get_time_series_uuid(ts_metadata),
-        row_index,
-        column_index,
-        len,
-        count,
+    return T(
+        ts_metadata,
+        get_time_series(
+            storage,
+            get_time_series_uuid(ts_metadata),
+            row_index,
+            column_index,
+            len,
+            count,
+        ),
     )
-    return make_time_series_data(ts_metadata, ts)
 end
 
 function get_time_series(
@@ -147,7 +149,7 @@ function _make_time_series(
         index = start_index,
         len = len,
     )
-    return make_time_series_data(ts_metadata, ta)
+    return T(ts_metadata, ta)
 end
 
 """
@@ -444,7 +446,8 @@ function get_time_series_multiple(
             end
             ts_metadata = container.data[key]
             ta = get_time_series(storage, get_time_series_uuid(ts_metadata))
-            ts_data = make_time_series_data(ts_metadata, ta)
+            ts_type = time_series_metadata_to_data(typeof(ts_metadata))
+            ts_data = ts_type(ts_metadata, ta)
             if !isnothing(filter_func) && !filter_func(ts_data)
                 continue
             end
