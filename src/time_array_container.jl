@@ -4,10 +4,10 @@ struct TimeDataContainer <: InfrastructureSystemsType
     internal::InfrastructureSystemsInternal
 
     function TimeDataContainer(
-        data::SortedDict{Dates.DateTime, Array{T, N}},
+        data::SortedDict{Dates.DateTime, Array},
         resolution::Dates.Period,
         internal::InfrastructureSystemsInternal,
-    ) where {T, N}
+    )
         series_length = length(first(values(data)))
         for (k, v) in data
             if length(v) < 2
@@ -22,9 +22,9 @@ struct TimeDataContainer <: InfrastructureSystemsType
 end
 
 function TimeDataContainer(
-    data::SortedDict{Dates.DateTime, Array{T, N}},
+    data::SortedDict{Dates.DateTime, Array},
     resolution::Dates.Period,
-) where {T, N}
+)
     return TimeDataContainer(data, resolution, InfrastructureSystemsInternal())
 end
 
