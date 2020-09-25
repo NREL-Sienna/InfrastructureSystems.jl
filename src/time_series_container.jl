@@ -81,18 +81,6 @@ function get_time_series(
     return container.data[key]
 end
 
-function get_time_series_initial_times(ts_metadata::TimeSeriesMetadata)
-    initial_time_stamp = get_initial_time_stamp(ts_metadata)
-    interval = get_interval(ts_metadata)
-    count = get_count(ts_metadata)
-    return collect(range(initial_time_stamp; length = count, step = interval))
-end
-
-function get_time_series_initial_times(container::TimeSeriesContainer)
-    ts_metadata = first(values(container.data))
-    return get_time_series_initial_times(ts_metadata)
-end
-
 function get_time_series_initial_times(
     ::Type{T},
     container::TimeSeriesContainer,

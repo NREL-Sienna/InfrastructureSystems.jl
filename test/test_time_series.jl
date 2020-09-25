@@ -18,28 +18,28 @@
         ),
     )
 
-    forecast = IS.Deterministic(data = data, resolution =, label = "test")
+    forecast = IS.Deterministic(data = data, label = "test")
     IS.add_time_series!(sys, component, forecast)
     # This still returns a forecast object. Requires update of the interfaces
-    var1 = IS.get_time_series(IS.Deterministic, component, initial_time, "test")
+    var1 = IS.get_time_series(IS.Deterministic, component, "test"; start_time = initial_time)
     @test length(var1.data) == 1
-    var2 = IS.get_time_series(IS.Deterministic, component, initial_time, "test"; count = 2)
+    var2 = IS.get_time_series(IS.Deterministic, component, "test"; start_time = initial_time, count = 2)
     @test length(var2.data) == 2
-    var3 = IS.get_time_series(IS.Deterministic, component, other_time, "test")
+    var3 = IS.get_time_series(IS.Deterministic, component, "test"; start_time = other_time)
     @test length(var2.data) == 2
     # Throws errors
     @test_throws ArgumentError IS.get_time_series(
         IS.Deterministic,
         component,
-        initial_time,
         "test";
+        start_time = initial_time,
         count = 3,
     )
     @test_throws ArgumentError IS.get_time_series(
         IS.Deterministic,
         component,
-        other_time,
         "test";
+        start_time = other_time,
         count = 2,
     )
 end
@@ -62,40 +62,40 @@ end
     ts1 = IS.get_time_series(
         IS.SingleTimeSeries,
         component,
-        initial_time,
         "test_c";
-        horizon = 12,
+        start_time = initial_time,
+        len = 12,
     )
     @test length(IS.get_data(ts1)) == 12
     ts2 = IS.get_time_series(
         IS.SingleTimeSeries,
         component,
-        initial_time + Dates.Day(1),
         "test_c";
-        horizon = 12,
+        start_time = initial_time + Dates.Day(1),
+        len = 12,
     )
     @test length(IS.get_data(ts2)) == 12
     ts3 = IS.get_time_series(
         IS.SingleTimeSeries,
         component,
-        initial_time + Dates.Day(1),
-        "test_c",
+        "test_c";
+        start_time = initial_time + Dates.Day(1),
     )
     @test length(IS.get_data(ts3)) == 341
     #Throws errors
     @test_throws ArgumentError IS.get_time_series(
         IS.SingleTimeSeries,
         component,
-        initial_time,
         "test_c";
-        horizon = 1200,
+        start_time = initial_time,
+        len = 1200,
     )
     @test_throws ArgumentError IS.get_time_series(
         IS.SingleTimeSeries,
         component,
-        initial_time - Dates.Day(10),
         "test_c";
-        horizon = 12,
+        start_time = initial_time - Dates.Day(10),
+        len = 12,
     )
 end
 
