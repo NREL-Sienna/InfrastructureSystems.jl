@@ -104,7 +104,7 @@ function add_time_series!(
             data = get_array_for_hdf(ts)
             path["data"] = data
             HDF5.attrs(path)["initial_time"] =
-                Dates.datetime2epochms(get_initial_time_stamp(ts))
+                Dates.datetime2epochms(get_initial_timestamp(ts))
             if ts isa Forecast
                 HDF5.attrs(path)["interval"] =
                     time_period_conversion(get_interval(ts)).value
@@ -208,8 +208,8 @@ function get_time_series(
     return HDF5.h5open(storage.file_path, "r") do file
         root = _get_root(storage, file)
         path = _get_time_series_path(root, uuid)
-        _initial_time_stamp = HDF5.read(HDF5.attrs(path)["initial_time"])
-        initial_time_stamp = Dates.epochms2datetime(_initial_time_stamp)
+        _initial_timestamp = HDF5.read(HDF5.attrs(path)["initial_time"])
+        initial_timestamp = Dates.epochms2datetime(_initial_timestamp)
         resolution = Dates.Millisecond(HDF5.read(HDF5.attrs(path)["resolution"]))
         sz_tuple = size(path["data"])
 
@@ -221,7 +221,7 @@ function get_time_series(
         if !HDF5.exists(HDF5.attrs(path), "interval")
             @assert length(sz_tuple) == 1
             @debug "reconstructing a contiguous time series"
-            start_time = initial_time_stamp + resolution * row_index
+            start_time = initial_timestamp + resolution * row_index
             end_index = row_index + num_rows - 1
             data = path["data"][row_index:end_index]
             return TimeSeries.TimeArray(
@@ -236,7 +236,7 @@ function get_time_series(
             if num_columns > sz_tuple[1]
                 throw(ArgumentError("More Forecasts requested $num_columns than the total stored $(sz_tuple[2])"))
             end
-            start_time = initial_time_stamp + interval * (row_index - 1)
+            start_time = initial_timestamp + interval * (row_index - 1)
             if num_columns == 1
                 data[start_time] = path["data"][1:num_rows, column_index]
             else

@@ -160,7 +160,7 @@ function Deterministic(
 )
     return Deterministic(
         name = get_name(ts_metadata),
-        initial_time_stamp = get_initial_time_stamp(ts_metadata),
+        initial_timestamp = get_initial_timestamp(ts_metadata),
         resolution = get_resolution(ts_metadata),
         horizon = get_horizon(ts_metadata),
         data = data,
@@ -173,7 +173,7 @@ function DeterministicMetadata(ts::Deterministic)
     return DeterministicMetadata(
         get_name(ts),
         get_resolution(ts),
-        get_initial_time_stamp(ts),
+        get_initial_timestamp(ts),
         get_interval(ts),
         get_count(ts),
         get_uuid(ts),

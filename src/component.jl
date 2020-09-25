@@ -37,7 +37,7 @@ function clear_time_series!(component::InfrastructureSystemsComponent)
 end
 
 function _get_column_index(start_time, count, ts_metadata::ForecastMetadata)
-    offset = start_time - get_initial_time_stamp(ts_metadata)
+    offset = start_time - get_initial_timestamp(ts_metadata)
     interval = get_interval(ts_metadata)
     index = Int(offset / interval) + 1
 
@@ -73,10 +73,10 @@ end
 
 function _check_start_time(start_time, ts_metadata::TimeSeriesMetadata)
     if start_time === nothing
-        return get_initial_time_stamp(ts_metadata)
+        return get_initial_timestamp(ts_metadata)
     end
 
-    time_diff = start_time - get_initial_time_stamp(ts_metadata)
+    time_diff = start_time - get_initial_timestamp(ts_metadata)
     if time_diff < Dates.Second(0)
         throw(ArgumentError("start_time=$start_time is earlier than $(get_initial_time(ts_metadata))"))
     end

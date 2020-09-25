@@ -14,7 +14,7 @@
     forecast = IS.Deterministic(
         data = data,
         name = name,
-        initial_time_stamp = initial_time,
+        initial_timestamp = initial_time,
         horizon = horizon,
         resolution = resolution,
     )

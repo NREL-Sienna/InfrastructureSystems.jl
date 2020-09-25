@@ -27,7 +27,7 @@ end
 Return the Dates.DateTime corresponding to an interval index.
 """
 function index_to_initial_time(forecast::Forecast, index::Int)
-    return get_initial_time_stamp(forecast) + get_interval(forecast) * index
+    return get_initial_timestamp(forecast) + get_interval(forecast) * index
 end
 
 function make_timestamps(forecast::Forecast, initial_time::Dates.DateTime)
