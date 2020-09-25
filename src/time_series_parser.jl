@@ -217,7 +217,7 @@ end
 
 function TimeSeriesParsedInfo(metadata::TimeSeriesFileMetadata, ta::TimeSeries.TimeArray)
     mod = Base.root_module(Base.__toplevel__, Symbol(metadata.time_series_type_module))
-    ts_type = time_series_data_to_metadata(getfield(mod, Symbol(metadata.time_series_type)))
+    ts_type = getfield(mod, Symbol(metadata.time_series_type))
 
     if (
         metadata.scaling_factor_multiplier === nothing &&
