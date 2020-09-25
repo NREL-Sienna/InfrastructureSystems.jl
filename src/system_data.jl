@@ -165,7 +165,7 @@ function _add_time_series!(
     skip_if_present = false,
 ) where {T <: TimeSeriesMetadata}
     _validate_component(data, component)
-    check_add_time_series!(data.time_series_params, ts_metadata)
+    check_add_time_series!(data.time_series_params, ts)
     check_read_only(data.time_series_storage)
     add_time_series!(component, ts_metadata, skip_if_present = skip_if_present)
     # TODO: can this be atomic with time_series addition?
