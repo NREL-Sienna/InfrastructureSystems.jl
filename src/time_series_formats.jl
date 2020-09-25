@@ -25,6 +25,34 @@ function read_time_series(file_path::AbstractString, component_name = nothing; k
     return read_time_series(get_time_series_format(file), file, component_name; kwargs...)
 end
 
+
+"""
+Return a TimeDataContaier from a CSV file.
+
+Pass component_name when the file does not have the component name in a column header.
+"""
+function read_forecast_from_CSV(file_path::AbstractString, resolution::Dates.Period)
+    if !isfile(file_path)
+        msg = "TimeSeries file doesn't exist : $file_path"
+        throw(DataFormatError(msg))
+    end
+    # TODO: Pass arguments
+    input = CSV.Rows(file_path)
+    @debug "Read CSV data from $file_path."
+    horizon = length(first(input)) - 1
+    data = Dict{Dates.DateTime, Vector{Float64}}()
+    # First element in the row is the time series. We use integer indexes not to rely on
+    # column names
+    for row in input
+        vector = Vector{Float64}(undef, horizon)
+        for i in 1:horizon
+            vector[i] = parse(Float64, row[i + 1])
+        end
+        data[Dates.DateTime(row.DateTime)] = vector
+    end
+    return TimeDataContainer(SortedDict(data...), resolution)
+end
+
 """
 Return the time series format used in the CSV file.
 """
