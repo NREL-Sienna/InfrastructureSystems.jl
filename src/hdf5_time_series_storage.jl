@@ -108,8 +108,6 @@ function add_time_series!(
                 HDF5.attrs(path)["interval"] =
                     time_period_conversion(get_interval(ta)).value
             end
-            HDF5.attrs(path)["length"] = length(ta)
-            HDF5.attrs(path)["count"] = get_count(ta)
             HDF5.attrs(path)["resolution"] =
                 time_period_conversion(get_resolution(ta)).value
             # Storing the UUID as an integer would take less space, but HDF5 library says
@@ -192,7 +190,8 @@ end
 function get_time_series(
     storage::Hdf5TimeSeriesStorage,
     uuid::UUIDs.UUID,
-    index::Int,
+    row_index::Int,
+    column_index::Int,
     len::Int,
     count::Int,
 )
@@ -202,7 +201,7 @@ function get_time_series(
         _initial_time_stamp = HDF5.read(HDF5.attrs(path)["initial_time"])
         initial_time_stamp = Dates.epochms2datetime(_initial_time_stamp)
         resolution = Dates.Millisecond(HDF5.read(HDF5.attrs(path)["resolution"]))
-        series_length = HDF5.read(HDF5.attrs(path)["length"])
+        sz_tuple = size(path["data"])
 
         # HDF5.readmmap could be faster in many cases than this. However, experiments
         # resulted in various crashes if we tried to close the file before references
@@ -210,37 +209,29 @@ function get_time_series(
         # Julia HDF5 library maintainers about that.
         # TODO: Consider case Interval_ms = 0 if contigous instead of not existing
         if !HDF5.exists(HDF5.attrs(path), "interval")
-            @assert HDF5.read(HDF5.attrs(path)["count"]) == 1
-            @debug "reconstructing a contigouos time series"
-            time_stamps =
-                range(initial_time_stamp; length = series_length, step = resolution)
-            if len == series_length && index == 1
-                data = HDF5.read(path["data"])
-            elseif len <= series_length
-                end_index = min(index + len - 1, series_length)
-                data = path["data"][index:end_index]
-                time_stamps = time_stamps[index:end_index]
-            else
-                @assert false
-            end
+            @assert length(sz_tuple) == 1
+            @debug "reconstructing a contiguous time series"
+            time_stamps = range(initial_time_stamp; length = sz_tuple[1], step = resolution)
+            end_index = row_index + len - 1
+            data = HDF5.read(path["data"])[row_index:end_index]
+            time_stamps = time_stamps[row_index:end_index]
             #Making a Dict prevents type instability in the return of the function
             return SortedDict(time_stamps[1] => TimeSeries.TimeArray(time_stamps, data))
         else
             @debug "reconstructing a overlapping forecast time series"
+            @assert length(sz_tuple) == 2
             data = SortedDict{Dates.DateTime, TimeSeries.TimeArray}()
             interval = Dates.Millisecond(HDF5.read(HDF5.attrs(path)["interval"]))
-            stored_count = HDF5.read(HDF5.attrs(path)["count"])
-            if count > stored_count
-                throw(ArgumentError("More Forecasts requested $count than the total stored $stored_count"))
+            if count > sz_tuple[1]
+                throw(ArgumentError("More Forecasts requested $count than the total stored $(sz_tuple[2])"))
             end
-            initial_times =
-                range(initial_time_stamp; length = stored_count, step = interval)
-            horizon = (len == 0) ? series_length : len
-            data_read = path["data"][1:horizon, index:(index + count - 1)]
+            num_rows = (len == 0) ? sz_tuple[1] : len
+            initial_times = range(initial_time_stamp; length = num_rows, step = interval)
+            data_read = path["data"][1:num_rows, column_index:(column_index + count - 1)]
             for i in 1:count
-                ini_time = initial_times[index + i]
+                ini_time = initial_times[column_index + i]
                 ts_data = data_read[:, i]
-                time_stamps = range(ini_time; length = horizon, step = resolution)
+                time_stamps = range(ini_time; length = num_rows, step = resolution)
                 data[ini_time] = TimeSeries.TimeArray(time_stamps, ts_data)
             end
             return data

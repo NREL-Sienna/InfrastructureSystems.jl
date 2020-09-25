@@ -287,56 +287,6 @@ function add_time_series_info!(cache::TimeSeriesCache, metadata::TimeSeriesFileM
 end
 
 """
-Return true if time_series are stored contiguously.
-
-Throws ArgumentError if there are no time_series stored.
-"""
-function are_time_series_contiguous(data::SystemData)
-    for component in iterate_components_with_time_series(data.components)
-        if has_time_series(component)
-            return are_time_series_contiguous(component)
-        end
-    end
-
-    throw(ArgumentError("no time_series are stored"))
-end
-
-"""
-Generates all possible initial times for the stored time_series. This should return the same
-result regardless of whether the time_series have been stored as one contiguous array or
-chunks of contiguous arrays, such as one 365-day time_series vs 365 one-day time_series.
-
-Throws ArgumentError if there are no time_series stored, interval is not a multiple of the
-system's time_series resolution, or if the stored time_series have overlapping timestamps.
-
-# Arguments
-- `data::SystemData`: system
-- `interval::Dates.Period`: Amount of time in between each initial time.
-- `horizon::Int`: Length of each time_series array.
-- `initial_time::Union{Nothing, Dates.DateTime}=nothing`: Start with this time. If nothing,
-  use the first initial time.
-"""
-function generate_initial_times(
-    data::SystemData,
-    interval::Dates.Period,
-    horizon::Int;
-    initial_time::Union{Nothing, Dates.DateTime} = nothing,
-)
-    for component in iterate_components_with_time_series(data.components)
-        if has_time_series(component)
-            return generate_initial_times(
-                component,
-                interval,
-                horizon;
-                initial_time = initial_time,
-            )
-        end
-    end
-
-    throw(ArgumentError("no time_series are stored"))
-end
-
-"""
 Checks that the component exists in data and the UUID's match.
 """
 function _validate_component(

@@ -18,28 +18,35 @@
         ),
     )
 
-    forecast = IS.Deterministic(data = data, resolution =, label = "test")
+    forecast = IS.Deterministic(data = data, label = "test")
     IS.add_time_series!(sys, component, forecast)
     # This still returns a forecast object. Requires update of the interfaces
-    var1 = IS.get_time_series(IS.Deterministic, component, initial_time, "test")
+    var1 =
+        IS.get_time_series(IS.Deterministic, component, "test"; start_time = initial_time)
     @test length(var1.data) == 1
-    var2 = IS.get_time_series(IS.Deterministic, component, initial_time, "test"; count = 2)
+    var2 = IS.get_time_series(
+        IS.Deterministic,
+        component,
+        "test";
+        start_time = initial_time,
+        count = 2,
+    )
     @test length(var2.data) == 2
-    var3 = IS.get_time_series(IS.Deterministic, component, other_time, "test")
+    var3 = IS.get_time_series(IS.Deterministic, component, "test"; start_time = other_time)
     @test length(var2.data) == 2
     # Throws errors
     @test_throws ArgumentError IS.get_time_series(
         IS.Deterministic,
         component,
-        initial_time,
         "test";
+        start_time = initial_time,
         count = 3,
     )
     @test_throws ArgumentError IS.get_time_series(
         IS.Deterministic,
         component,
-        other_time,
         "test";
+        start_time = other_time,
         count = 2,
     )
 end
@@ -62,40 +69,40 @@ end
     ts1 = IS.get_time_series(
         IS.SingleTimeSeries,
         component,
-        initial_time,
         "test_c";
-        horizon = 12,
+        start_time = initial_time,
+        len = 12,
     )
     @test length(IS.get_data(ts1)) == 12
     ts2 = IS.get_time_series(
         IS.SingleTimeSeries,
         component,
-        initial_time + Dates.Day(1),
         "test_c";
-        horizon = 12,
+        start_time = initial_time + Dates.Day(1),
+        len = 12,
     )
     @test length(IS.get_data(ts2)) == 12
     ts3 = IS.get_time_series(
         IS.SingleTimeSeries,
         component,
-        initial_time + Dates.Day(1),
-        "test_c",
+        "test_c";
+        start_time = initial_time + Dates.Day(1),
     )
     @test length(IS.get_data(ts3)) == 341
     #Throws errors
     @test_throws ArgumentError IS.get_time_series(
         IS.SingleTimeSeries,
         component,
-        initial_time,
         "test_c";
-        horizon = 1200,
+        start_time = initial_time,
+        len = 1200,
     )
     @test_throws ArgumentError IS.get_time_series(
         IS.SingleTimeSeries,
         component,
-        initial_time - Dates.Day(10),
         "test_c";
-        horizon = 12,
+        start_time = initial_time - Dates.Day(10),
+        len = 12,
     )
 end
 
@@ -573,405 +580,6 @@ end
         initial_time2,
         label2a,
     )
-end
-
-function validate_generated_initial_times(
-    time_series_type::Type{<:IS.TimeSeriesData},
-    component::IS.InfrastructureSystemsComponent,
-    label::AbstractString,
-    horizon::Int,
-    initial_times::Vector{Dates.DateTime},
-    initial_time::Dates.DateTime,
-    interval::Dates.Period,
-    exp_length::Int,
-)
-    @test length(initial_times) == exp_length
-    for it in initial_times
-        @test it == initial_time
-        # Verify all possible time_series ranges.
-        for i in 2:horizon
-            time_series = IS.get_time_series(time_series_type, component, it, label, i)
-            @test IS.get_horizon(time_series) == i
-            @test IS.get_initial_time(time_series) == it
-            # This will throw if the resolution isn't consistent throughout.
-            IS.get_resolution(IS.get_data(time_series))
-        end
-        initial_time += interval
-    end
-end
-
-@testset "Test subset from contiguous time_series" begin
-    sys = create_system_data()
-
-    components = collect(IS.get_components(IS.InfrastructureSystemsComponent, sys))
-    @test length(components) == 1
-    component = components[1]
-
-    dates1 = collect(
-        Dates.DateTime("2020-01-01T00:00:00"):Dates.Hour(1):Dates.DateTime("2020-01-01T23:00:00"),
-    )
-    dates2 = collect(
-        Dates.DateTime("2020-01-02T00:00:00"):Dates.Hour(1):Dates.DateTime("2020-01-02T23:00:00"),
-    )
-    dates3 = collect(
-        Dates.DateTime("2020-01-03T00:00:00"):Dates.Hour(1):Dates.DateTime("2020-01-03T23:00:00"),
-    )
-    data = collect(1:24)
-
-    label = "val"
-    ta1 = TimeSeries.TimeArray(dates1, data, [IS.get_name(component)])
-    ta2 = TimeSeries.TimeArray(dates2, data, [IS.get_name(component)])
-    ta3 = TimeSeries.TimeArray(dates3, data, [IS.get_name(component)])
-    ts1 = IS.SingleTimeSeries(label, ta1)
-    ts2 = IS.SingleTimeSeries(label, ta2)
-    ts3 = IS.SingleTimeSeries(label, ta3)
-    IS.add_time_series!(sys, component, ts1)
-    IS.add_time_series!(sys, component, ts2)
-    IS.add_time_series!(sys, component, ts3)
-    initial_times = IS.get_time_series_initial_times(component)
-    @test length(initial_times) == 3
-    @test IS.are_time_series_contiguous(component)
-    @test IS.are_time_series_contiguous(sys)
-
-    interval = Dates.Hour(1)
-    horizon = 55
-    initial_times = IS.generate_initial_times(component, interval, horizon)
-    validate_generated_initial_times(
-        IS.SingleTimeSeries,
-        component,
-        label,
-        horizon,
-        initial_times,
-        dates1[1],
-        interval,
-        18,
-    )
-
-    invalid_it = Dates.DateTime("2020-01-20T00:00:00")
-    @test_throws ArgumentError IS.get_time_series(
-        IS.SingleTimeSeries,
-        component,
-        invalid_it,
-        label,
-        horizon,
-    )
-end
-
-@testset "Test generate_initial_times" begin
-    sys = create_system_data()
-    components = collect(IS.get_components(IS.InfrastructureSystemsComponent, sys))
-    @test length(components) == 1
-    component = components[1]
-
-    dates = collect(
-        Dates.DateTime("2020-01-01T00:00:00"):Dates.Hour(1):Dates.DateTime("2020-01-01T23:00:00"),
-    )
-    data = collect(1:24)
-
-    ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
-    label = "val"
-    ts = IS.SingleTimeSeries(label, ta)
-    IS.add_time_series!(sys, component, ts)
-    initial_times = IS.get_time_series_initial_times(component)
-    @test length(initial_times) == 1
-
-    horizon = 24
-    interval = Dates.Hour(1)
-    initial_times = IS.generate_initial_times(component, interval, horizon)
-    validate_generated_initial_times(
-        IS.SingleTimeSeries,
-        component,
-        label,
-        horizon,
-        initial_times,
-        dates[1],
-        interval,
-        1,
-    )
-
-    horizon = 12
-    interval = Dates.Hour(1)
-    initial_times = IS.generate_initial_times(component, interval, horizon)
-    validate_generated_initial_times(
-        IS.SingleTimeSeries,
-        component,
-        label,
-        horizon,
-        initial_times,
-        dates[1],
-        interval,
-        13,
-    )
-
-    horizon = 6
-    interval = Dates.Hour(3)
-    initial_times = IS.generate_initial_times(component, interval, horizon)
-    validate_generated_initial_times(
-        IS.SingleTimeSeries,
-        component,
-        label,
-        horizon,
-        initial_times,
-        dates[1],
-        interval,
-        7,
-    )
-
-    horizon = 6
-    interval = Dates.Hour(4)
-    initial_times = IS.generate_initial_times(component, interval, horizon)
-    validate_generated_initial_times(
-        IS.SingleTimeSeries,
-        component,
-        label,
-        horizon,
-        initial_times,
-        dates[1],
-        interval,
-        5,
-    )
-
-    # Test through the system.
-    horizon = 6
-    initial_times = IS.generate_initial_times(sys, interval, horizon)
-    validate_generated_initial_times(
-        IS.SingleTimeSeries,
-        component,
-        label,
-        horizon,
-        initial_times,
-        dates[1],
-        interval,
-        5,
-    )
-    IS.clear_time_series!(sys)
-    @test_throws ArgumentError IS.generate_initial_times(sys, interval, 6)
-end
-
-@testset "Test generate_initial_times contiguous" begin
-    sys = create_system_data()
-
-    components = collect(IS.get_components(IS.InfrastructureSystemsComponent, sys))
-    @test length(components) == 1
-    component = components[1]
-
-    @test_throws ArgumentError IS.are_time_series_contiguous(component)
-    @test_throws ArgumentError IS.are_time_series_contiguous(sys)
-
-    dates1 = collect(
-        Dates.DateTime("2020-01-01T00:00:00"):Dates.Hour(1):Dates.DateTime("2020-01-01T23:00:00"),
-    )
-    dates2 = collect(
-        Dates.DateTime("2020-01-02T00:00:00"):Dates.Hour(1):Dates.DateTime("2020-01-02T23:00:00"),
-    )
-    data = collect(1:24)
-
-    label = "val"
-    ta1 = TimeSeries.TimeArray(dates1, data, [IS.get_name(component)])
-    ta2 = TimeSeries.TimeArray(dates2, data, [IS.get_name(component)])
-    ts1 = IS.SingleTimeSeries(label, ta1)
-    ts2 = IS.SingleTimeSeries(label, ta2)
-    IS.add_time_series!(sys, component, ts1)
-    IS.add_time_series!(sys, component, ts2)
-    initial_times = IS.get_time_series_initial_times(component)
-    @test length(initial_times) == 2
-    @test IS.are_time_series_contiguous(component)
-    @test IS.are_time_series_contiguous(sys)
-
-    interval = Dates.Hour(1)
-    horizon = 48
-    initial_times = IS.generate_initial_times(component, interval, horizon)
-    validate_generated_initial_times(
-        IS.SingleTimeSeries,
-        component,
-        label,
-        horizon,
-        initial_times,
-        dates1[1],
-        interval,
-        1,
-    )
-
-    horizon = 24
-    interval = Dates.Hour(1)
-    initial_times = IS.generate_initial_times(component, interval, horizon)
-    validate_generated_initial_times(
-        IS.SingleTimeSeries,
-        component,
-        label,
-        horizon,
-        initial_times,
-        dates1[1],
-        interval,
-        25,
-    )
-
-    horizon = 12
-    interval = Dates.Hour(1)
-    initial_times = IS.generate_initial_times(component, interval, horizon)
-    validate_generated_initial_times(
-        IS.SingleTimeSeries,
-        component,
-        label,
-        horizon,
-        initial_times,
-        dates1[1],
-        interval,
-        37,
-    )
-
-    horizon = 6
-    interval = Dates.Hour(3)
-    initial_times = IS.generate_initial_times(component, interval, horizon)
-    validate_generated_initial_times(
-        IS.SingleTimeSeries,
-        component,
-        label,
-        horizon,
-        initial_times,
-        dates1[1],
-        interval,
-        15,
-    )
-
-    horizon = 6
-    interval = Dates.Hour(4)
-    initial_times = IS.generate_initial_times(component, interval, horizon)
-    validate_generated_initial_times(
-        IS.SingleTimeSeries,
-        component,
-        label,
-        horizon,
-        initial_times,
-        dates1[1],
-        interval,
-        11,
-    )
-
-    # Run once on the system.
-    horizon = 6
-    initial_times = IS.generate_initial_times(sys, interval, horizon)
-    validate_generated_initial_times(
-        IS.SingleTimeSeries,
-        component,
-        label,
-        horizon,
-        initial_times,
-        dates1[1],
-        interval,
-        11,
-    )
-end
-
-@testset "Test generate_initial_times overlapping" begin
-    sys = create_system_data()
-
-    @test_throws ArgumentError IS.generate_initial_times(sys, Dates.Hour(3), 6)
-
-    components = collect(IS.get_components(IS.InfrastructureSystemsComponent, sys))
-    @test length(components) == 1
-    component = components[1]
-
-    dates1 = collect(
-        Dates.DateTime("2020-01-01T00:00:00"):Dates.Hour(1):Dates.DateTime("2020-01-01T23:00:00"),
-    )
-    dates2 = collect(
-        Dates.DateTime("2020-01-01T01:00:00"):Dates.Hour(1):Dates.DateTime("2020-01-02T00:00:00"),
-    )
-    data = collect(1:24)
-
-    ta1 = TimeSeries.TimeArray(dates1, data, [IS.get_name(component)])
-    ta2 = TimeSeries.TimeArray(dates2, data, [IS.get_name(component)])
-    label = "val"
-    ts1 = IS.SingleTimeSeries(label, ta1)
-    ts2 = IS.SingleTimeSeries(label, ta2)
-    IS.add_time_series!(sys, component, ts1)
-    @test_throws IS.ConflictingInputsError IS.generate_initial_times(
-        sys,
-        Dates.Minute(30),
-        6,
-    )
-
-    IS.add_time_series!(sys, component, ts2)
-    @test_throws ArgumentError IS.generate_initial_times(sys, Dates.Hour(3), 6)
-
-    @test !IS.are_time_series_contiguous(component)
-    @test !IS.are_time_series_contiguous(sys)
-end
-
-@testset "Test generate_initial_times non-contiguous" begin
-    sys = create_system_data()
-
-    @test_throws ArgumentError IS.generate_initial_times(sys, Dates.Hour(3), 6)
-
-    components = collect(IS.get_components(IS.InfrastructureSystemsComponent, sys))
-    @test length(components) == 1
-    component = components[1]
-
-    dates1 = collect(
-        Dates.DateTime("2020-01-01T00:00:00"):Dates.Hour(1):Dates.DateTime("2020-01-01T23:00:00"),
-    )
-    # Skip 1 hour.
-    dates2 = collect(
-        Dates.DateTime("2020-01-02T01:00:00"):Dates.Hour(1):Dates.DateTime("2020-01-03T00:00:00"),
-    )
-    data = collect(1:24)
-
-    ta1 = TimeSeries.TimeArray(dates1, data, [IS.get_name(component)])
-    ta2 = TimeSeries.TimeArray(dates2, data, [IS.get_name(component)])
-    label = "val"
-    ts1 = IS.SingleTimeSeries(label, ta1)
-    ts2 = IS.SingleTimeSeries(label, ta2)
-    IS.add_time_series!(sys, component, ts1)
-    @test_throws IS.ConflictingInputsError IS.generate_initial_times(
-        sys,
-        Dates.Minute(30),
-        6,
-    )
-
-    IS.add_time_series!(sys, component, ts2)
-    @test_throws ArgumentError IS.generate_initial_times(sys, Dates.Hour(3), 6)
-
-    @test !IS.are_time_series_contiguous(component)
-    @test !IS.are_time_series_contiguous(sys)
-end
-
-@testset "Test generate_initial_times offset from first initial_time" begin
-    sys = create_system_data()
-
-    components = collect(IS.get_components(IS.InfrastructureSystemsComponent, sys))
-    @test length(components) == 1
-    component = components[1]
-
-    dates = collect(
-        Dates.DateTime("2020-01-01T00:00:00"):Dates.Hour(1):Dates.DateTime("2020-01-01T23:00:00"),
-    )
-    data = collect(1:24)
-
-    ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
-    label = "val"
-    ts = IS.SingleTimeSeries(label, ta)
-    IS.add_time_series!(sys, component, ts)
-    resolution = IS.get_time_series_resolution(sys)
-    initial_times = IS.get_time_series_initial_times(component)
-    @test length(initial_times) == 1
-
-    horizon = 6
-    offset = 1
-    interval = resolution * 2
-    initial_time = initial_times[1] + offset * resolution
-
-    expected = collect(
-        Dates.DateTime("2020-01-01T01:00:00"):interval:Dates.DateTime("2020-01-01T17:00:00"),
-    )
-
-    actual =
-        IS.generate_initial_times(component, interval, horizon; initial_time = initial_time)
-    @test actual == expected
-
-    # Repeat on the system.
-    actual = IS.generate_initial_times(sys, interval, horizon; initial_time = initial_time)
-    @test actual == expected
 end
 
 @testset "Test component-time_series being added to multiple systems" begin
