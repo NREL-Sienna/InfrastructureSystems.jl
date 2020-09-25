@@ -289,3 +289,17 @@ function _add_time_series_info!(
 
     return cache.data_files[data_file]
 end
+
+function read_forecast_from_CSV(file::AbstractString, resolution::Dates.Period)
+    input = CSV.Rows(file)
+    horizon = length(first(input)) - 1
+    data = Dict{Dates.DateTime, Vector{Float64}}()
+    for row in input
+        vector = Vector{Float64}(undef, horizon)
+        for i in 1:horizon
+            vector[i] = parse(Float64, row[i + 1])
+        end
+        data[Dates.DateTime(row.DateTime)] = vector
+    end
+    return TimeDataContainer(SortedDict(data...), resolution)
+end
