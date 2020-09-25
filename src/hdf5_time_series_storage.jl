@@ -211,8 +211,7 @@ function get_time_series(
         if !HDF5.exists(HDF5.attrs(path), "interval")
             @assert length(sz_tuple) == 1
             @debug "reconstructing a contiguous time series"
-            time_stamps =
-                range(initial_time_stamp; length = sz_tuple[1], step = resolution)
+            time_stamps = range(initial_time_stamp; length = sz_tuple[1], step = resolution)
             end_index = row_index + len - 1
             data = HDF5.read(path["data"])[row_index:end_index]
             time_stamps = time_stamps[row_index:end_index]
@@ -227,8 +226,7 @@ function get_time_series(
                 throw(ArgumentError("More Forecasts requested $count than the total stored $(sz_tuple[2])"))
             end
             num_rows = (len == 0) ? sz_tuple[1] : len
-            initial_times =
-                range(initial_time_stamp; length = num_rows, step = interval)
+            initial_times = range(initial_time_stamp; length = num_rows, step = interval)
             data_read = path["data"][1:num_rows, column_index:(column_index + count - 1)]
             for i in 1:count
                 ini_time = initial_times[column_index + i]

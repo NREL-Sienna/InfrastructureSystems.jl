@@ -21,9 +21,16 @@
     forecast = IS.Deterministic(data = data, label = "test")
     IS.add_time_series!(sys, component, forecast)
     # This still returns a forecast object. Requires update of the interfaces
-    var1 = IS.get_time_series(IS.Deterministic, component, "test"; start_time = initial_time)
+    var1 =
+        IS.get_time_series(IS.Deterministic, component, "test"; start_time = initial_time)
     @test length(var1.data) == 1
-    var2 = IS.get_time_series(IS.Deterministic, component, "test"; start_time = initial_time, count = 2)
+    var2 = IS.get_time_series(
+        IS.Deterministic,
+        component,
+        "test";
+        start_time = initial_time,
+        count = 2,
+    )
     @test length(var2.data) == 2
     var3 = IS.get_time_series(IS.Deterministic, component, "test"; start_time = other_time)
     @test length(var2.data) == 2

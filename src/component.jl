@@ -51,7 +51,8 @@ end
 _get_column_index(start_time, count, ts_metadata::StaticTimeSeriesMetadata) = 1
 
 function _get_row_index(start_time, len, ts_metadata::StaticTimeSeriesMetadata)
-    index = Int((start_time - get_initial_time(ts_metadata)) / get_resolution(ts_metadata)) + 1
+    index =
+        Int((start_time - get_initial_time(ts_metadata)) / get_resolution(ts_metadata)) + 1
     if len === nothing
         len = length(ts_metadata) - index + 1
     end
@@ -75,7 +76,7 @@ function _check_start_time(start_time, ts_metadata::TimeSeriesMetadata)
         return get_initial_time_stamp(ts_metadata)
     end
 
-    time_diff =  start_time - get_initial_time_stamp(ts_metadata)
+    time_diff = start_time - get_initial_time_stamp(ts_metadata)
     if time_diff < Dates.Second(0)
         throw(ArgumentError("start_time=$start_time is earlier than $(get_initial_time(ts_metadata))"))
     end
