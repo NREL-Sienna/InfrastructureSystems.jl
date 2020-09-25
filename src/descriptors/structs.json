@@ -78,7 +78,7 @@
         },
         {
           "name": "data",
-          "data_type": "SortedDict{Dates.DateTime, Array}",
+          "data_type": "SortedDict{Dates.DateTime, Vector}",
           "comment": "timestamp - scalingfactor"
         },
         {

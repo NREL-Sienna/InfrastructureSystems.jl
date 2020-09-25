@@ -7,7 +7,7 @@ This file is auto-generated. Do not edit.
         initial_time_stamp::Dates.DateTime
         horizon::Int
         resolution::Dates.Period
-        data::SortedDict{Dates.DateTime, Array}
+        data::SortedDict{Dates.DateTime, Vector}
         scaling_factor_multiplier::Union{Nothing, Function}
         internal::InfrastructureSystemsInternal
     end
@@ -19,7 +19,7 @@ A deterministic forecast for a particular data field in a Component.
 - `initial_time_stamp::Dates.DateTime`: first timestamp in forecast
 - `horizon::Int`: length of this time series
 - `resolution::Dates.Period`: forecast resolution
-- `data::SortedDict{Dates.DateTime, Array}`: timestamp - scalingfactor
+- `data::SortedDict{Dates.DateTime, Vector}`: timestamp - scalingfactor
 - `scaling_factor_multiplier::Union{Nothing, Function}`: Applicable when the time series data are scaling factors. Called on the associated component to convert the values.
 - `internal::InfrastructureSystemsInternal`
 """
@@ -33,7 +33,7 @@ mutable struct Deterministic <: Forecast
     "forecast resolution"
     resolution::Dates.Period
     "timestamp - scalingfactor"
-    data::SortedDict{Dates.DateTime, Array}
+    data::SortedDict{Dates.DateTime, Vector}
     "Applicable when the time series data are scaling factors. Called on the associated component to convert the values."
     scaling_factor_multiplier::Union{Nothing, Function}
     internal::InfrastructureSystemsInternal
