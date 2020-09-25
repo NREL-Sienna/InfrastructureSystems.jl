@@ -14,7 +14,7 @@ This file is auto-generated. Do not edit.
         internal::InfrastructureSystemsInternal
     end
 
-A deterministic time series for a particular data field in a Component.
+A deterministic forecast for a particular data field in a Component.
 
 # Arguments
 - `label::String`: user-defined label

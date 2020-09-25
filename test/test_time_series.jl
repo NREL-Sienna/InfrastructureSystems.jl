@@ -5,50 +5,73 @@
     IS.add_component!(sys, component)
 
     initial_time = Dates.DateTime("2020-09-01")
-    other_time = initial_time + Dates.Hour(1)
+    resolution = Dates.Hour(1)
+    other_time = initial_time + resolution
+    label = "test"
+    horizon = 24
+    data = SortedDict(initial_time => ones(horizon), other_time => ones(horizon))
 
-    data = Dict(
-        initial_time => TimeSeries.TimeArray(
-            range(initial_time; length = 24, step = Dates.Hour(1)),
-            ones(24),
-        ),
-        other_time => TimeSeries.TimeArray(
-            range(other_time; length = 24, step = Dates.Hour(1)),
-            ones(24),
-        ),
+    forecast = IS.Deterministic(
+        data = data,
+        label = label,
+        initial_time_stamp = initial_time,
+        horizon = horizon,
+        resolution = resolution,
     )
-
-    forecast = IS.Deterministic(data = data, label = "test")
     IS.add_time_series!(sys, component, forecast)
     # This still returns a forecast object. Requires update of the interfaces
-    var1 =
-        IS.get_time_series(IS.Deterministic, component, "test"; start_time = initial_time)
+    var1 = IS.get_time_series(IS.Deterministic, component, label; start_time = initial_time)
     @test length(var1.data) == 1
     var2 = IS.get_time_series(
         IS.Deterministic,
         component,
-        "test";
+        label;
         start_time = initial_time,
         count = 2,
     )
     @test length(var2.data) == 2
-    var3 = IS.get_time_series(IS.Deterministic, component, "test"; start_time = other_time)
+    var3 = IS.get_time_series(IS.Deterministic, component, label; start_time = other_time)
     @test length(var2.data) == 2
     # Throws errors
     @test_throws ArgumentError IS.get_time_series(
         IS.Deterministic,
         component,
-        "test";
+        label;
         start_time = initial_time,
         count = 3,
     )
     @test_throws ArgumentError IS.get_time_series(
         IS.Deterministic,
         component,
-        "test";
+        label;
         start_time = other_time,
         count = 2,
     )
+
+    count = IS.get_count(var2)
+    @test count == 2
+
+    window1 = IS.get_window(var2, initial_time)
+    @assert window1 isa TimeSeries.TimeArray
+    @assert TimeSeries.timestamp(window1)[1] == initial_time
+    window2 = IS.get_window(var2, other_time)
+    @assert window2 isa TimeSeries.TimeArray
+    @assert TimeSeries.timestamp(window2)[1] == other_time
+
+    found = 0
+    for ta in IS.iterate_windows(var2)
+        @test ta isa TimeSeries.TimeArray
+        found += 1
+        if found == 1
+            @test TimeSeries.timestamp(ta)[1] == initial_time
+        else
+            @test TimeSeries.timestamp(ta)[1] == other_time
+        end
+    end
+    @test found == count
+
+    @test IS.get_uuid(forecast) == IS.get_uuid(var1)
+    @test IS.get_uuid(forecast) == IS.get_uuid(var2)
 end
 
 @testset "Test add SingleTimeSeries" begin
@@ -58,10 +81,11 @@ end
     IS.add_component!(sys, component)
 
     initial_time = Dates.DateTime("2020-09-01")
-    other_time = initial_time + Dates.Hour(1)
+    resolution = Dates.Hour(1)
+    other_time = initial_time + resolution
 
     data = TimeSeries.TimeArray(
-        range(initial_time; length = 365, step = Dates.Hour(1)),
+        range(initial_time; length = 365, step = resolution),
         ones(365),
     )
     data = IS.SingleTimeSeries(data = data, label = "test_c")
@@ -106,7 +130,6 @@ end
     )
 end
 
-#=
 @testset "Test read_time_series_file_metadata" begin
     file = joinpath(FORECASTS_DIR, "ComponentsAsColumnsNoTime.json")
     time_series = IS.read_time_series_file_metadata(file)
@@ -117,6 +140,7 @@ end
     end
 end
 
+#=
 @testset "Test add_time_series from file" begin
     data = IS.SystemData()
 

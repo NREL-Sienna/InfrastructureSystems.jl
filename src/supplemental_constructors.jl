@@ -81,7 +81,7 @@ function SingleTimeSeries(time_series::Vector{SingleTimeSeries})
     data = collect(Iterators.flatten((TimeSeries.values(get_data(x)) for x in time_series)))
     ta = TimeSeries.TimeArray(timestamps, data)
 
-    time_series = Deterministic(
+    time_series = SingleTimeSeries(
         label = get_label(time_series[1]),
         data = ta,
         scaling_factor_multiplier = time_series[1].scaling_factor_multiplier,
@@ -90,38 +90,23 @@ function SingleTimeSeries(time_series::Vector{SingleTimeSeries})
     return time_series
 end
 
-function make_time_series_data(
-    ts_metadata::SingleTimeSeriesMetadata,
-    data::SortedDict{Dates.DateTime, <:TimeSeries.TimeArray},
-)
-    @assert length(data) == 1
+function SingleTimeSeries(ts_metadata::SingleTimeSeriesMetadata, data::TimeSeries.TimeArray)
     return SingleTimeSeries(
         get_label(ts_metadata),
-        first(values(data)),
+        data,
         get_scaling_factor_multiplier(ts_metadata),
+        InfrastructureSystemsInternal(get_time_series_uuid(ts_metadata)),
     )
 end
 
-function make_time_series_metadata(time_series::SingleTimeSeries, ta::TimeDataContainer)
+function SingleTimeSeriesMetadata(ts::SingleTimeSeries)
     return SingleTimeSeriesMetadata(
-        get_label(time_series),
-        ta,
-        get_scaling_factor_multiplier(time_series),
-    )
-end
-
-function SingleTimeSeriesMetadata(
-    label::AbstractString,
-    data::TimeDataContainer,
-    scaling_factor_multiplier = nothing,
-)
-    return SingleTimeSeriesMetadata(
-        label,
-        get_resolution(data),
-        get_initial_time(data),
-        get_uuid(data),
-        length(data),
-        scaling_factor_multiplier,
+        get_label(ts),
+        get_resolution(ts),
+        get_initial_time(ts),
+        get_uuid(ts),
+        length(ts),
+        get_scaling_factor_multiplier(ts),
     )
 end
 
@@ -169,39 +154,31 @@ end
 
 # TODO: need to make concatenation constructors for Probabilistic
 
-function make_time_series_data(
+function Deterministic(
     ts_metadata::DeterministicMetadata,
-    data::SortedDict{Dates.DateTime, TimeSeries.TimeArray},
+    data::SortedDict{Dates.DateTime, Array},
 )
     return Deterministic(
-        get_label(ts_metadata),
-        data,
-        get_scaling_factor_multiplier(ts_metadata),
+        label = get_label(ts_metadata),
+        initial_time_stamp = get_initial_time_stamp(ts_metadata),
+        resolution = get_resolution(ts_metadata),
+        horizon = get_horizon(ts_metadata),
+        data = data,
+        scaling_factor_multiplier = get_scaling_factor_multiplier(ts_metadata),
+        internal = InfrastructureSystemsInternal(get_time_series_uuid(ts_metadata)),
     )
 end
 
-function make_time_series_metadata(time_series::Deterministic, ta::TimeDataContainer)
+function DeterministicMetadata(ts::Deterministic)
     return DeterministicMetadata(
-        get_label(time_series),
-        ta,
-        get_scaling_factor_multiplier(time_series),
-    )
-end
-
-function DeterministicMetadata(
-    label::AbstractString,
-    data::TimeDataContainer,
-    scaling_factor_multiplier = nothing,
-)
-    return DeterministicMetadata(
-        label,
-        get_resolution(data),
-        get_initial_time(data),
-        get_interval(data),
-        get_count(data),
-        get_uuid(data),
-        get_horizon(data),
-        scaling_factor_multiplier,
+        get_label(ts),
+        get_resolution(ts),
+        get_initial_time_stamp(ts),
+        get_interval(ts),
+        get_count(ts),
+        get_uuid(ts),
+        get_horizon(ts),
+        get_scaling_factor_multiplier(ts),
     )
 end
 
@@ -224,7 +201,7 @@ function Probabilistic(
 end
 
 """
-Constructs Probabilistic SingleTimeSeries after constructing a TimeArray from initial_time and time_steps.
+Constructs Probabilistic forecast after constructing a TimeArray from initial_time and time_steps.
 """
 # TODO: do we need this check still?
 #function Probabilistic(
@@ -252,22 +229,27 @@ function Probabilistic(
     return Probabilistic(label = label, percentiles = percentiles, data = data)
 end
 
-function make_time_series_data(
+function Probabilistic(
     ts_metadata::ProbabilisticMetadata,
-    data::SortedDict{Dates.DateTime, TimeSeries.TimeArray},
+    data::SortedDict{Dates.DateTime, Array},
 )
-    return Probabilistic(get_label(time_series), get_percentiles(time_series), data)
+    return Probabilistic(
+        label = get_label(time_series),
+        percentiles = get_percentiles(time_series),
+        data = data,
+        internal = InfrastructureSystemsInternal(get_time_series_uuid(ts_metadata)),
+    )
 end
 
-function make_time_series_metadata(time_series::Probabilistic, ta::TimeDataContainer)
+function ProbabilisticMetadata(time_series::Probabilistic)
     return ProbabilisticMetadata(
         get_label(time_series),
         get_resolution(time_series),
         get_initial_time(time_series),
-        get_interval(data),
-        get_count(data),
+        get_interval(time_series),
+        get_count(time_series),
         get_percentiles(time_series),
-        get_uuid(ta),
+        get_uuid(time_series),
         get_horizon(time_series),
         get_scaling_factor_multiplier(time_series),
     )
@@ -290,7 +272,7 @@ function Scenarios(
 end
 
 """
-Constructs Scenarios SingleTimeSeries after constructing a TimeArray from initial_time and
+Constructs Scenarios forecast after constructing a TimeArray from initial_time and
 time_steps.
 """
 function Scenarios(
@@ -323,50 +305,47 @@ function Scenarios(time_series::Vector{Scenarios})
     return time_series
 end
 
-function make_time_series_data(ts_metadata::ScenariosMetadata, data::TimeSeries.TimeArray)
-    return Scenarios(get_label(ts_metadata), data)
+function Scenarios(ts_metadata::ScenariosMetadata, data::Array)
+    return Scenarios(
+        label = get_label(ts_metadata),
+        scenario_count = get_scenario_count(ts_metadata),
+        data = data,
+        internal = InfrastructureSystemsInternal(get_time_series_uuid(ts_metadata)),
+    )
 end
 
-function make_time_series_metadata(time_series::Scenarios, ta::TimeDataContainer)
+function ScenariosMetadata(time_series::Scenarios)
     return ScenariosMetadata(
         get_label(time_series),
         get_resolution(time_series),
         get_initial_time(time_series),
-        get_interval(data),
+        get_interval(time_series),
         get_scenario_count(time_series),
-        get_count(data),
-        get_uuid(ta),
+        get_count(time_series),
+        get_uuid(time_series),
         get_horizon(time_series),
         get_scaling_factor_multiplier(time_series),
     )
 end
 
-function time_series_data_to_metadata(::Type{T}) where {T <: TimeSeriesData}
-    if T <: Deterministic
-        time_series_type = DeterministicMetadata
-    elseif T <: Probabilistic
-        time_series_type = ProbabilisticMetadata
-    elseif T <: Scenarios
-        time_series_type = ScenariosMetadata
-    elseif T <: SingleTimeSeries
-        time_series_type = SingleTimeSeriesMetadata
-    else
-        @assert false
-    end
+const _TS_DATA_TO_METADATA_MAP = Dict(
+    Deterministic => DeterministicMetadata,
+    Probabilistic => ProbabilisticMetadata,
+    Scenarios => ScenariosMetadata,
+    SingleTimeSeries => SingleTimeSeriesMetadata,
+)
 
-    return time_series_type
+const _TS_METADATA_TO_DATA_MAP = Dict(
+    DeterministicMetadata => Deterministic,
+    ProbabilisticMetadata => Probabilistic,
+    ScenariosMetadata => Scenarios,
+    SingleTimeSeriesMetadata => SingleTimeSeries,
+)
+
+function time_series_data_to_metadata(::Type{T}) where {T <: TimeSeriesData}
+    return _TS_DATA_TO_METADATA_MAP[T]
 end
 
 function time_series_metadata_to_data(::Type{T}) where {T <: TimeSeriesMetadata}
-    if T <: DeterministicMetadata
-        time_series_type = Deterministic
-    elseif T <: ProbabilisticMetadata
-        time_series_type = Probabilistic
-    elseif T <: ScenariosMetadata
-        time_series_type = Scenarios
-    else
-        @assert false
-    end
-
-    return time_series_type
+    return _TS_METADATA_TO_DATA_MAP[T]
 end

@@ -2,7 +2,7 @@
   "auto_generated_structs": [
     {
       "struct_name": "DeterministicMetadata",
-      "docstring": "A deterministic time series for a particular data field in a Component.",
+      "docstring": "A deterministic forecast for a particular data field in a Component.",
       "fields": [
         {
           "name": "label",
@@ -54,7 +54,7 @@
     },
     {
       "struct_name": "Deterministic",
-      "docstring": "A deterministic time series for a particular data field in a Component.",
+      "docstring": "A deterministic forecast for a particular data field in a Component.",
       "fields": [
         {
           "name": "label",
@@ -62,8 +62,23 @@
           "comment": "user-defined label"
         },
         {
+          "name": "initial_time_stamp",
+          "data_type": "Dates.DateTime",
+          "comment": "first timestamp in forecast"
+        },
+        {
+          "name": "horizon",
+          "data_type": "Int",
+          "comment": "length of this time series"
+        },
+        {
+          "name": "resolution",
+          "data_type": "Dates.Period",
+          "comment": "forecast resolution"
+        },
+        {
           "name": "data",
-          "data_type": "SortedDict{Dates.DateTime, TimeSeries.TimeArray}",
+          "data_type": "SortedDict{Dates.DateTime, Vector}",
           "comment": "timestamp - scalingfactor"
         },
         {
@@ -71,14 +86,18 @@
           "data_type": "Union{Nothing, Function}",
           "default": "nothing",
           "comment": "Applicable when the time series data are scaling factors. Called on the associated component to convert the values."
+        },
+        {
+          "name": "internal",
+          "data_type": "InfrastructureSystemsInternal",
+          "internal_default": "InfrastructureSystemsInternal()"
         }
       ],
-      "custom_code": "Deterministic(label, data) = Determinstic(label = label, data = data)",
       "supertype": "Forecast"
     },
     {
       "struct_name": "ProbabilisticMetadata",
-      "docstring": "A Probabilistic time series for a particular data field in a Component.",
+      "docstring": "A Probabilistic forecast for a particular data field in a Component.",
       "fields": [
         {
           "name": "label",
@@ -86,13 +105,13 @@
           "comment": "user-defined label"
         },
         {
-          "name": "resolution",
-          "data_type": "Dates.Period"
-        },
-        {
           "name": "initial_time_stamp",
           "data_type": "Dates.DateTime",
           "comment": "time series availability time"
+        },
+        {
+          "name": "resolution",
+          "data_type": "Dates.Period"
         },
         {
           "name": "interval",
@@ -107,7 +126,7 @@
         {
           "name": "percentiles",
           "data_type": "Vector{Float64}",
-          "comment": "Percentiles for the probabilistic time series"
+          "comment": "Percentiles for the probabilistic forecast"
         },
         {
           "name": "time_series_uuid",
@@ -135,7 +154,7 @@
     },
     {
       "struct_name": "Probabilistic",
-      "docstring": "A Probabilistic time series for a particular data field in a Component.",
+      "docstring": "A Probabilistic forecast for a particular data field in a Component.",
       "fields": [
         {
           "name": "label",
@@ -143,13 +162,28 @@
           "comment": "user-defined label"
         },
         {
+          "name": "initial_time_stamp",
+          "data_type": "Dates.DateTime",
+          "comment": "first timestamp in forecast"
+        },
+        {
+          "name": "horizon",
+          "data_type": "Int",
+          "comment": "length of this time series"
+        },
+        {
+          "name": "resolution",
+          "data_type": "Dates.Period",
+          "comment": "forecast resolution"
+        },
+        {
           "name": "percentiles",
           "data_type": "Vector{Float64}",
-          "comment": "Percentiles for the probabilistic time series"
+          "comment": "Percentiles for the probabilistic forecast"
         },
         {
           "name": "data",
-          "data_type": "SortedDict{Dates.DateTime, TimeSeries.TimeArray}",
+          "data_type": "SortedDict{Dates.DateTime, Array}",
           "comment": "timestamp - scalingfactor"
         },
         {
@@ -157,9 +191,13 @@
           "data_type": "Union{Nothing, Function}",
           "default": "nothing",
           "comment": "Applicable when the time series data are scaling factors. Called on the associated component to convert the values."
+        },
+        {
+          "name": "internal",
+          "data_type": "InfrastructureSystemsInternal",
+          "internal_default": "InfrastructureSystemsInternal()"
         }
       ],
-      "custom_code": "Probabilistic(label, percentiles, data) = Probabilistic(label = label, data = data, percentiles = percentiles)",
       "supertype": "Forecast"
     },
     {
@@ -229,13 +267,28 @@
           "comment": "user-defined label"
         },
         {
+          "name": "initial_time_stamp",
+          "data_type": "Dates.DateTime",
+          "comment": "first timestamp in forecast"
+        },
+        {
+          "name": "horizon",
+          "data_type": "Int",
+          "comment": "length of this time series"
+        },
+        {
+          "name": "resolution",
+          "data_type": "Dates.Period",
+          "comment": "forecast resolution"
+        },
+        {
           "name": "scenario_count",
           "data_type": "Int64",
           "comment": "Number of scenarios"
         },
         {
           "name": "data",
-          "data_type": "SortedDict{Dates.DateTime, TimeSeries.TimeArray}",
+          "data_type": "SortedDict{Dates.DateTime, Array}",
           "comment": "timestamp - scalingfactor"
         },
         {
@@ -243,6 +296,11 @@
           "data_type": "Union{Nothing, Function}",
           "default": "nothing",
           "comment": "Applicable when the time series data are scaling factors. Called on the associated component to convert the values."
+        },
+        {
+          "name": "internal",
+          "data_type": "InfrastructureSystemsInternal",
+          "internal_default": "InfrastructureSystemsInternal()"
         }
       ],
       "supertype": "Forecast"
@@ -292,7 +350,7 @@
     },
     {
       "struct_name": "SingleTimeSeries",
-      "docstring": "A deterministic time series for a particular data field in a Component.",
+      "docstring": "A deterministic forecast for a particular data field in a Component.",
       "fields": [
         {
           "name": "label",
@@ -309,9 +367,13 @@
           "data_type": "Union{Nothing, Function}",
           "default": "nothing",
           "comment": "Applicable when the time series data are scaling factors. Called on the associated component to convert the values."
+        },
+        {
+          "name": "internal",
+          "data_type": "InfrastructureSystemsInternal",
+          "internal_default": "InfrastructureSystemsInternal()"
         }
       ],
-      "custom_code": "SingleTimeSeries(label, data) = SingleTimeSeries(label = label, data = data)",
       "supertype": "StaticTimeSeries"
     }
   ],

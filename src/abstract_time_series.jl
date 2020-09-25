@@ -1,7 +1,7 @@
 """
 Abstract type for time_series that are stored in a system.
 Users never create them or get access to them.
-Stores references to time series data.
+Stores references to TimeSeriesData.
 """
 abstract type TimeSeriesMetadata <: InfrastructureSystemsType end
 
@@ -25,9 +25,8 @@ Base.length(ts::StaticTimeSeriesMetadata) = get_length(ts)
 Base.length(ts::ForecastMetadata) = get_horizon(ts)
 
 """
-Abstract type for time_series supplied to users. They are not stored in a system. Instead,
-they are generated on demand for the user.
-Users can create them. The system will convert them to a subtype of TimeSeriesMetadata for
-storage.
+Abstract type for time series stored in the system.
+Components store references to these through TimeSeriesMetadata values so that data can
+reside on storage media instead of memory.
 """
-abstract type TimeSeriesData end
+abstract type TimeSeriesData <: InfrastructureSystemsComponent end
