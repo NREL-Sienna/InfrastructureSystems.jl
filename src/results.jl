@@ -20,8 +20,8 @@ function get_optimizer_log(r::T) where {T <: Results}
     error("get_optimizer_log must be implemented for $T")
 end
 
-function get_time_stamp(r::T) where {T <: Results}
-    error("get_time_stamp must be implemented for $T")
+function get_timestamp(r::T) where {T <: Results}
+    error("get_timestamp must be implemented for $T")
 end
 
 function write_results(r::T) where {T <: Results}

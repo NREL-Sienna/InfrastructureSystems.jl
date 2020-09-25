@@ -2,7 +2,7 @@
 Construct SingleTimeSeries from a TimeArray or DataFrame.
 
 # Arguments
-- `label::AbstractString`: user-defined label
+- `name::AbstractString`: user-defined name
 - `data::Union{TimeSeries.TimeArray, DataFrames.DataFrame}`: time series data
 - `normalization_factor::NormalizationFactor = 1.0`: optional normalization factor to apply
   to each data entry
@@ -13,7 +13,7 @@ Construct SingleTimeSeries from a TimeArray or DataFrame.
   contains timestamps.
 """
 function SingleTimeSeries(
-    label::AbstractString,
+    name::AbstractString,
     data::Union{TimeSeries.TimeArray, DataFrames.DataFrame};
     normalization_factor::NormalizationFactor = 1.0,
     scaling_factor_multiplier::Union{Nothing, Function} = nothing,
@@ -28,7 +28,7 @@ function SingleTimeSeries(
     end
 
     ta = handle_normalization_factor(ta, normalization_factor)
-    return SingleTimeSeries(label, ta, scaling_factor_multiplier)
+    return SingleTimeSeries(name, ta, scaling_factor_multiplier)
 end
 
 """
@@ -36,7 +36,7 @@ Construct SingleTimeSeries from a CSV file. The file must have a column that is 
 component.
 
 # Arguments
-- `label::AbstractString`: user-defined label
+- `name::AbstractString`: user-defined name
 - `filename::AbstractString`: name of CSV file containing data
 - `normalization_factor::NormalizationFactor = 1.0`: optional normalization factor to apply
   to each data entry
@@ -45,7 +45,7 @@ component.
   [`get_time_series_array`](@ref) is called.
 """
 function SingleTimeSeries(
-    label::AbstractString,
+    name::AbstractString,
     filename::AbstractString,
     component::InfrastructureSystemsComponent;
     normalization_factor::NormalizationFactor = 1.0,
@@ -54,7 +54,7 @@ function SingleTimeSeries(
     component_name = get_name(component)
     ta = read_time_series(filename, component_name)
     ta = handle_normalization_factor(ta[Symbol(component_name)], normalization_factor)
-    return SingleTimeSeries(label, ta, scaling_factor_multiplier)
+    return SingleTimeSeries(name, ta, scaling_factor_multiplier)
 end
 
 """
@@ -62,7 +62,7 @@ Construct SingleTimeSeries after constructing a TimeArray from `initial_time` an
 `time_steps`.
 """
 function SingleTimeSeries(
-    label::String,
+    name::String,
     resolution::Dates.Period,
     initial_time::Dates.DateTime,
     time_steps::Int,
@@ -71,7 +71,7 @@ function SingleTimeSeries(
         initial_time:resolution:(initial_time + resolution * (time_steps - 1)),
         ones(time_steps),
     )
-    return SingleTimeSeries(; label = label, data = data)
+    return SingleTimeSeries(; name = name, data = data)
 end
 
 function SingleTimeSeries(time_series::Vector{SingleTimeSeries})
@@ -82,7 +82,7 @@ function SingleTimeSeries(time_series::Vector{SingleTimeSeries})
     ta = TimeSeries.TimeArray(timestamps, data)
 
     time_series = SingleTimeSeries(
-        label = get_label(time_series[1]),
+        name = get_name(time_series[1]),
         data = ta,
         scaling_factor_multiplier = time_series[1].scaling_factor_multiplier,
     )
@@ -92,7 +92,7 @@ end
 
 function SingleTimeSeries(ts_metadata::SingleTimeSeriesMetadata, data::TimeSeries.TimeArray)
     return SingleTimeSeries(
-        get_label(ts_metadata),
+        get_name(ts_metadata),
         data,
         get_scaling_factor_multiplier(ts_metadata),
         InfrastructureSystemsInternal(get_time_series_uuid(ts_metadata)),
@@ -101,7 +101,7 @@ end
 
 function SingleTimeSeriesMetadata(ts::SingleTimeSeries)
     return SingleTimeSeriesMetadata(
-        get_label(ts),
+        get_name(ts),
         get_resolution(ts),
         get_initial_time(ts),
         get_uuid(ts),
@@ -114,7 +114,7 @@ end
 Construct Deterministic from a Dict of TimeArrays, DataFrames or Arrays.
 
 # Arguments
-- `label::AbstractString`: user-defined label
+- `name::AbstractString`: user-defined name
 - `data::Union{Dict{Dates.DateTime, Any}, SortedDict.Dict{Dates.DateTime, Any}}`: time series data. The values in the dictionary should be TimeSeries.TimeArray or be able to be converted
 - `normalization_factor::NormalizationFactor = 1.0`: optional normalization factor to apply
   to each data entry
@@ -126,7 +126,7 @@ Construct Deterministic from a Dict of TimeArrays, DataFrames or Arrays.
 - `resolution = nothing : If the values are a Matrix or a Vector, then this must be the resolution of the forecast in Dates.Period`
 """
 function Deterministic(
-    label::AbstractString,
+    name::AbstractString,
     data::Union{Dict{Dates.DateTime, Any}, SortedDict{Dates.DateTime, Any}};
     normalization_factor::NormalizationFactor = 1.0,
     scaling_factor_multiplier::Union{Nothing, Function} = nothing,
@@ -149,7 +149,7 @@ function Deterministic(
     end
 
     ta = handle_normalization_factor(ta, normalization_factor)
-    return Deterministic(label, ta, scaling_factor_multiplier)
+    return Deterministic(name, ta, scaling_factor_multiplier)
 end
 
 # TODO: need to make concatenation constructors for Probabilistic
@@ -159,8 +159,8 @@ function Deterministic(
     data::SortedDict{Dates.DateTime, Array},
 )
     return Deterministic(
-        label = get_label(ts_metadata),
-        initial_time_stamp = get_initial_time_stamp(ts_metadata),
+        name = get_name(ts_metadata),
+        initial_timestamp = get_initial_timestamp(ts_metadata),
         resolution = get_resolution(ts_metadata),
         horizon = get_horizon(ts_metadata),
         data = data,
@@ -171,9 +171,9 @@ end
 
 function DeterministicMetadata(ts::Deterministic)
     return DeterministicMetadata(
-        get_label(ts),
+        get_name(ts),
         get_resolution(ts),
-        get_initial_time_stamp(ts),
+        get_initial_timestamp(ts),
         get_interval(ts),
         get_count(ts),
         get_uuid(ts),
@@ -186,7 +186,7 @@ end
 Constructs Probabilistic after constructing a TimeArray from initial_time and time_steps.
 """
 function Probabilistic(
-    label::String,
+    name::String,
     resolution::Dates.Period,
     initial_time::Dates.DateTime,
     percentiles::Vector{Float64},
@@ -197,7 +197,7 @@ function Probabilistic(
         ones(time_steps, length(percentiles)),
     )
 
-    return Probabilistic(; label = label, percentiles = percentiles, data = data)
+    return Probabilistic(; name = name, percentiles = percentiles, data = data)
 end
 
 """
@@ -205,7 +205,7 @@ Constructs Probabilistic forecast after constructing a TimeArray from initial_ti
 """
 # TODO: do we need this check still?
 #function Probabilistic(
-#                       label::String,
+#                       name::String,
 #                       percentiles::Vector{Float64},  # percentiles for the probabilistic time_series
 #                       data::TimeSeries.TimeArray,
 #                      )
@@ -216,17 +216,17 @@ Constructs Probabilistic forecast after constructing a TimeArray from initial_ti
 #    initial_time = TimeSeries.timestamp(data)[1]
 #    resolution = get_resolution(data)
 #
-#    return Probabilistic(label, percentiles, data)
+#    return Probabilistic(name, percentiles, data)
 #end
 
 function Probabilistic(
-    label::String,
+    name::String,
     resolution::Dates.Period,
     initial_time::Dates.DateTime,
     percentiles::Vector{Float64},  # percentiles for the probabilistic time_series
     data::TimeSeries.TimeArray,
 )
-    return Probabilistic(label = label, percentiles = percentiles, data = data)
+    return Probabilistic(name = name, percentiles = percentiles, data = data)
 end
 
 function Probabilistic(
@@ -234,7 +234,7 @@ function Probabilistic(
     data::SortedDict{Dates.DateTime, Array},
 )
     return Probabilistic(
-        label = get_label(time_series),
+        name = get_name(time_series),
         percentiles = get_percentiles(time_series),
         data = data,
         internal = InfrastructureSystemsInternal(get_time_series_uuid(ts_metadata)),
@@ -243,7 +243,7 @@ end
 
 function ProbabilisticMetadata(time_series::Probabilistic)
     return ProbabilisticMetadata(
-        get_label(time_series),
+        get_name(time_series),
         get_resolution(time_series),
         get_initial_time(time_series),
         get_interval(time_series),
@@ -256,7 +256,7 @@ function ProbabilisticMetadata(time_series::Probabilistic)
 end
 
 function Scenarios(
-    label::String,
+    name::String,
     data::SortedDict{Dates.DateTime, TimeSeries.TimeArray},
     scaling_factor_multiplier = nothing,
 )
@@ -264,7 +264,7 @@ function Scenarios(
     resolution = get_resolution(data)
     scenario_count = length(TimeSeries.colnames(data))
     return Scenarios(
-        label = label,
+        name = name,
         scenario_count = scenario_count,
         data = data,
         scaling_factor_multiplier = scaling_factor_multiplier,
@@ -276,7 +276,7 @@ Constructs Scenarios forecast after constructing a TimeArray from initial_time a
 time_steps.
 """
 function Scenarios(
-    label::String,
+    name::String,
     resolution::Dates.Period,
     initial_time::Dates.DateTime,
     scenario_count::Int,
@@ -287,7 +287,7 @@ function Scenarios(
         ones(time_steps, scenario_count),
     )
 
-    return Scenarios(label, data)
+    return Scenarios(name, data)
 end
 
 function Scenarios(time_series::Vector{Scenarios})
@@ -300,14 +300,14 @@ function Scenarios(time_series::Vector{Scenarios})
     ta = TimeSeries.TimeArray(timestamps, data, colnames)
 
     time_series =
-        Scenarios(get_label(time_series[1]), ta, time_series[1].scaling_factor_multiplier)
+        Scenarios(get_name(time_series[1]), ta, time_series[1].scaling_factor_multiplier)
     @debug "concatenated time_series" time_series
     return time_series
 end
 
 function Scenarios(ts_metadata::ScenariosMetadata, data::Array)
     return Scenarios(
-        label = get_label(ts_metadata),
+        name = get_name(ts_metadata),
         scenario_count = get_scenario_count(ts_metadata),
         data = data,
         internal = InfrastructureSystemsInternal(get_time_series_uuid(ts_metadata)),
@@ -316,7 +316,7 @@ end
 
 function ScenariosMetadata(time_series::Scenarios)
     return ScenariosMetadata(
-        get_label(time_series),
+        get_name(time_series),
         get_resolution(time_series),
         get_initial_time(time_series),
         get_interval(time_series),

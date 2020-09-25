@@ -47,7 +47,7 @@ end
 function Base.show(io::IO, ::MIME"text/plain", container::TimeSeriesContainer)
     println(io, summary(container))
     for key in keys(container.data)
-        println(io, "$(key.time_series_type): label=$(key.label)")
+        println(io, "$(key.time_series_type): name=$(key.name)")
     end
 end
 

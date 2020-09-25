@@ -88,23 +88,23 @@ get_file_path(storage::Hdf5TimeSeriesStorage) = storage.file_path
 function add_time_series!(
     storage::Hdf5TimeSeriesStorage,
     component_uuid::UUIDs.UUID,
-    label::AbstractString,
+    name::AbstractString,
     ts::TimeSeriesData,
 )
     check_read_only(storage)
     uuid = string(get_uuid(ts))
-    component_label = make_component_label(component_uuid, label)
+    component_name = make_component_name(component_uuid, name)
 
     HDF5.h5open(storage.file_path, "r+") do file
         root = _get_root(storage, file)
         if !HDF5.exists(root, uuid)
             HDF5.g_create(root, uuid)
             path = root[uuid]
-            @debug "Create new time series entry." uuid component_uuid label
+            @debug "Create new time series entry." uuid component_uuid name
             data = get_array_for_hdf(ts)
             path["data"] = data
             HDF5.attrs(path)["initial_time"] =
-                Dates.datetime2epochms(get_initial_time_stamp(ts))
+                Dates.datetime2epochms(get_initial_timestamp(ts))
             if ts isa Forecast
                 HDF5.attrs(path)["interval"] =
                     time_period_conversion(get_interval(ts)).value
@@ -113,11 +113,11 @@ function add_time_series!(
                 time_period_conversion(get_resolution(ts)).value
             # Storing the UUID as an integer would take less space, but HDF5 library says
             # arrays of 128-bit integers aren't supported.
-            path["components"] = [component_label]
+            path["components"] = [component_name]
         else
             path = root[uuid]
-            @debug "Add reference to existing time series entry." uuid component_uuid label
-            _append_item!(path, "components", component_label)
+            @debug "Add reference to existing time series entry." uuid component_uuid name
+            _append_item!(path, "components", component_name)
         end
     end
 end
@@ -125,17 +125,17 @@ end
 function add_time_series_reference!(
     storage::Hdf5TimeSeriesStorage,
     component_uuid::UUIDs.UUID,
-    label::AbstractString,
+    name::AbstractString,
     ts_uuid::UUIDs.UUID,
 )
     check_read_only(storage)
     uuid = string(ts_uuid)
-    component_label = make_component_label(component_uuid, label)
+    component_name = make_component_name(component_uuid, name)
     HDF5.h5open(storage.file_path, "r+") do file
         root = _get_root(storage, file)
         path = root[uuid]
-        _append_item!(path, "components", component_label)
-        @debug "Add reference to existing time series entry." uuid component_uuid label
+        _append_item!(path, "components", component_name)
+        @debug "Add reference to existing time series entry." uuid component_uuid name
     end
 end
 
@@ -152,8 +152,8 @@ end
 #                internal = InfrastructureSystemsInternal(uuid)
 #                ts = TimeDataContainer(get_time_series(storage, uuid), internal)
 #                for item in HDF5.read(uuid_group["components"])
-#                    component, label = deserialize_component_label(item)
-#                    put!(channel, (component, label, ta))
+#                    component, name = deserialize_component_name(item)
+#                    put!(channel, (component, name, ta))
 #                end
 #            end
 #        end
@@ -164,13 +164,13 @@ function remove_time_series!(
     storage::Hdf5TimeSeriesStorage,
     uuid::UUIDs.UUID,
     component_uuid::UUIDs.UUID,
-    label::AbstractString,
+    name::AbstractString,
 )
     check_read_only(storage)
     HDF5.h5open(storage.file_path, "r+") do file
         root = _get_root(storage, file)
         path = _get_time_series_path(root, uuid)
-        if _remove_item!(path, "components", make_component_label(component_uuid, label))
+        if _remove_item!(path, "components", make_component_name(component_uuid, name))
             @debug "$path has no more references; delete it."
             HDF5.o_delete(path)
         end
@@ -208,8 +208,8 @@ function get_time_series(
     return HDF5.h5open(storage.file_path, "r") do file
         root = _get_root(storage, file)
         path = _get_time_series_path(root, uuid)
-        _initial_time_stamp = HDF5.read(HDF5.attrs(path)["initial_time"])
-        initial_time_stamp = Dates.epochms2datetime(_initial_time_stamp)
+        _initial_timestamp = HDF5.read(HDF5.attrs(path)["initial_time"])
+        initial_timestamp = Dates.epochms2datetime(_initial_timestamp)
         resolution = Dates.Millisecond(HDF5.read(HDF5.attrs(path)["resolution"]))
         sz_tuple = size(path["data"])
 
@@ -221,7 +221,7 @@ function get_time_series(
         if !HDF5.exists(HDF5.attrs(path), "interval")
             @assert length(sz_tuple) == 1
             @debug "reconstructing a contiguous time series"
-            start_time = initial_time_stamp + resolution * row_index
+            start_time = initial_timestamp + resolution * row_index
             end_index = row_index + num_rows - 1
             data = path["data"][row_index:end_index]
             return TimeSeries.TimeArray(
@@ -236,7 +236,7 @@ function get_time_series(
             if num_columns > sz_tuple[1]
                 throw(ArgumentError("More Forecasts requested $num_columns than the total stored $(sz_tuple[2])"))
             end
-            start_time = initial_time_stamp + interval * (row_index - 1)
+            start_time = initial_timestamp + interval * (row_index - 1)
             if num_columns == 1
                 data[start_time] = path["data"][1:num_rows, column_index]
             else
@@ -346,13 +346,13 @@ function compare_values(x::Hdf5TimeSeriesStorage, y::Hdf5TimeSeriesStorage)::Boo
         return false
     end
 
-    for ((uuid_x, label_x, ts_x), (uuid_y, label_y, ts_y)) in zip(data_x, data_y)
+    for ((uuid_x, name_x, ts_x), (uuid_y, name_y, ts_y)) in zip(data_x, data_y)
         if uuid_x != uuid_y
             @error "component UUIDs don't match" uuid_x uuid_y
             return false
         end
-        if label_x != label_y
-            @error "labels don't match" label_x label_y
+        if name_x != name_y
+            @error "names don't match" name_x name_y
             return false
         end
         if TimeSeries.timestamp(ts_x.data) != TimeSeries.timestamp(ts_y.data)

@@ -1,7 +1,7 @@
 abstract type Forecast <: TimeSeriesData end
 
 Base.length(ts::Forecast) = get_horizon(ts)
-get_label(value::Forecast) = value.label
+get_name(value::Forecast) = value.name
 get_percentiles(value::Forecast) = value.percentiles
 get_data(value::Forecast) = value.data
 get_scaling_factor_multiplier(value::Forecast) = value.scaling_factor_multiplier
@@ -27,7 +27,7 @@ end
 Return the Dates.DateTime corresponding to an interval index.
 """
 function index_to_initial_time(forecast::Forecast, index::Int)
-    return get_initial_time_stamp(forecast) + get_interval(forecast) * index
+    return get_initial_timestamp(forecast) + get_interval(forecast) * index
 end
 
 function make_timestamps(forecast::Forecast, initial_time::Dates.DateTime)

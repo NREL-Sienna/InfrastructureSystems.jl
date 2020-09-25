@@ -5,16 +5,16 @@
       "docstring": "A deterministic forecast for a particular data field in a Component.",
       "fields": [
         {
-          "name": "label",
+          "name": "name",
           "data_type": "String",
-          "comment": "user-defined label"
+          "comment": "user-defined name"
         },
         {
           "name": "resolution",
           "data_type": "Dates.Period"
         },
         {
-          "name": "initial_time_stamp",
+          "name": "initial_timestamp",
           "data_type": "Dates.DateTime",
           "comment": "time series availability time"
         },
@@ -57,12 +57,12 @@
       "docstring": "A deterministic forecast for a particular data field in a Component.",
       "fields": [
         {
-          "name": "label",
+          "name": "name",
           "data_type": "String",
-          "comment": "user-defined label"
+          "comment": "user-defined name"
         },
         {
-          "name": "initial_time_stamp",
+          "name": "initial_timestamp",
           "data_type": "Dates.DateTime",
           "comment": "first timestamp in forecast"
         },
@@ -100,12 +100,12 @@
       "docstring": "A Probabilistic forecast for a particular data field in a Component.",
       "fields": [
         {
-          "name": "label",
+          "name": "name",
           "data_type": "String",
-          "comment": "user-defined label"
+          "comment": "user-defined name"
         },
         {
-          "name": "initial_time_stamp",
+          "name": "initial_timestamp",
           "data_type": "Dates.DateTime",
           "comment": "time series availability time"
         },
@@ -157,12 +157,12 @@
       "docstring": "A Probabilistic forecast for a particular data field in a Component.",
       "fields": [
         {
-          "name": "label",
+          "name": "name",
           "data_type": "String",
-          "comment": "user-defined label"
+          "comment": "user-defined name"
         },
         {
-          "name": "initial_time_stamp",
+          "name": "initial_timestamp",
           "data_type": "Dates.DateTime",
           "comment": "first timestamp in forecast"
         },
@@ -205,16 +205,16 @@
       "docstring": "A Discrete Scenario Based time series for a particular data field in a Component.",
       "fields": [
         {
-          "name": "label",
+          "name": "name",
           "data_type": "String",
-          "comment": "user-defined label"
+          "comment": "user-defined name"
         },
         {
           "name": "resolution",
           "data_type": "Dates.Period"
         },
         {
-          "name": "initial_time_stamp",
+          "name": "initial_timestamp",
           "data_type": "Dates.DateTime",
           "comment": "time series availability time"
         },
@@ -262,12 +262,12 @@
       "docstring": "A Discrete Scenario Based time series for a particular data field in a Component.",
       "fields": [
         {
-          "name": "label",
+          "name": "name",
           "data_type": "String",
-          "comment": "user-defined label"
+          "comment": "user-defined name"
         },
         {
-          "name": "initial_time_stamp",
+          "name": "initial_timestamp",
           "data_type": "Dates.DateTime",
           "comment": "first timestamp in forecast"
         },
@@ -310,9 +310,9 @@
       "docstring": "A TimeSeries Data object in contigous form.",
       "fields": [
         {
-          "name": "label",
+          "name": "name",
           "data_type": "String",
-          "comment": "user-defined label"
+          "comment": "user-defined name"
         },
         {
           "name": "resolution",
@@ -353,9 +353,9 @@
       "docstring": "A deterministic forecast for a particular data field in a Component.",
       "fields": [
         {
-          "name": "label",
+          "name": "name",
           "data_type": "String",
-          "comment": "user-defined label"
+          "comment": "user-defined name"
         },
         {
           "name": "data",

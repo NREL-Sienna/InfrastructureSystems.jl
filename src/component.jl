@@ -22,10 +22,10 @@ function remove_time_series_metadata!(
     ::Type{T},
     component::InfrastructureSystemsComponent,
     initial_time::Dates.DateTime,
-    label::AbstractString,
+    name::AbstractString,
 ) where {T <: TimeSeriesMetadata}
-    remove_time_series!(T, get_time_series_container(component), initial_time, label)
-    @debug "Removed time_series from $component:  $initial_time $label."
+    remove_time_series!(T, get_time_series_container(component), initial_time, name)
+    @debug "Removed time_series from $component:  $initial_time $name."
 end
 
 function clear_time_series!(component::InfrastructureSystemsComponent)
@@ -37,7 +37,7 @@ function clear_time_series!(component::InfrastructureSystemsComponent)
 end
 
 function _get_column_index(start_time, count, ts_metadata::ForecastMetadata)
-    offset = start_time - get_initial_time_stamp(ts_metadata)
+    offset = start_time - get_initial_timestamp(ts_metadata)
     interval = get_interval(ts_metadata)
     index = Int(offset / interval) + 1
 
@@ -73,10 +73,10 @@ end
 
 function _check_start_time(start_time, ts_metadata::TimeSeriesMetadata)
     if start_time === nothing
-        return get_initial_time_stamp(ts_metadata)
+        return get_initial_timestamp(ts_metadata)
     end
 
-    time_diff = start_time - get_initial_time_stamp(ts_metadata)
+    time_diff = start_time - get_initial_timestamp(ts_metadata)
     if time_diff < Dates.Second(0)
         throw(ArgumentError("start_time=$start_time is earlier than $(get_initial_time(ts_metadata))"))
     end
@@ -97,7 +97,7 @@ Return a time_series for the entire time series range stored for these parameter
 function get_time_series(
     ::Type{T},
     component::InfrastructureSystemsComponent,
-    label::AbstractString;
+    name::AbstractString;
     start_time::Union{Nothing, Dates.DateTime} = nothing,
     len::Union{Nothing, Int} = nothing,
     count::Int = 1,
@@ -107,7 +107,7 @@ function get_time_series(
     end
 
     metadata_type = time_series_data_to_metadata(T)
-    ts_metadata = get_time_series(metadata_type, component, label)
+    ts_metadata = get_time_series(metadata_type, component, name)
     start_time = _check_start_time(start_time, ts_metadata)
     row_index, len = _get_row_index(start_time, len, ts_metadata)
     column_index = _get_column_index(start_time, count, ts_metadata)
@@ -128,9 +128,9 @@ end
 function get_time_series(
     ::Type{T},
     component::InfrastructureSystemsComponent,
-    label::AbstractString,
+    name::AbstractString,
 ) where {T <: TimeSeriesMetadata}
-    return get_time_series(T, get_time_series_container(component), label)
+    return get_time_series(T, get_time_series_container(component), name)
 end
 
 function _make_time_series(
@@ -139,10 +139,10 @@ function _make_time_series(
     start_index::Int,
     len::Int,
     initial_time::Dates.DateTime,
-    label::AbstractString,
+    name::AbstractString,
 ) where {T <: TimeSeriesMetadata}
     container = get_time_series_container(component)
-    ts_metadata = get_time_series(T, container, label)
+    ts_metadata = get_time_series(T, container, name)
     ta = get_time_series(
         _get_time_series_storage(component),
         get_time_series_uuid(ts_metadata);
@@ -162,13 +162,13 @@ function get_time_series_array(
     ::Type{T},
     component::InfrastructureSystemsComponent,
     initial_time::Dates.DateTime,
-    label::AbstractString,
+    name::AbstractString,
     horizon::Union{Nothing, Int} = nothing,
 ) where {T <: TimeSeriesData}
     if horizon === nothing
-        time_series = get_time_series(T, component, initial_time, label)
+        time_series = get_time_series(T, component, initial_time, name)
     else
-        time_series = get_time_series(T, component, initial_time, label, horizon)
+        time_series = get_time_series(T, component, initial_time, name, horizon)
     end
 
     return get_time_series_array(component, time_series)
@@ -191,14 +191,14 @@ function get_time_series_timestamps(
     ::Type{T},
     component::InfrastructureSystemsComponent,
     initial_time::Dates.DateTime,
-    label::AbstractString,
+    name::AbstractString,
     horizon::Union{Nothing, Int} = nothing,
 ) where {T <: TimeSeriesData}
     return (TimeSeries.timestamp ∘ get_time_series_array)(
         T,
         component,
         initial_time,
-        label,
+        name,
         horizon,
     )
 end
@@ -217,14 +217,14 @@ function get_time_series_values(
     ::Type{T},
     component::InfrastructureSystemsComponent,
     initial_time::Dates.DateTime,
-    label::AbstractString,
+    name::AbstractString,
     horizon::Union{Nothing, Int} = nothing,
 ) where {T <: TimeSeriesData}
     return (TimeSeries.values ∘ get_time_series_array)(
         T,
         component,
         initial_time,
-        label,
+        name,
         horizon,
     )
 end
@@ -257,7 +257,7 @@ end
 function get_time_series_initial_times(
     ::Type{T},
     component::InfrastructureSystemsComponent,
-    label::AbstractString,
+    name::AbstractString,
 ) where {T <: TimeSeriesData}
     if !has_time_series(component)
         throw(ArgumentError("$(typeof(component)) does not have time_series"))
@@ -265,7 +265,7 @@ function get_time_series_initial_times(
     return get_time_series_initial_times(
         time_series_data_to_metadata(T),
         get_time_series_container(component),
-        label,
+        name,
     )
 end
 
@@ -298,10 +298,10 @@ references.
 # Arguments
 - `dst::InfrastructureSystemsComponent`: Destination component
 - `src::InfrastructureSystemsComponent`: Source component
-- `label_mapping::Dict = nothing`: Optionally map src labels to different dst labels.
-  If provided and src has a time_series with a label not present in label_mapping, that
-  time_series will not copied. If label_mapping is nothing then all time_series will be
-  copied with src's labels.
+- `name_mapping::Dict = nothing`: Optionally map src names to different dst names.
+  If provided and src has a time_series with a name not present in name_mapping, that
+  time_series will not copied. If name_mapping is nothing then all time_series will be
+  copied with src's names.
 - `scaling_factor_multiplier_mapping::Dict = nothing`: Optionally map src multipliers to
   different dst multipliers.  If provided and src has a time_series with a multiplier not
   present in scaling_factor_multiplier_mapping, that time_series will not copied. If
@@ -311,19 +311,19 @@ references.
 function copy_time_series!(
     dst::InfrastructureSystemsComponent,
     src::InfrastructureSystemsComponent;
-    label_mapping::Union{Nothing, Dict{String, String}} = nothing,
+    name_mapping::Union{Nothing, Dict{String, String}} = nothing,
     scaling_factor_multiplier_mapping::Union{Nothing, Dict{String, String}} = nothing,
 )
     for ts_metadata in get_time_series_multiple(TimeSeriesMetadata, src)
-        label = get_label(ts_metadata)
-        new_label = label
-        if !isnothing(label_mapping)
-            new_label = get(label_mapping, label, nothing)
-            if isnothing(new_label)
-                @debug "Skip copying ts_metadata" label
+        name = get_name(ts_metadata)
+        new_name = name
+        if !isnothing(name_mapping)
+            new_name = get(name_mapping, name, nothing)
+            if isnothing(new_name)
+                @debug "Skip copying ts_metadata" name
                 continue
             end
-            @debug "Copy ts_metadata with" new_label
+            @debug "Copy ts_metadata with" new_name
         end
         multiplier = get_scaling_factor_multiplier(ts_metadata)
         new_multiplier = multiplier
@@ -337,7 +337,7 @@ function copy_time_series!(
         end
         new_time_series = deepcopy(ts_metadata)
         assign_new_uuid!(new_time_series)
-        set_label!(new_time_series, new_label)
+        set_name!(new_time_series, new_name)
         set_scaling_factor_multiplier!(new_time_series, new_multiplier)
         add_time_series!(dst, new_time_series)
         storage = _get_time_series_storage(dst)
@@ -345,7 +345,7 @@ function copy_time_series!(
             throw(ArgumentError("component does not have time series storage"))
         end
         ts_uuid = get_time_series_uuid(ts_metadata)
-        add_time_series_reference!(storage, get_uuid(dst), new_label, ts_uuid)
+        add_time_series_reference!(storage, get_uuid(dst), new_name, ts_uuid)
     end
 end
 
@@ -353,12 +353,12 @@ function get_time_series_keys(component::InfrastructureSystemsComponent)
     return keys(get_time_series_container(component).data)
 end
 
-function get_time_series_labels(
+function get_time_series_names(
     ::Type{T},
     component::InfrastructureSystemsComponent,
     initial_time::Dates.DateTime,
 ) where {T <: TimeSeriesData}
-    return get_time_series_labels(
+    return get_time_series_names(
         time_series_data_to_metadata(T),
         get_time_series_container(component),
         initial_time,
@@ -386,7 +386,7 @@ function get_time_series_uuids(component::InfrastructureSystemsComponent)
     container = get_time_series_container(component)
 
     return [
-        (get_time_series_uuid(container.data[key]), key.label)
+        (get_time_series_uuid(container.data[key]), key.name)
         for key in get_time_series_keys(component)
     ]
 end
@@ -416,14 +416,14 @@ Call `collect` on the result to get an array.
 - `filter_func = nothing`: Only return time_series for which this returns true.
 - `type = nothing`: Only return time_series with this type.
 - `initial_time = nothing`: Only return time_series matching this value.
-- `label = nothing`: Only return time_series matching this value.
+- `name = nothing`: Only return time_series matching this value.
 """
 function get_time_series_multiple(
     component::InfrastructureSystemsComponent,
     filter_func = nothing;
     type = nothing,
     initial_time = nothing,
-    label = nothing,
+    name = nothing,
 )
     container = get_time_series_container(component)
     time_series_keys = sort!(collect(keys(container.data)), by = x -> x.initial_time)
@@ -441,7 +441,7 @@ function get_time_series_multiple(
             if !isnothing(initial_time) && key.initial_time != initial_time
                 continue
             end
-            if !isnothing(label) && key.label != label
+            if !isnothing(name) && key.name != name
                 continue
             end
             ts_metadata = container.data[key]
@@ -476,8 +476,8 @@ end
 function clear_time_series_storage!(component::InfrastructureSystemsComponent)
     storage = _get_time_series_storage(component)
     if !isnothing(storage)
-        for (uuid, label) in get_time_series_uuids(component)
-            remove_time_series!(storage, uuid, get_uuid(component), label)
+        for (uuid, name) in get_time_series_uuids(component)
+            remove_time_series!(storage, uuid, get_uuid(component), name)
         end
     end
 end
@@ -493,13 +493,13 @@ function set_time_series_storage!(
 end
 
 function validate_time_series_consistency(component::InfrastructureSystemsComponent)
-    # Initial times for each label must be identical.
+    # Initial times for each name must be identical.
     initial_times = Dict{String, Vector{Dates.DateTime}}()
     for key in keys(get_time_series_container(component).data)
-        if !haskey(initial_times, key.label)
-            initial_times[key.label] = Vector{Dates.DateTime}()
+        if !haskey(initial_times, key.name)
+            initial_times[key.name] = Vector{Dates.DateTime}()
         end
-        push!(initial_times[key.label], key.initial_time)
+        push!(initial_times[key.name], key.initial_time)
     end
 
     if isempty(initial_times)
@@ -507,7 +507,7 @@ function validate_time_series_consistency(component::InfrastructureSystemsCompon
     end
 
     base_its = nothing
-    for (label, its) in initial_times
+    for (name, its) in initial_times
         sort!(its)
         if isnothing(base_its)
             base_its = its

@@ -3,8 +3,8 @@ This file is auto-generated. Do not edit.
 =#
 """
     mutable struct ProbabilisticMetadata <: ForecastMetadata
-        label::String
-        initial_time_stamp::Dates.DateTime
+        name::String
+        initial_timestamp::Dates.DateTime
         resolution::Dates.Period
         interval::Dates.Period
         count::Int
@@ -18,8 +18,8 @@ This file is auto-generated. Do not edit.
 A Probabilistic forecast for a particular data field in a Component.
 
 # Arguments
-- `label::String`: user-defined label
-- `initial_time_stamp::Dates.DateTime`: time series availability time
+- `name::String`: user-defined name
+- `initial_timestamp::Dates.DateTime`: time series availability time
 - `resolution::Dates.Period`
 - `interval::Dates.Period`: time series availability time
 - `count::Int`: time series availability time
@@ -30,10 +30,10 @@ A Probabilistic forecast for a particular data field in a Component.
 - `internal::InfrastructureSystemsInternal`
 """
 mutable struct ProbabilisticMetadata <: ForecastMetadata
-    "user-defined label"
-    label::String
+    "user-defined name"
+    name::String
     "time series availability time"
-    initial_time_stamp::Dates.DateTime
+    initial_timestamp::Dates.DateTime
     resolution::Dates.Period
     "time series availability time"
     interval::Dates.Period
@@ -50,18 +50,18 @@ mutable struct ProbabilisticMetadata <: ForecastMetadata
     internal::InfrastructureSystemsInternal
 end
 
-function ProbabilisticMetadata(label, initial_time_stamp, resolution, interval, count, percentiles, time_series_uuid, horizon, scaling_factor_multiplier=nothing, )
-    ProbabilisticMetadata(label, initial_time_stamp, resolution, interval, count, percentiles, time_series_uuid, horizon, scaling_factor_multiplier, InfrastructureSystemsInternal(), )
+function ProbabilisticMetadata(name, initial_timestamp, resolution, interval, count, percentiles, time_series_uuid, horizon, scaling_factor_multiplier=nothing, )
+    ProbabilisticMetadata(name, initial_timestamp, resolution, interval, count, percentiles, time_series_uuid, horizon, scaling_factor_multiplier, InfrastructureSystemsInternal(), )
 end
 
-function ProbabilisticMetadata(; label, initial_time_stamp, resolution, interval, count, percentiles, time_series_uuid, horizon, scaling_factor_multiplier=nothing, internal=InfrastructureSystemsInternal(), )
-    ProbabilisticMetadata(label, initial_time_stamp, resolution, interval, count, percentiles, time_series_uuid, horizon, scaling_factor_multiplier, internal, )
+function ProbabilisticMetadata(; name, initial_timestamp, resolution, interval, count, percentiles, time_series_uuid, horizon, scaling_factor_multiplier=nothing, internal=InfrastructureSystemsInternal(), )
+    ProbabilisticMetadata(name, initial_timestamp, resolution, interval, count, percentiles, time_series_uuid, horizon, scaling_factor_multiplier, internal, )
 end
 
-"""Get [`ProbabilisticMetadata`](@ref) `label`."""
-get_label(value::ProbabilisticMetadata) = value.label
-"""Get [`ProbabilisticMetadata`](@ref) `initial_time_stamp`."""
-get_initial_time_stamp(value::ProbabilisticMetadata) = value.initial_time_stamp
+"""Get [`ProbabilisticMetadata`](@ref) `name`."""
+get_name(value::ProbabilisticMetadata) = value.name
+"""Get [`ProbabilisticMetadata`](@ref) `initial_timestamp`."""
+get_initial_timestamp(value::ProbabilisticMetadata) = value.initial_timestamp
 """Get [`ProbabilisticMetadata`](@ref) `resolution`."""
 get_resolution(value::ProbabilisticMetadata) = value.resolution
 """Get [`ProbabilisticMetadata`](@ref) `interval`."""
@@ -79,10 +79,10 @@ get_scaling_factor_multiplier(value::ProbabilisticMetadata) = value.scaling_fact
 """Get [`ProbabilisticMetadata`](@ref) `internal`."""
 get_internal(value::ProbabilisticMetadata) = value.internal
 
-"""Set [`ProbabilisticMetadata`](@ref) `label`."""
-set_label!(value::ProbabilisticMetadata, val) = value.label = val
-"""Set [`ProbabilisticMetadata`](@ref) `initial_time_stamp`."""
-set_initial_time_stamp!(value::ProbabilisticMetadata, val) = value.initial_time_stamp = val
+"""Set [`ProbabilisticMetadata`](@ref) `name`."""
+set_name!(value::ProbabilisticMetadata, val) = value.name = val
+"""Set [`ProbabilisticMetadata`](@ref) `initial_timestamp`."""
+set_initial_timestamp!(value::ProbabilisticMetadata, val) = value.initial_timestamp = val
 """Set [`ProbabilisticMetadata`](@ref) `resolution`."""
 set_resolution!(value::ProbabilisticMetadata, val) = value.resolution = val
 """Set [`ProbabilisticMetadata`](@ref) `interval`."""

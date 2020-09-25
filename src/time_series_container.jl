@@ -1,6 +1,6 @@
 struct TimeSeriesKey
     time_series_type::Type{<:TimeSeriesMetadata}
-    label::String
+    name::String
 end
 
 const TimeSeriesByType = Dict{TimeSeriesKey, TimeSeriesMetadata}
@@ -39,7 +39,7 @@ function add_time_series!(
     time_series::T;
     skip_if_present = false,
 ) where {T <: TimeSeriesMetadata}
-    key = TimeSeriesKey(T, get_label(time_series))
+    key = TimeSeriesKey(T, get_name(time_series))
     if haskey(container.data, key)
         if skip_if_present
             @warn "time_series $key is already present, skipping overwrite"
@@ -54,9 +54,9 @@ end
 function remove_time_series!(
     ::Type{T},
     container::TimeSeriesContainer,
-    label::AbstractString,
+    name::AbstractString,
 ) where {T <: TimeSeriesMetadata}
-    key = TimeSeriesKey(T, label)
+    key = TimeSeriesKey(T, name)
     if !haskey(container.data, key)
         throw(ArgumentError("time_series $key is not stored"))
     end
@@ -71,9 +71,9 @@ end
 function get_time_series(
     ::Type{T},
     container::TimeSeriesContainer,
-    label::AbstractString,
+    name::AbstractString,
 ) where {T <: TimeSeriesMetadata}
-    key = TimeSeriesKey(T, label)
+    key = TimeSeriesKey(T, name)
     if !haskey(container.data, key)
         throw(ArgumentError("time_series $key is not stored"))
     end
@@ -96,9 +96,9 @@ end
 function get_time_series_initial_times(
     ::Type{T},
     container::TimeSeriesContainer,
-    label::AbstractString,
+    name::AbstractString,
 ) where {T <: TimeSeriesMetadata}
-    ts_metadata = get(container.data, TimeSeriesKey(T, label), nothing)
+    ts_metadata = get(container.data, TimeSeriesKey(T, name), nothing)
     if ts_metadata === nothing
         return Vector{Dates.DateTime}()
     else
@@ -115,18 +115,18 @@ function get_time_series_initial_times!(
     end
 end
 
-function get_time_series_labels(
+function get_time_series_names(
     ::Type{T},
     container::TimeSeriesContainer,
 ) where {T <: TimeSeriesMetadata}
-    labels = Set{String}()
+    names = Set{String}()
     for key in keys(container.data)
         if key.time_series_type <: T
-            push!(labels, key.label)
+            push!(names, key.name)
         end
     end
 
-    return Vector{String}(collect(labels))
+    return Vector{String}(collect(names))
 end
 
 function serialize(container::TimeSeriesContainer)
