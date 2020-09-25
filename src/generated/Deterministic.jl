@@ -3,7 +3,7 @@ This file is auto-generated. Do not edit.
 =#
 """
     mutable struct Deterministic <: Forecast
-        label::String
+        name::String
         initial_time_stamp::Dates.DateTime
         horizon::Int
         resolution::Dates.Period
@@ -15,7 +15,7 @@ This file is auto-generated. Do not edit.
 A deterministic forecast for a particular data field in a Component.
 
 # Arguments
-- `label::String`: user-defined label
+- `name::String`: user-defined name
 - `initial_time_stamp::Dates.DateTime`: first timestamp in forecast
 - `horizon::Int`: length of this time series
 - `resolution::Dates.Period`: forecast resolution
@@ -24,8 +24,8 @@ A deterministic forecast for a particular data field in a Component.
 - `internal::InfrastructureSystemsInternal`
 """
 mutable struct Deterministic <: Forecast
-    "user-defined label"
-    label::String
+    "user-defined name"
+    name::String
     "first timestamp in forecast"
     initial_time_stamp::Dates.DateTime
     "length of this time series"
@@ -39,16 +39,16 @@ mutable struct Deterministic <: Forecast
     internal::InfrastructureSystemsInternal
 end
 
-function Deterministic(label, initial_time_stamp, horizon, resolution, data, scaling_factor_multiplier=nothing, )
-    Deterministic(label, initial_time_stamp, horizon, resolution, data, scaling_factor_multiplier, InfrastructureSystemsInternal(), )
+function Deterministic(name, initial_time_stamp, horizon, resolution, data, scaling_factor_multiplier=nothing, )
+    Deterministic(name, initial_time_stamp, horizon, resolution, data, scaling_factor_multiplier, InfrastructureSystemsInternal(), )
 end
 
-function Deterministic(; label, initial_time_stamp, horizon, resolution, data, scaling_factor_multiplier=nothing, internal=InfrastructureSystemsInternal(), )
-    Deterministic(label, initial_time_stamp, horizon, resolution, data, scaling_factor_multiplier, internal, )
+function Deterministic(; name, initial_time_stamp, horizon, resolution, data, scaling_factor_multiplier=nothing, internal=InfrastructureSystemsInternal(), )
+    Deterministic(name, initial_time_stamp, horizon, resolution, data, scaling_factor_multiplier, internal, )
 end
 
-"""Get [`Deterministic`](@ref) `label`."""
-get_label(value::Deterministic) = value.label
+"""Get [`Deterministic`](@ref) `name`."""
+get_name(value::Deterministic) = value.name
 """Get [`Deterministic`](@ref) `initial_time_stamp`."""
 get_initial_time_stamp(value::Deterministic) = value.initial_time_stamp
 """Get [`Deterministic`](@ref) `horizon`."""
@@ -62,8 +62,8 @@ get_scaling_factor_multiplier(value::Deterministic) = value.scaling_factor_multi
 """Get [`Deterministic`](@ref) `internal`."""
 get_internal(value::Deterministic) = value.internal
 
-"""Set [`Deterministic`](@ref) `label`."""
-set_label!(value::Deterministic, val) = value.label = val
+"""Set [`Deterministic`](@ref) `name`."""
+set_name!(value::Deterministic, val) = value.name = val
 """Set [`Deterministic`](@ref) `initial_time_stamp`."""
 set_initial_time_stamp!(value::Deterministic, val) = value.initial_time_stamp = val
 """Set [`Deterministic`](@ref) `horizon`."""

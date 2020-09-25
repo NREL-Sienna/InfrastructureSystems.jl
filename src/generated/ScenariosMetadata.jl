@@ -3,7 +3,7 @@ This file is auto-generated. Do not edit.
 =#
 """
     mutable struct ScenariosMetadata <: ForecastMetadata
-        label::String
+        name::String
         resolution::Dates.Period
         initial_time_stamp::Dates.DateTime
         interval::Dates.Period
@@ -18,7 +18,7 @@ This file is auto-generated. Do not edit.
 A Discrete Scenario Based time series for a particular data field in a Component.
 
 # Arguments
-- `label::String`: user-defined label
+- `name::String`: user-defined name
 - `resolution::Dates.Period`
 - `initial_time_stamp::Dates.DateTime`: time series availability time
 - `interval::Dates.Period`: time series availability time
@@ -30,8 +30,8 @@ A Discrete Scenario Based time series for a particular data field in a Component
 - `internal::InfrastructureSystemsInternal`
 """
 mutable struct ScenariosMetadata <: ForecastMetadata
-    "user-defined label"
-    label::String
+    "user-defined name"
+    name::String
     resolution::Dates.Period
     "time series availability time"
     initial_time_stamp::Dates.DateTime
@@ -50,16 +50,16 @@ mutable struct ScenariosMetadata <: ForecastMetadata
     internal::InfrastructureSystemsInternal
 end
 
-function ScenariosMetadata(label, resolution, initial_time_stamp, interval, scenario_count, count, time_series_uuid, horizon, scaling_factor_multiplier=nothing, )
-    ScenariosMetadata(label, resolution, initial_time_stamp, interval, scenario_count, count, time_series_uuid, horizon, scaling_factor_multiplier, InfrastructureSystemsInternal(), )
+function ScenariosMetadata(name, resolution, initial_time_stamp, interval, scenario_count, count, time_series_uuid, horizon, scaling_factor_multiplier=nothing, )
+    ScenariosMetadata(name, resolution, initial_time_stamp, interval, scenario_count, count, time_series_uuid, horizon, scaling_factor_multiplier, InfrastructureSystemsInternal(), )
 end
 
-function ScenariosMetadata(; label, resolution, initial_time_stamp, interval, scenario_count, count, time_series_uuid, horizon, scaling_factor_multiplier=nothing, internal=InfrastructureSystemsInternal(), )
-    ScenariosMetadata(label, resolution, initial_time_stamp, interval, scenario_count, count, time_series_uuid, horizon, scaling_factor_multiplier, internal, )
+function ScenariosMetadata(; name, resolution, initial_time_stamp, interval, scenario_count, count, time_series_uuid, horizon, scaling_factor_multiplier=nothing, internal=InfrastructureSystemsInternal(), )
+    ScenariosMetadata(name, resolution, initial_time_stamp, interval, scenario_count, count, time_series_uuid, horizon, scaling_factor_multiplier, internal, )
 end
 
-"""Get [`ScenariosMetadata`](@ref) `label`."""
-get_label(value::ScenariosMetadata) = value.label
+"""Get [`ScenariosMetadata`](@ref) `name`."""
+get_name(value::ScenariosMetadata) = value.name
 """Get [`ScenariosMetadata`](@ref) `resolution`."""
 get_resolution(value::ScenariosMetadata) = value.resolution
 """Get [`ScenariosMetadata`](@ref) `initial_time_stamp`."""
@@ -79,8 +79,8 @@ get_scaling_factor_multiplier(value::ScenariosMetadata) = value.scaling_factor_m
 """Get [`ScenariosMetadata`](@ref) `internal`."""
 get_internal(value::ScenariosMetadata) = value.internal
 
-"""Set [`ScenariosMetadata`](@ref) `label`."""
-set_label!(value::ScenariosMetadata, val) = value.label = val
+"""Set [`ScenariosMetadata`](@ref) `name`."""
+set_name!(value::ScenariosMetadata, val) = value.name = val
 """Set [`ScenariosMetadata`](@ref) `resolution`."""
 set_resolution!(value::ScenariosMetadata, val) = value.resolution = val
 """Set [`ScenariosMetadata`](@ref) `initial_time_stamp`."""

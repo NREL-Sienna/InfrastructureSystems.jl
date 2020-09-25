@@ -172,7 +172,7 @@ function _add_time_series!(
     add_time_series!(
         data.time_series_storage,
         get_uuid(component),
-        get_label(ts_metadata),
+        get_name(ts_metadata),
         ts,
     )
 end
@@ -201,14 +201,14 @@ function remove_time_series!(
     data::SystemData,
     component::InfrastructureSystemsComponent,
     initial_time::Dates.DateTime,
-    label::String,
+    name::String,
 ) where {T <: TimeSeriesData}
     type = time_series_data_to_metadata(T)
-    time_series = get_time_series(type, component, initial_time, label)
+    time_series = get_time_series(type, component, initial_time, name)
     uuid = get_time_series_uuid(time_series)
     # TODO: can this be atomic?
-    remove_time_series_metadata!(type, component, initial_time, label)
-    remove_time_series!(data.time_series_storage, uuid, get_uuid(component), label)
+    remove_time_series_metadata!(type, component, initial_time, name)
+    remove_time_series!(data.time_series_storage, uuid, get_uuid(component), name)
 end
 
 """
@@ -231,7 +231,7 @@ end
 function _add_time_series!(
     data::SystemData,
     component::InfrastructureSystemsComponent,
-    label::AbstractString,
+    name::AbstractString,
     time_series::TimeSeries.TimeArray,
     normalization_factor,
     scaling_factor_multiplier,
@@ -239,7 +239,7 @@ function _add_time_series!(
     time_series = handle_normalization_factor(time_series, normalization_factor)
     # TODO: This code path needs to accept a metdata file or parameters telling it which
     # type of time_series to create.
-    ts_metadata = DeterministicMetadata(label, time_series, scaling_factor_multiplier)
+    ts_metadata = DeterministicMetadata(name, time_series, scaling_factor_multiplier)
     _add_time_series!(data, component, ts_metadata, time_series)
 end
 
@@ -268,7 +268,7 @@ function _make_time_series(info::TimeSeriesParsedInfo, resolution)
 
     ta = info.data[Symbol(get_name(info.component))]
     ta = handle_normalization_factor(ta, info.normalization_factor)
-    ts_metadata = info.time_series_type(info.label, ta, info.scaling_factor_multiplier)
+    ts_metadata = info.time_series_type(info.name, ta, info.scaling_factor_multiplier)
     @debug "Created $ts_metadata"
     return ts_metadata, ta
 end
@@ -349,14 +349,14 @@ Call `collect` on the result to get an array.
 - `filter_func = nothing`: Only return time_series for which this returns true.
 - `type = nothing`: Only return time_series with this type.
 - `initial_time = nothing`: Only return time_series matching this value.
-- `label = nothing`: Only return time_series matching this value.
+- `name = nothing`: Only return time_series matching this value.
 """
 function get_time_series_multiple(
     data::SystemData,
     filter_func = nothing;
     type = nothing,
     initial_time = nothing,
-    label = nothing,
+    name = nothing,
 )
     Channel() do channel
         for component in iterate_components_with_time_series(data.components)
@@ -365,7 +365,7 @@ function get_time_series_multiple(
                 filter_func;
                 type = type,
                 initial_time = initial_time,
-                label = label,
+                name = name,
             )
                 put!(channel, time_series)
             end

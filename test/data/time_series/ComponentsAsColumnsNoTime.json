@@ -3,7 +3,7 @@
     "simulation": "simulation",
     "category": "InfrastructureSystemsComponent",
     "component_name": "Component1",
-    "label": "val",
+    "name": "val",
     "normalization_factor": 1,
     "data_file": "ComponentsAsColumnsNoTime.csv",
     "type": "Deterministic",

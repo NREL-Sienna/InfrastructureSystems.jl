@@ -5,9 +5,9 @@
       "docstring": "A deterministic forecast for a particular data field in a Component.",
       "fields": [
         {
-          "name": "label",
+          "name": "name",
           "data_type": "String",
-          "comment": "user-defined label"
+          "comment": "user-defined name"
         },
         {
           "name": "resolution",
@@ -57,9 +57,9 @@
       "docstring": "A deterministic forecast for a particular data field in a Component.",
       "fields": [
         {
-          "name": "label",
+          "name": "name",
           "data_type": "String",
-          "comment": "user-defined label"
+          "comment": "user-defined name"
         },
         {
           "name": "initial_time_stamp",
@@ -100,9 +100,9 @@
       "docstring": "A Probabilistic forecast for a particular data field in a Component.",
       "fields": [
         {
-          "name": "label",
+          "name": "name",
           "data_type": "String",
-          "comment": "user-defined label"
+          "comment": "user-defined name"
         },
         {
           "name": "initial_time_stamp",
@@ -157,9 +157,9 @@
       "docstring": "A Probabilistic forecast for a particular data field in a Component.",
       "fields": [
         {
-          "name": "label",
+          "name": "name",
           "data_type": "String",
-          "comment": "user-defined label"
+          "comment": "user-defined name"
         },
         {
           "name": "initial_time_stamp",
@@ -205,9 +205,9 @@
       "docstring": "A Discrete Scenario Based time series for a particular data field in a Component.",
       "fields": [
         {
-          "name": "label",
+          "name": "name",
           "data_type": "String",
-          "comment": "user-defined label"
+          "comment": "user-defined name"
         },
         {
           "name": "resolution",
@@ -262,9 +262,9 @@
       "docstring": "A Discrete Scenario Based time series for a particular data field in a Component.",
       "fields": [
         {
-          "name": "label",
+          "name": "name",
           "data_type": "String",
-          "comment": "user-defined label"
+          "comment": "user-defined name"
         },
         {
           "name": "initial_time_stamp",
@@ -310,9 +310,9 @@
       "docstring": "A TimeSeries Data object in contigous form.",
       "fields": [
         {
-          "name": "label",
+          "name": "name",
           "data_type": "String",
-          "comment": "user-defined label"
+          "comment": "user-defined name"
         },
         {
           "name": "resolution",
@@ -353,9 +353,9 @@
       "docstring": "A deterministic forecast for a particular data field in a Component.",
       "fields": [
         {
-          "name": "label",
+          "name": "name",
           "data_type": "String",
-          "comment": "user-defined label"
+          "comment": "user-defined name"
         },
         {
           "name": "data",

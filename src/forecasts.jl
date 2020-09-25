@@ -1,7 +1,7 @@
 abstract type Forecast <: TimeSeriesData end
 
 Base.length(ts::Forecast) = get_horizon(ts)
-get_label(value::Forecast) = value.label
+get_name(value::Forecast) = value.name
 get_percentiles(value::Forecast) = value.percentiles
 get_data(value::Forecast) = value.data
 get_scaling_factor_multiplier(value::Forecast) = value.scaling_factor_multiplier
