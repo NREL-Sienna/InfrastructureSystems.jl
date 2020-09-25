@@ -26,7 +26,7 @@ function read_time_series(file_path::AbstractString, component_name = nothing; k
 end
 
 """
-Return a TimeDataContaier from a CSV file.
+Return a TimeDataContainer from a CSV file.
 
 Pass component_name when the file does not have the component name in a column header.
 """
