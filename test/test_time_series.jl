@@ -106,6 +106,53 @@ end
     )
 end
 
+@testset "Test add_time_series from file" begin
+    data = IS.SystemData()
+
+    name = "Component1"
+    component = IS.TestComponent(name, 5)
+    IS.add_component!(data, component)
+    @test !IS.has_time_series(component)
+
+    file = joinpath(FORECASTS_DIR, "DateTimeAsColumn_forecast.csv")
+    r = IS.read_forecast_from_CSV(file, Dates.Hour(1))
+    @test isa(r, IS.TimeDataContainer)
+
+    #= old tests
+        file = joinpath(FORECASTS_DIR, "ComponentsAsColumnsNoTime.json")
+        IS.add_time_series!(IS.InfrastructureSystemsComponent, data, file)
+        @test IS.has_time_series(component)
+
+        all_time_series = get_all_time_series(data)
+        @test length(all_time_series) == 1
+        time_series = all_time_series[1]
+        @test time_series isa IS.SingleTimeSeries
+
+        time_series2 = IS.get_time_series(
+            typeof(time_series),
+            component,
+            IS.get_initial_time(time_series),
+            IS.get_label(time_series),
+        )
+        @test IS.get_horizon(time_series) == IS.get_horizon(time_series2)
+        @test IS.get_initial_time(time_series) == IS.get_initial_time(time_series2)
+
+        it = IS.get_initial_time(time_series)
+
+        all_time_series = get_all_time_series(data)
+        @test length(collect(all_time_series)) == 1
+
+        @test IS.get_time_series_initial_times(data) == [it]
+        unique_its = Set{Dates.DateTime}()
+        IS.get_time_series_initial_times!(unique_its, component) == [it]
+        @test collect(unique_its) == [it]
+        @test IS.get_time_series_initial_time(data) == it
+        @test IS.get_time_series_interval(data) == IS.UNINITIALIZED_PERIOD
+        @test IS.get_time_series_horizon(data) == IS.get_horizon(time_series)
+        @test IS.get_time_series_resolution(data) == IS.get_resolution(time_series)
+        =#
+end
+
 #=
 @testset "Test read_time_series_file_metadata" begin
     file = joinpath(FORECASTS_DIR, "ComponentsAsColumnsNoTime.json")
@@ -115,47 +162,6 @@ end
     for time_series in time_series
         @test isfile(time_series.data_file)
     end
-end
-
-@testset "Test add_time_series from file" begin
-    data = IS.SystemData()
-
-    name = "Component1"
-    component = IS.TestComponent(name, 5)
-    IS.add_component!(data, component)
-    @test !IS.has_time_series(component)
-
-    file = joinpath(FORECASTS_DIR, "ComponentsAsColumnsNoTime.json")
-    IS.add_time_series!(IS.InfrastructureSystemsComponent, data, file)
-    @test IS.has_time_series(component)
-
-    all_time_series = get_all_time_series(data)
-    @test length(all_time_series) == 1
-    time_series = all_time_series[1]
-    @test time_series isa IS.SingleTimeSeries
-
-    time_series2 = IS.get_time_series(
-        typeof(time_series),
-        component,
-        IS.get_initial_time(time_series),
-        IS.get_label(time_series),
-    )
-    @test IS.get_horizon(time_series) == IS.get_horizon(time_series2)
-    @test IS.get_initial_time(time_series) == IS.get_initial_time(time_series2)
-
-    it = IS.get_initial_time(time_series)
-
-    all_time_series = get_all_time_series(data)
-    @test length(collect(all_time_series)) == 1
-
-    @test IS.get_time_series_initial_times(data) == [it]
-    unique_its = Set{Dates.DateTime}()
-    IS.get_time_series_initial_times!(unique_its, component) == [it]
-    @test collect(unique_its) == [it]
-    @test IS.get_time_series_initial_time(data) == it
-    @test IS.get_time_series_interval(data) == IS.UNINITIALIZED_PERIOD
-    @test IS.get_time_series_horizon(data) == IS.get_horizon(time_series)
-    @test IS.get_time_series_resolution(data) == IS.get_resolution(time_series)
 end
 
 @testset "Test add_time_series" begin
