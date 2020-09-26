@@ -21,11 +21,10 @@ The caller must also remove the actual time series data.
 function remove_time_series_metadata!(
     ::Type{T},
     component::InfrastructureSystemsComponent,
-    initial_time::Dates.DateTime,
     name::AbstractString,
 ) where {T <: TimeSeriesMetadata}
-    remove_time_series!(T, get_time_series_container(component), initial_time, name)
-    @debug "Removed time_series from $component:  $initial_time $name."
+    remove_time_series!(T, get_time_series_container(component), name)
+    @debug "Removed time_series from $component:  $name."
 end
 
 function clear_time_series!(component::InfrastructureSystemsComponent)
@@ -396,30 +395,25 @@ Call `collect` on the result to get an array.
 - `component::InfrastructureSystemsComponent`: component from which to get time_series
 - `filter_func = nothing`: Only return time_series for which this returns true.
 - `type = nothing`: Only return time_series with this type.
-- `initial_time = nothing`: Only return time_series matching this value.
 - `name = nothing`: Only return time_series matching this value.
 """
 function get_time_series_multiple(
     component::InfrastructureSystemsComponent,
     filter_func = nothing;
     type = nothing,
-    initial_time = nothing,
+    start_time = nothing,
     name = nothing,
 )
     container = get_time_series_container(component)
-    time_series_keys = sort!(collect(keys(container.data)), by = x -> x.initial_time)
     storage = _get_time_series_storage(component)
     if storage === nothing
         @assert isempty(time_series_keys)
     end
 
     Channel() do channel
-        for key in time_series_keys
+        for key in keys(container.data)
             if !isnothing(type) &&
                !(time_series_metadata_to_data(key.time_series_type) <: type)
-                continue
-            end
-            if !isnothing(initial_time) && key.initial_time != initial_time
                 continue
             end
             if !isnothing(name) && key.name != name
@@ -452,10 +446,8 @@ function get_time_series_multiple(
     component::InfrastructureSystemsComponent,
 )
     container = get_time_series_container(component)
-    time_series_keys = sort!(collect(keys(container.data)), by = x -> x.initial_time)
-
-    Channel() do channel
-        for key in time_series_keys
+    time_series_keys = Channel() do channel
+        for key in keys(container.data)
             put!(channel, container.data[key])
         end
     end
