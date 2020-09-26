@@ -90,8 +90,8 @@ function add_time_series_from_file_metadata!(
     metadata_file::AbstractString;
     resolution = nothing,
 ) where {T <: InfrastructureSystemsComponent}
-    metadata = read_time_series_file_metadata(metadata_file)
-    return add_time_series_from_file_metadata!(data, T, metadata; resolution = resolution)
+    metadata = read_time_series_file_metadata(metadata_file; resolution = resolution)
+    return add_time_series_from_file_metadata!(data, T, metadata)
 end
 
 """
@@ -105,13 +105,12 @@ Adds time series data from a metadata file or metadata descriptors.
 function add_time_series_from_file_metadata!(
     data::SystemData,
     ::Type{T},
-    file_metadata::Vector{TimeSeriesFileMetadata};
-    resolution = nothing,
+    file_metadata::Vector{TimeSeriesFileMetadata}
 ) where {T <: InfrastructureSystemsComponent}
     cache = TimeSeriesCache()
 
     for metadata in file_metadata
-        _add_time_series_from_file_metadata!(data, T, cache, metadata, resolution)
+        _add_time_series_from_file_metadata!(data, T, cache, metadata)
     end
 end
 
@@ -181,13 +180,12 @@ function _add_time_series_from_file_metadata!(
     data::SystemData,
     ::Type{T},
     cache::TimeSeriesCache,
-    file_metadata::TimeSeriesFileMetadata,
-    resolution,
+    file_metadata::TimeSeriesFileMetadata
 ) where {T <: InfrastructureSystemsComponent}
     set_component!(file_metadata, data, InfrastructureSystems)
     component = file_metadata.component
 
-    ts = make_time_series!(cache, file_metadata, resolution)
+    ts = make_time_series!(cache, file_metadata)
     if !isnothing(ts)
         add_time_series!(data, component, ts)
     end
@@ -222,10 +220,9 @@ Return a time series from TimeSeriesFileMetadata.
 function make_time_series!(
     cache::TimeSeriesCache,
     ts_file_metadata::TimeSeriesFileMetadata,
-    resolution,
 )
     info = add_time_series_info!(cache, ts_file_metadata)
-    return _make_time_series(info, resolution)
+    return _make_time_series(info)
 end
 
 function _add_time_series!(
@@ -243,10 +240,10 @@ function _add_time_series!(
     _add_time_series!(data, component, ts_metadata, time_series)
 end
 
-function _make_time_series(info::TimeSeriesParsedInfo, resolution)
+function _make_time_series(info::TimeSeriesParsedInfo)
     ta = info.data[Symbol(get_name(info.component))]
     res = get_resolution(ta)
-    if resolution !== nothing && res != resolution
+    if info.resolution !== nothing && res != resolution
         @debug "Skip time_series with resolution=$res; doesn't match user=$resolution"
         return
     end
@@ -258,7 +255,7 @@ function _make_time_series(info::TimeSeriesParsedInfo, resolution)
 end
 
 function add_time_series_info!(cache::TimeSeriesCache, metadata::TimeSeriesFileMetadata)
-    time_series = _add_time_series_info!(cache, metadata.data_file, metadata.component_name)
+    time_series = _add_time_series_info!(cache, metadata)
     info = TimeSeriesParsedInfo(metadata, time_series)
     @debug "Added TimeSeriesParsedInfo" metadata
     return info
