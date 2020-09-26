@@ -182,7 +182,6 @@ end
     @test IS.get_time_series_resolution(data) == IS.get_resolution(time_series)
 end
 
-#=
 @testset "Test add_time_series" begin
     sys = IS.SystemData()
     name = "Component1"
@@ -196,13 +195,9 @@ end
     data = collect(1:24)
     ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
     name = "val"
-    ts = IS.SingleTimeSeries(
-        name = name,
-        data = ta,
-        scaling_factor_multiplier = IS.get_val,
-    )
+    ts = IS.SingleTimeSeries(name = name, data = ta, scaling_factor_multiplier = IS.get_val)
     IS.add_time_series!(sys, component, ts)
-    ts = IS.get_time_series(IS.SingleTimeSeries, component, dates[1], name)
+    ts = IS.get_time_series(IS.SingleTimeSeries, component, name; start_time = dates[1])
     @test ts isa IS.SingleTimeSeries
 
     name = "Component2"
@@ -230,17 +225,13 @@ end
     data = collect(1:24)
     ta = TimeSeries.TimeArray(dates, data, ["1"])
     name = "val"
-    ts = IS.SingleTimeSeries(
-        name = name,
-        data = ta,
-        scaling_factor_multiplier = IS.get_val,
-    )
+    ts = IS.SingleTimeSeries(name = name, data = ta, scaling_factor_multiplier = IS.get_val)
     IS.add_time_series!(sys, components, ts)
 
     hash_ta_main = nothing
     for i in 1:len
         component = IS.get_component(IS.TestComponent, sys, string(i))
-        ts = IS.get_time_series(IS.SingleTimeSeries, component, initial_time, name)
+        ts = IS.get_time_series(IS.SingleTimeSeries, component, name)
         hash_ta = hash(IS.get_data(ts))
         if i == 1
             hash_ta_main = hash_ta
@@ -275,7 +266,7 @@ end
         scaling_factor_multiplier = IS.get_val,
     )
     time_series2 = IS.SingleTimeSeries(
-        name = "val",
+        name = "val2",
         data = ta2,
         scaling_factor_multiplier = IS.get_val,
     )
@@ -289,20 +280,14 @@ end
     @test length(collect(IS.get_time_series_multiple(sys; type = IS.SingleTimeSeries))) == 2
     @test length(collect(IS.get_time_series_multiple(sys; type = IS.Probabilistic))) == 0
 
-    time_series = collect(IS.get_time_series_multiple(sys; initial_time = initial_time1))
-    @test length(time_series) == 1
-    @test IS.get_initial_time(time_series[1]) == initial_time1
-    @test TimeSeries.values(IS.get_data(time_series[1]))[1] == 1
+    time_series = collect(IS.get_time_series_multiple(sys))
+    @test length(time_series) == 2
 
-    @test length(collect(IS.get_time_series_multiple(sys; name = "val"))) == 2
+    @test length(collect(IS.get_time_series_multiple(sys; name = "val"))) == 1
     @test length(collect(IS.get_time_series_multiple(sys; name = "bad_name"))) == 0
 
     filter_func = x -> TimeSeries.values(IS.get_data(x))[12] == 12
-    @test length(collect(IS.get_time_series_multiple(
-        sys,
-        filter_func;
-        initial_time = initial_time2,
-    ))) == 0
+    @test length(collect(IS.get_time_series_multiple(sys, filter_func; name = "val2"))) == 0
 end
 
 # TODO: this is disabled because PowerSystems currently does not set names correctly.
@@ -336,10 +321,11 @@ end
     name = "val"
     ts = IS.SingleTimeSeries(name, ta; scaling_factor_multiplier = IS.get_val)
     IS.add_time_series!(sys, component, ts)
-    time_series = IS.get_time_series(IS.SingleTimeSeries, component, dates[1], name)
+    time_series = IS.get_time_series(IS.SingleTimeSeries, component, name)
     @test time_series isa IS.SingleTimeSeries
 end
 
+#=
 @testset "Test time_series initial times" begin
     sys = IS.SystemData()
 
@@ -413,6 +399,7 @@ end
     @test IS.validate_time_series_consistency(sys)
     IS.get_time_series_interval(sys) == dates2[1] - dates1[1]
 end
+=#
 
 @testset "Test remove_time_series" begin
     data = create_system_data(; with_time_series = true)
@@ -423,18 +410,13 @@ end
     @test length(get_all_time_series(data)) == 1
 
     time_series = time_series[1]
-    IS.remove_time_series!(
-        typeof(time_series),
-        data,
-        component,
-        IS.get_initial_time(time_series),
-        IS.get_name(time_series),
-    )
+    IS.remove_time_series!(typeof(time_series), data, component, IS.get_name(time_series))
 
     @test length(get_all_time_series(data)) == 0
     @test IS.get_num_time_series(data.time_series_storage) == 0
 end
 
+#=
 @testset "Test clear_time_series" begin
     data = create_system_data(; with_time_series = true)
     IS.clear_time_series!(data)

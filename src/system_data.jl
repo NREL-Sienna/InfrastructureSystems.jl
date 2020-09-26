@@ -133,7 +133,7 @@ function add_time_series!(
 )
     metadata_type = time_series_data_to_metadata(typeof(time_series))
     ts_metadata = metadata_type(time_series)
-    _add_time_series!(data, component, ts_metadata, time_series)
+    _add_time_series_metadata!(data, component, ts_metadata, time_series)
 end
 
 """
@@ -153,11 +153,11 @@ function add_time_series!(data::SystemData, components, time_series::TimeSeriesD
     metadata_type = time_series_data_to_metadata(typeof(time_series))
     ts_metadata = metadata_type(time_series)
     for component in components
-        add_time_series!(data, component, ts_metadata)
+        _add_time_series_metadata!(data, component, ts_metadata, time_series)
     end
 end
 
-function _add_time_series!(
+function _add_time_series_metadata!(
     data::SystemData,
     component::InfrastructureSystemsComponent,
     ts_metadata::T,
@@ -200,14 +200,13 @@ function remove_time_series!(
     ::Type{T},
     data::SystemData,
     component::InfrastructureSystemsComponent,
-    initial_time::Dates.DateTime,
     name::String,
 ) where {T <: TimeSeriesData}
     type = time_series_data_to_metadata(T)
-    time_series = get_time_series(type, component, initial_time, name)
+    time_series = get_time_series(type, component, name)
     uuid = get_time_series_uuid(time_series)
     # TODO: can this be atomic?
-    remove_time_series_metadata!(type, component, initial_time, name)
+    remove_time_series_metadata!(type, component, name)
     remove_time_series!(data.time_series_storage, uuid, get_uuid(component), name)
 end
 
@@ -228,20 +227,21 @@ function make_time_series!(
     return _make_time_series(info, resolution)
 end
 
-function _add_time_series!(
-    data::SystemData,
-    component::InfrastructureSystemsComponent,
-    name::AbstractString,
-    time_series::TimeSeries.TimeArray,
-    normalization_factor,
-    scaling_factor_multiplier,
-)
-    time_series = handle_normalization_factor(time_series, normalization_factor)
-    # TODO: This code path needs to accept a metdata file or parameters telling it which
-    # type of time_series to create.
-    ts_metadata = DeterministicMetadata(name, time_series, scaling_factor_multiplier)
-    _add_time_series!(data, component, ts_metadata, time_series)
-end
+# TODO DT: probably not needed any longer
+#function _add_time_series!(
+#    data::SystemData,
+#    component::InfrastructureSystemsComponent,
+#    name::AbstractString,
+#    time_series::TimeSeries.TimeArray,
+#    normalization_factor,
+#    scaling_factor_multiplier,
+#)
+#    time_series = handle_normalization_factor(time_series, normalization_factor)
+#    # TODO: This code path needs to accept a metdata file or parameters telling it which
+#    # type of time_series to create.
+#    ts_metadata = DeterministicMetadata(name, time_series, scaling_factor_multiplier)
+#    _add_time_series_metadata!(data, component, ts_metadata, time_series)
+#end
 
 function _make_time_series(info::TimeSeriesParsedInfo, resolution)
     ta = info.data[Symbol(get_name(info.component))]
@@ -332,25 +332,18 @@ Call `collect` on the result to get an array.
 - `data::SystemData`: system
 - `filter_func = nothing`: Only return time_series for which this returns true.
 - `type = nothing`: Only return time_series with this type.
-- `initial_time = nothing`: Only return time_series matching this value.
 - `name = nothing`: Only return time_series matching this value.
 """
 function get_time_series_multiple(
     data::SystemData,
     filter_func = nothing;
     type = nothing,
-    initial_time = nothing,
     name = nothing,
 )
     Channel() do channel
         for component in iterate_components_with_time_series(data.components)
-            for time_series in get_time_series_multiple(
-                component,
-                filter_func;
-                type = type,
-                initial_time = initial_time,
-                name = name,
-            )
+            for time_series in
+                get_time_series_multiple(component, filter_func; type = type, name = name)
                 put!(channel, time_series)
             end
         end
