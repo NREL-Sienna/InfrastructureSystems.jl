@@ -111,16 +111,14 @@ function get_time_series(
     row_index, len = _get_row_index(start_time, len, ts_metadata)
     column_index = _get_column_index(start_time, count, ts_metadata)
     storage = _get_time_series_storage(component)
-    return T(
+    return deserialize_time_series(
+        T,
+        storage,
         ts_metadata,
-        get_time_series(
-            storage,
-            get_time_series_uuid(ts_metadata),
-            row_index,
-            column_index,
-            len,
-            count,
-        ),
+        row_index,
+        column_index,
+        len,
+        count,
     )
 end
 
@@ -141,14 +139,13 @@ the component and applied to the data.
 function get_time_series_array(
     ::Type{T},
     component::InfrastructureSystemsComponent,
-    initial_time::Dates.DateTime,
     name::AbstractString,
     horizon::Union{Nothing, Int} = nothing,
 ) where {T <: TimeSeriesData}
     if horizon === nothing
-        time_series = get_time_series(T, component, initial_time, name)
+        time_series = get_time_series(T, component, name)
     else
-        time_series = get_time_series(T, component, initial_time, name, horizon)
+        time_series = get_time_series(T, component, name, horizon)
     end
 
     return get_time_series_array(component, time_series)
@@ -170,14 +167,12 @@ end
 function get_time_series_timestamps(
     ::Type{T},
     component::InfrastructureSystemsComponent,
-    initial_time::Dates.DateTime,
     name::AbstractString,
     horizon::Union{Nothing, Int} = nothing,
 ) where {T <: TimeSeriesData}
     return (TimeSeries.timestamp ∘ get_time_series_array)(
         T,
         component,
-        initial_time,
         name,
         horizon,
     )
@@ -406,9 +401,6 @@ function get_time_series_multiple(
 )
     container = get_time_series_container(component)
     storage = _get_time_series_storage(component)
-    if storage === nothing
-        @assert isempty(time_series_keys)
-    end
 
     Channel() do channel
         for key in keys(container.data)
@@ -420,20 +412,20 @@ function get_time_series_multiple(
                 continue
             end
             ts_metadata = container.data[key]
-            obj = get_time_series(
+            ts_type = time_series_metadata_to_data(typeof(ts_metadata))
+            ts = deserialize_time_series(
+                ts_type,
                 storage,
-                get_time_series_uuid(ts_metadata),
+                ts_metadata,
                 1,
                 1,
                 length(ts_metadata),
                 get_count(ts_metadata),
             )
-            ts_type = time_series_metadata_to_data(typeof(ts_metadata))
-            ts_data = ts_type(ts_metadata, obj)
-            if !isnothing(filter_func) && !filter_func(ts_data)
+            if !isnothing(filter_func) && !filter_func(ts)
                 continue
             end
-            put!(channel, ts_data)
+            put!(channel, ts)
         end
     end
 end
@@ -446,7 +438,7 @@ function get_time_series_multiple(
     component::InfrastructureSystemsComponent,
 )
     container = get_time_series_container(component)
-    time_series_keys = Channel() do channel
+    Channel() do channel
         for key in keys(container.data)
             put!(channel, container.data[key])
         end

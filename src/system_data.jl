@@ -133,7 +133,7 @@ function add_time_series!(
 )
     metadata_type = time_series_data_to_metadata(typeof(time_series))
     ts_metadata = metadata_type(time_series)
-    _add_time_series_metadata!(data, component, ts_metadata, time_series)
+    _attach_time_series_and_serialize!(data, component, ts_metadata, time_series)
 end
 
 """
@@ -153,11 +153,11 @@ function add_time_series!(data::SystemData, components, time_series::TimeSeriesD
     metadata_type = time_series_data_to_metadata(typeof(time_series))
     ts_metadata = metadata_type(time_series)
     for component in components
-        _add_time_series_metadata!(data, component, ts_metadata, time_series)
+        _attach_time_series_and_serialize!(data, component, ts_metadata, time_series)
     end
 end
 
-function _add_time_series_metadata!(
+function _attach_time_series_and_serialize!(
     data::SystemData,
     component::InfrastructureSystemsComponent,
     ts_metadata::T,
@@ -168,8 +168,7 @@ function _add_time_series_metadata!(
     check_add_time_series!(data.time_series_params, ts)
     check_read_only(data.time_series_storage)
     add_time_series!(component, ts_metadata, skip_if_present = skip_if_present)
-    # TODO: can this be atomic with time_series addition?
-    add_time_series!(
+    serialize_time_series!(
         data.time_series_storage,
         get_uuid(component),
         get_name(ts_metadata),
@@ -240,7 +239,7 @@ end
 #    # TODO: This code path needs to accept a metdata file or parameters telling it which
 #    # type of time_series to create.
 #    ts_metadata = DeterministicMetadata(name, time_series, scaling_factor_multiplier)
-#    _add_time_series_metadata!(data, component, ts_metadata, time_series)
+#    _attach_time_series_and_serialize!(data, component, ts_metadata, time_series)
 #end
 
 function _make_time_series(info::TimeSeriesParsedInfo, resolution)
@@ -342,8 +341,7 @@ function get_time_series_multiple(
 )
     Channel() do channel
         for component in iterate_components_with_time_series(data.components)
-            for time_series in
-                get_time_series_multiple(component, filter_func; type = type, name = name)
+            for time_series in get_time_series_multiple(component, filter_func; type = type, name = name)
                 put!(channel, time_series)
             end
         end

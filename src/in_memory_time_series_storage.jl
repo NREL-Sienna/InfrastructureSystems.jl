@@ -21,7 +21,7 @@ end
 
 function InMemoryTimeSeriesStorage()
     storage = InMemoryTimeSeriesStorage(Dict{UUIDs.UUID, _TimeSeriesRecord}())
-    @info "Created InMemoryTimeSeriesStorage"
+    @debug "Created InMemoryTimeSeriesStorage"
     return storage
 end
 
@@ -39,12 +39,11 @@ end
 
 check_read_only(storage::InMemoryTimeSeriesStorage) = nothing
 
-function add_time_series!(
+function serialize_time_series!(
     storage::InMemoryTimeSeriesStorage,
     component_uuid::UUIDs.UUID,
     name::AbstractString,
     ts::TimeSeriesData,
-    unused = nothing,
 )
     uuid = get_uuid(ts)
     if !haskey(storage.data, uuid)
@@ -91,23 +90,77 @@ function remove_time_series!(
     end
 end
 
-function get_time_series(
+function deserialize_time_series(
+    ::Type{T},
     storage::InMemoryTimeSeriesStorage,
-    uuid::UUIDs.UUID;
-    index = 0,
-    len = 0,
-)::TimeSeries.TimeArray
+    ts_metadata::TimeSeriesMetadata,
+    row_index::Int,
+    column_index::Int,
+    num_rows::Int,
+    num_columns::Int,
+) where T <: StaticTimeSeries
+    uuid = get_time_series_uuid(ts_metadata)
     if !haskey(storage.data, uuid)
         throw(ArgumentError("$uuid is not stored"))
     end
 
-    if index != 0
-        @assert len != 0
-        end_index = index + len - 1
-        return storage.data[uuid].ta.data[index:end_index]
+    ts = storage.data[uuid].ts
+    total_rows = length(ts_metadata)
+    if row_index == 1 && num_rows == total_rows
+        # No memory allocation
+        return ts
     end
 
-    return storage.data[uuid].ta.data
+    end_index = row_index + num_rows - 1
+    # TimeArray doesn't support @view
+    return split_time_series(ts, get_data(ts)[row_index:end_index])
+end
+
+function deserialize_time_series(
+    ::Type{T},
+    storage::InMemoryTimeSeriesStorage,
+    ts_metadata::TimeSeriesMetadata,
+    row_index::Int,
+    column_index::Int,
+    num_rows::Int,
+    num_columns::Int,
+) where T <: Deterministic
+    # TODO 1.0: Much of this will apply to Probabilistic and Scenarios
+    uuid = get_time_series_uuid(ts_metadata)
+    if !haskey(storage.data, uuid)
+        throw(ArgumentError("$uuid is not stored"))
+    end
+
+    ts = storage.data[uuid].ts
+    total_rows = length(ts_metadata)
+    total_columns = get_count(ts_metadata)
+    if num_rows == total_rows && num_columns == total_columns
+        return ts
+    end
+
+    full_data = get_data(ts)
+    initial_timestamp = get_initial_timestamp(ts)
+    resolution = get_resolution(ts)
+    interval = get_interval(ts)
+    start_time = initial_timestamp + interval * (column_index - 1)
+    end_row_index = row_index + num_rows - 1
+    data = SortedDict{Dates.DateTime, Vector}()
+    for initial_time in range(start_time; step = interval, length = num_columns)
+        if row_index == 1
+            it = initial_time
+        else
+            it = initial_time + (row_index - 1) * resolution
+        end
+        data[it] = @view full_data[initial_time][row_index:end_row_index]
+    end
+
+    new_ts = split_time_series(ts, data)
+    set_horizon!(new_ts, num_rows)
+    if row_index > 1
+        set_initial_timestamp!(new_ts, start_time + row_index * resolution)
+    end
+
+    return new_ts
 end
 
 function clear_time_series!(storage::InMemoryTimeSeriesStorage)

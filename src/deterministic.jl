@@ -45,15 +45,22 @@ end
 function Deterministic(
     ts_metadata::DeterministicMetadata,
     data::SortedDict{Dates.DateTime, Array},
+    use_same_uuid::Bool,
 )
+    if use_same_uuid
+        uuid = get_time_series_uuid(ts_metadata)
+    else
+        uuid = UUIDs.uuid4()
+    end
+
     return Deterministic(
         name = get_name(ts_metadata),
-        initial_timestamp = get_initial_timestamp(ts_metadata),
+        initial_timestamp = first(keys(data)),
         resolution = get_resolution(ts_metadata),
-        horizon = get_horizon(ts_metadata),
+        horizon = length(first(values(data))),
         data = data,
         scaling_factor_multiplier = get_scaling_factor_multiplier(ts_metadata),
-        internal = InfrastructureSystemsInternal(get_time_series_uuid(ts_metadata)),
+        internal = InfrastructureSystemsInternal(uuid),
     )
 end
 
@@ -109,7 +116,9 @@ function split_time_series(
     for (fname, ftype) in zip(fieldnames(T), fieldtypes(T))
         if ftype <: SortedDict{Dates.DateTime, Vector}
             val = data
-        # Note: Use the same UUID.
+        elseif ftype <: InfrastructureSystemsInternal
+            # Need to create a new UUID.
+            val = InfrastructureSystemsInternal()
         else
             val = getfield(time_series, fname)
         end
