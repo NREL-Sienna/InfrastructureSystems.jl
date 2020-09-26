@@ -201,10 +201,9 @@ function split_time_series(
     for (fname, ftype) in zip(fieldnames(T), fieldtypes(T))
         if ftype <: TimeSeries.TimeArray
             val = data
-        # Use the same UUID
-        #elseif ftype <: InfrastructureSystemsInternal
-        #    # Need to create a new UUID.
-        #    continue
+        elseif ftype <: InfrastructureSystemsInternal
+            # Need to create a new UUID.
+            val = InfrastructureSystemsInternal()
         else
             val = getfield(time_series, fname)
         end

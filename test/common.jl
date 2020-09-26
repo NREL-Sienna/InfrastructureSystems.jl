@@ -54,3 +54,11 @@ function create_time_array()
     component_name = "gen"
     return TimeSeries.TimeArray(dates, data, [component_name])
 end
+
+function create_dates(start_time::Dates.DateTime, resolution, end_time::Dates.DateTime)
+    return collect(start_time:resolution:end_time)
+end
+
+function create_dates(start_time::String, resolution, end_time::String)
+    return create_dates(Dates.DateTime(start_time), resolution, Dates.DateTime(end_time))
+end

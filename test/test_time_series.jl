@@ -6,6 +6,14 @@
 
     initial_time = Dates.DateTime("2020-09-01")
     resolution = Dates.Hour(1)
+
+    data = TimeSeries.TimeArray(
+        range(initial_time; length = 365, step = resolution),
+        ones(365),
+    )
+    data = IS.SingleTimeSeries(data = data, name = "test_c")
+    initial_time = Dates.DateTime("2020-09-01")
+    resolution = Dates.Hour(1)
     other_time = initial_time + resolution
     name = "test"
     horizon = 24
@@ -70,8 +78,9 @@
     end
     @test found == count
 
-    @test IS.get_uuid(forecast) == IS.get_uuid(var1)
-    @test IS.get_uuid(forecast) == IS.get_uuid(var2)
+    # TODO 1.0: same or not?
+    #@test IS.get_uuid(forecast) == IS.get_uuid(var1)
+    #@test IS.get_uuid(forecast) == IS.get_uuid(var2)
 end
 
 @testset "Test add SingleTimeSeries" begin
@@ -415,7 +424,6 @@ end
     @test IS.get_num_time_series(data.time_series_storage) == 0
 end
 
-#=
 @testset "Test clear_time_series" begin
     data = create_system_data(; with_time_series = true)
     IS.clear_time_series!(data)
@@ -461,14 +469,14 @@ end
         scaling_factor_multiplier = IS.get_val,
     )
     IS.add_time_series!(sys, component, ts)
-    time_series = IS.get_time_series(IS.SingleTimeSeries, component, dates[1], name)
+    time_series = IS.get_time_series(IS.SingleTimeSeries, component, name)
 
     # Test both versions of the function.
     vals = IS.get_time_series_array(component, time_series)
     @test TimeSeries.timestamp(vals) == dates
     @test TimeSeries.values(vals) == data .* component_val
 
-    vals2 = IS.get_time_series_array(IS.SingleTimeSeries, component, dates[1], name)
+    vals2 = IS.get_time_series_array(IS.SingleTimeSeries, component, name)
     @test TimeSeries.timestamp(vals2) == dates
     @test TimeSeries.values(vals2) == data .* component_val
 end
@@ -489,12 +497,17 @@ end
     ts = IS.SingleTimeSeries(name, ta)
     IS.add_time_series!(sys, component, ts)
 
-    time_series = IS.get_time_series(IS.SingleTimeSeries, component, dates[1], name)
+    time_series = IS.get_time_series(IS.SingleTimeSeries, component, name; start_time = dates[1])
     @test TimeSeries.timestamp(IS.get_data(time_series))[1] == dates[1]
+    @test length(time_series) == 24
 
-    time_series = IS.get_time_series(IS.SingleTimeSeries, component, dates[3], name, 3)
+    time_series = IS.get_time_series(IS.SingleTimeSeries, component, name; start_time = dates[3])
     @test TimeSeries.timestamp(IS.get_data(time_series))[1] == dates[3]
-    @test length(time_series) == 3
+    @test length(time_series) == 22
+
+    time_series = IS.get_time_series(IS.SingleTimeSeries, component, name; start_time = dates[5], len = 10)
+    @test TimeSeries.timestamp(IS.get_data(time_series))[1] == dates[5]
+    @test length(time_series) == 10
 end
 
 @testset "Test copy time_series no name mapping" begin
@@ -515,7 +528,7 @@ end
     component2 = IS.TestComponent("component2", 6)
     IS.add_component!(sys, component2)
     IS.copy_time_series!(component2, component)
-    time_series = IS.get_time_series(IS.SingleTimeSeries, component2, initial_time, name)
+    time_series = IS.get_time_series(IS.SingleTimeSeries, component2, name)
     @test time_series isa IS.SingleTimeSeries
     @test IS.get_initial_time(time_series) == initial_time
     @test IS.get_name(time_series) == name
@@ -541,7 +554,7 @@ end
     name2 = "val2"
     name_mapping = Dict(name1 => name2)
     IS.copy_time_series!(component2, component; name_mapping = name_mapping)
-    time_series = IS.get_time_series(IS.SingleTimeSeries, component2, initial_time, name2)
+    time_series = IS.get_time_series(IS.SingleTimeSeries, component2, name2)
     @test time_series isa IS.SingleTimeSeries
     @test IS.get_initial_time(time_series) == initial_time
     @test IS.get_name(time_series) == name2
@@ -576,16 +589,11 @@ end
     name_mapping = Dict(name2a => name2b)
     IS.copy_time_series!(component2, component; name_mapping = name_mapping)
     time_series =
-        IS.get_time_series(IS.SingleTimeSeries, component2, initial_time2, name2b)
+        IS.get_time_series(IS.SingleTimeSeries, component2, name2b)
     @test time_series isa IS.SingleTimeSeries
     @test IS.get_initial_time(time_series) == initial_time2
     @test IS.get_name(time_series) == name2b
-    @test_throws ArgumentError IS.get_time_series(
-        IS.SingleTimeSeries,
-        component2,
-        initial_time2,
-        name2a,
-    )
+    @test_throws ArgumentError IS.get_time_series(IS.SingleTimeSeries, component2, name2a)
 end
 
 @testset "Test component-time_series being added to multiple systems" begin
@@ -677,6 +685,8 @@ end
     end
 end
 
+# TODO 1.0: Scenarios are broken
+#=
 @testset "Test Scenarios time_series" begin
     sys = IS.SystemData()
     name = "Component1"
@@ -684,19 +694,26 @@ end
     component = IS.TestComponent(name, 5)
     IS.add_component!(sys, component)
 
-    dates = collect(
-        Dates.DateTime("2020-01-01T00:00:00"):Dates.Hour(1):Dates.DateTime("2020-01-01T23:00:00"),
+    initial_timestamp = Dates.DateTime("2020-01-01T00:00:00")
+    horizon = 24
+    resolution = Dates.Hour(1)
+    scenario_count = 2
+    data = SortedDict(initial_timestamp => ones(horizon, scenario_count))
+    time_series = IS.Scenarios(
+        name = name,
+        initial_timestamp = initial_timestamp,
+        horizon = horizon,
+        resolution = resolution,
+        scenario_count = scenario_count,
+        data = data,
     )
-    data = ones(24, 2)
-    ta = TimeSeries.TimeArray(dates, data)
-    time_series = IS.Scenarios(name, ta)
     fdata = IS.get_data(time_series)
     @test length(TimeSeries.colnames(fdata)) == 2
     @test TimeSeries.timestamp(ta) == TimeSeries.timestamp(fdata)
     @test TimeSeries.values(ta) == TimeSeries.values(fdata)
 
     IS.add_time_series!(sys, component, time_series)
-    time_series2 = IS.get_time_series(IS.Scenarios, component, dates[1], name)
+    time_series2 = IS.get_time_series(IS.Scenarios, component, name)
     @test time_series2 isa IS.Scenarios
     fdata2 = IS.get_data(time_series2)
     @test length(TimeSeries.colnames(fdata2)) == 2
@@ -705,13 +722,14 @@ end
 
     no_time_series = 3
     time_series3 =
-        IS.get_time_series(IS.Scenarios, component, dates[1], name, no_time_series)
+        IS.get_time_series(IS.Scenarios, component, name, no_time_series)
     @test time_series3 isa IS.Scenarios
     fdata3 = IS.get_data(time_series3)
     @test length(TimeSeries.colnames(fdata3)) == 2
     @test TimeSeries.timestamp(ta)[1:no_time_series] == TimeSeries.timestamp(fdata3)
     @test TimeSeries.values(ta)[1:no_time_series, :] == TimeSeries.values(fdata3)
 end
+=#
 
 @testset "Add time_series to unsupported struct" begin
     struct TestComponentNoTimeSeries <: IS.InfrastructureSystemsComponent
@@ -727,13 +745,8 @@ end
     name = "component"
     component = TestComponentNoTimeSeries(name)
     IS.add_component!(sys, component)
-    dates = collect(
-        Dates.DateTime("2020-01-01T00:00:00"):Dates.Hour(1):Dates.DateTime("2020-01-01T23:00:00"),
-    )
-    data = collect(1:24)
-    ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
+    dates = create_dates("2020-01-01T00:00:00", Dates.Hour(1), "2020-01-01T23:00:00")
+    ta = TimeSeries.TimeArray(dates, collect(1:24), [IS.get_name(component)])
     time_series = IS.SingleTimeSeries(name = "val", data = ta)
     @test_throws ArgumentError IS.add_time_series!(sys, component, time_series)
 end
-
-=#
