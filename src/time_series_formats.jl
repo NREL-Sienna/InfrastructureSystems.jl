@@ -13,43 +13,18 @@ Return a TimeArray from a CSV file.
 
 Pass component_name when the file does not have the component name in a column header.
 """
-function read_time_series(file_path::AbstractString, component_name = nothing; kwargs...)
-    if !isfile(file_path)
-        msg = "TimeSeries file doesn't exist : $file_path"
+function read_time_series(metadata::TimeSeriesFileMetadata; kwargs...)
+    if !isfile(metadata.data_file)
+        msg = "TimeSeries file doesn't exist : $(metadata.data_file)"
         throw(DataFormatError(msg))
     end
 
-    file = CSV.File(file_path)
-    @debug "Read CSV data from $file_path."
+    file = CSV.File(metadata.data_file)
+    @debug "Read CSV data from $(metadata.data_file)."
 
-    return read_time_series(get_time_series_format(file), file, component_name; kwargs...)
-end
-
-"""
-Return a TimeDataContainer from a CSV file.
-
-Pass component_name when the file does not have the component name in a column header.
-"""
-function read_time_series(x::Int, file_path::AbstractString, component_name = nothingresolution::Dates.Period)
-    if !isfile(file_path)
-        msg = "TimeSeries file doesn't exist : $file_path"
-        throw(DataFormatError(msg))
-    end
-    # TODO: Pass arguments
-    input = CSV.Rows(file_path)
-    @debug "Read CSV data from $file_path."
-    horizon = length(first(input)) - 1
-    data = Dict{Dates.DateTime, Vector{Float64}}()
-    # First element in the row is the time series. We use integer indexes not to rely on
-    # column names
-    for row in input
-        vector = Vector{Float64}(undef, horizon)
-        for i in 1:horizon
-            vector[i] = parse(Float64, row[i + 1])
-        end
-        data[Dates.DateTime(row.DateTime)] = vector
-    end
-    return TimeDataContainer(SortedDict(data...), resolution)
+    format = get_time_series_format(file)
+    @debug "$format detected for the time series"
+    return read_time_series(format, metadata.time_series_type, file, component_name, resolution; kwargs...)
 end
 
 """
@@ -179,16 +154,63 @@ function get_timestamp(
 end
 
 """
+Return a TimeDataContainer from a CSV file.
+
+Pass component_name when the file does not have the component name in a column header.
+"""
+function read_time_series(
+    ::Type{T},
+    ::Type{U},
+    file::CSV.File,
+    component_name = nothing,
+    resolution = nothing;
+    kwargs...
+) where {T <: TimeSeriesFileFormat, U <: Forecast}
+    error("The file format provided can't be parsed into a $U forecast")
+end
+
+"""
+Return a TimeDataContainer from a CSV file.
+
+Pass component_name when the file does not have the component name in a column header.
+"""
+function read_time_series(
+    ::Type{T},
+    ::Type{Deterministic},
+    file::CSV.File,
+    component_name = nothing,
+    resolution = nothing;
+    kwargs...
+) where {T <: TimeSeriesFormatDateTimeAsColumn}
+    input = CSV.Rows(file_path)
+    @debug "Read CSV data from $file_path."
+    horizon = length(first(input)) - 1
+    data = Dict{Dates.DateTime, Vector{Float64}}()
+    # First element in the row is the time series. We use integer indexes not to rely on
+    # column names
+    for row in input
+        vector = Vector{Float64}(undef, horizon)
+        for i in 1:horizon
+            vector[i] = parse(Float64, row[i + 1])
+        end
+        data[Dates.DateTime(row.DateTime)] = vector
+    end
+    return TimeDataContainer(SortedDict(data...), resolution)
+end
+
+"""
 Return a TimeSeries.TimeArray representing the CSV file.
 
 This version of the function only has component_name to match the interface. It is unused.
 """
 function read_time_series(
     ::Type{T},
+    time_series_data_type::Type{U},
     file::CSV.File,
-    component_name = nothing;
+    component_name = nothing,
+    resolution = nothing;
     kwargs...,
-) where {T <: TimeSeriesFormatDateTimeAsColumn}
+) where {T <: TimeSeriesFormatDateTimeAsColumn, U <: StaticTimeSeries}
     timestamps = Vector{Dates.DateTime}()
     step = get_step_time(TimeSeriesFormatDateTimeAsColumn, file, collect(1:length(file)))
 
@@ -215,10 +237,12 @@ This version of the function only has component_name to match the interface. It 
 """
 function read_time_series(
     ::Type{T},
+    ::Type{U},
     file::CSV.File,
-    component_name = nothing;
+    component_name = nothing,
+    resolution = nothing;
     kwargs...,
-) where {T <: TimeSeriesFormatPeriodAsColumn}
+) where {T <: TimeSeriesFormatPeriodAsColumn, U <: StaticTimeSeries}
     timestamps = Vector{Dates.DateTime}()
     step = get_step_time(T, file, file.Period)
 
@@ -244,10 +268,12 @@ a component, so the component_name must be passed in.
 """
 function read_time_series(
     ::Type{T},
+    ::Type{U}
     file::CSV.File,
-    component_name::AbstractString;
+    component_name::AbstractString,
+    resolution = nothing;
     kwargs...,
-) where {T <: TimeSeriesFormatPeriodAsHeader}
+) where {T <: TimeSeriesFormatPeriodAsHeader, U <: StaticTimeSeries}
     timestamps = Vector{Dates.DateTime}()
 
     period_cols_as_symbols = get_period_columns(T, file)
@@ -291,10 +317,12 @@ day is used.
 """
 function read_time_series(
     ::Type{T},
+    ::Type{U},
     file::CSV.File,
-    component_name = nothing;
+    component_name = nothing,
+    resolution = nothing;
     kwargs...,
-) where {T <: TimeSeriesFormatComponentsAsColumnsNoTime}
+) where {T <: TimeSeriesFormatComponentsAsColumnsNoTime, U <: StaticTimeSeries}
     timestamps = Vector{Dates.DateTime}()
     step = get_step_time(T, file)
 

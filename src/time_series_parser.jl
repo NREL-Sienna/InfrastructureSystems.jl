@@ -19,8 +19,7 @@ mutable struct TimeSeriesFileMetadata
     "Resolution of the data being parsed in milliseconds"
     resolution::Dates.Period
     percentiles::Vector{Float64}
-    time_series_type_module::String
-    time_series_type::String
+    time_series_type::DataType
     "Calling module must set."
     component::Union{Nothing, InfrastructureSystemsComponent}
     "Applicable when data are scaling factors. Accessor function on component to apply to
@@ -43,6 +42,10 @@ function TimeSeriesFileMetadata(;
     scaling_factor_multiplier = nothing,
     scaling_factor_multiplier_module = nothing,
 )
+
+    mod = Base.root_module(Base.__toplevel__, Symbol(time_series_type_module))
+    ts_type = getfield(mod, Symbol(time_series_type))
+
     return TimeSeriesFileMetadata(
         simulation,
         category,
@@ -52,8 +55,7 @@ function TimeSeriesFileMetadata(;
         data_file,
         resolution,
         percentiles,
-        time_series_type_module,
-        time_series_type,
+        ts_type,
         nothing,
         scaling_factor_multiplier,
         scaling_factor_multiplier_module,
@@ -228,8 +230,8 @@ struct TimeSeriesParsedInfo
 end
 
 function TimeSeriesParsedInfo(metadata::TimeSeriesFileMetadata, ta::TimeSeries.TimeArray)
-    mod = Base.root_module(Base.__toplevel__, Symbol(metadata.time_series_type_module))
-    ts_type = getfield(mod, Symbol(metadata.time_series_type))
+    #mod = Base.root_module(Base.__toplevel__, Symbol(metadata.time_series_type_module))
+    #ts_type = getfield(mod, Symbol(metadata.time_series_type))
 
     if (
         metadata.scaling_factor_multiplier === nothing &&
@@ -272,7 +274,7 @@ function TimeSeriesParsedInfo(metadata::TimeSeriesFileMetadata, ta::TimeSeries.T
         ta,
         metadata.percentiles,
         metadata.data_file,
-        ts_type,
+        metadata.ts_type,
         multiplier_func,
     )
 end
@@ -293,11 +295,10 @@ function _add_time_series_info!(
     cache::TimeSeriesCache,
     metadata::TimeSeriesFileMetadata
 )
-    metadata.data_file, metadata.component_name
-    if !haskey(cache.data_files, data_file)
-        cache.data_files[data_file] = read_time_series(metadata.data_file, metadata.component_name, metadata.resolution)
-        @debug "Added time series file" data_file
+    if !haskey(cache.data_files, metadata.data_file)
+        cache.data_files[metadata.data_file] = read_time_series(metadata)
+        @debug "Added time series file" metadata.data_file
     end
 
-    return cache.data_files[data_file]
+    return cache.data_files[metadata.data_file]
 end
