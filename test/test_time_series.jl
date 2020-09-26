@@ -147,16 +147,15 @@ end
     component = IS.TestComponent(name, 5)
     IS.add_component!(data, component)
     @test !IS.has_time_series(component)
-
     file = joinpath(FORECASTS_DIR, "ComponentsAsColumnsNoTime.json")
     IS.add_time_series_from_file_metadata!(data, IS.InfrastructureSystemsComponent, file)
     @test IS.has_time_series(component)
 
-    all_time_series = get_all_time_series(data)
-    @test length(all_time_series) == 1
-    time_series = all_time_series[1]
-    @test time_series isa IS.SingleTimeSeries
-
+#=
+@testset "Test read_time_series_file_metadata" begin
+    file = joinpath(FORECASTS_DIR, "ComponentsAsColumnsNoTime.json")
+    time_series = IS.read_time_series_file_metadata(file)
+    @test length(time_series) == 1
     time_series2 = IS.get_time_series(
         typeof(time_series),
         component,
