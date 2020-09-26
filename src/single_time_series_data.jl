@@ -37,7 +37,7 @@ Return a time_series truncated starting with timestamp.
 """
 function from(time_series::T, timestamp) where {T <: SingleTimeSeries}
     return T(;
-        label = get_label(time_series),
+        name = get_name(time_series),
         data = TimeSeries.from(get_data(time_series), timestamp),
     )
 end
@@ -47,7 +47,7 @@ Return a time_series truncated after timestamp.
 """
 function to(time_series::T, timestamp) where {T <: SingleTimeSeries}
     return T(;
-        label = get_label(time_series),
+        name = get_name(time_series),
         data = TimeSeries.to(get_data(time_series), timestamp),
     )
 end
@@ -96,33 +96,6 @@ function _split_time_series(
     end
 
     return T(vals...)
-end
-
-function get_resolution(ts::TimeSeries.TimeArray)
-    tstamps = TimeSeries.timestamp(ts)
-    timediffs = unique([tstamps[ix] - tstamps[ix - 1] for ix in 2:length(tstamps)])
-
-    res = []
-
-    for timediff in timediffs
-        if mod(timediff, Dates.Millisecond(Dates.Day(1))) == Dates.Millisecond(0)
-            push!(res, Dates.Day(timediff / Dates.Millisecond(Dates.Day(1))))
-        elseif mod(timediff, Dates.Millisecond(Dates.Hour(1))) == Dates.Millisecond(0)
-            push!(res, Dates.Hour(timediff / Dates.Millisecond(Dates.Hour(1))))
-        elseif mod(timediff, Dates.Millisecond(Dates.Minute(1))) == Dates.Millisecond(0)
-            push!(res, Dates.Minute(timediff / Dates.Millisecond(Dates.Minute(1))))
-        elseif mod(timediff, Dates.Millisecond(Dates.Second(1))) == Dates.Millisecond(0)
-            push!(res, Dates.Second(timediff / Dates.Millisecond(Dates.Second(1))))
-        else
-            throw(DataFormatError("cannot understand the resolution of the time series"))
-        end
-    end
-
-    if length(res) > 1
-        throw(DataFormatError("time series has non-uniform resolution: this is currently not supported"))
-    end
-
-    return res[1]
 end
 
 get_columns(::Type{<:TimeSeriesMetadata}, ta::TimeSeries.TimeArray) = nothing

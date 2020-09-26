@@ -3,7 +3,7 @@ This file is auto-generated. Do not edit.
 =#
 """
     mutable struct SingleTimeSeriesMetadata <: StaticTimeSeriesMetadata
-        label::String
+        name::String
         resolution::Dates.Period
         initial_time::Dates.DateTime
         time_series_uuid::UUIDs.UUID
@@ -15,7 +15,7 @@ This file is auto-generated. Do not edit.
 A TimeSeries Data object in contigous form.
 
 # Arguments
-- `label::String`: user-defined label
+- `name::String`: user-defined name
 - `resolution::Dates.Period`
 - `initial_time::Dates.DateTime`: time series availability time
 - `time_series_uuid::UUIDs.UUID`: reference to time series data
@@ -24,8 +24,8 @@ A TimeSeries Data object in contigous form.
 - `internal::InfrastructureSystemsInternal`
 """
 mutable struct SingleTimeSeriesMetadata <: StaticTimeSeriesMetadata
-    "user-defined label"
-    label::String
+    "user-defined name"
+    name::String
     resolution::Dates.Period
     "time series availability time"
     initial_time::Dates.DateTime
@@ -38,16 +38,16 @@ mutable struct SingleTimeSeriesMetadata <: StaticTimeSeriesMetadata
     internal::InfrastructureSystemsInternal
 end
 
-function SingleTimeSeriesMetadata(label, resolution, initial_time, time_series_uuid, length, scaling_factor_multiplier=nothing, )
-    SingleTimeSeriesMetadata(label, resolution, initial_time, time_series_uuid, length, scaling_factor_multiplier, InfrastructureSystemsInternal(), )
+function SingleTimeSeriesMetadata(name, resolution, initial_time, time_series_uuid, length, scaling_factor_multiplier=nothing, )
+    SingleTimeSeriesMetadata(name, resolution, initial_time, time_series_uuid, length, scaling_factor_multiplier, InfrastructureSystemsInternal(), )
 end
 
-function SingleTimeSeriesMetadata(; label, resolution, initial_time, time_series_uuid, length, scaling_factor_multiplier=nothing, internal=InfrastructureSystemsInternal(), )
-    SingleTimeSeriesMetadata(label, resolution, initial_time, time_series_uuid, length, scaling_factor_multiplier, internal, )
+function SingleTimeSeriesMetadata(; name, resolution, initial_time, time_series_uuid, length, scaling_factor_multiplier=nothing, internal=InfrastructureSystemsInternal(), )
+    SingleTimeSeriesMetadata(name, resolution, initial_time, time_series_uuid, length, scaling_factor_multiplier, internal, )
 end
 
-"""Get [`SingleTimeSeriesMetadata`](@ref) `label`."""
-get_label(value::SingleTimeSeriesMetadata) = value.label
+"""Get [`SingleTimeSeriesMetadata`](@ref) `name`."""
+get_name(value::SingleTimeSeriesMetadata) = value.name
 """Get [`SingleTimeSeriesMetadata`](@ref) `resolution`."""
 get_resolution(value::SingleTimeSeriesMetadata) = value.resolution
 """Get [`SingleTimeSeriesMetadata`](@ref) `initial_time`."""
@@ -61,8 +61,8 @@ get_scaling_factor_multiplier(value::SingleTimeSeriesMetadata) = value.scaling_f
 """Get [`SingleTimeSeriesMetadata`](@ref) `internal`."""
 get_internal(value::SingleTimeSeriesMetadata) = value.internal
 
-"""Set [`SingleTimeSeriesMetadata`](@ref) `label`."""
-set_label!(value::SingleTimeSeriesMetadata, val) = value.label = val
+"""Set [`SingleTimeSeriesMetadata`](@ref) `name`."""
+set_name!(value::SingleTimeSeriesMetadata, val) = value.name = val
 """Set [`SingleTimeSeriesMetadata`](@ref) `resolution`."""
 set_resolution!(value::SingleTimeSeriesMetadata, val) = value.resolution = val
 """Set [`SingleTimeSeriesMetadata`](@ref) `initial_time`."""

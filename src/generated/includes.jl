@@ -11,10 +11,9 @@ export get_count
 export get_data
 export get_horizon
 export get_initial_time
-export get_initial_time_stamp
-export get_internal
+export get_initial_timestamp
 export get_interval
-export get_label
+export get_name
 export get_length
 export get_percentiles
 export get_resolution
@@ -25,10 +24,9 @@ export set_count!
 export set_data!
 export set_horizon!
 export set_initial_time!
-export set_initial_time_stamp!
-export set_internal!
+export set_initial_timestamp!
 export set_interval!
-export set_label!
+export set_name!
 export set_length!
 export set_percentiles!
 export set_resolution!

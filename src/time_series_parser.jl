@@ -7,8 +7,8 @@ mutable struct TimeSeriesFileMetadata
     "Calling module should determine the actual type."
     "Name of time_series component"
     component_name::String
-    "User-defined label"
-    label::String
+    "User-defined name"
+    name::String
     "Controls normalization of time series.
      Use 1.0 for pre-normalized data.
      Use 'Max' to divide the time series by the max value in the column.
@@ -31,7 +31,7 @@ function TimeSeriesFileMetadata(;
     simulation,
     category,
     component_name,
-    label,
+    name,
     normalization_factor,
     data_file,
     percentiles,
@@ -44,7 +44,7 @@ function TimeSeriesFileMetadata(;
         simulation,
         category,
         component_name,
-        label,
+        name,
         normalization_factor,
         data_file,
         percentiles,
@@ -78,7 +78,7 @@ function read_time_series_file_metadata(file_path::AbstractString)
                         simulation = item["simulation"],
                         category = item["category"],
                         component_name = item["component_name"],
-                        label = item["label"],
+                        name = item["name"],
                         normalization_factor = normalization_factor,
                         data_file = item["data_file"],
                         # Use default values until CDM data is updated.
@@ -110,7 +110,7 @@ function read_time_series_file_metadata(file_path::AbstractString)
                     simulation = row.simulation,
                     category = row.category,
                     component_name = row.component_name,
-                    label = row.label,
+                    name = row.name,
                     normalization_factor = row.normalization_factor,
                     data_file = row.data_file,
                     percentiles = [],
@@ -182,7 +182,7 @@ end
 struct TimeSeriesParsedInfo
     simulation::String
     component::InfrastructureSystemsComponent
-    label::String  # Component field on which time series data is based.
+    name::String  # Component field on which time series data is based.
     normalization_factor::NormalizationFactor
     data::TimeSeries.TimeArray
     percentiles::Vector{Float64}
@@ -193,7 +193,7 @@ struct TimeSeriesParsedInfo
     function TimeSeriesParsedInfo(
         simulation,
         component,
-        label,
+        name,
         normalization_factor,
         data,
         percentiles,
@@ -204,7 +204,7 @@ struct TimeSeriesParsedInfo
         new(
             simulation,
             component,
-            label,
+            name,
             normalization_factor,
             data,
             percentiles,
@@ -217,7 +217,7 @@ end
 
 function TimeSeriesParsedInfo(metadata::TimeSeriesFileMetadata, ta::TimeSeries.TimeArray)
     mod = Base.root_module(Base.__toplevel__, Symbol(metadata.time_series_type_module))
-    ts_type = time_series_data_to_metadata(getfield(mod, Symbol(metadata.time_series_type)))
+    ts_type = getfield(mod, Symbol(metadata.time_series_type))
 
     if (
         metadata.scaling_factor_multiplier === nothing &&
@@ -255,7 +255,7 @@ function TimeSeriesParsedInfo(metadata::TimeSeriesFileMetadata, ta::TimeSeries.T
     return TimeSeriesParsedInfo(
         metadata.simulation,
         metadata.component,
-        metadata.label,
+        metadata.name,
         normalization_factor,
         ta,
         metadata.percentiles,

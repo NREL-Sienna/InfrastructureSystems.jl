@@ -1,14 +1,14 @@
 
-const _ComponentLabelReferences = Set{Tuple{UUIDs.UUID, String}}
+const _ComponentnameReferences = Set{Tuple{UUIDs.UUID, String}}
 
 struct _TimeSeriesRecord
-    component_labels::_ComponentLabelReferences
-    ta::TimeDataContainer
+    component_names::_ComponentnameReferences
+    ts::TimeSeriesData
 end
 
-function _TimeSeriesRecord(component_uuid, label, ta)
-    record = _TimeSeriesRecord(_ComponentLabelReferences(), ta)
-    push!(record.component_labels, (component_uuid, label))
+function _TimeSeriesRecord(component_uuid, name, ts)
+    record = _TimeSeriesRecord(_ComponentnameReferences(), ts)
+    push!(record.component_names, (component_uuid, name))
     return record
 end
 
@@ -30,8 +30,8 @@ Constructs InMemoryTimeSeriesStorage from an instance of Hdf5TimeSeriesStorage.
 """
 function InMemoryTimeSeriesStorage(hdf5_storage::Hdf5TimeSeriesStorage)
     storage = InMemoryTimeSeriesStorage()
-    for (component, label, time_series) in iterate_time_series(hdf5_storage)
-        add_time_series!(storage, component, label, time_series)
+    for (component, name, time_series) in iterate_time_series(hdf5_storage)
+        add_time_series!(storage, component, name, time_series)
     end
 
     return storage
@@ -42,50 +42,50 @@ check_read_only(storage::InMemoryTimeSeriesStorage) = nothing
 function add_time_series!(
     storage::InMemoryTimeSeriesStorage,
     component_uuid::UUIDs.UUID,
-    label::AbstractString,
-    ta::TimeDataContainer,
+    name::AbstractString,
+    ts::TimeSeriesData,
     unused = nothing,
 )
-    uuid = get_uuid(ta)
+    uuid = get_uuid(ts)
     if !haskey(storage.data, uuid)
-        @debug "Create new time series entry." uuid component_uuid label
-        storage.data[uuid] = _TimeSeriesRecord(component_uuid, label, ta)
+        @debug "Create new time series entry." uuid component_uuid name
+        storage.data[uuid] = _TimeSeriesRecord(component_uuid, name, ts)
     else
-        add_time_series_reference!(storage, component_uuid, label, uuid)
+        add_time_series_reference!(storage, component_uuid, name, uuid)
     end
 end
 
 function add_time_series_reference!(
     storage::InMemoryTimeSeriesStorage,
     component_uuid::UUIDs.UUID,
-    label::AbstractString,
+    name::AbstractString,
     ts_uuid::UUIDs.UUID,
 )
-    @debug "Add reference to existing time series entry." ts_uuid component_uuid label
+    @debug "Add reference to existing time series entry." ts_uuid component_uuid name
     record = storage.data[ts_uuid]
-    push!(record.component_labels, (component_uuid, label))
+    push!(record.component_names, (component_uuid, name))
 end
 
 function remove_time_series!(
     storage::InMemoryTimeSeriesStorage,
     uuid::UUIDs.UUID,
     component_uuid::UUIDs.UUID,
-    label::AbstractString,
+    name::AbstractString,
 )
     if !haskey(storage.data, uuid)
         throw(ArgumentError("$uuid is not stored"))
     end
 
     record = storage.data[uuid]
-    component_label = (component_uuid, label)
-    if !(component_label in record.component_labels)
-        throw(ArgumentError("$component_label wasn't stored for $uuid"))
+    component_name = (component_uuid, name)
+    if !(component_name in record.component_names)
+        throw(ArgumentError("$component_name wasn't stored for $uuid"))
     end
 
-    pop!(record.component_labels, component_label)
-    @debug "Removed $component_label from $uuid."
+    pop!(record.component_names, component_name)
+    @debug "Removed $component_name from $uuid."
 
-    if isempty(record.component_labels)
+    if isempty(record.component_names)
         @debug "$uuid has no more references; delete it."
         pop!(storage.data, uuid)
     end
@@ -123,7 +123,7 @@ function convert_to_hdf5(storage::InMemoryTimeSeriesStorage, filename::AbstractS
     create_file = true
     hdf5_storage = Hdf5TimeSeriesStorage(create_file; filename = filename)
     for record in values(storage.data)
-        for pair in record.component_labels
+        for pair in record.component_names
             columns = TimeSeries.colnames(record.ta.data)
             add_time_series!(hdf5_storage, pair[1], pair[2], record.ta, columns)
         end
@@ -141,8 +141,8 @@ function compare_values(x::InMemoryTimeSeriesStorage, y::InMemoryTimeSeriesStora
     for key in keys_x
         record_x = x.data[key]
         record_y = y.data[key]
-        if record_x.component_labels != record_y.component_labels
-            @error "component_labels don't match" record_x.component_labels record_y.component_labels
+        if record_x.component_names != record_y.component_names
+            @error "component_names don't match" record_x.component_names record_y.component_names
             return false
         end
         if TimeSeries.timestamp(record_x.ta.data) != TimeSeries.timestamp(record_y.ta.data)
