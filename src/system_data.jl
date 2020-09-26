@@ -78,20 +78,20 @@ end
 Adds time_series from a metadata file or metadata descriptors.
 
 # Arguments
-- `::Type{T}`: type of the component associated with time series data; may be abstract
 - `data::SystemData`: system
+- `::Type{T}`: type of the component associated with time series data; may be abstract
 - `metadata_file::AbstractString`: metadata file for time series
   that includes an array of TimeSeriesFileMetadata instances or a vector.
 - `resolution::DateTime.Period=nothing`: skip time_series that don't match this resolution.
 """
-function add_time_series!(
-    ::Type{T},
+function add_time_series_from_file_metadata!(
     data::SystemData,
+    ::Type{T},
     metadata_file::AbstractString;
     resolution = nothing,
 ) where {T <: InfrastructureSystemsComponent}
     metadata = read_time_series_file_metadata(metadata_file)
-    return add_time_series!(T, data, metadata; resolution = resolution)
+    return add_time_series_from_file_metadata!(data, T, metadata; resolution = resolution)
 end
 
 """
@@ -102,16 +102,16 @@ Adds time series data from a metadata file or metadata descriptors.
 - `file_metadata::Vector{TimeSeriesFileMetadata}`: metadata for time series
 - `resolution::DateTime.Period=nothing`: skip time_series that don't match this resolution.
 """
-function add_time_series!(
-    ::Type{T},
+function add_time_series_from_file_metadata!(
     data::SystemData,
+    ::Type{T},
     file_metadata::Vector{TimeSeriesFileMetadata};
     resolution = nothing,
 ) where {T <: InfrastructureSystemsComponent}
     cache = TimeSeriesCache()
 
     for metadata in file_metadata
-        add_time_series!(T, data, cache, metadata; resolution = resolution)
+        _add_time_series_from_file_metadata!(data, T, cache, metadata, resolution)
     end
 end
 
@@ -177,19 +177,19 @@ function _add_time_series!(
     )
 end
 
-function add_time_series!(
-    ::Type{T},
+function _add_time_series_from_file_metadata!(
     data::SystemData,
+    ::Type{T},
     cache::TimeSeriesCache,
-    file_metadata::TimeSeriesFileMetadata;
-    resolution = nothing,
+    file_metadata::TimeSeriesFileMetadata,
+    resolution,
 ) where {T <: InfrastructureSystemsComponent}
     set_component!(file_metadata, data, InfrastructureSystems)
     component = file_metadata.component
 
-    ts_metadata, ta = make_time_series!(cache, file_metadata; resolution = resolution)
-    if !isnothing(ts_metadata)
-        add_time_series!(data, component, ts_metadata, ta)
+    ts = make_time_series!(cache, file_metadata, resolution)
+    if !isnothing(ts)
+        add_time_series!(data, component, ts)
     end
 end
 
@@ -212,7 +212,7 @@ function remove_time_series!(
 end
 
 """
-Return a vector of time_series from TimeSeriesFileMetadata.
+Return a time series from TimeSeriesFileMetadata.
 
 # Arguments
 - `cache::TimeSeriesCache`: cached data
@@ -221,8 +221,8 @@ Return a vector of time_series from TimeSeriesFileMetadata.
 """
 function make_time_series!(
     cache::TimeSeriesCache,
-    ts_file_metadata::TimeSeriesFileMetadata;
-    resolution = nothing,
+    ts_file_metadata::TimeSeriesFileMetadata,
+    resolution,
 )
     info = add_time_series_info!(cache, ts_file_metadata)
     return _make_time_series(info, resolution)
@@ -243,34 +243,18 @@ function _add_time_series!(
     _add_time_series!(data, component, ts_metadata, time_series)
 end
 
-function _make_time_series(cache::TimeSeriesCache, resolution)
-    time_series_arrays = Vector{TimeSeriesData}()
-
-    for info in cache.infos
-        time_series = _make_time_series(info, resolution)
-        if !isnothing(time_series)
-            push!(time_series_arrays, time_series)
-        end
-    end
-
-    return time_series_arrays
-end
-
 function _make_time_series(info::TimeSeriesParsedInfo, resolution)
-    len = length(info.data)
-    @assert len >= 2
-    timestamps = TimeSeries.timestamp(info.data)
-    res = timestamps[2] - timestamps[1]
-    if !isnothing(resolution) && res != resolution
+    ta = info.data[Symbol(get_name(info.component))]
+    res = get_resolution(ta)
+    if resolution !== nothing && res != resolution
         @debug "Skip time_series with resolution=$res; doesn't match user=$resolution"
-        return nothing, nothing
+        return
     end
 
-    ta = info.data[Symbol(get_name(info.component))]
     ta = handle_normalization_factor(ta, info.normalization_factor)
-    ts_metadata = info.time_series_type(info.name, ta, info.scaling_factor_multiplier)
-    @debug "Created $ts_metadata"
-    return ts_metadata, ta
+    ts = info.time_series_type(info.name, ta, info.scaling_factor_multiplier)
+    @debug "Created $ts"
+    return ts
 end
 
 function add_time_series_info!(cache::TimeSeriesCache, metadata::TimeSeriesFileMetadata)

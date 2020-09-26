@@ -133,25 +133,6 @@ function get_time_series(
     return get_time_series(T, get_time_series_container(component), name)
 end
 
-function _make_time_series(
-    ::Type{T},
-    component::InfrastructureSystemsComponent,
-    start_index::Int,
-    len::Int,
-    initial_time::Dates.DateTime,
-    name::AbstractString,
-) where {T <: TimeSeriesMetadata}
-    container = get_time_series_container(component)
-    ts_metadata = get_time_series(T, container, name)
-    ta = get_time_series(
-        _get_time_series_storage(component),
-        get_time_series_uuid(ts_metadata);
-        index = start_index,
-        len = len,
-    )
-    return T(ts_metadata, ta)
-end
-
 """
 Return a TimeSeries.TimeArray for the given time series parameters.
 
@@ -445,9 +426,16 @@ function get_time_series_multiple(
                 continue
             end
             ts_metadata = container.data[key]
-            ta = get_time_series(storage, get_time_series_uuid(ts_metadata))
+            obj = get_time_series(
+                storage,
+                get_time_series_uuid(ts_metadata),
+                1,
+                1,
+                length(ts_metadata),
+                get_count(ts_metadata),
+            )
             ts_type = time_series_metadata_to_data(typeof(ts_metadata))
-            ts_data = ts_type(ts_metadata, ta)
+            ts_data = ts_type(ts_metadata, obj)
             if !isnothing(filter_func) && !filter_func(ts_data)
                 continue
             end

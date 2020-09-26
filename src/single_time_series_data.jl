@@ -98,31 +98,4 @@ function _split_time_series(
     return T(vals...)
 end
 
-function get_resolution(ts::TimeSeries.TimeArray)
-    tstamps = TimeSeries.timestamp(ts)
-    timediffs = unique([tstamps[ix] - tstamps[ix - 1] for ix in 2:length(tstamps)])
-
-    res = []
-
-    for timediff in timediffs
-        if mod(timediff, Dates.Millisecond(Dates.Day(1))) == Dates.Millisecond(0)
-            push!(res, Dates.Day(timediff / Dates.Millisecond(Dates.Day(1))))
-        elseif mod(timediff, Dates.Millisecond(Dates.Hour(1))) == Dates.Millisecond(0)
-            push!(res, Dates.Hour(timediff / Dates.Millisecond(Dates.Hour(1))))
-        elseif mod(timediff, Dates.Millisecond(Dates.Minute(1))) == Dates.Millisecond(0)
-            push!(res, Dates.Minute(timediff / Dates.Millisecond(Dates.Minute(1))))
-        elseif mod(timediff, Dates.Millisecond(Dates.Second(1))) == Dates.Millisecond(0)
-            push!(res, Dates.Second(timediff / Dates.Millisecond(Dates.Second(1))))
-        else
-            throw(DataFormatError("cannot understand the resolution of the time series"))
-        end
-    end
-
-    if length(res) > 1
-        throw(DataFormatError("time series has non-uniform resolution: this is currently not supported"))
-    end
-
-    return res[1]
-end
-
 get_columns(::Type{<:TimeSeriesMetadata}, ta::TimeSeries.TimeArray) = nothing
