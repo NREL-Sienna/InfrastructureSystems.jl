@@ -1,4 +1,76 @@
 """
+Construct Deterministic from a Dict of TimeArrays, DataFrames or Arrays.
+
+# Arguments
+- `name::AbstractString`: user-defined name
+- `data::Union{Dict{Dates.DateTime, Any}, SortedDict.Dict{Dates.DateTime, Any}}`: time series data. The values in the dictionary should be TimeSeries.TimeArray or be able to be converted
+- `normalization_factor::NormalizationFactor = 1.0`: optional normalization factor to apply
+  to each data entry
+- `scaling_factor_multiplier::Union{Nothing, Function} = nothing`: If the data are scaling
+  factors then this function will be called on the component and applied to the data when
+  [`get_time_series_array`](@ref) is called.
+- `timestamp = :timestamp`: If the values are DataFrames is passed then this must be the column name that
+  contains timestamps.
+- `resolution = nothing : If the values are a Matrix or a Vector, then this must be the resolution of the forecast in Dates.Period`
+"""
+function Deterministic(
+    name::AbstractString,
+    data::Union{Dict{Dates.DateTime, Any}, SortedDict{Dates.DateTime, Any}};
+    normalization_factor::NormalizationFactor = 1.0,
+    scaling_factor_multiplier::Union{Nothing, Function} = nothing,
+    timestamp = :timestamp,
+    resolution::Union{Dates.Period, Nothing} = nothing,
+)
+    for (k, v) in data
+        if v isa DataFrames.DataFrame
+            data[k] = TimeSeries.TimeArray(v; timestamp = timestamp)
+        elseif v isa TimeSeries.TimeArray
+            continue
+        else
+            try
+                data[k] =
+                    TimeSeries.TimeArray(range(k, length = length(v), step = resolution))
+            catch e
+                throw(ArgumentError("The values in the data dict can't be converted to TimeArrays. Resulting error: $e"))
+            end
+        end
+    end
+
+    ta = handle_normalization_factor(ta, normalization_factor)
+    return Deterministic(name, ta, scaling_factor_multiplier)
+end
+
+# TODO: need to make concatenation constructors for Probabilistic
+
+function Deterministic(
+    ts_metadata::DeterministicMetadata,
+    data::SortedDict{Dates.DateTime, Array},
+)
+    return Deterministic(
+        name = get_name(ts_metadata),
+        initial_timestamp = get_initial_timestamp(ts_metadata),
+        resolution = get_resolution(ts_metadata),
+        horizon = get_horizon(ts_metadata),
+        data = data,
+        scaling_factor_multiplier = get_scaling_factor_multiplier(ts_metadata),
+        internal = InfrastructureSystemsInternal(get_time_series_uuid(ts_metadata)),
+    )
+end
+
+function DeterministicMetadata(ts::Deterministic)
+    return DeterministicMetadata(
+        get_name(ts),
+        get_resolution(ts),
+        get_initial_timestamp(ts),
+        get_interval(ts),
+        get_count(ts),
+        get_uuid(ts),
+        get_horizon(ts),
+        get_scaling_factor_multiplier(ts),
+    )
+end
+
+"""
 Return the forecast window corresponsing to initial_time.
 """
 function get_window(forecast::Deterministic, initial_time::Dates.DateTime)
@@ -24,4 +96,26 @@ end
 
 function get_array_for_hdf(forecast::Deterministic)
     return hcat(values(forecast.data)...)
+end
+
+"""
+Creates a new Deterministic from an existing instance and a subset of data.
+"""
+function split_time_series(
+    time_series::T,
+    data::SortedDict{Dates.DateTime, Vector},
+) where {T <: Deterministic}
+    vals = []
+    for (fname, ftype) in zip(fieldnames(T), fieldtypes(T))
+        if ftype <: SortedDict{Dates.DateTime, Vector}
+            val = data
+        # Note: Use the same UUID.
+        else
+            val = getfield(time_series, fname)
+        end
+
+        push!(vals, val)
+    end
+
+    return T(vals...)
 end

@@ -1,9 +1,125 @@
+"""
+Construct SingleTimeSeries from a TimeArray or DataFrame.
+
+# Arguments
+- `name::AbstractString`: user-defined name
+- `data::Union{TimeSeries.TimeArray, DataFrames.DataFrame}`: time series data
+- `normalization_factor::NormalizationFactor = 1.0`: optional normalization factor to apply
+  to each data entry
+- `scaling_factor_multiplier::Union{Nothing, Function} = nothing`: If the data are scaling
+  factors then this function will be called on the component and applied to the data when
+  [`get_time_series_array`](@ref) is called.
+- `timestamp = :timestamp`: If a DataFrame is passed then this must be the column name that
+  contains timestamps.
+"""
+function SingleTimeSeries(
+    name::AbstractString,
+    data::Union{TimeSeries.TimeArray, DataFrames.DataFrame};
+    normalization_factor::NormalizationFactor = 1.0,
+    scaling_factor_multiplier::Union{Nothing, Function} = nothing,
+    timestamp = :timestamp,
+)
+    if data isa DataFrames.DataFrame
+        ta = TimeSeries.TimeArray(data; timestamp = timestamp)
+    elseif data isa TimeSeries.TimeArray
+        ta = data
+    else
+        error("fatal: $(typeof(data))")
+    end
+
+    ta = handle_normalization_factor(ta, normalization_factor)
+    return SingleTimeSeries(name, ta, scaling_factor_multiplier)
+end
+
+"""
+Construct SingleTimeSeries from a CSV file. The file must have a column that is the name of the
+component.
+
+# Arguments
+- `name::AbstractString`: user-defined name
+- `filename::AbstractString`: name of CSV file containing data
+- `normalization_factor::NormalizationFactor = 1.0`: optional normalization factor to apply
+  to each data entry
+- `scaling_factor_multiplier::Union{Nothing, Function} = nothing`: If the data are scaling
+  factors then this function will be called on the component and applied to the data when
+  [`get_time_series_array`](@ref) is called.
+"""
+function SingleTimeSeries(
+    name::AbstractString,
+    filename::AbstractString,
+    component::InfrastructureSystemsComponent;
+    normalization_factor::NormalizationFactor = 1.0,
+    scaling_factor_multiplier::Union{Nothing, Function} = nothing,
+)
+    component_name = get_name(component)
+    ta = read_time_series(filename, component_name)
+    ta = handle_normalization_factor(ta[Symbol(component_name)], normalization_factor)
+    return SingleTimeSeries(name, ta, scaling_factor_multiplier)
+end
+
+"""
+Construct SingleTimeSeries after constructing a TimeArray from `initial_time` and
+`time_steps`.
+"""
+function SingleTimeSeries(
+    name::String,
+    resolution::Dates.Period,
+    initial_time::Dates.DateTime,
+    time_steps::Int,
+)
+    data = TimeSeries.TimeArray(
+        initial_time:resolution:(initial_time + resolution * (time_steps - 1)),
+        ones(time_steps),
+    )
+    return SingleTimeSeries(; name = name, data = data)
+end
+
+function SingleTimeSeries(time_series::Vector{SingleTimeSeries})
+    @assert !isempty(time_series)
+    timestamps =
+        collect(Iterators.flatten((TimeSeries.timestamp(get_data(x)) for x in time_series)))
+    data = collect(Iterators.flatten((TimeSeries.values(get_data(x)) for x in time_series)))
+    ta = TimeSeries.TimeArray(timestamps, data)
+
+    time_series = SingleTimeSeries(
+        name = get_name(time_series[1]),
+        data = ta,
+        scaling_factor_multiplier = time_series[1].scaling_factor_multiplier,
+    )
+    @debug "concatenated time_series" time_series
+    return time_series
+end
+
+function SingleTimeSeries(ts_metadata::SingleTimeSeriesMetadata, data::TimeSeries.TimeArray)
+    return SingleTimeSeries(
+        get_name(ts_metadata),
+        data,
+        get_scaling_factor_multiplier(ts_metadata),
+        InfrastructureSystemsInternal(get_time_series_uuid(ts_metadata)),
+    )
+end
+
+function SingleTimeSeriesMetadata(ts::SingleTimeSeries)
+    return SingleTimeSeriesMetadata(
+        get_name(ts),
+        get_resolution(ts),
+        get_initial_time(ts),
+        get_uuid(ts),
+        length(ts),
+        get_scaling_factor_multiplier(ts),
+    )
+end
+
 get_initial_time(time_series::SingleTimeSeries) =
     TimeSeries.timestamp(get_data(time_series))[1]
 
 function get_resolution(time_series::SingleTimeSeries)
     data = get_data(time_series)
     return TimeSeries.timestamp(data)[2] - TimeSeries.timestamp(data)[1]
+end
+
+function get_array_for_hdf(ts::SingleTimeSeries)
+    return TimeSeries.values(ts.data)
 end
 
 function Base.getindex(time_series::SingleTimeSeries, args...)
@@ -75,7 +191,7 @@ function tail(time_series::SingleTimeSeries, num)
 end
 
 """
-Creates a new time_series from an existing time_series with a split TimeArray.
+Creates a new SingleTimeSeries from an existing instance and a subset of data.
 """
 function split_time_series(
     time_series::T,
@@ -100,7 +216,3 @@ function split_time_series(
 end
 
 get_columns(::Type{<:TimeSeriesMetadata}, ta::TimeSeries.TimeArray) = nothing
-
-function get_array_for_hdf(ts::SingleTimeSeries)
-    return TimeSeries.values(ts.data)
-end
