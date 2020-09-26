@@ -7,7 +7,7 @@ function get_resolution(time_series::SingleTimeSeries)
 end
 
 function Base.getindex(time_series::SingleTimeSeries, args...)
-    return _split_time_series(time_series, getindex(get_data(time_series), args...))
+    return split_time_series(time_series, getindex(get_data(time_series), args...))
 end
 
 Base.first(time_series::SingleTimeSeries) = head(time_series, 1)
@@ -28,7 +28,7 @@ Base.iterate(time_series::SingleTimeSeries, n = 1) = iterate(get_data(time_serie
 Refer to TimeSeries.when(). Underlying data is copied.
 """
 function when(time_series::SingleTimeSeries, period::Function, t::Integer)
-    new = _split_time_series(time_series, TimeSeries.when(get_data(time_series), period, t))
+    new = split_time_series(time_series, TimeSeries.when(get_data(time_series), period, t))
 
 end
 
@@ -56,28 +56,28 @@ end
 Return a time_series with only the first num values.
 """
 function head(time_series::SingleTimeSeries)
-    return _split_time_series(time_series, TimeSeries.head(get_data(time_series)))
+    return split_time_series(time_series, TimeSeries.head(get_data(time_series)))
 end
 
 function head(time_series::SingleTimeSeries, num)
-    return _split_time_series(time_series, TimeSeries.head(get_data(time_series), num))
+    return split_time_series(time_series, TimeSeries.head(get_data(time_series), num))
 end
 
 """
 Return a time_series with only the ending num values.
 """
 function tail(time_series::SingleTimeSeries)
-    return _split_time_series(time_series, TimeSeries.tail(get_data(time_series)))
+    return split_time_series(time_series, TimeSeries.tail(get_data(time_series)))
 end
 
 function tail(time_series::SingleTimeSeries, num)
-    return _split_time_series(time_series, TimeSeries.tail(get_data(time_series), num))
+    return split_time_series(time_series, TimeSeries.tail(get_data(time_series), num))
 end
 
 """
 Creates a new time_series from an existing time_series with a split TimeArray.
 """
-function _split_time_series(
+function split_time_series(
     time_series::T,
     data::TimeSeries.TimeArray,
 ) where {T <: SingleTimeSeries}
@@ -85,9 +85,10 @@ function _split_time_series(
     for (fname, ftype) in zip(fieldnames(T), fieldtypes(T))
         if ftype <: TimeSeries.TimeArray
             val = data
-        elseif ftype <: InfrastructureSystemsInternal
-            # Need to create a new UUID.
-            continue
+        # Use the same UUID
+        #elseif ftype <: InfrastructureSystemsInternal
+        #    # Need to create a new UUID.
+        #    continue
         else
             val = getfield(time_series, fname)
         end
@@ -99,3 +100,7 @@ function _split_time_series(
 end
 
 get_columns(::Type{<:TimeSeriesMetadata}, ta::TimeSeries.TimeArray) = nothing
+
+function get_array_for_hdf(ts::SingleTimeSeries)
+    return TimeSeries.values(ts.data)
+end
