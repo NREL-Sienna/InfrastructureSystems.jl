@@ -31,7 +31,7 @@ Constructs InMemoryTimeSeriesStorage from an instance of Hdf5TimeSeriesStorage.
 function InMemoryTimeSeriesStorage(hdf5_storage::Hdf5TimeSeriesStorage)
     storage = InMemoryTimeSeriesStorage()
     for (component, name, time_series) in iterate_time_series(hdf5_storage)
-        add_time_series!(storage, component, name, time_series)
+        serialize_time_series!(storage, component, name, time_series)
     end
 
     return storage
@@ -171,8 +171,7 @@ function convert_to_hdf5(storage::InMemoryTimeSeriesStorage, filename::AbstractS
     hdf5_storage = Hdf5TimeSeriesStorage(create_file; filename = filename)
     for record in values(storage.data)
         for pair in record.component_names
-            columns = TimeSeries.colnames(record.ta.data)
-            add_time_series!(hdf5_storage, pair[1], pair[2], record.ta, columns)
+            serialize_time_series!(hdf5_storage, pair[1], pair[2], record.ts)
         end
     end
 end

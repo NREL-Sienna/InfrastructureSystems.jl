@@ -104,8 +104,7 @@ function get_type_from_serialization_data(data::Dict)
 end
 
 function get_type_from_serialization_metadata(metadata::Dict)
-    mod = Base.root_module(Base.__toplevel__, Symbol(metadata[MODULE_KEY]))
-    base_type = getfield(mod, Symbol(metadata[TYPE_KEY]))
+    base_type = get_type_from_strings(metadata[MODULE_KEY], metadata[TYPE_KEY])
     if !get(metadata, CONSTRUCT_WITH_PARAMETERS_KEY, false)
         return base_type
     end
@@ -154,9 +153,7 @@ end
 
 function deserialize(::Type{Function}, data::Dict)
     metadata = data[METADATA_KEY]
-    mod = Base.root_module(Base.__toplevel__, Symbol(metadata[MODULE_KEY]))
-    name = Symbol(metadata[FUNCTION_KEY])
-    return getfield(mod, name)
+    return get_type_from_strings(metadata[MODULE_KEY], metadata[FUNCTION_KEY])
 end
 
 function deserialize(::Type{T}, data::Any) where {T}

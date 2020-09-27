@@ -292,8 +292,15 @@ function compare_values(x::SystemData, y::SystemData)::Bool
             # Not deserialized in IS.
             continue
         end
-        if !compare_values(getfield(x, name), getfield(y, name))
-            @error "SystemData field=$name does not match"
+        val_x = getfield(x, name)
+        val_y = getfield(y, name)
+        if name == :time_series_storage && typeof(val_x) != typeof(val_y)
+            # TODO 1.0: workaround for not being able to convert Hdf5TimeSeriesStorage to
+            # InMemoryTimeSeriesStorage
+            continue
+        end
+        if !compare_values(val_x, val_y)
+            @error "SystemData field=$name does not match" getfield(x, name) getfield(y, name)
             match = false
         end
     end
@@ -478,16 +485,17 @@ function deserialize(::Type{SystemData}, raw; time_series_read_only = false)
     end
     validation_descriptors = read_validation_descriptor(raw["validation_descriptor_file"])
 
+    # TODO 1.0: need to address this limitation
     if strip_module_name(raw["time_series_storage_type"]) == "InMemoryTimeSeriesStorage"
-        hdf5_storage = Hdf5TimeSeriesStorage(raw["time_series_storage_file"], true)
-        time_series_storage = InMemoryTimeSeriesStorage(hdf5_storage)
-    else
-        time_series_storage = from_file(
-            Hdf5TimeSeriesStorage,
-            raw["time_series_storage_file"];
-            read_only = time_series_read_only,
-        )
+        @info "Deserializing with InMemoryTimeSeriesStorage is currently not supported. Using HDF"
+        #hdf5_storage = Hdf5TimeSeriesStorage(raw["time_series_storage_file"], true)
+        #time_series_storage = InMemoryTimeSeriesStorage(hdf5_storage)
     end
+    time_series_storage = from_file(
+        Hdf5TimeSeriesStorage,
+        raw["time_series_storage_file"];
+        read_only = time_series_read_only,
+    )
 
     internal = deserialize(InfrastructureSystemsInternal, raw["internal"])
     @debug "deserialize" validation_descriptors time_series_storage internal
