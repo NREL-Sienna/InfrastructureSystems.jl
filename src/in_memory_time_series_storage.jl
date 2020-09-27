@@ -94,11 +94,9 @@ function deserialize_time_series(
     ::Type{T},
     storage::InMemoryTimeSeriesStorage,
     ts_metadata::TimeSeriesMetadata,
-    row_index::Int,
-    column_index::Int,
-    num_rows::Int,
-    num_columns::Int,
-) where T <: StaticTimeSeries
+    rows::UnitRange,
+    columns::UnitRange,
+) where {T <: StaticTimeSeries}
     uuid = get_time_series_uuid(ts_metadata)
     if !haskey(storage.data, uuid)
         throw(ArgumentError("$uuid is not stored"))
@@ -106,25 +104,22 @@ function deserialize_time_series(
 
     ts = storage.data[uuid].ts
     total_rows = length(ts_metadata)
-    if row_index == 1 && num_rows == total_rows
+    if rows.start == 1 && length(rows) == total_rows
         # No memory allocation
         return ts
     end
 
-    end_index = row_index + num_rows - 1
     # TimeArray doesn't support @view
-    return split_time_series(ts, get_data(ts)[row_index:end_index])
+    return split_time_series(ts, get_data(ts)[rows])
 end
 
 function deserialize_time_series(
     ::Type{T},
     storage::InMemoryTimeSeriesStorage,
     ts_metadata::TimeSeriesMetadata,
-    row_index::Int,
-    column_index::Int,
-    num_rows::Int,
-    num_columns::Int,
-) where T <: Deterministic
+    rows::UnitRange,
+    columns::UnitRange,
+) where {T <: Deterministic}
     # TODO 1.0: Much of this will apply to Probabilistic and Scenarios
     uuid = get_time_series_uuid(ts_metadata)
     if !haskey(storage.data, uuid)
@@ -134,7 +129,7 @@ function deserialize_time_series(
     ts = storage.data[uuid].ts
     total_rows = length(ts_metadata)
     total_columns = get_count(ts_metadata)
-    if num_rows == total_rows && num_columns == total_columns
+    if length(rows) == total_rows && length(columns) == total_columns
         return ts
     end
 
@@ -142,22 +137,21 @@ function deserialize_time_series(
     initial_timestamp = get_initial_timestamp(ts)
     resolution = get_resolution(ts)
     interval = get_interval(ts)
-    start_time = initial_timestamp + interval * (column_index - 1)
-    end_row_index = row_index + num_rows - 1
+    start_time = initial_timestamp + interval * (columns.start - 1)
     data = SortedDict{Dates.DateTime, Vector}()
-    for initial_time in range(start_time; step = interval, length = num_columns)
-        if row_index == 1
+    for initial_time in range(start_time; step = interval, length = length(columns))
+        if rows.start == 1
             it = initial_time
         else
-            it = initial_time + (row_index - 1) * resolution
+            it = initial_time + (rows.start - 1) * resolution
         end
-        data[it] = @view full_data[initial_time][row_index:end_row_index]
+        data[it] = @view full_data[initial_time][rows]
     end
 
     new_ts = split_time_series(ts, data)
-    set_horizon!(new_ts, num_rows)
-    if row_index > 1
-        set_initial_timestamp!(new_ts, start_time + row_index * resolution)
+    set_horizon!(new_ts, length(rows))
+    if rows.start > 1
+        set_initial_timestamp!(new_ts, start_time + rows.start * resolution)
     end
 
     return new_ts

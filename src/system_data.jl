@@ -341,7 +341,8 @@ function get_time_series_multiple(
 )
     Channel() do channel
         for component in iterate_components_with_time_series(data.components)
-            for time_series in get_time_series_multiple(component, filter_func; type = type, name = name)
+            for time_series in
+                get_time_series_multiple(component, filter_func; type = type, name = name)
                 put!(channel, time_series)
             end
         end

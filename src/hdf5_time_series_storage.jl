@@ -141,36 +141,32 @@ end
 function _read_time_series_attributes(
     storage::Hdf5TimeSeriesStorage,
     path,
-    row_index,
-    num_rows,
+    rows,
     ::Type{T},
 ) where {T <: StaticTimeSeries}
-    return _read_time_series_attributes_common(storage, path, row_index, num_rows)
+    return _read_time_series_attributes_common(storage, path, rows)
 end
 
 function _read_time_series_attributes(
     storage::Hdf5TimeSeriesStorage,
     path,
-    row_index,
-    num_rows,
+    rows,
     ::Type{T},
 ) where {T <: Forecast}
-    data = _read_time_series_attributes_common(storage, path, row_index, num_rows)
+    data = _read_time_series_attributes_common(storage, path, rows)
     data["interval"] = Dates.Millisecond(HDF5.read(HDF5.attrs(path)["interval"]))
     return data
 end
 
-function _read_time_series_attributes_common(storage::Hdf5TimeSeriesStorage, path, row_index, num_rows)
-    initial_timestamp = Dates.epochms2datetime(
-        HDF5.read(HDF5.attrs(path)["initial_timestamp"]),
-    )
+function _read_time_series_attributes_common(storage::Hdf5TimeSeriesStorage, path, rows)
+    initial_timestamp =
+        Dates.epochms2datetime(HDF5.read(HDF5.attrs(path)["initial_timestamp"]),)
     resolution = Dates.Millisecond(HDF5.read(HDF5.attrs(path)["resolution"]))
     return Dict(
         "initial_timestamp" => initial_timestamp,
         "resolution" => resolution,
         "dataset_size" => size(path["data"]),
-        "start_time" => initial_timestamp + resolution * (row_index - 1),
-        "end_index" => row_index + num_rows - 1,
+        "start_time" => initial_timestamp + resolution * (rows.start - 1),
     )
 end
 
@@ -233,27 +229,25 @@ function deserialize_time_series(
     ::Type{T},
     storage::Hdf5TimeSeriesStorage,
     ts_metadata::TimeSeriesMetadata,
-    row_index::Int,
-    column_index::Int,
-    num_rows::Int,
-    num_columns::Int,
-) where {T<:StaticTimeSeries}
+    rows::UnitRange,
+    columns::UnitRange,
+) where {T <: StaticTimeSeries}
     # Note that all range checks must occur at a higher level.
     return HDF5.h5open(storage.file_path, "r") do file
         root = _get_root(storage, file)
         uuid = get_time_series_uuid(ts_metadata)
         path = _get_time_series_path(root, uuid)
-        attributes = _read_time_series_attributes(storage, path, row_index, num_rows, T)
+        attributes = _read_time_series_attributes(storage, path, rows, T)
 
         @assert length(attributes["dataset_size"]) == 1
         @debug "deserializing a StaticTimeSeries" T
-        data = path["data"][row_index:attributes["end_index"]]
+        data = path["data"][rows]
         return T(
             ts_metadata,
             TimeSeries.TimeArray(
                 range(
                     attributes["start_time"];
-                    length = num_rows,
+                    length = length(rows),
                     step = attributes["resolution"],
                 ),
                 data,
@@ -266,34 +260,34 @@ function deserialize_time_series(
     ::Type{T},
     storage::Hdf5TimeSeriesStorage,
     ts_metadata::TimeSeriesMetadata,
-    row_index::Int,
-    column_index::Int,
-    num_rows::Int,
-    num_columns::Int,
+    rows::UnitRange,
+    columns::UnitRange,
 ) where {T <: Forecast}
     # Note that all range checks must occur at a higher level.
     total_rows = length(ts_metadata)
     total_columns = get_count(ts_metadata)
-    use_same_uuid = num_rows == total_rows && num_columns == total_columns
+    use_same_uuid = length(rows) == total_rows && length(columns) == total_columns
 
     return HDF5.h5open(storage.file_path, "r") do file
         root = _get_root(storage, file)
         uuid = get_time_series_uuid(ts_metadata)
         path = _get_time_series_path(root, uuid)
-        attributes = _read_time_series_attributes(storage, path, row_index, num_rows, T)
+        attributes = _read_time_series_attributes(storage, path, rows, T)
 
         @assert length(attributes["dataset_size"]) == 2
         @debug "deserializing a Forecast" T
-        end_row_index = row_index + num_rows - 1
         data = SortedDict{Dates.DateTime, Array}()
         start_time = attributes["start_time"]
-        if num_columns == 1
-            data[start_time] = path["data"][row_index:end_row_index, column_index]
+        if length(columns) == 1
+            data[start_time] = path["data"][rows, columns.start]
         else
-            data_read =
-                path["data"][row_index:end_row_index, column_index:(column_index + num_columns - 1)]
-            for (i, it) in enumerate(range(attributes["start_time"]; length = num_columns, step = attributes["interval"]))
-                data[it] = @view data_read[1:num_rows, i]
+            data_read = path["data"][rows, columns]
+            for (i, it) in enumerate(range(
+                attributes["start_time"];
+                length = length(columns),
+                step = attributes["interval"],
+            ))
+                data[it] = @view data_read[1:length(rows), i]
             end
         end
 
