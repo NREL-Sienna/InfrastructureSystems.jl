@@ -49,10 +49,6 @@ function TimeSeriesFileMetadata(;
     scaling_factor_multiplier = nothing,
     scaling_factor_multiplier_module = nothing,
 )
-
-    mod = Base.root_module(Base.__toplevel__, Symbol(time_series_type_module))
-    ts_type = getfield(mod, Symbol(time_series_type))
-
     return TimeSeriesFileMetadata(
         simulation,
         category,
@@ -62,7 +58,7 @@ function TimeSeriesFileMetadata(;
         data_file,
         resolution,
         percentiles,
-        ts_type,
+        get_type_from_strings(mod, ts_type),
         nothing,
         scaling_factor_multiplier,
         scaling_factor_multiplier_module,
