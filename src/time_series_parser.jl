@@ -2,6 +2,7 @@
 struct RawTimeSeries
     initial_time::Dates.DateTime
     data::Dict
+    length::Int
 end
 
 """Describes how to construct time_series from raw time series data files."""
@@ -194,7 +195,7 @@ function handle_normalization_factor(
     return ta
 end
 
-struct TimeSeriesParsedInfo
+struct TimeSeriesParsedInfo{T <: TimeSeriesData}
     simulation::String
     component::InfrastructureSystemsComponent
     name::String  # Component field on which time series data is based.
@@ -203,7 +204,6 @@ struct TimeSeriesParsedInfo
     percentiles::Vector{Float64}
     file_path::String
     resolution::Dates.Period
-    time_series_type::DataType
     scaling_factor_multiplier::Union{Nothing, Function}
 
     function TimeSeriesParsedInfo(
@@ -218,7 +218,7 @@ struct TimeSeriesParsedInfo
         time_series_type,
         scaling_factor_multiplier = nothing,
     )
-        new(
+        new{time_series_type}(
             simulation,
             component,
             name,
@@ -227,7 +227,6 @@ struct TimeSeriesParsedInfo
             percentiles,
             abspath(file_path),
             resolution,
-            time_series_type,
             scaling_factor_multiplier,
         )
     end
