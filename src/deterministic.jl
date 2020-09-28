@@ -108,23 +108,20 @@ end
 """
 Creates a new Deterministic from an existing instance and a subset of data.
 """
-function split_time_series(
-    time_series::T,
-    data::SortedDict{Dates.DateTime, Vector},
-) where {T <: Deterministic}
+function Deterministic(forecast::Deterministic, data::SortedDict{Dates.DateTime, Vector})
     vals = []
-    for (fname, ftype) in zip(fieldnames(T), fieldtypes(T))
+    for (fname, ftype) in zip(fieldnames(Deterministic), fieldtypes(Deterministic))
         if ftype <: SortedDict{Dates.DateTime, Vector}
             val = data
         elseif ftype <: InfrastructureSystemsInternal
             # Need to create a new UUID.
             val = InfrastructureSystemsInternal()
         else
-            val = getfield(time_series, fname)
+            val = getfield(forecast, fname)
         end
 
         push!(vals, val)
     end
 
-    return T(vals...)
+    return Deterministic(vals...)
 end

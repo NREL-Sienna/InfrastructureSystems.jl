@@ -110,16 +110,16 @@ function deserialize_time_series(
     end
 
     # TimeArray doesn't support @view
-    return split_time_series(ts, get_data(ts)[rows])
+    return T(ts, get_data(ts)[rows])
 end
 
 function deserialize_time_series(
-    ::Type{T},
+    ::Type{Deterministic},
     storage::InMemoryTimeSeriesStorage,
     ts_metadata::TimeSeriesMetadata,
     rows::UnitRange,
     columns::UnitRange,
-) where {T <: Deterministic}
+)
     # TODO 1.0: Much of this will apply to Probabilistic and Scenarios
     uuid = get_time_series_uuid(ts_metadata)
     if !haskey(storage.data, uuid)
@@ -148,7 +148,7 @@ function deserialize_time_series(
         data[it] = @view full_data[initial_time][rows]
     end
 
-    new_ts = split_time_series(ts, data)
+    new_ts = Deterministic(ts, data)
     set_horizon!(new_ts, length(rows))
     if rows.start > 1
         set_initial_timestamp!(new_ts, start_time + rows.start * resolution)
