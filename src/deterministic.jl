@@ -21,13 +21,15 @@ function Deterministic(
     resolution::Union{Dates.Period, Nothing} = nothing,
 )
     for (k, v) in data
-        if v isa DataFrames.DataFrame
+        if isa(v, DataFrames.DataFrame)
             data[k] = Array(v)
-        elseif v isa TimeSeries.TimeArray
+        elseif isa(v, TimeSeries.TimeArray)
             data[k] = TimeSeries.values(v)
             if resolution === nothing
-                resolution = diff(TimeSeries.timestamp(v))[1]
+                resolution = TimeSeries.timestamp(v)[2] - TimeSeries.timestamp(v)[1]
             end
+        elseif isa(v, Vector{Float64})
+            continue
         else
             try
                 data[k] = Vector{Float64}(v...)
