@@ -40,6 +40,32 @@ function Deterministic(
     return Deterministic(name, ta, scaling_factor_multiplier)
 end
 
+"""
+Construct Deterministic from a CSV file. The file must have a column that is the name of the
+component.
+
+# Arguments
+- `name::AbstractString`: user-defined name
+- `filename::AbstractString`: name of CSV file containing data
+- `normalization_factor::NormalizationFactor = 1.0`: optional normalization factor to apply
+  to each data entry
+- `scaling_factor_multiplier::Union{Nothing, Function} = nothing`: If the data are scaling
+  factors then this function will be called on the component and applied to the data when
+  [`get_time_series_array`](@ref) is called.
+"""
+function Deterministic(
+    name::AbstractString,
+    filename::AbstractString,
+    component::InfrastructureSystemsComponent;
+    normalization_factor::NormalizationFactor = 1.0,
+    scaling_factor_multiplier::Union{Nothing, Function} = nothing,
+)
+    component_name = get_name(component)
+    ta = read_time_series(Deterministic, filename, component_name)
+    ta = handle_normalization_factor(ta, normalization_factor)
+    return Deterministic(name, ta, scaling_factor_multiplier)
+end
+
 function Deterministic(
     ts_metadata::DeterministicMetadata,
     data::SortedDict{Dates.DateTime, Array},
