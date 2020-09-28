@@ -157,13 +157,13 @@ end
     file = joinpath(FORECASTS_DIR, "ComponentsAsColumnsNoTime.json")
     IS.add_time_series_from_file_metadata!(data, IS.InfrastructureSystemsComponent, file)
     @test IS.has_time_series(component)
-    
+
     data = IS.SystemData()
     name = "Component1"
     component = IS.TestComponent(name, 5)
     IS.add_component!(data, component)
     @test !IS.has_time_series(component)
     file = joinpath(FORECASTS_DIR, "ForecastPointers.json")
-    IS.add_time_series_from_file_metadata!(sys, IS.InfrastructureSystemsComponent, file)
+    IS.add_time_series_from_file_metadata!(data, IS.InfrastructureSystemsComponent, file)
     @test IS.has_time_series(component)
 end
