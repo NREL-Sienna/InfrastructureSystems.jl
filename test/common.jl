@@ -31,10 +31,9 @@ function create_system_data_shared_time_series(; time_series_in_memory = false)
     IS.add_component!(data, component1)
     IS.add_component!(data, component2)
 
-    ta = create_time_array()
-    ts_metadata = IS.SingleTimeSeriesMetadata("val", ta, IS.get_val)
-    IS.add_time_series!(data, component1, ts_metadata, ta)
-    IS.add_time_series!(data, component2, ts_metadata, ta)
+    ts = IS.SingleTimeSeries(name = "val", data = create_time_array())
+    IS.add_time_series!(data, component1, ts)
+    IS.add_time_series!(data, component2, ts)
 
     return data
 end

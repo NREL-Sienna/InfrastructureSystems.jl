@@ -11,7 +11,6 @@
         range(initial_time; length = 365, step = resolution),
         ones(365),
     )
-    data = IS.SingleTimeSeries(data = data, name = "test_c")
     initial_time = Dates.DateTime("2020-09-01")
     resolution = Dates.Hour(1)
     other_time = initial_time + resolution
@@ -197,9 +196,7 @@ end
     component = IS.TestComponent(name, component_val)
     IS.add_component!(sys, component)
 
-    dates = collect(
-        Dates.DateTime("2020-01-01T00:00:00"):Dates.Hour(1):Dates.DateTime("2020-01-01T23:00:00"),
-    )
+    dates = create_dates("2020-01-01T00:00:00", Dates.Hour(1), "2020-01-01T23:00:00")
     data = collect(1:24)
     ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
     name = "val"
@@ -298,22 +295,6 @@ end
     @test length(collect(IS.get_time_series_multiple(sys, filter_func; name = "val2"))) == 0
 end
 
-# TODO: this is disabled because PowerSystems currently does not set names correctly.
-#@testset "Test add_time_series bad name" begin
-#    sys = IS.SystemData()
-#    name = "Component1"
-#    component_val = 5
-#    component = IS.TestComponent(name, component_val)
-#    IS.add_component!(sys, component)
-#
-#    dates = collect(Dates.DateTime("2020-01-01T00:00:00"):Dates.Hour(1) :
-#                    Dates.DateTime("2020-01-01T23:00:00"))
-#    data = collect(1:24)
-#    ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
-#    time_series = IS.SingleTimeSeries("bad-name", ta)
-#    @test_throws ArgumentError IS.add_time_series!(sys, component, time_series)
-#end
-
 @testset "Test add_time_series from TimeArray" begin
     sys = IS.SystemData()
     name = "Component1"
@@ -321,9 +302,7 @@ end
     component = IS.TestComponent(name, component_val)
     IS.add_component!(sys, component)
 
-    dates = collect(
-        Dates.DateTime("2020-01-01T00:00:00"):Dates.Hour(1):Dates.DateTime("2020-01-01T23:00:00"),
-    )
+    dates = create_dates("2020-01-01T00:00:00", Dates.Hour(1), "2020-01-01T23:00:00")
     data = collect(1:24)
     ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
     name = "val"
@@ -456,9 +435,7 @@ end
     component = IS.TestComponent(name, component_val)
     IS.add_component!(sys, component)
 
-    dates = collect(
-        Dates.DateTime("2020-01-01T00:00:00"):Dates.Hour(1):Dates.DateTime("2020-01-01T23:00:00"),
-    )
+    dates = create_dates("2020-01-01T00:00:00", Dates.Hour(1), "2020-01-01T23:00:00")
     data = collect(1:24)
     ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
     name = "val"
@@ -487,9 +464,7 @@ end
     @test length(components) == 1
     component = components[1]
 
-    dates = collect(
-        Dates.DateTime("2020-01-01T00:00:00"):Dates.Hour(1):Dates.DateTime("2020-01-01T23:00:00"),
-    )
+    dates = create_dates("2020-01-01T00:00:00", Dates.Hour(1), "2020-01-01T23:00:00")
     data = collect(1:24)
 
     ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
@@ -610,9 +585,7 @@ end
     component = IS.TestComponent(name, 5)
     IS.add_component!(sys1, component)
 
-    dates = collect(
-        Dates.DateTime("2020-01-01T00:00:00"):Dates.Hour(1):Dates.DateTime("2020-01-01T23:00:00"),
-    )
+    dates = create_dates("2020-01-01T00:00:00", Dates.Hour(1), "2020-01-01T23:00:00")
     data = collect(1:24)
     ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
     name = "val"
