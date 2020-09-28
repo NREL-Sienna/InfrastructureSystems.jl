@@ -134,6 +134,6 @@ function make_time_series(info::TimeSeriesParsedInfo{Deterministic})
         scaling_factor_multiplier = info.scaling_factor_multiplier,
         initial_timestamp = info.data.initial_time,
         horizon = info.data.length,
-        resolution = info.resolution
+        resolution = info.resolution,
     )
 end
