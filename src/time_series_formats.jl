@@ -196,7 +196,7 @@ function read_time_series(
         end
         data[Dates.DateTime(row.DateTime)] = vector
     end
-    return RawTimeSeries(first(keys(data)), data)
+    return RawTimeSeries(first(keys(data)), data, horizon)
 end
 
 """
@@ -220,9 +220,10 @@ function read_time_series(
     first_timestamp = get_timestamp(T, file, 1)
 
     value_columns = get_value_columns(T, file)
-    vals = [(x => getproperty(file, x)) for x in value_columns]
+    vals = [(string(x) => getproperty(file, x)) for x in value_columns]
+    series_length = length(vals[1][2])
 
-    return RawTimeSeries(first_timestamp, Dict(vals...))
+    return RawTimeSeries(first_timestamp, Dict(vals...), series_length)
 end
 
 """
@@ -252,7 +253,7 @@ function read_time_series(
         end
     end
 
-    return RawTimeSeries(first_timestamp, Dict(component_name => vals))
+    return RawTimeSeries(first_timestamp, Dict(component_name => vals), length(vals))
 end
 
 """
@@ -271,8 +272,9 @@ function read_time_series(
 ) where {T <: TimeSeriesFormatComponentsAsColumnsNoTime, U <: StaticTimeSeries}
     first_timestamp = get(kwargs, :start_datetime, Dates.DateTime(Dates.today()))
     value_columns = get_value_columns(T, file)
-    vals = [(x => getproperty(file, x)) for x in value_columns]
-    return RawTimeSeries(first_timestamp, Dict(vals...))
+    vals = [(string(x) => getproperty(file, x)) for x in value_columns]
+    series_length = length(vals[1][2])
+    return RawTimeSeries(first_timestamp, Dict(vals...), series_length)
 end
 
 """
