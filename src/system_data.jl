@@ -90,8 +90,8 @@ function add_time_series_from_file_metadata!(
     metadata_file::AbstractString;
     resolution = nothing,
 ) where {T <: InfrastructureSystemsComponent}
-    metadata = read_time_series_file_metadata(metadata_file; resolution = resolution)
-    return add_time_series_from_file_metadata!(data, T, metadata)
+    metadata = read_time_series_file_metadata(metadata_file)
+    return add_time_series_from_file_metadata!(data, T, metadata; resolution = resolution)
 end
 
 """
@@ -109,9 +109,10 @@ function add_time_series_from_file_metadata!(
     resolution=nothing
 ) where {T <: InfrastructureSystemsComponent}
     cache = TimeSeriesCache()
-
     for metadata in file_metadata
-        add_time_series_from_file_metadata_internal!(data, T, cache, metadata, resolution)
+        if resolution === nothing || metada.resolution == resolution
+            add_time_series_from_file_metadata_internal!(data, T, cache, metadata)
+        end
     end
     return
 end
