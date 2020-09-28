@@ -39,7 +39,7 @@ function Deterministic(
         end
     end
     if resolution === nothing
-        throw(ArgumentError("Need to pass resolution keyword argument or the data most be provided using TimeArrays"))
+        throw(ArgumentError("Need to pass resolution keyword argument or the data must be provided using TimeArrays"))
     end
 
     if !isa(data, SortedDict)
