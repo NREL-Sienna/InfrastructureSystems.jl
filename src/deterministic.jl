@@ -18,26 +18,64 @@ function Deterministic(
     data::Union{Dict{Dates.DateTime, Any}, SortedDict{Dates.DateTime, Any}};
     normalization_factor::NormalizationFactor = 1.0,
     scaling_factor_multiplier::Union{Nothing, Function} = nothing,
-    timestamp = :timestamp,
     resolution::Union{Dates.Period, Nothing} = nothing,
 )
     for (k, v) in data
         if v isa DataFrames.DataFrame
-            data[k] = TimeSeries.TimeArray(v; timestamp = timestamp)
+            data[k] = Array(v)
         elseif v isa TimeSeries.TimeArray
-            continue
+            data[k] = TimeSeries.values(v)
+            if resolution === nothing
+                resolution = diff(TimeSeries.timestamp(v))[1]
+            end
         else
             try
-                data[k] =
-                    TimeSeries.TimeArray(range(k, length = length(v), step = resolution))
+                data[k] = Vector{Float64}()
             catch e
-                throw(ArgumentError("The values in the data dict can't be converted to TimeArrays. Resulting error: $e"))
+                throw(ArgumentError("The values in the data dict are in an invalid format. Resulting error: $e"))
             end
         end
     end
+    if resolution === nothing
+        throw(ArgumentError("Need to pass resolution keyword argument or the data most be provided using TimeArrays"))
+    end
 
-    ta = handle_normalization_factor(ta, normalization_factor)
-    return Deterministic(name, ta, scaling_factor_multiplier)
+    if !isa(data, SortedDict)
+        data = SortedDict(data...)
+    end
+
+    initial_timestamp = first(keys(data))
+    horizon = length(first(values(data)))
+    data_ = handle_normalization_factor(data, normalization_factor)
+
+    return Deterministic(
+        name,
+        initial_timestamp,
+        horizon,
+        resolution,
+        data_,
+        normalization_factor,
+        scaling_factor_multiplier,
+    )
+end
+
+"""
+Construct Deterministic from RawTimeSeries.
+"""
+function Deterministic(
+    name::AbstractString,
+    series_data::RawTimeSeries,
+    resolution::Dates.Period;
+    normalization_factor::NormalizationFactor = 1.0,
+    scaling_factor_multiplier::Union{Nothing, Function} = nothing,
+)
+    return Deterministic(
+        name,
+        series_data.data;
+        normalization_factor = normalization_factor,
+        scaling_factor = scaling_factor_multiplier,
+        resolution = resolution,
+    )
 end
 
 """
@@ -47,6 +85,7 @@ component.
 # Arguments
 - `name::AbstractString`: user-defined name
 - `filename::AbstractString`: name of CSV file containing data
+- `component::InfrastructureSystemsComponent`: component associated with the data
 - `normalization_factor::NormalizationFactor = 1.0`: optional normalization factor to apply
   to each data entry
 - `scaling_factor_multiplier::Union{Nothing, Function} = nothing`: If the data are scaling
@@ -57,13 +96,19 @@ function Deterministic(
     name::AbstractString,
     filename::AbstractString,
     component::InfrastructureSystemsComponent;
+    resolution::Dates.Period,
     normalization_factor::NormalizationFactor = 1.0,
     scaling_factor_multiplier::Union{Nothing, Function} = nothing,
 )
     component_name = get_name(component)
-    ta = read_time_series(Deterministic, filename, component_name)
-    ta = handle_normalization_factor(ta, normalization_factor)
-    return Deterministic(name, ta, scaling_factor_multiplier)
+    raw_data = read_time_series(Deterministic, filename, component_name)
+    return Deterministic(
+        name,
+        raw_data,
+        resolution,
+        normalization_factor,
+        scaling_factor_multiplier,
+    )
 end
 
 function Deterministic(
@@ -77,6 +122,7 @@ function Deterministic(
         uuid = UUIDs.uuid4()
     end
 
+    data_ = handle_normalization_factor(data, normalization_factor)
     return Deterministic(
         name = get_name(ts_metadata),
         initial_timestamp = first(keys(data)),
@@ -85,6 +131,16 @@ function Deterministic(
         data = data,
         scaling_factor_multiplier = get_scaling_factor_multiplier(ts_metadata),
         internal = InfrastructureSystemsInternal(uuid),
+    )
+end
+
+function Deterministic(info::TimeSeriesParsedInfo)
+    return Deterministic(
+        info.name,
+        data,
+        normalization_factor = info.normalization_factor,
+        scaling_factor_multiplier = info.scaling_factor_multiplier,
+        resolution = info.resolution,
     )
 end
 
@@ -151,15 +207,4 @@ function split_time_series(
     end
 
     return T(vals...)
-end
-
-function Deterministic(info::TimeSeriesParsedInfo)
-    return Deterministic(
-        name = info.name,
-        data = handle_normalization_factor(info.data.data, info.normalization_factor),
-        scaling_factor_multiplier = info.scaling_factor_multiplier,
-        initial_timestamp = info.data.initial_time,
-        horizon = info.data.length,
-        resolution = info.resolution,
-    )
 end
