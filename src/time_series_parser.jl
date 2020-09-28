@@ -1,3 +1,9 @@
+"""Wraps the data read from the text files with time series"""
+struct RawTimeSeries
+    initial_time::Dates.DateTime
+    data::Dict
+end
+
 """Describes how to construct time_series from raw time series data files."""
 mutable struct TimeSeriesFileMetadata
     "User description of simulation"

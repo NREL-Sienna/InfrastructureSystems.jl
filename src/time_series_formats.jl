@@ -1,8 +1,3 @@
-struct RawTimeSeries
-    initial_time::Dates.DateTime
-    data::Dict
-end
-
 abstract type TimeSeriesFileFormat end
 abstract type TimeSeriesFormatPeriodAsColumn <: TimeSeriesFileFormat end
 abstract type TimeSeriesFormatYMDPeriodAsColumn <: TimeSeriesFormatPeriodAsColumn end
