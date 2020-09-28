@@ -105,13 +105,17 @@ Adds time series data from a metadata file or metadata descriptors.
 function add_time_series_from_file_metadata!(
     data::SystemData,
     ::Type{T},
-    file_metadata::Vector{TimeSeriesFileMetadata}
+    file_metadata::Vector{TimeSeriesFileMetadata};
+    resolution=nothing
 ) where {T <: InfrastructureSystemsComponent}
     cache = TimeSeriesCache()
 
     for metadata in file_metadata
-        _add_time_series_from_file_metadata!(data, T, cache, metadata)
+        if resolution !== nothing && metadata.resolution != resolution
+            _add_time_series_from_file_metadata!(data, T, cache, metadata)
+        end
     end
+    return
 end
 
 """
@@ -185,9 +189,9 @@ function _add_time_series_from_file_metadata!(
     set_component!(file_metadata, data, InfrastructureSystems)
     component = file_metadata.component
 
-    ts = make_time_series!(cache, file_metadata)
+    time_series = make_time_series!(cache, file_metadata)
     if !isnothing(ts)
-        add_time_series!(data, component, ts)
+        add_time_series!(data, component, time_series)
     end
 end
 
@@ -240,16 +244,30 @@ function _add_time_series!(
     _add_time_series!(data, component, ts_metadata, time_series)
 end
 
+function _make_time_array(info::TimeSeriesParsedInfo)
+    series_length=length(info.data)
+    timestamps = range(info.initial_time; length = series_length, step = resolution)
+    return TimeSeries.TimeArray(timestamps, info.data.data[get_name(info.component)])
+end
+
+
 function _make_time_series(info::TimeSeriesParsedInfo)
     ta = info.data[Symbol(get_name(info.component))]
-    res = get_resolution(ta)
-    if info.resolution !== nothing && res != resolution
-        @debug "Skip time_series with resolution=$res; doesn't match user=$resolution"
-        return
+    if info.time_series_type <: SingleTimeSeries
+        ts = info.time_series_type(name = info.name,
+                                   data = _make_time_array(info.data),
+                                   scaling_factot_multiplier = info.scaling_factor_multiplier,
+                                   resolution = info.resolution,
+                                   initial_timestamp = info.initial_time)
+    else info.time_series_type <: Forecast
+        ts = info.time_series_type(name = info.name,
+                                   data = info.data.data,
+                                   scaling_factot_multiplier = info.scaling_factor_multiplier,
+                                   resolution = info.resolution,
+                                   initial_timestamp = info.initial_time)
     end
 
-    ta = handle_normalization_factor(ta, info.normalization_factor)
-    ts = info.time_series_type(info.name, ta, info.scaling_factor_multiplier)
+    ts = handle_normalization_factor(ts, info.normalization_factor)
     @debug "Created $ts"
     return ts
 end
