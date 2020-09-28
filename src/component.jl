@@ -131,15 +131,19 @@ the component and applied to the data.
 function get_time_series_array(
     ::Type{T},
     component::InfrastructureSystemsComponent,
-    name::AbstractString,
-    horizon::Union{Nothing, Int} = nothing,
+    name::AbstractString;
+    start_time::Union{Nothing, Dates.DateTime} = nothing,
+    len::Union{Nothing, Int} = nothing,
+    count::Int = 1,
 ) where {T <: TimeSeriesData}
-    if horizon === nothing
-        time_series = get_time_series(T, component, name)
-    else
-        time_series = get_time_series(T, component, name, horizon)
-    end
-
+    time_series = get_time_series(
+        T,
+        component,
+        name;
+        start_time = start_time,
+        len = len,
+        count = count,
+    )
     return get_time_series_array(component, time_series)
 end
 
@@ -159,17 +163,26 @@ end
 function get_time_series_timestamps(
     ::Type{T},
     component::InfrastructureSystemsComponent,
-    name::AbstractString,
-    horizon::Union{Nothing, Int} = nothing,
+    name::AbstractString;
+    start_time::Union{Nothing, Dates.DateTime} = nothing,
+    len::Union{Nothing, Int} = nothing,
+    count::Int = 1,
 ) where {T <: TimeSeriesData}
-    return (TimeSeries.timestamp ∘ get_time_series_array)(T, component, name, horizon)
+    return TimeSeries.timestamp(get_time_series_array(
+        T,
+        component,
+        name;
+        start_time = start_time,
+        len = len,
+        count = count,
+    ))
 end
 
 function get_time_series_timestamps(
     component::InfrastructureSystemsComponent,
     time_series::TimeSeriesData,
 )
-    return (TimeSeries.timestamp ∘ get_time_series_array)(component, time_series)
+    return TimeSeries.timestamp(get_time_series_array(component, time_series))
 end
 
 """
@@ -178,17 +191,19 @@ Return an Array of values for the requested time series parameters.
 function get_time_series_values(
     ::Type{T},
     component::InfrastructureSystemsComponent,
-    initial_time::Dates.DateTime,
-    name::AbstractString,
-    horizon::Union{Nothing, Int} = nothing,
+    name::AbstractString;
+    start_time::Union{Nothing, Dates.DateTime} = nothing,
+    len::Union{Nothing, Int} = nothing,
+    count::Int = 1,
 ) where {T <: TimeSeriesData}
-    return (TimeSeries.values ∘ get_time_series_array)(
+    return TimeSeries.values(get_time_series_array(
         T,
         component,
-        initial_time,
-        name,
-        horizon,
-    )
+        name;
+        start_time = start_time,
+        len = len,
+        count = count,
+    ))
 end
 
 function get_time_series_values(
@@ -318,12 +333,10 @@ end
 function get_time_series_names(
     ::Type{T},
     component::InfrastructureSystemsComponent,
-    initial_time::Dates.DateTime,
 ) where {T <: TimeSeriesData}
     return get_time_series_names(
         time_series_data_to_metadata(T),
         get_time_series_container(component),
-        initial_time,
     )
 end
 
@@ -450,29 +463,30 @@ function set_time_series_storage!(
 end
 
 function validate_time_series_consistency(component::InfrastructureSystemsComponent)
+    # TODO 1.0
     # Initial times for each name must be identical.
-    initial_times = Dict{String, Vector{Dates.DateTime}}()
-    for key in keys(get_time_series_container(component).data)
-        if !haskey(initial_times, key.name)
-            initial_times[key.name] = Vector{Dates.DateTime}()
-        end
-        push!(initial_times[key.name], key.initial_time)
-    end
+    #initial_times = Dict{String, Vector{Dates.DateTime}}()
+    #for key in keys(get_time_series_container(component).data)
+    #    if !haskey(initial_times, key.name)
+    #        initial_times[key.name] = Vector{Dates.DateTime}()
+    #    end
+    #    push!(initial_times[key.name], key.initial_time)
+    #end
 
-    if isempty(initial_times)
-        return true
-    end
+    #if isempty(initial_times)
+    #    return true
+    #end
 
-    base_its = nothing
-    for (name, its) in initial_times
-        sort!(its)
-        if isnothing(base_its)
-            base_its = its
-        elseif its != base_its
-            @error "initial times don't match" base_its, its
-            return false
-        end
-    end
+    #base_its = nothing
+    #for (name, its) in initial_times
+    #    sort!(its)
+    #    if isnothing(base_its)
+    #        base_its = its
+    #    elseif its != base_its
+    #        @error "initial times don't match" base_its, its
+    #        return false
+    #    end
+    #end
 
     return true
 end
