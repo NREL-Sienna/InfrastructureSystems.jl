@@ -23,7 +23,13 @@ function read_time_series(metadata::TimeSeriesFileMetadata; kwargs...)
 
     format = get_time_series_format(file)
     @debug "$format detected for the time series"
-    return read_time_series(format, metadata.time_series_type, file, metadata.component_name; kwargs...)
+    return read_time_series(
+        format,
+        metadata.time_series_type,
+        file,
+        metadata.component_name;
+        kwargs...,
+    )
 end
 
 """
@@ -161,7 +167,7 @@ function read_time_series(
     ::Type{T},
     ::Type{U},
     file::CSV.File;
-    kwargs...
+    kwargs...,
 ) where {T <: TimeSeriesFileFormat, U <: Forecast}
     error("The file format provided can't be parsed into a $U forecast")
 end
@@ -176,7 +182,7 @@ function read_time_series(
     ::Type{Deterministic},
     file::CSV.File,
     component_name = nothing;
-    kwargs...
+    kwargs...,
 ) where {T <: TimeSeriesFormatDateTimeAsColumn}
     @debug "Read CSV data from $file_path."
     horizon = length(first(file)) - 1
@@ -204,7 +210,10 @@ function read_time_series(
     file::CSV.File,
     component_name = nothing;
     kwargs...,
-) where {T <: Union{TimeSeriesFormatPeriodAsColumn, TimeSeriesFormatDateTimeAsColumn}, U <: StaticTimeSeries}
+) where {
+    T <: Union{TimeSeriesFormatPeriodAsColumn, TimeSeriesFormatDateTimeAsColumn},
+    U <: StaticTimeSeries,
+}
     # All timestamps must be sequential by step, so we can ignore the timestamps in the
     # file after the first one.
     # They were validated in get_step_time.
@@ -243,7 +252,7 @@ function read_time_series(
         end
     end
 
-    return RawTimeSeries(first_timestamp,  Dict(component_name => vals))
+    return RawTimeSeries(first_timestamp, Dict(component_name => vals))
 end
 
 """

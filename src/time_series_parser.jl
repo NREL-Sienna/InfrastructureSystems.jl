@@ -284,16 +284,10 @@ struct TimeSeriesCache
 end
 
 function TimeSeriesCache()
-    return TimeSeriesCache(
-        Vector{TimeSeriesParsedInfo}(),
-        Dict{String, Any}(),
-    )
+    return TimeSeriesCache(Vector{TimeSeriesParsedInfo}(), Dict{String, Any}())
 end
 
-function _add_time_series_info!(
-    cache::TimeSeriesCache,
-    metadata::TimeSeriesFileMetadata
-)
+function _add_time_series_info!(cache::TimeSeriesCache, metadata::TimeSeriesFileMetadata)
     if !haskey(cache.data_files, metadata.data_file)
         cache.data_files[metadata.data_file] = read_time_series(metadata)
         @debug "Added time series file" metadata.data_file
