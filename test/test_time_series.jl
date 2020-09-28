@@ -266,7 +266,7 @@ end
     @test !IS.has_time_series(component)
     file = joinpath(FORECASTS_DIR, "DateTimeAsColumnDeterministic.csv")
     raw_data = IS.read_time_series(IS.Deterministic, file, "Component1")
-    data = IS.Deterministic("test", file, component; resolution = Hour(1))
+    data = IS.Deterministic("test", file, component; resolution = Dates.Hour(1))
     IS.add_time_series!(sys, component, data)
     @test IS.has_time_series(component)
     ini_time = IS.get_initial_timestamp(data)
