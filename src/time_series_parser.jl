@@ -69,17 +69,13 @@ function TimeSeriesFileMetadata(;
 end
 
 """Reads time_series metadata and fixes relative paths to the data files."""
-function read_time_series_file_metadata(file_path::AbstractString; resolution::Union{Dates.Period, Nothing} = nothing)
+function read_time_series_file_metadata(file_path::AbstractString)
     if endswith(file_path, ".json")
         metadata = open(file_path) do io
             metadata = Vector{TimeSeriesFileMetadata}()
             data = JSON3.read(io, Array)
             for item in data
                 parsed_resolution = Dates.Millisecond(item["resolution"])
-                if resolution !== nothing && parsed_resolution != resolution
-                    @debug "Skip time_series with resolution=$parsed_resolution; doesn't match user=$resolution"
-                    continue
-                end
                 category = _get_category(item["category"])
                 normalization_factor = item["normalization_factor"]
                 if !isa(normalization_factor, AbstractString)
@@ -98,7 +94,7 @@ function read_time_series_file_metadata(file_path::AbstractString; resolution::U
                         name = item["name"],
                         normalization_factor = normalization_factor,
                         data_file = item["data_file"],
-                        parsed_resolution,
+                        resolution = parsed_resolution,
                         # Use default values until CDM data is updated.
                         percentiles = get(item, "percentiles", []),
                         time_series_type_module = get(
@@ -129,7 +125,7 @@ function read_time_series_file_metadata(file_path::AbstractString; resolution::U
                     category = row.category,
                     component_name = row.component_name,
                     name = row.name,
-                    resolution = resolution,
+                    resolution = row.resolution,
                     normalization_factor = row.normalization_factor,
                     data_file = row.data_file,
                     percentiles = [],
