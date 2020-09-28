@@ -122,7 +122,6 @@ function Deterministic(
         uuid = UUIDs.uuid4()
     end
 
-    data_ = handle_normalization_factor(data, normalization_factor)
     return Deterministic(
         name = get_name(ts_metadata),
         initial_timestamp = first(keys(data)),
