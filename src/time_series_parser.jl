@@ -100,7 +100,7 @@ function read_time_series_file_metadata(file_path::AbstractString; resolution::U
                             "module",
                             "InfrastructureSystems",
                         ),
-                        time_series_type = get(item, "type", "Deterministic"),
+                        time_series_type = get(item, "type", "SingleTimeSeries"),
                         scaling_factor_multiplier = scaling_factor_multiplier,
                         scaling_factor_multiplier_module = scaling_factor_multiplier_module,
                     ),
@@ -128,7 +128,7 @@ function read_time_series_file_metadata(file_path::AbstractString; resolution::U
                     data_file = row.data_file,
                     percentiles = [],
                     time_series_type_module = get(row, :module, "InfrastructureSystems"),
-                    time_series_type = get(row, :type, "Deterministic"),
+                    time_series_type = get(row, :type, "SingleTimeSeries"),
                     scaling_factor_multiplier = scaling_factor_multiplier,
                     scaling_factor_multiplier_module = scaling_factor_multiplier_module,
                 ),
@@ -231,7 +231,8 @@ struct TimeSeriesParsedInfo
 end
 
 function TimeSeriesParsedInfo(metadata::TimeSeriesFileMetadata, ta::TimeSeries.TimeArray)
-    ts_type = get_type_from_strings(metadata.time_series_type_module, metadata.time_series_type)
+    ts_type =
+        get_type_from_strings(metadata.time_series_type_module, metadata.time_series_type)
 
     if (
         metadata.scaling_factor_multiplier === nothing &&

@@ -111,9 +111,7 @@ function add_time_series_from_file_metadata!(
     cache = TimeSeriesCache()
 
     for metadata in file_metadata
-        if resolution !== nothing && metadata.resolution != resolution
-            _add_time_series_from_file_metadata!(data, T, cache, metadata)
-        end
+        add_time_series_from_file_metadata_internal!(data, T, cache, metadata, resolution)
     end
     return
 end
@@ -132,11 +130,18 @@ Throws ArgumentError if the component is not stored in the system.
 function add_time_series!(
     data::SystemData,
     component::InfrastructureSystemsComponent,
-    time_series::TimeSeriesData,
+    time_series::TimeSeriesData;
+    skip_if_present = false,
 )
     metadata_type = time_series_data_to_metadata(typeof(time_series))
     ts_metadata = metadata_type(time_series)
-    _attach_time_series_and_serialize!(data, component, ts_metadata, time_series)
+    _attach_time_series_and_serialize!(
+        data,
+        component,
+        ts_metadata,
+        time_series;
+        skip_if_present = skip_if_present,
+    )
 end
 
 """
@@ -179,7 +184,7 @@ function _attach_time_series_and_serialize!(
     )
 end
 
-function _add_time_series_from_file_metadata!(
+function add_time_series_from_file_metadata_internal!(
     data::SystemData,
     ::Type{T},
     cache::TimeSeriesCache,
@@ -315,7 +320,10 @@ function compare_values(x::SystemData, y::SystemData)::Bool
             continue
         end
         if !compare_values(val_x, val_y)
-            @error "SystemData field=$name does not match" getfield(x, name) getfield(y, name)
+            @error "SystemData field=$name does not match" getfield(x, name) getfield(
+                y,
+                name,
+            )
             match = false
         end
     end
@@ -404,7 +412,6 @@ This requires that category be a string version of a component's abstract type.
 Modules can override for custom behavior.
 """
 function set_component!(metadata::TimeSeriesFileMetadata, data::SystemData, mod::Module)
-
     category = getfield(mod, Symbol(metadata.category))
     if isconcretetype(category)
         metadata.component =
