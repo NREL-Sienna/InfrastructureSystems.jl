@@ -165,20 +165,6 @@ Pass component_name when the file does not have the component name in a column h
 """
 function read_time_series(
     ::Type{T},
-    ::Type{U},
-    file::CSV.File;
-    kwargs...,
-) where {T <: TimeSeriesFileFormat, U <: Forecast}
-    error("The file format provided can't be parsed into a $U forecast")
-end
-
-"""
-Return a TimeDataContainer from a CSV file.
-
-Pass component_name when the file does not have the component name in a column header.
-"""
-function read_time_series(
-    ::Type{T},
     ::Type{Deterministic},
     file::CSV.File,
     component_name = nothing;
