@@ -12,9 +12,12 @@ Return a TimeArray from a CSV file.
 
 Pass component_name when the file does not have the component name in a column header.
 """
-function read_time_series(::Type{T},
+function read_time_series(
+    ::Type{T},
     data_file::AbstractString,
-    component_name = nothing; kwargs...) where T <: TimeSeriesData
+    component_name = nothing;
+    kwargs...,
+) where {T <: TimeSeriesData}
     if !isfile(data_file)
         msg = "TimeSeries file doesn't exist : $(metadata.data_file)"
         throw(DataFormatError(msg))
@@ -25,17 +28,16 @@ function read_time_series(::Type{T},
 
     format = get_time_series_format(file)
     @debug "$format detected for the time series"
-    return read_time_series(
-        format,
-        T,
-        file,
-        component_name;
-        kwargs...,
-    )
+    return read_time_series(format, T, file, component_name; kwargs...)
 end
 
 function read_time_series(metadata::TimeSeriesFileMetadata; kwargs...)
-    return read_time_series(metadata.time_series_type, metadata.data_file, metadata.component_name; kwargs...)
+    return read_time_series(
+        metadata.time_series_type,
+        metadata.data_file,
+        metadata.component_name;
+        kwargs...,
+    )
 end
 
 """
