@@ -40,8 +40,6 @@ function Deterministic(
     return Deterministic(name, ta, scaling_factor_multiplier)
 end
 
-# TODO: need to make concatenation constructors for Probabilistic
-
 function Deterministic(
     ts_metadata::DeterministicMetadata,
     data::SortedDict{Dates.DateTime, Array},
