@@ -200,7 +200,6 @@ struct TimeSeriesParsedInfo
     name::String  # Component field on which time series data is based.
     normalization_factor::NormalizationFactor
     data::RawTimeSeries
-    initial_time::Dates.DateTime
     percentiles::Vector{Float64}
     file_path::String
     resolution::Dates.Period
@@ -215,6 +214,7 @@ struct TimeSeriesParsedInfo
         data,
         percentiles,
         file_path,
+        resolution,
         time_series_type,
         scaling_factor_multiplier = nothing,
     )
@@ -226,16 +226,14 @@ struct TimeSeriesParsedInfo
             data,
             percentiles,
             abspath(file_path),
+            resolution,
             time_series_type,
             scaling_factor_multiplier,
         )
     end
 end
 
-function TimeSeriesParsedInfo(metadata::TimeSeriesFileMetadata, ta::TimeSeries.TimeArray)
-    ts_type =
-        get_type_from_strings(metadata.time_series_type_module, metadata.time_series_type)
-
+function TimeSeriesParsedInfo(metadata::TimeSeriesFileMetadata, raw_data::RawTimeSeries)
     if (
         metadata.scaling_factor_multiplier === nothing &&
         metadata.scaling_factor_multiplier_module !== nothing
@@ -271,9 +269,10 @@ function TimeSeriesParsedInfo(metadata::TimeSeriesFileMetadata, ta::TimeSeries.T
         metadata.component,
         metadata.name,
         normalization_factor,
-        ta,
+        raw_data,
         metadata.percentiles,
         metadata.data_file,
+        metadata.resolution,
         metadata.time_series_type,
         multiplier_func,
     )
@@ -281,7 +280,7 @@ end
 
 struct TimeSeriesCache
     time_series_infos::Vector{TimeSeriesParsedInfo}
-    data_files::Dict{String, TimeSeries.TimeArray}
+    data_files::Dict{String, RawTimeSeries}
 end
 
 function TimeSeriesCache()
