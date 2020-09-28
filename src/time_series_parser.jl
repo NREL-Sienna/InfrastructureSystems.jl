@@ -214,7 +214,6 @@ struct TimeSeriesParsedInfo
         percentiles,
         file_path,
         resolution,
-        time_series_type,
         scaling_factor_multiplier = nothing,
     )
         new(
@@ -271,7 +270,6 @@ function TimeSeriesParsedInfo(metadata::TimeSeriesFileMetadata, raw_data::RawTim
         metadata.percentiles,
         metadata.data_file,
         metadata.resolution,
-        metadata.time_series_type,
         multiplier_func,
     )
 end
