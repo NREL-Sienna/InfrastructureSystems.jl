@@ -193,11 +193,8 @@ function add_time_series_from_file_metadata_internal!(
 ) where {T <: InfrastructureSystemsComponent}
     set_component!(file_metadata, data, InfrastructureSystems)
     component = file_metadata.component
-
     time_series = make_time_series!(cache, file_metadata)
-    if !isnothing(ts)
-        add_time_series!(data, component, time_series)
-    end
+    add_time_series!(data, component, time_series)
 end
 
 """
@@ -227,7 +224,7 @@ Return a time series from TimeSeriesFileMetadata.
 """
 function make_time_series!(cache::TimeSeriesCache, ts_file_metadata::TimeSeriesFileMetadata)
     info = add_time_series_info!(cache, ts_file_metadata)
-    return _make_time_series(info)
+    return make_time_series(info)
 end
 
 # TODO DT: probably not needed any longer
@@ -245,38 +242,6 @@ end
 #    ts_metadata = DeterministicMetadata(name, time_series, scaling_factor_multiplier)
 #    _attach_time_series_and_serialize!(data, component, ts_metadata, time_series)
 #end
-
-function _make_time_array(info::TimeSeriesParsedInfo)
-    series_length = length(info.data)
-    timestamps = range(info.initial_time; length = series_length, step = resolution)
-    return TimeSeries.TimeArray(timestamps, info.data.data[get_name(info.component)])
-end
-
-function _make_time_series(info::TimeSeriesParsedInfo)
-    ta = info.data[Symbol(get_name(info.component))]
-    if info.time_series_type <: SingleTimeSeries
-        ts = info.time_series_type(
-            name = info.name,
-            data = _make_time_array(info.data),
-            scaling_factot_multiplier = info.scaling_factor_multiplier,
-            resolution = info.resolution,
-            initial_timestamp = info.initial_time,
-        )
-    else
-        info.time_series_type <: Forecast
-        ts = info.time_series_type(
-            name = info.name,
-            data = info.data.data,
-            scaling_factot_multiplier = info.scaling_factor_multiplier,
-            resolution = info.resolution,
-            initial_timestamp = info.initial_time,
-        )
-    end
-
-    ts = handle_normalization_factor(ts, info.normalization_factor)
-    @debug "Created $ts"
-    return ts
-end
 
 function add_time_series_info!(cache::TimeSeriesCache, metadata::TimeSeriesFileMetadata)
     time_series = _add_time_series_info!(cache, metadata)
