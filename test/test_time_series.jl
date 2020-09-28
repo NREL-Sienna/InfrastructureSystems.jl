@@ -140,7 +140,6 @@ end
     end
 end
 
-#=
 @testset "Test add_time_series from file" begin
     data = IS.SystemData()
 
@@ -180,6 +179,18 @@ end
     @test IS.get_time_series_interval(data) == IS.UNINITIALIZED_PERIOD
     @test IS.get_time_series_horizon(data) == IS.get_horizon(time_series)
     @test IS.get_time_series_resolution(data) == IS.get_resolution(time_series)
+
+
+    data = IS.SystemData()
+    name = "Component1"
+    component = IS.TestComponent(name, 5)
+    IS.add_component!(data, component)
+    @test !IS.has_time_series(component)
+    file = joinpath(FORECASTS_DIR, "ForecastPointers.json")
+    IS.add_time_series_from_file_metadata!(data, IS.InfrastructureSystemsComponent, file)
+    @test IS.has_time_series(component)
+
+
 end
 
 @testset "Test add_time_series" begin
@@ -753,5 +764,3 @@ end
     time_series = IS.SingleTimeSeries(name = "val", data = ta)
     @test_throws ArgumentError IS.add_time_series!(sys, component, time_series)
 end
-
-=#
