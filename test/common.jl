@@ -31,10 +31,9 @@ function create_system_data_shared_time_series(; time_series_in_memory = false)
     IS.add_component!(data, component1)
     IS.add_component!(data, component2)
 
-    ta = create_time_array()
-    ts_metadata = IS.SingleTimeSeriesMetadata("val", ta, IS.get_val)
-    IS.add_time_series!(data, component1, ts_metadata, ta)
-    IS.add_time_series!(data, component2, ts_metadata, ta)
+    ts = IS.SingleTimeSeries(name = "val", data = create_time_array())
+    IS.add_time_series!(data, component1, ts)
+    IS.add_time_series!(data, component2, ts)
 
     return data
 end
@@ -53,4 +52,12 @@ function create_time_array()
     data = collect(1:24)
     component_name = "gen"
     return TimeSeries.TimeArray(dates, data, [component_name])
+end
+
+function create_dates(start_time::Dates.DateTime, resolution, end_time::Dates.DateTime)
+    return collect(start_time:resolution:end_time)
+end
+
+function create_dates(start_time::String, resolution, end_time::String)
+    return create_dates(Dates.DateTime(start_time), resolution, Dates.DateTime(end_time))
 end

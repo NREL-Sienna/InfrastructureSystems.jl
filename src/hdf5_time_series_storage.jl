@@ -85,7 +85,7 @@ end
 
 get_file_path(storage::Hdf5TimeSeriesStorage) = storage.file_path
 
-function add_time_series!(
+function serialize_time_series!(
     storage::Hdf5TimeSeriesStorage,
     component_uuid::UUIDs.UUID,
     name::AbstractString,
@@ -102,24 +102,81 @@ function add_time_series!(
             path = root[uuid]
             data = get_array_for_hdf(ts)
             path["data"] = data
-            initial_time = get_initial_timestamp(ts)
-            resolution = get_resolution(ts)
-            HDF5.attrs(path)["initial_time"] = Dates.datetime2epochms(initial_time)
-            if ts isa Forecast
-                interval = get_interval(ts)
-                HDF5.attrs(path)["interval"] = time_period_conversion(interval).value
-            end
-            HDF5.attrs(path)["resolution"] = time_period_conversion(resolution).value
-            # Storing the UUID as an integer would take less space, but HDF5 library says
-            # arrays of 128-bit integers aren't supported.
+            _write_time_series_attributes!(storage, ts, path)
             path["components"] = [component_name]
-            @debug "Create new time series entry." uuid component_uuid name initial_time
+            @debug "Create new time series entry." uuid component_uuid name
         else
             path = root[uuid]
             @debug "Add reference to existing time series entry." uuid component_uuid name
             _append_item!(path, "components", component_name)
         end
     end
+end
+
+function _write_time_series_attributes!(
+    storage::Hdf5TimeSeriesStorage,
+    ts::T,
+    path,
+) where {T <: StaticTimeSeries}
+    _write_time_series_attributes_common!(storage, ts, path)
+end
+
+function _write_time_series_attributes!(
+    storage::Hdf5TimeSeriesStorage,
+    ts::T,
+    path,
+) where {T <: Forecast}
+    _write_time_series_attributes_common!(storage, ts, path)
+    interval = get_interval(ts)
+    HDF5.attrs(path)["interval"] = time_period_conversion(interval).value
+end
+
+function _write_time_series_attributes_common!(storage::Hdf5TimeSeriesStorage, ts, path)
+    initial_timestamp = Dates.datetime2epochms(get_initial_timestamp(ts))
+    resolution = get_resolution(ts)
+    HDF5.attrs(path)["module"] = string(parentmodule(typeof(ts)))
+    HDF5.attrs(path)["type"] = string(nameof(typeof(ts)))
+    HDF5.attrs(path)["initial_timestamp"] = initial_timestamp
+    HDF5.attrs(path)["resolution"] = time_period_conversion(resolution).value
+end
+
+function _read_time_series_attributes(
+    storage::Hdf5TimeSeriesStorage,
+    path,
+    rows,
+    ::Type{T},
+) where {T <: StaticTimeSeries}
+    return _read_time_series_attributes_common(storage, path, rows)
+end
+
+function _read_time_series_attributes(
+    storage::Hdf5TimeSeriesStorage,
+    path,
+    rows,
+    ::Type{T},
+) where {T <: Forecast}
+    data = _read_time_series_attributes_common(storage, path, rows)
+    data["interval"] = Dates.Millisecond(HDF5.read(HDF5.attrs(path)["interval"]))
+    return data
+end
+
+function _read_time_series_attributes_common(storage::Hdf5TimeSeriesStorage, path, rows)
+    initial_timestamp =
+        Dates.epochms2datetime(HDF5.read(HDF5.attrs(path)["initial_timestamp"]),)
+    resolution = Dates.Millisecond(HDF5.read(HDF5.attrs(path)["resolution"]))
+    return Dict(
+        "type" => _read_time_series_type(path),
+        "initial_timestamp" => initial_timestamp,
+        "resolution" => resolution,
+        "dataset_size" => size(path["data"]),
+        "start_time" => initial_timestamp + resolution * (rows.start - 1),
+    )
+end
+
+function _read_time_series_type(path)
+    module_str = HDF5.read(HDF5.attrs(path)["module"])
+    type_str = HDF5.read(HDF5.attrs(path)["type"])
+    return get_type_from_strings(module_str, type_str)
 end
 
 function add_time_series_reference!(
@@ -139,26 +196,45 @@ function add_time_series_reference!(
     end
 end
 
-# TODO DT: broken
-#function iterate_time_series(storage::Hdf5TimeSeriesStorage)
-#    Channel() do channel
-#        HDF5.h5open(storage.file_path, "r") do file
-#            root = _get_root(storage, file)
-#            for uuid_group in root
-#                uuid_path = HDF5.name(uuid_group)
-#                range = findlast("/", uuid_path)
-#                uuid_str = uuid_path[(range.start + 1):end]
-#                uuid = UUIDs.UUID(uuid_str)
-#                internal = InfrastructureSystemsInternal(uuid)
-#                ts = TimeDataContainer(get_time_series(storage, uuid), internal)
-#                for item in HDF5.read(uuid_group["components"])
-#                    component, name = deserialize_component_name(item)
-#                    put!(channel, (component, name, ta))
-#                end
-#            end
-#        end
-#    end
-#end
+# TODO: This needs to change if we want to directly convert Hdf5TimeSeriesStorage to
+# InMemoryTimeSeriesStorage, which is currently not supported System deserialization.
+function iterate_time_series(storage::Hdf5TimeSeriesStorage)
+    Channel() do channel
+        HDF5.h5open(storage.file_path, "r") do file
+            root = _get_root(storage, file)
+            for uuid_group in root
+                uuid_path = HDF5.name(uuid_group)
+                uuid_str = uuid_path[(findlast("/", uuid_path).start + 1):end]
+                uuid = UUIDs.UUID(uuid_str)
+
+                data = uuid_group["data"][:]
+                attributes = Dict()
+                for name in names(HDF5.attrs(uuid_group))
+                    attributes[name] = HDF5.read(HDF5.attrs(uuid_group)[name])
+                end
+                for item in HDF5.read(uuid_group["components"])
+                    component, name = deserialize_component_name(item)
+                    put!(channel, (component, name, data, attributes))
+                end
+            end
+        end
+    end
+end
+
+#=
+# This could be used if we deserialize the type directly from HDF.
+function _make_rows_columns(dataset, ::Type{T}) where T <: StaticTimeSeries
+    rows = UnitRange(1, size(dataset)[1])
+    columns = UnitRange(1, 1)
+    return (rows, columns)
+end
+
+function _make_rows_columns(dataset, ::Type{T}) where T <: Forecast
+    rows = UnitRange(1, size(dataset)[1])
+    columns = UnitRange(1, size(dataset)[2])
+    return (rows, columns)
+end
+=#
 
 function remove_time_series!(
     storage::Hdf5TimeSeriesStorage,
@@ -177,58 +253,73 @@ function remove_time_series!(
     end
 end
 
-function get_time_series(
+function deserialize_time_series(
+    ::Type{T},
     storage::Hdf5TimeSeriesStorage,
-    uuid::UUIDs.UUID,
-    row_index::Int,
-    column_index::Int,
-    num_rows::Int,
-    num_columns::Int,
-)
+    ts_metadata::TimeSeriesMetadata,
+    rows::UnitRange,
+    columns::UnitRange,
+) where {T <: StaticTimeSeries}
+    # Note that all range checks must occur at a higher level.
     return HDF5.h5open(storage.file_path, "r") do file
         root = _get_root(storage, file)
+        uuid = get_time_series_uuid(ts_metadata)
         path = _get_time_series_path(root, uuid)
-        _initial_timestamp = HDF5.read(HDF5.attrs(path)["initial_time"])
-        initial_timestamp = Dates.epochms2datetime(_initial_timestamp)
-        resolution = Dates.Millisecond(HDF5.read(HDF5.attrs(path)["resolution"]))
-        sz_tuple = size(path["data"])
-
-        # HDF5.readmmap could be faster in many cases than this. However, experiments
-        # resulted in various crashes if we tried to close the file before references
-        # to the array data were garbage collected. May need to consult with the
-        # Julia HDF5 library maintainers about that.
-        # TODO: Consider case Interval_ms = 0 if contigous instead of not existing
-        if !HDF5.exists(HDF5.attrs(path), "interval")
-            @assert length(sz_tuple) == 1
-            @debug "reconstructing a contiguous time series"
-            start_time = initial_timestamp + resolution * (row_index - 1)
-            end_index = row_index + num_rows - 1
-            data = path["data"][row_index:end_index]
-            return TimeSeries.TimeArray(
-                range(start_time; length = num_rows, step = resolution),
+        attributes = _read_time_series_attributes(storage, path, rows, T)
+        @assert attributes["type"] == T
+        @assert length(attributes["dataset_size"]) == 1
+        @debug "deserializing a StaticTimeSeries" T
+        data = path["data"][rows]
+        return T(
+            ts_metadata,
+            TimeSeries.TimeArray(
+                range(
+                    attributes["start_time"];
+                    length = length(rows),
+                    step = attributes["resolution"],
+                ),
                 data,
-            )
+            ),
+        )
+    end
+end
+
+function deserialize_time_series(
+    ::Type{T},
+    storage::Hdf5TimeSeriesStorage,
+    ts_metadata::TimeSeriesMetadata,
+    rows::UnitRange,
+    columns::UnitRange,
+) where {T <: Forecast}
+    # Note that all range checks must occur at a higher level.
+    total_rows = length(ts_metadata)
+    total_columns = get_count(ts_metadata)
+    use_same_uuid = length(rows) == total_rows && length(columns) == total_columns
+
+    return HDF5.h5open(storage.file_path, "r") do file
+        root = _get_root(storage, file)
+        uuid = get_time_series_uuid(ts_metadata)
+        path = _get_time_series_path(root, uuid)
+        attributes = _read_time_series_attributes(storage, path, rows, T)
+        @assert attributes["type"] == T
+        @assert length(attributes["dataset_size"]) == 2
+        @debug "deserializing a Forecast" T
+        data = SortedDict{Dates.DateTime, Array}()
+        start_time = attributes["start_time"]
+        if length(columns) == 1
+            data[start_time] = path["data"][rows, columns.start]
         else
-            @debug "reconstructing a overlapping forecast time series"
-            @assert length(sz_tuple) == 2
-            data = SortedDict{Dates.DateTime, Array}()
-            interval = Dates.Millisecond(HDF5.read(HDF5.attrs(path)["interval"]))
-            if num_columns > sz_tuple[1]
-                throw(ArgumentError("More Forecasts requested $num_columns than the total stored $(sz_tuple[2])"))
+            data_read = path["data"][rows, columns]
+            for (i, it) in enumerate(range(
+                attributes["start_time"];
+                length = length(columns),
+                step = attributes["interval"],
+            ))
+                data[it] = @view data_read[1:length(rows), i]
             end
-            start_time = initial_timestamp + interval * (row_index - 1)
-            if num_columns == 1
-                data[start_time] = path["data"][1:num_rows, column_index]
-            else
-                data_read =
-                    path["data"][1:num_rows, column_index:(column_index + num_columns - 1)]
-                for (i, it) in
-                    enumerate(range(start_time; length = num_columns, step = interval))
-                    data[it] = @view data_read[1:num_rows, i]
-                end
-            end
-            return data
         end
+
+        new_ts = T(ts_metadata, data, use_same_uuid)
     end
 end
 
@@ -319,14 +410,15 @@ function check_read_only(storage::Hdf5TimeSeriesStorage)
 end
 
 function compare_values(x::Hdf5TimeSeriesStorage, y::Hdf5TimeSeriesStorage)::Bool
-    data_x = sort!(collect(iterate_time_series(x)), by = z -> z[1])
-    data_y = sort!(collect(iterate_time_series(y)), by = z -> z[1])
-    if length(data_x) != length(data_y)
-        @error "lengths don't match" length(data_x) length(data_y)
+    item_x = sort!(collect(iterate_time_series(x)), by = z -> z[1])
+    item_y = sort!(collect(iterate_time_series(y)), by = z -> z[1])
+    if length(item_x) != length(item_y)
+        @error "lengths don't match" length(item_x) length(item_y)
         return false
     end
 
-    for ((uuid_x, name_x, ts_x), (uuid_y, name_y, ts_y)) in zip(data_x, data_y)
+    for ((uuid_x, name_x, data_x, attrs_x), (uuid_y, name_y, data_y, attrs_y)) in
+        zip(item_x, item_y)
         if uuid_x != uuid_y
             @error "component UUIDs don't match" uuid_x uuid_y
             return false
@@ -335,13 +427,15 @@ function compare_values(x::Hdf5TimeSeriesStorage, y::Hdf5TimeSeriesStorage)::Boo
             @error "names don't match" name_x name_y
             return false
         end
-        if TimeSeries.timestamp(ts_x.data) != TimeSeries.timestamp(ts_y.data)
-            @error "timestamps don't match" ts_x.data ts_y.data
+        if data_x != data_y
+            @error "data doesn't match" data_x data_y
             return false
         end
-        if TimeSeries.values(ts_x.data) != TimeSeries.values(ts_y.data)
-            @error "values don't match" ts_x.data ts_y.data
-            return false
+        if sort!(collect(keys(attrs_x))) != sort!(collect(keys(attrs_y)))
+            @error "attr keys don't match" attrs_x attrs_y
+        end
+        if collect(values(attrs_x)) != collect(values(attrs_y))
+            @error "attr values don't match" attrs_x attrs_y
         end
     end
 

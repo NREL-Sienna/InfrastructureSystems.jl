@@ -88,7 +88,7 @@ function read_time_series_file_metadata(file_path::AbstractString)
                             "module",
                             "InfrastructureSystems",
                         ),
-                        time_series_type = get(item, "type", "Deterministic"),
+                        time_series_type = get(item, "type", "SingleTimeSeries"),
                         scaling_factor_multiplier = scaling_factor_multiplier,
                         scaling_factor_multiplier_module = scaling_factor_multiplier_module,
                     ),
@@ -115,7 +115,7 @@ function read_time_series_file_metadata(file_path::AbstractString)
                     data_file = row.data_file,
                     percentiles = [],
                     time_series_type_module = get(row, :module, "InfrastructureSystems"),
-                    time_series_type = get(row, :type, "Deterministic"),
+                    time_series_type = get(row, :type, "SingleTimeSeries"),
                     scaling_factor_multiplier = scaling_factor_multiplier,
                     scaling_factor_multiplier_module = scaling_factor_multiplier_module,
                 ),
@@ -216,8 +216,8 @@ struct TimeSeriesParsedInfo
 end
 
 function TimeSeriesParsedInfo(metadata::TimeSeriesFileMetadata, ta::TimeSeries.TimeArray)
-    mod = Base.root_module(Base.__toplevel__, Symbol(metadata.time_series_type_module))
-    ts_type = getfield(mod, Symbol(metadata.time_series_type))
+    ts_type =
+        get_type_from_strings(metadata.time_series_type_module, metadata.time_series_type)
 
     if (
         metadata.scaling_factor_multiplier === nothing &&
@@ -229,16 +229,13 @@ function TimeSeriesParsedInfo(metadata::TimeSeriesFileMetadata, ta::TimeSeries.T
         throw(DataFormatError("scaling_factor_multiplier and scaling_factor_multiplier_module must both be set or not set"))
     end
 
-    if metadata.scaling_factor_multiplier !== nothing
-        multiplier_mod = Base.root_module(
-            Base.__toplevel__,
-            Symbol(metadata.scaling_factor_multiplier_module),
-        )
-        multiplier_func =
-            metadata.scaling_factor_multiplier === nothing ? nothing :
-            getfield(multiplier_mod, Symbol(metadata.scaling_factor_multiplier))
-    else
+    if metadata.scaling_factor_multiplier === nothing
         multiplier_func = nothing
+    else
+        multiplier_func = get_type_from_strings(
+            metadata.scaling_factor_multiplier_module,
+            metadata.scaling_factor_multiplier,
+        )
     end
 
     if metadata.normalization_factor isa String

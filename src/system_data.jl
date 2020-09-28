@@ -111,7 +111,7 @@ function add_time_series_from_file_metadata!(
     cache = TimeSeriesCache()
 
     for metadata in file_metadata
-        _add_time_series_from_file_metadata!(data, T, cache, metadata, resolution)
+        add_time_series_from_file_metadata_internal!(data, T, cache, metadata, resolution)
     end
 end
 
@@ -129,11 +129,18 @@ Throws ArgumentError if the component is not stored in the system.
 function add_time_series!(
     data::SystemData,
     component::InfrastructureSystemsComponent,
-    time_series::TimeSeriesData,
+    time_series::TimeSeriesData;
+    skip_if_present = false,
 )
     metadata_type = time_series_data_to_metadata(typeof(time_series))
     ts_metadata = metadata_type(time_series)
-    _add_time_series_metadata!(data, component, ts_metadata, time_series)
+    _attach_time_series_and_serialize!(
+        data,
+        component,
+        ts_metadata,
+        time_series;
+        skip_if_present = skip_if_present,
+    )
 end
 
 """
@@ -153,11 +160,11 @@ function add_time_series!(data::SystemData, components, time_series::TimeSeriesD
     metadata_type = time_series_data_to_metadata(typeof(time_series))
     ts_metadata = metadata_type(time_series)
     for component in components
-        _add_time_series_metadata!(data, component, ts_metadata, time_series)
+        _attach_time_series_and_serialize!(data, component, ts_metadata, time_series)
     end
 end
 
-function _add_time_series_metadata!(
+function _attach_time_series_and_serialize!(
     data::SystemData,
     component::InfrastructureSystemsComponent,
     ts_metadata::T,
@@ -168,8 +175,7 @@ function _add_time_series_metadata!(
     check_add_time_series!(data.time_series_params, ts)
     check_read_only(data.time_series_storage)
     add_time_series!(component, ts_metadata, skip_if_present = skip_if_present)
-    # TODO: can this be atomic with time_series addition?
-    add_time_series!(
+    serialize_time_series!(
         data.time_series_storage,
         get_uuid(component),
         get_name(ts_metadata),
@@ -177,7 +183,7 @@ function _add_time_series_metadata!(
     )
 end
 
-function _add_time_series_from_file_metadata!(
+function add_time_series_from_file_metadata_internal!(
     data::SystemData,
     ::Type{T},
     cache::TimeSeriesCache,
@@ -240,7 +246,7 @@ end
 #    # TODO: This code path needs to accept a metdata file or parameters telling it which
 #    # type of time_series to create.
 #    ts_metadata = DeterministicMetadata(name, time_series, scaling_factor_multiplier)
-#    _add_time_series_metadata!(data, component, ts_metadata, time_series)
+#    _attach_time_series_and_serialize!(data, component, ts_metadata, time_series)
 #end
 
 function _make_time_series(info::TimeSeriesParsedInfo, resolution)
@@ -293,8 +299,18 @@ function compare_values(x::SystemData, y::SystemData)::Bool
             # Not deserialized in IS.
             continue
         end
-        if !compare_values(getfield(x, name), getfield(y, name))
-            @error "SystemData field=$name does not match"
+        val_x = getfield(x, name)
+        val_y = getfield(y, name)
+        if name == :time_series_storage && typeof(val_x) != typeof(val_y)
+            # TODO 1.0: workaround for not being able to convert Hdf5TimeSeriesStorage to
+            # InMemoryTimeSeriesStorage
+            continue
+        end
+        if !compare_values(val_x, val_y)
+            @error "SystemData field=$name does not match" getfield(x, name) getfield(
+                y,
+                name,
+            )
             match = false
         end
     end
@@ -383,7 +399,6 @@ This requires that category be a string version of a component's abstract type.
 Modules can override for custom behavior.
 """
 function set_component!(metadata::TimeSeriesFileMetadata, data::SystemData, mod::Module)
-
     category = getfield(mod, Symbol(metadata.category))
     if isconcretetype(category)
         metadata.component =
@@ -479,16 +494,17 @@ function deserialize(::Type{SystemData}, raw; time_series_read_only = false)
     end
     validation_descriptors = read_validation_descriptor(raw["validation_descriptor_file"])
 
+    # TODO 1.0: need to address this limitation
     if strip_module_name(raw["time_series_storage_type"]) == "InMemoryTimeSeriesStorage"
-        hdf5_storage = Hdf5TimeSeriesStorage(raw["time_series_storage_file"], true)
-        time_series_storage = InMemoryTimeSeriesStorage(hdf5_storage)
-    else
-        time_series_storage = from_file(
-            Hdf5TimeSeriesStorage,
-            raw["time_series_storage_file"];
-            read_only = time_series_read_only,
-        )
+        @info "Deserializing with InMemoryTimeSeriesStorage is currently not supported. Using HDF"
+        #hdf5_storage = Hdf5TimeSeriesStorage(raw["time_series_storage_file"], true)
+        #time_series_storage = InMemoryTimeSeriesStorage(hdf5_storage)
     end
+    time_series_storage = from_file(
+        Hdf5TimeSeriesStorage,
+        raw["time_series_storage_file"];
+        read_only = time_series_read_only,
+    )
 
     internal = deserialize(InfrastructureSystemsInternal, raw["internal"])
     @debug "deserialize" validation_descriptors time_series_storage internal

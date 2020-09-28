@@ -339,3 +339,7 @@ end
 function get_initial_time(data::TimeSeries.TimeArray)
     return TimeSeries.timestamp(data)[1]
 end
+
+function get_type_from_strings(mod, type)
+    return getfield(Base.root_module(Base.__toplevel__, Symbol(mod)), Symbol(type))
+end

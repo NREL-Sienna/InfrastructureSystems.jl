@@ -21,7 +21,7 @@ end
 
 function InMemoryTimeSeriesStorage()
     storage = InMemoryTimeSeriesStorage(Dict{UUIDs.UUID, _TimeSeriesRecord}())
-    @info "Created InMemoryTimeSeriesStorage"
+    @debug "Created InMemoryTimeSeriesStorage"
     return storage
 end
 
@@ -31,7 +31,7 @@ Constructs InMemoryTimeSeriesStorage from an instance of Hdf5TimeSeriesStorage.
 function InMemoryTimeSeriesStorage(hdf5_storage::Hdf5TimeSeriesStorage)
     storage = InMemoryTimeSeriesStorage()
     for (component, name, time_series) in iterate_time_series(hdf5_storage)
-        add_time_series!(storage, component, name, time_series)
+        serialize_time_series!(storage, component, name, time_series)
     end
 
     return storage
@@ -39,12 +39,11 @@ end
 
 check_read_only(storage::InMemoryTimeSeriesStorage) = nothing
 
-function add_time_series!(
+function serialize_time_series!(
     storage::InMemoryTimeSeriesStorage,
     component_uuid::UUIDs.UUID,
     name::AbstractString,
     ts::TimeSeriesData,
-    unused = nothing,
 )
     uuid = get_uuid(ts)
     if !haskey(storage.data, uuid)
@@ -91,23 +90,71 @@ function remove_time_series!(
     end
 end
 
-function get_time_series(
+function deserialize_time_series(
+    ::Type{T},
     storage::InMemoryTimeSeriesStorage,
-    uuid::UUIDs.UUID;
-    index = 0,
-    len = 0,
-)::TimeSeries.TimeArray
+    ts_metadata::TimeSeriesMetadata,
+    rows::UnitRange,
+    columns::UnitRange,
+) where {T <: StaticTimeSeries}
+    uuid = get_time_series_uuid(ts_metadata)
     if !haskey(storage.data, uuid)
         throw(ArgumentError("$uuid is not stored"))
     end
 
-    if index != 0
-        @assert len != 0
-        end_index = index + len - 1
-        return storage.data[uuid].ta.data[index:end_index]
+    ts = storage.data[uuid].ts
+    total_rows = length(ts_metadata)
+    if rows.start == 1 && length(rows) == total_rows
+        # No memory allocation
+        return ts
     end
 
-    return storage.data[uuid].ta.data
+    # TimeArray doesn't support @view
+    return split_time_series(ts, get_data(ts)[rows])
+end
+
+function deserialize_time_series(
+    ::Type{T},
+    storage::InMemoryTimeSeriesStorage,
+    ts_metadata::TimeSeriesMetadata,
+    rows::UnitRange,
+    columns::UnitRange,
+) where {T <: Deterministic}
+    # TODO 1.0: Much of this will apply to Probabilistic and Scenarios
+    uuid = get_time_series_uuid(ts_metadata)
+    if !haskey(storage.data, uuid)
+        throw(ArgumentError("$uuid is not stored"))
+    end
+
+    ts = storage.data[uuid].ts
+    total_rows = length(ts_metadata)
+    total_columns = get_count(ts_metadata)
+    if length(rows) == total_rows && length(columns) == total_columns
+        return ts
+    end
+
+    full_data = get_data(ts)
+    initial_timestamp = get_initial_timestamp(ts)
+    resolution = get_resolution(ts)
+    interval = get_interval(ts)
+    start_time = initial_timestamp + interval * (columns.start - 1)
+    data = SortedDict{Dates.DateTime, Vector}()
+    for initial_time in range(start_time; step = interval, length = length(columns))
+        if rows.start == 1
+            it = initial_time
+        else
+            it = initial_time + (rows.start - 1) * resolution
+        end
+        data[it] = @view full_data[initial_time][rows]
+    end
+
+    new_ts = split_time_series(ts, data)
+    set_horizon!(new_ts, length(rows))
+    if rows.start > 1
+        set_initial_timestamp!(new_ts, start_time + rows.start * resolution)
+    end
+
+    return new_ts
 end
 
 function clear_time_series!(storage::InMemoryTimeSeriesStorage)
@@ -124,8 +171,7 @@ function convert_to_hdf5(storage::InMemoryTimeSeriesStorage, filename::AbstractS
     hdf5_storage = Hdf5TimeSeriesStorage(create_file; filename = filename)
     for record in values(storage.data)
         for pair in record.component_names
-            columns = TimeSeries.colnames(record.ta.data)
-            add_time_series!(hdf5_storage, pair[1], pair[2], record.ta, columns)
+            serialize_time_series!(hdf5_storage, pair[1], pair[2], record.ts)
         end
     end
 end

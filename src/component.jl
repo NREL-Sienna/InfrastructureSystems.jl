@@ -35,7 +35,7 @@ function clear_time_series!(component::InfrastructureSystemsComponent)
     end
 end
 
-function _get_column_index(start_time, count, ts_metadata::ForecastMetadata)
+function _get_columns(start_time, count, ts_metadata::ForecastMetadata)
     offset = start_time - get_initial_timestamp(ts_metadata)
     interval = get_interval(ts_metadata)
     index = Int(offset / interval) + 1
@@ -44,30 +44,30 @@ function _get_column_index(start_time, count, ts_metadata::ForecastMetadata)
         throw(ArgumentError("The requested start_time $start_time and count $count are invalid"))
     end
 
-    return index
+    return UnitRange(index, index + count - 1)
 end
 
-_get_column_index(start_time, count, ts_metadata::StaticTimeSeriesMetadata) = 1
+_get_columns(start_time, count, ts_metadata::StaticTimeSeriesMetadata) = UnitRange(1, 1)
 
-function _get_row_index(start_time, len, ts_metadata::StaticTimeSeriesMetadata)
+function _get_rows(start_time, len, ts_metadata::StaticTimeSeriesMetadata)
     index =
         Int((start_time - get_initial_time(ts_metadata)) / get_resolution(ts_metadata)) + 1
     if len === nothing
         len = length(ts_metadata) - index + 1
     end
     if index + len - 1 > length(ts_metadata)
-        throw(ArgumentError("The requested index=$index len=$len exceed the range $(length(ts_metadata))"))
+        throw(ArgumentError("The requested index=$index len=$len exceeds the range $(length(ts_metadata))"))
     end
 
-    return (index, len)
+    return UnitRange(index, index + len - 1)
 end
 
-function _get_row_index(start_time, len, ts_metadata::ForecastMetadata)
+function _get_rows(start_time, len, ts_metadata::ForecastMetadata)
     if len === nothing
         len = get_horizon(ts_metadata)
     end
 
-    return (1, len)
+    return UnitRange(1, len)
 end
 
 function _check_start_time(start_time, ts_metadata::TimeSeriesMetadata)
@@ -108,20 +108,10 @@ function get_time_series(
     metadata_type = time_series_data_to_metadata(T)
     ts_metadata = get_time_series(metadata_type, component, name)
     start_time = _check_start_time(start_time, ts_metadata)
-    row_index, len = _get_row_index(start_time, len, ts_metadata)
-    column_index = _get_column_index(start_time, count, ts_metadata)
+    rows = _get_rows(start_time, len, ts_metadata)
+    columns = _get_columns(start_time, count, ts_metadata)
     storage = _get_time_series_storage(component)
-    return T(
-        ts_metadata,
-        get_time_series(
-            storage,
-            get_time_series_uuid(ts_metadata),
-            row_index,
-            column_index,
-            len,
-            count,
-        ),
-    )
+    return deserialize_time_series(T, storage, ts_metadata, rows, columns)
 end
 
 function get_time_series(
@@ -141,16 +131,19 @@ the component and applied to the data.
 function get_time_series_array(
     ::Type{T},
     component::InfrastructureSystemsComponent,
-    initial_time::Dates.DateTime,
-    name::AbstractString,
-    horizon::Union{Nothing, Int} = nothing,
+    name::AbstractString;
+    start_time::Union{Nothing, Dates.DateTime} = nothing,
+    len::Union{Nothing, Int} = nothing,
+    count::Int = 1,
 ) where {T <: TimeSeriesData}
-    if horizon === nothing
-        time_series = get_time_series(T, component, initial_time, name)
-    else
-        time_series = get_time_series(T, component, initial_time, name, horizon)
-    end
-
+    time_series = get_time_series(
+        T,
+        component,
+        name;
+        start_time = start_time,
+        len = len,
+        count = count,
+    )
     return get_time_series_array(component, time_series)
 end
 
@@ -170,24 +163,26 @@ end
 function get_time_series_timestamps(
     ::Type{T},
     component::InfrastructureSystemsComponent,
-    initial_time::Dates.DateTime,
-    name::AbstractString,
-    horizon::Union{Nothing, Int} = nothing,
+    name::AbstractString;
+    start_time::Union{Nothing, Dates.DateTime} = nothing,
+    len::Union{Nothing, Int} = nothing,
+    count::Int = 1,
 ) where {T <: TimeSeriesData}
-    return (TimeSeries.timestamp ∘ get_time_series_array)(
+    return TimeSeries.timestamp(get_time_series_array(
         T,
         component,
-        initial_time,
-        name,
-        horizon,
-    )
+        name;
+        start_time = start_time,
+        len = len,
+        count = count,
+    ))
 end
 
 function get_time_series_timestamps(
     component::InfrastructureSystemsComponent,
     time_series::TimeSeriesData,
 )
-    return (TimeSeries.timestamp ∘ get_time_series_array)(component, time_series)
+    return TimeSeries.timestamp(get_time_series_array(component, time_series))
 end
 
 """
@@ -196,17 +191,19 @@ Return an Array of values for the requested time series parameters.
 function get_time_series_values(
     ::Type{T},
     component::InfrastructureSystemsComponent,
-    initial_time::Dates.DateTime,
-    name::AbstractString,
-    horizon::Union{Nothing, Int} = nothing,
+    name::AbstractString;
+    start_time::Union{Nothing, Dates.DateTime} = nothing,
+    len::Union{Nothing, Int} = nothing,
+    count::Int = 1,
 ) where {T <: TimeSeriesData}
-    return (TimeSeries.values ∘ get_time_series_array)(
+    return TimeSeries.values(get_time_series_array(
         T,
         component,
-        initial_time,
-        name,
-        horizon,
-    )
+        name;
+        start_time = start_time,
+        len = len,
+        count = count,
+    ))
 end
 
 function get_time_series_values(
@@ -336,12 +333,10 @@ end
 function get_time_series_names(
     ::Type{T},
     component::InfrastructureSystemsComponent,
-    initial_time::Dates.DateTime,
 ) where {T <: TimeSeriesData}
     return get_time_series_names(
         time_series_data_to_metadata(T),
         get_time_series_container(component),
-        initial_time,
     )
 end
 
@@ -406,9 +401,6 @@ function get_time_series_multiple(
 )
     container = get_time_series_container(component)
     storage = _get_time_series_storage(component)
-    if storage === nothing
-        @assert isempty(time_series_keys)
-    end
 
     Channel() do channel
         for key in keys(container.data)
@@ -420,20 +412,18 @@ function get_time_series_multiple(
                 continue
             end
             ts_metadata = container.data[key]
-            obj = get_time_series(
-                storage,
-                get_time_series_uuid(ts_metadata),
-                1,
-                1,
-                length(ts_metadata),
-                get_count(ts_metadata),
-            )
             ts_type = time_series_metadata_to_data(typeof(ts_metadata))
-            ts_data = ts_type(ts_metadata, obj)
-            if !isnothing(filter_func) && !filter_func(ts_data)
+            ts = deserialize_time_series(
+                ts_type,
+                storage,
+                ts_metadata,
+                UnitRange(1, length(ts_metadata)),
+                UnitRange(1, get_count(ts_metadata)),
+            )
+            if !isnothing(filter_func) && !filter_func(ts)
                 continue
             end
-            put!(channel, ts_data)
+            put!(channel, ts)
         end
     end
 end
@@ -446,7 +436,7 @@ function get_time_series_multiple(
     component::InfrastructureSystemsComponent,
 )
     container = get_time_series_container(component)
-    time_series_keys = Channel() do channel
+    Channel() do channel
         for key in keys(container.data)
             put!(channel, container.data[key])
         end
@@ -473,29 +463,30 @@ function set_time_series_storage!(
 end
 
 function validate_time_series_consistency(component::InfrastructureSystemsComponent)
+    # TODO 1.0
     # Initial times for each name must be identical.
-    initial_times = Dict{String, Vector{Dates.DateTime}}()
-    for key in keys(get_time_series_container(component).data)
-        if !haskey(initial_times, key.name)
-            initial_times[key.name] = Vector{Dates.DateTime}()
-        end
-        push!(initial_times[key.name], key.initial_time)
-    end
+    #initial_times = Dict{String, Vector{Dates.DateTime}}()
+    #for key in keys(get_time_series_container(component).data)
+    #    if !haskey(initial_times, key.name)
+    #        initial_times[key.name] = Vector{Dates.DateTime}()
+    #    end
+    #    push!(initial_times[key.name], key.initial_time)
+    #end
 
-    if isempty(initial_times)
-        return true
-    end
+    #if isempty(initial_times)
+    #    return true
+    #end
 
-    base_its = nothing
-    for (name, its) in initial_times
-        sort!(its)
-        if isnothing(base_its)
-            base_its = its
-        elseif its != base_its
-            @error "initial times don't match" base_its, its
-            return false
-        end
-    end
+    #base_its = nothing
+    #for (name, its) in initial_times
+    #    sort!(its)
+    #    if isnothing(base_its)
+    #        base_its = its
+    #    elseif its != base_its
+    #        @error "initial times don't match" base_its, its
+    #        return false
+    #    end
+    #end
 
     return true
 end
