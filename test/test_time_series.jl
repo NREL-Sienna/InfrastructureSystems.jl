@@ -197,6 +197,22 @@ end
     file = joinpath(FORECASTS_DIR, "ForecastPointers.json")
     IS.add_time_series_from_file_metadata!(data, IS.InfrastructureSystemsComponent, file)
     @test IS.has_time_series(component)
+
+    sys = IS.SystemData()
+    name = "Component1"
+    component = IS.TestComponent(name, 5)
+    IS.add_component!(sys, component)
+    @test !IS.has_time_series(component)
+    file = joinpath(FORECASTS_DIR, "DateTimeAsColumnDeterministic.csv")
+    raw_data = IS.read_time_series(IS.Deterministic, file, "Component1")
+    data = IS.Deterministic("test", file, component; resolution = Hour(1))
+    IS.add_time_series!(sys, component, data)
+    @test IS.has_time_series(component)
+    ini_time = IS.get_initial_timestamp(data)
+    retrieved_data =
+        IS.get_time_series(IS.Deterministic, component, "test"; start_time = ini_time)
+    @test IS.get_name(data) == IS.get_name(retrieved_data)
+    @test IS.get_resolution(data) == IS.get_resolution(retrieved_data)
 end
 
 @testset "Test add_time_series" begin
