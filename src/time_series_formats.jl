@@ -159,7 +159,7 @@ function get_timestamp(
 end
 
 """
-Return a TimeDataContainer from a CSV file.
+Return a RawTimeSeries from a CSV file.
 
 Pass component_name when the file does not have the component name in a column header.
 """
@@ -192,13 +192,12 @@ This version of the function only has component_name to match the interface. It 
 """
 function read_time_series(
     ::Type{T},
-    ::Type{U},
+    ::Type{<:StaticTimeSeries},
     file::CSV.File,
     component_name = nothing;
     kwargs...,
 ) where {
     T <: Union{TimeSeriesFormatPeriodAsColumn, TimeSeriesFormatDateTimeAsColumn},
-    U <: StaticTimeSeries,
 }
     # All timestamps must be sequential by step, so we can ignore the timestamps in the
     # file after the first one.
@@ -218,11 +217,11 @@ a component, so the component_name must be passed in.
 """
 function read_time_series(
     ::Type{T},
-    ::Type{U},
+    ::Type{<:StaticTimeSeries},
     file::CSV.File,
     component_name::AbstractString;
     kwargs...,
-) where {T <: TimeSeriesFormatPeriodAsHeader, U <: StaticTimeSeries}
+) where {T <: TimeSeriesFormatPeriodAsHeader}
     period_cols_as_symbols = get_period_columns(T, file)
     period = [parse(Int, string(x)) for x in period_cols_as_symbols]
 
@@ -251,11 +250,11 @@ day is used.
 """
 function read_time_series(
     ::Type{T},
-    ::Type{U},
+    ::Type{<:StaticTimeSeries},
     file::CSV.File,
     component_name = nothing;
     kwargs...,
-) where {T <: TimeSeriesFormatComponentsAsColumnsNoTime, U <: StaticTimeSeries}
+) where {T <: TimeSeriesFormatComponentsAsColumnsNoTime}
     first_timestamp = get(kwargs, :start_datetime, Dates.DateTime(Dates.today()))
     value_columns = get_value_columns(T, file)
     vals = [(string(x) => getproperty(file, x)) for x in value_columns]
