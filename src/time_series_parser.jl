@@ -58,7 +58,7 @@ function TimeSeriesFileMetadata(;
         data_file,
         resolution,
         percentiles,
-        get_type_from_strings(mod, ts_type),
+        get_type_from_strings(time_series_type_module, time_series_type),
         nothing,
         scaling_factor_multiplier,
         scaling_factor_multiplier_module,
@@ -171,12 +171,15 @@ function handle_normalization_factor(
     return data
 end
 
+get_max_value(ta::TimeSeries.TimeArray) = maximum(TimeSeries.values(ta))
+get_max_value(ta::Vector) = maximum(ta)
+
 function handle_normalization_factor(
-    ta::TimeSeries.TimeArray,
+    ta::AbstractArray,
     normalization_factor::NormalizationFactor,
 )
     if normalization_factor isa NormalizationTypes.NormalizationType
-        max_value = maximum(TimeSeries.values(ta))
+        max_value = get_max_value(ta)
         ta = ta ./ max_value
         @debug "Normalize by max value" max_value
     else

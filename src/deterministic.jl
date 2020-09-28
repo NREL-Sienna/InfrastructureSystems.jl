@@ -126,3 +126,14 @@ function split_time_series(
 
     return T(vals...)
 end
+
+function make_time_series(info::TimeSeriesParsedInfo{Deterministic})
+    return Deterministic(
+        name = info.name,
+        data = handle_normalization_factor(info.data.data, info.normalization_factor),
+        scaling_factor_multiplier = info.scaling_factor_multiplier,
+        initial_timestamp = info.data.initial_time,
+        horizon = info.data.length,
+        resolution = info.resolution
+    )
+end
