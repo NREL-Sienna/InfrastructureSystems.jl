@@ -87,8 +87,7 @@ function Deterministic(
 end
 
 """
-Construct Deterministic from a CSV file. The file must have a column that is the name of the
-component.
+Construct Deterministic from a CSV file. The first column must be a timestamp in DateTime format and the columns the values in the forecast window.
 
 # Arguments
 - `name::AbstractString`: user-defined name
