@@ -23,7 +23,7 @@ function read_time_series(metadata::TimeSeriesFileMetadata; kwargs...)
 
     format = get_time_series_format(file)
     @debug "$format detected for the time series"
-    return read_time_series(format, metadata.time_series_type, file, metadata.component_name, metadata.resolution; kwargs...)
+    return read_time_series(format, metadata.time_series_type, file, metadata.component_name; kwargs...)
 end
 
 """
@@ -160,8 +160,7 @@ Pass component_name when the file does not have the component name in a column h
 function read_time_series(
     ::Type{T},
     ::Type{U},
-    file::CSV.File,
-    component_name = nothing,
+    file::CSV.File;
     kwargs...
 ) where {T <: TimeSeriesFileFormat, U <: Forecast}
     error("The file format provided can't be parsed into a $U forecast")
@@ -176,8 +175,7 @@ function read_time_series(
     ::Type{T},
     ::Type{Deterministic},
     file::CSV.File,
-    component_name = nothing,
-    resolution = nothing;
+    component_name = nothing;
     kwargs...
 ) where {T <: TimeSeriesFormatDateTimeAsColumn}
     @debug "Read CSV data from $file_path."
@@ -192,39 +190,7 @@ function read_time_series(
         end
         data[Dates.DateTime(row.DateTime)] = vector
     end
-    return data
-end
-
-"""
-Return a TimeSeries.TimeArray representing the CSV file.
-
-This version of the function only has component_name to match the interface. It is unused.
-"""
-function read_time_series(
-    ::Type{T},
-    time_series_data_type::Type{U},
-    file::CSV.File,
-    component_name = nothing,
-    resolution = nothing;
-    kwargs...,
-) where {T <: TimeSeriesFormatDateTimeAsColumn, U <: StaticTimeSeries}
-    timestamps = Vector{Dates.DateTime}()
-    step = get_step_time(TimeSeriesFormatDateTimeAsColumn, file, collect(1:length(file)))
-
-    # All timestamps must be sequential by step, so we can ignore the timestamps in the
-    # file after the first one.
-    # They were validated in get_step_time.
-    first = get_timestamp(T, file, 1)
-    push!(timestamps, first)
-    for i in 2:length(file)
-        timestamp = first + step * (i - 1)
-        push!(timestamps, timestamp)
-    end
-
-    value_columns = get_value_columns(T, file)
-    vals = [getproperty(file, x) for x in value_columns]
-
-    return Dict{Dates.DateTime, TimeSeries.TimeArray(timestamps, hcat(vals...), value_columns)}
+    return RawTimeSeries(first(keys(data)), data)
 end
 
 """
@@ -236,27 +202,18 @@ function read_time_series(
     ::Type{T},
     ::Type{U},
     file::CSV.File,
-    component_name = nothing,
-    resolution = nothing;
+    component_name = nothing;
     kwargs...,
-) where {T <: TimeSeriesFormatPeriodAsColumn, U <: StaticTimeSeries}
-    timestamps = Vector{Dates.DateTime}()
-    step = get_step_time(T, file, file.Period)
-
+) where {T <: Union{TimeSeriesFormatPeriodAsColumn, TimeSeriesFormatDateTimeAsColumn}, U <: StaticTimeSeries}
     # All timestamps must be sequential by step, so we can ignore the timestamps in the
     # file after the first one.
     # They were validated in get_step_time.
-    first = get_timestamp(T, file, 1)
-    push!(timestamps, first)
-    for i in 2:length(file)
-        timestamp = first + step * (i - 1)
-        push!(timestamps, timestamp)
-    end
+    first_timestamp = get_timestamp(T, file, 1)
 
     value_columns = get_value_columns(T, file)
-    vals = [getproperty(file, x) for x in value_columns]
+    vals = [(x => getproperty(file, x)) for x in value_columns]
 
-    return TimeSeries.TimeArray(timestamps, hcat(vals...), value_columns)
+    return RawTimeSeries(first_timestamp, Dict(vals...))
 end
 
 """
@@ -267,33 +224,17 @@ function read_time_series(
     ::Type{T},
     ::Type{U},
     file::CSV.File,
-    component_name::AbstractString,
-    resolution = nothing;
+    component_name::AbstractString;
     kwargs...,
 ) where {T <: TimeSeriesFormatPeriodAsHeader, U <: StaticTimeSeries}
-    timestamps = Vector{Dates.DateTime}()
-
     period_cols_as_symbols = get_period_columns(T, file)
     period = [parse(Int, string(x)) for x in period_cols_as_symbols]
-    step = get_step_time(T, file, period)
 
     # All timestamps must be sequential by step, so we can ignore the timestamps in the
     # file after the first one.
     # They were validated in get_step_time.
 
-    first = Dates.DateTime(Dates.today())
-    count = 0
-    for i in 1:length(file)
-        if i == 1
-            first = get_timestamp(T, file, 1)
-        end
-        for j in 1:length(period)
-            timestamp = first + step * count
-            count += 1
-            push!(timestamps, timestamp)
-        end
-    end
-
+    first_time_stamp = get_timestamp(T, file, 1)
     vals = Vector{Float64}()
     for i in 1:length(file)
         for period in period_cols_as_symbols
@@ -302,7 +243,7 @@ function read_time_series(
         end
     end
 
-    return TimeSeries.TimeArray(timestamps, vals, Symbol.([component_name]))
+    return RawTimeSeries(first_timestamp,  Dict(component_name => vals))
 end
 
 """
@@ -316,23 +257,13 @@ function read_time_series(
     ::Type{T},
     ::Type{U},
     file::CSV.File,
-    component_name = nothing,
-    resolution = nothing;
+    component_name = nothing;
     kwargs...,
 ) where {T <: TimeSeriesFormatComponentsAsColumnsNoTime, U <: StaticTimeSeries}
-    timestamps = Vector{Dates.DateTime}()
-    step = get_step_time(T, file)
-
-    start = get(kwargs, :start_datetime, Dates.DateTime(Dates.today()))
-    for i in 1:length(file)
-        timestamp = start + step * (i - 1)
-        push!(timestamps, timestamp)
-    end
-
+    first_timestamp = get(kwargs, :start_datetime, Dates.DateTime(Dates.today()))
     value_columns = get_value_columns(T, file)
-    vals = [getproperty(file, x) for x in value_columns]
-
-    return TimeSeries.TimeArray(timestamps, hcat(vals...), value_columns)
+    vals = [(x => getproperty(file, x)) for x in value_columns]
+    return RawTimeSeries(first_timestamp, Dict(vals...))
 end
 
 """
