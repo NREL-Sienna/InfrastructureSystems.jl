@@ -104,16 +104,17 @@ function get_type_from_serialization_data(data::Dict)
 end
 
 function get_type_from_serialization_metadata(metadata::Dict)
-    base_type = get_type_from_strings(metadata[MODULE_KEY], metadata[TYPE_KEY])
+    _module = Base.root_module(Base.__toplevel__, Symbol(metadata[MODULE_KEY]))
+    base_type = getfield(_module, Symbol(metadata[TYPE_KEY]))
     if !get(metadata, CONSTRUCT_WITH_PARAMETERS_KEY, false)
         return base_type
     end
 
     # This has several limitations and is only a workaround for PSY.Reserve subtypes.
-    # - each parameter must be in mod
+    # - each parameter must be in _module
     # - does not support nested parametrics.
     # Reserves should be fixed and then we can remove this hack.
-    parameters = [getfield(mod, Symbol(x)) for x in metadata[PARAMETERS_KEY]]
+    parameters = [getfield(_module, Symbol(x)) for x in metadata[PARAMETERS_KEY]]
     return base_type{parameters...}
 end
 
