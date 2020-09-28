@@ -243,6 +243,22 @@ end
 #    _attach_time_series_and_serialize!(data, component, ts_metadata, time_series)
 #end
 
+# TODO DT: probably not needed any longer
+#function _add_time_series!(
+#    data::SystemData,
+#    component::InfrastructureSystemsComponent,
+#    name::AbstractString,
+#    time_series::TimeSeries.TimeArray,
+#    normalization_factor,
+#    scaling_factor_multiplier,
+#)
+#    time_series = handle_normalization_factor(time_series, normalization_factor)
+#    # TODO: This code path needs to accept a metdata file or parameters telling it which
+#    # type of time_series to create.
+#    ts_metadata = DeterministicMetadata(name, time_series, scaling_factor_multiplier)
+#    _attach_time_series_and_serialize!(data, component, ts_metadata, time_series)
+#end
+
 function add_time_series_info!(cache::TimeSeriesCache, metadata::TimeSeriesFileMetadata)
     time_series = _add_time_series_info!(cache, metadata)
     info = TimeSeriesParsedInfo(metadata, time_series)
