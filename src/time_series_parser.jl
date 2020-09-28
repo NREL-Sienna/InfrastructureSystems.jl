@@ -194,7 +194,7 @@ function handle_normalization_factor(
     return ta
 end
 
-struct TimeSeriesParsedInfo{T <: TimeSeriesData}
+struct TimeSeriesParsedInfo
     simulation::String
     component::InfrastructureSystemsComponent
     name::String  # Component field on which time series data is based.
@@ -217,7 +217,7 @@ struct TimeSeriesParsedInfo{T <: TimeSeriesData}
         time_series_type,
         scaling_factor_multiplier = nothing,
     )
-        new{time_series_type}(
+        new(
             simulation,
             component,
             name,

@@ -224,7 +224,7 @@ Return a time series from TimeSeriesFileMetadata.
 """
 function make_time_series!(cache::TimeSeriesCache, ts_file_metadata::TimeSeriesFileMetadata)
     info = add_time_series_info!(cache, ts_file_metadata)
-    return make_time_series(info)
+    return ts_file_metadata.time_series_type(info)
 end
 
 # TODO DT: probably not needed any longer

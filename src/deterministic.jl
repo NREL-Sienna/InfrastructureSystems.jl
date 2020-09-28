@@ -127,7 +127,7 @@ function split_time_series(
     return T(vals...)
 end
 
-function make_time_series(info::TimeSeriesParsedInfo{Deterministic})
+function Deterministic(info::TimeSeriesParsedInfo)
     return Deterministic(
         name = info.name,
         data = handle_normalization_factor(info.data.data, info.normalization_factor),
