@@ -12,24 +12,30 @@ Return a TimeArray from a CSV file.
 
 Pass component_name when the file does not have the component name in a column header.
 """
-function read_time_series(metadata::TimeSeriesFileMetadata; kwargs...)
-    if !isfile(metadata.data_file)
+function read_time_series(::Type{T},
+    data_file::AbstractString,
+    component_name = nothing; kwargs...) where T <: TimeSeriesData
+    if !isfile(data_file)
         msg = "TimeSeries file doesn't exist : $(metadata.data_file)"
         throw(DataFormatError(msg))
     end
 
-    file = CSV.File(metadata.data_file)
-    @debug "Read CSV data from $(metadata.data_file)."
+    file = CSV.File(data_file)
+    @debug "Read CSV data from $(data_file)."
 
     format = get_time_series_format(file)
     @debug "$format detected for the time series"
     return read_time_series(
         format,
-        metadata.time_series_type,
+        T,
         file,
-        metadata.component_name;
+        component_name;
         kwargs...,
     )
+end
+
+function read_time_series(metadata::TimeSeriesFileMetadata; kwargs...)
+    return read_time_series(metadata.time_series_type, metadata.data_file, metadata.component_name; kwargs...)
 end
 
 """
@@ -217,7 +223,7 @@ function read_time_series(
 ) where {T <: TimeSeriesFormatPeriodAsHeader}
     period_cols_as_symbols = get_period_columns(T, file)
     period = [parse(Int, string(x)) for x in period_cols_as_symbols]
-    first_time_stamp = get_timestamp(T, file, 1)
+    first_timestamp = get_timestamp(T, file, 1)
     vals = Vector{Float64}()
     for i in 1:length(file)
         for period in period_cols_as_symbols

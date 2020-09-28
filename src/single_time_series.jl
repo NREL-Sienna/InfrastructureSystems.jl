@@ -52,7 +52,7 @@ function SingleTimeSeries(
     scaling_factor_multiplier::Union{Nothing, Function} = nothing,
 )
     component_name = get_name(component)
-    ta = read_time_series(filename, component_name)
+    ta = read_time_series(SingleTimeSeries, filename, component_name)
     ta = handle_normalization_factor(ta[Symbol(component_name)], normalization_factor)
     return SingleTimeSeries(name, ta, scaling_factor_multiplier)
 end
