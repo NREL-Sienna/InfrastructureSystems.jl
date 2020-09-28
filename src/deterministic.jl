@@ -15,35 +15,42 @@ Construct Deterministic from a Dict of TimeArrays, DataFrames or Arrays.
 """
 function Deterministic(
     name::AbstractString,
-    data::Union{Dict{Dates.DateTime, <:Any}, SortedDict{Dates.DateTime, <:Any}};
+    input_data::Union{Dict{Dates.DateTime, <:Any}, SortedDict{Dates.DateTime, <:Any}};
     normalization_factor::NormalizationFactor = 1.0,
     scaling_factor_multiplier::Union{Nothing, Function} = nothing,
     resolution::Union{Dates.Period, Nothing} = nothing,
 )
-    for (k, v) in data
-        if isa(v, DataFrames.DataFrame)
-            data[k] = Array(v)
-        elseif isa(v, TimeSeries.TimeArray)
-            data[k] = TimeSeries.values(v)
-            if resolution === nothing
-                resolution = TimeSeries.timestamp(v)[2] - TimeSeries.timestamp(v)[1]
-            end
-        elseif isa(v, Vector{Float64})
-            continue
-        else
-            try
-                data[k] = Vector{Float64}(v...)
-            catch e
-                throw(ArgumentError("The values in the data dict are in an invalid format. Resulting error: $e"))
+
+    if eltype(input_data) == Pair{Dates.DateTime, Array{Float64, 1}}
+        data = !isa(input_data, SortedDict) ? SortedDict(input_data...) : input_data
+    else
+        data = SortedDict{Dates.DateTime, Vector{Float64}}()
+        for (k, v) in input_data
+            if isa(v, DataFrames.DataFrame)
+                if length(size(v)) > 1 && size(v)[2] > 1
+                    throw(ArgumentError("DataFrame with timestamp $k has more than one column)"))
+                end
+                data[k] = v[!, 1]
+            elseif isa(v, TimeSeries.TimeArray)
+                if length(size(v)) > 1
+                    throw(ArgumentError("TimeArray with timestamp $k has more than one column)"))
+                end
+                data[k] = TimeSeries.values(v)
+                if resolution === nothing
+                    resolution = TimeSeries.timestamp(v)[2] - TimeSeries.timestamp(v)[1]
+                end
+            else
+                try
+                    data[k] = Float64[i for i in v]
+                catch e
+                    rethrow()
+                end
             end
         end
     end
+    @assert !isempty(data)
     if resolution === nothing
         throw(ArgumentError("Need to pass resolution keyword argument or the data must be provided using TimeArrays"))
-    end
-
-    if !isa(data, SortedDict)
-        data = SortedDict(data...)
     end
 
     initial_timestamp = first(keys(data))
