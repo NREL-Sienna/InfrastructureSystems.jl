@@ -215,3 +215,13 @@ function split_time_series(
 end
 
 get_columns(::Type{<:TimeSeriesMetadata}, ta::TimeSeries.TimeArray) = nothing
+
+function make_time_series(info::TimeSeriesParsedInfo{SingleTimeSeries})
+    data = make_time_array(info)
+    ts = handle_normalization_factor(data, info.normalization_factor)
+    return SingleTimeSeries(
+        name = info.name,
+        data = ts,
+        scaling_factor_multiplier = info.scaling_factor_multiplier,
+    )
+end
