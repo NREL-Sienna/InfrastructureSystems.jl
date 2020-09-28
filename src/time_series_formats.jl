@@ -1,3 +1,7 @@
+struct RawTimeSeries
+    initial_time::Dates.DateTime
+    data::Dict
+end
 
 abstract type TimeSeriesFileFormat end
 abstract type TimeSeriesFormatPeriodAsColumn <: TimeSeriesFileFormat end
@@ -24,7 +28,7 @@ function read_time_series(metadata::TimeSeriesFileMetadata; kwargs...)
 
     format = get_time_series_format(file)
     @debug "$format detected for the time series"
-    return read_time_series(format, metadata.time_series_type, file, component_name, resolution; kwargs...)
+    return read_time_series(format, metadata.time_series_type, file, metadata.component_name, metadata.resolution; kwargs...)
 end
 
 """
@@ -163,7 +167,6 @@ function read_time_series(
     ::Type{U},
     file::CSV.File,
     component_name = nothing,
-    resolution = nothing;
     kwargs...
 ) where {T <: TimeSeriesFileFormat, U <: Forecast}
     error("The file format provided can't be parsed into a $U forecast")
@@ -182,20 +185,19 @@ function read_time_series(
     resolution = nothing;
     kwargs...
 ) where {T <: TimeSeriesFormatDateTimeAsColumn}
-    input = CSV.Rows(file_path)
     @debug "Read CSV data from $file_path."
-    horizon = length(first(input)) - 1
-    data = Dict{Dates.DateTime, Vector{Float64}}()
+    horizon = length(first(file)) - 1
+    data = SortedDict{Dates.DateTime, Vector{Float64}}()
     # First element in the row is the time series. We use integer indexes not to rely on
     # column names
-    for row in input
+    for row in file
         vector = Vector{Float64}(undef, horizon)
         for i in 1:horizon
-            vector[i] = parse(Float64, row[i + 1])
+            vector[i] = row[i + 1]
         end
         data[Dates.DateTime(row.DateTime)] = vector
     end
-    return TimeDataContainer(SortedDict(data...), resolution)
+    return data
 end
 
 """
@@ -227,7 +229,7 @@ function read_time_series(
     value_columns = get_value_columns(T, file)
     vals = [getproperty(file, x) for x in value_columns]
 
-    return TimeSeries.TimeArray(timestamps, hcat(vals...), value_columns)
+    return Dict{Dates.DateTime, TimeSeries.TimeArray(timestamps, hcat(vals...), value_columns)}
 end
 
 """
@@ -268,7 +270,7 @@ a component, so the component_name must be passed in.
 """
 function read_time_series(
     ::Type{T},
-    ::Type{U}
+    ::Type{U},
     file::CSV.File,
     component_name::AbstractString,
     resolution = nothing;
