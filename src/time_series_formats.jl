@@ -196,9 +196,7 @@ function read_time_series(
     file::CSV.File,
     component_name = nothing;
     kwargs...,
-) where {
-    T <: Union{TimeSeriesFormatPeriodAsColumn, TimeSeriesFormatDateTimeAsColumn},
-}
+) where {T <: Union{TimeSeriesFormatPeriodAsColumn, TimeSeriesFormatDateTimeAsColumn}}
     first_timestamp = get_timestamp(T, file, 1)
     value_columns = get_value_columns(T, file)
     vals = [(string(x) => getproperty(file, x)) for x in value_columns]
