@@ -175,7 +175,7 @@ get_max_value(ta::TimeSeries.TimeArray) = maximum(TimeSeries.values(ta))
 get_max_value(ta::Vector) = maximum(ta)
 
 function handle_normalization_factor(
-    ta::AbstractArray,
+    ta::Union{TimeSeries.AbstractTimeSeries, AbstractArray},
     normalization_factor::NormalizationFactor,
 )
     if normalization_factor isa NormalizationTypes.NormalizationType
