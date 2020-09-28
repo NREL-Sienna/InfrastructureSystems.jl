@@ -65,13 +65,15 @@ end
 """Reads time_series metadata and fixes relative paths to the data files."""
 function read_time_series_file_metadata(file_path::AbstractString; resolution::Union{Dates.Period, Nothing} = nothing)
     if endswith(file_path, ".json")
-        if resolution !== nothing
-            @warn("The resolution keyword is ignored when reading from a json file")
-        end
         metadata = open(file_path) do io
             metadata = Vector{TimeSeriesFileMetadata}()
             data = JSON3.read(io, Array)
             for item in data
+                parsed_resolution = Dates.Millisecond(item["resolution"])
+                if resolution !== nothing && parsed_resolution != resolution
+                    @debug "Skip time_series with resolution=$parsed_resolution; doesn't match user=$resolution"
+                    continue
+                end
                 category = _get_category(item["category"])
                 normalization_factor = item["normalization_factor"]
                 if !isa(normalization_factor, AbstractString)
@@ -90,7 +92,7 @@ function read_time_series_file_metadata(file_path::AbstractString; resolution::U
                         name = item["name"],
                         normalization_factor = normalization_factor,
                         data_file = item["data_file"],
-                        resolution = Dates.Millisecond(item["resolution"]),
+                        parsed_resolution,
                         # Use default values until CDM data is updated.
                         percentiles = get(item, "percentiles", []),
                         time_series_type_module = get(
@@ -108,9 +110,6 @@ function read_time_series_file_metadata(file_path::AbstractString; resolution::U
         end
     elseif endswith(file_path, ".csv")
         csv = DataFrames.DataFrame(CSV.File(file_path))
-        if resolution === nothing
-            throw(ArgumentError("CSV files require passing the keyword resolution to identify the properties of the data"))
-        end
         metadata = Vector{TimeSeriesFileMetadata}()
         for row in eachrow(csv)
             category = _get_category(row.category)
@@ -198,9 +197,11 @@ struct TimeSeriesParsedInfo
     component::InfrastructureSystemsComponent
     name::String  # Component field on which time series data is based.
     normalization_factor::NormalizationFactor
-    data::TimeSeries.TimeArray
+    data::RawTimeSeries
+    initial_time::Dates.DateTime
     percentiles::Vector{Float64}
     file_path::String
+    resolution::Dates.Period
     time_series_type::DataType
     scaling_factor_multiplier::Union{Nothing, Function}
 
@@ -274,7 +275,7 @@ function TimeSeriesParsedInfo(metadata::TimeSeriesFileMetadata, ta::TimeSeries.T
         ta,
         metadata.percentiles,
         metadata.data_file,
-        metadata.ts_type,
+        metadata.time_series_type,
         multiplier_func,
     )
 end
@@ -287,7 +288,7 @@ end
 function TimeSeriesCache()
     return TimeSeriesCache(
         Vector{TimeSeriesParsedInfo}(),
-        Dict{String, TimeSeries.TimeArray}(),
+        Dict{String, Any}(),
     )
 end
 
@@ -299,6 +300,5 @@ function _add_time_series_info!(
         cache.data_files[metadata.data_file] = read_time_series(metadata)
         @debug "Added time series file" metadata.data_file
     end
-
     return cache.data_files[metadata.data_file]
 end
