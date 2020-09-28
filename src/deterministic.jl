@@ -15,7 +15,7 @@ Construct Deterministic from a Dict of TimeArrays, DataFrames or Arrays.
 """
 function Deterministic(
     name::AbstractString,
-    data::Union{Dict{Dates.DateTime, Any}, SortedDict{Dates.DateTime, Any}};
+    data::Union{Dict{Dates.DateTime, <:Any}, SortedDict{Dates.DateTime, <:Any}};
     normalization_factor::NormalizationFactor = 1.0,
     scaling_factor_multiplier::Union{Nothing, Function} = nothing,
     resolution::Union{Dates.Period, Nothing} = nothing,
@@ -56,7 +56,6 @@ function Deterministic(
         horizon,
         resolution,
         data_,
-        normalization_factor,
         scaling_factor_multiplier,
     )
 end
@@ -75,7 +74,7 @@ function Deterministic(
         name,
         series_data.data;
         normalization_factor = normalization_factor,
-        scaling_factor = scaling_factor_multiplier,
+        scaling_factor_multiplier = scaling_factor_multiplier,
         resolution = resolution,
     )
 end
@@ -107,9 +106,9 @@ function Deterministic(
     return Deterministic(
         name,
         raw_data,
-        resolution,
-        normalization_factor,
-        scaling_factor_multiplier,
+        resolution;
+        normalization_factor = normalization_factor,
+        scaling_factor_multiplier = scaling_factor_multiplier,
     )
 end
 
