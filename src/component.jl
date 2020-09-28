@@ -35,7 +35,7 @@ function clear_time_series!(component::InfrastructureSystemsComponent)
     end
 end
 
-function _get_column_index(start_time, count, ts_metadata::ForecastMetadata)
+function _get_columns(start_time, count, ts_metadata::ForecastMetadata)
     offset = start_time - get_initial_timestamp(ts_metadata)
     interval = get_interval(ts_metadata)
     index = Int(offset / interval) + 1
@@ -44,30 +44,30 @@ function _get_column_index(start_time, count, ts_metadata::ForecastMetadata)
         throw(ArgumentError("The requested start_time $start_time and count $count are invalid"))
     end
 
-    return index
+    return UnitRange(index, index + count - 1)
 end
 
-_get_column_index(start_time, count, ts_metadata::StaticTimeSeriesMetadata) = 1
+_get_columns(start_time, count, ts_metadata::StaticTimeSeriesMetadata) = UnitRange(1, 1)
 
-function _get_row_index(start_time, len, ts_metadata::StaticTimeSeriesMetadata)
+function _get_rows(start_time, len, ts_metadata::StaticTimeSeriesMetadata)
     index =
         Int((start_time - get_initial_time(ts_metadata)) / get_resolution(ts_metadata)) + 1
     if len === nothing
         len = length(ts_metadata) - index + 1
     end
     if index + len - 1 > length(ts_metadata)
-        throw(ArgumentError("The requested index=$index len=$len exceed the range $(length(ts_metadata))"))
+        throw(ArgumentError("The requested index=$index len=$len exceeds the range $(length(ts_metadata))"))
     end
 
-    return (index, len)
+    return UnitRange(index, index + len - 1)
 end
 
-function _get_row_index(start_time, len, ts_metadata::ForecastMetadata)
+function _get_rows(start_time, len, ts_metadata::ForecastMetadata)
     if len === nothing
         len = get_horizon(ts_metadata)
     end
 
-    return (1, len)
+    return UnitRange(1, len)
 end
 
 function _check_start_time(start_time, ts_metadata::TimeSeriesMetadata)
@@ -108,18 +108,10 @@ function get_time_series(
     metadata_type = time_series_data_to_metadata(T)
     ts_metadata = get_time_series(metadata_type, component, name)
     start_time = _check_start_time(start_time, ts_metadata)
-    row_index, len = _get_row_index(start_time, len, ts_metadata)
-    column_index = _get_column_index(start_time, count, ts_metadata)
+    rows = _get_rows(start_time, len, ts_metadata)
+    columns = _get_columns(start_time, count, ts_metadata)
     storage = _get_time_series_storage(component)
-    return deserialize_time_series(
-        T,
-        storage,
-        ts_metadata,
-        row_index,
-        column_index,
-        len,
-        count,
-    )
+    return deserialize_time_series(T, storage, ts_metadata, rows, columns)
 end
 
 function get_time_series(
@@ -170,12 +162,7 @@ function get_time_series_timestamps(
     name::AbstractString,
     horizon::Union{Nothing, Int} = nothing,
 ) where {T <: TimeSeriesData}
-    return (TimeSeries.timestamp ∘ get_time_series_array)(
-        T,
-        component,
-        name,
-        horizon,
-    )
+    return (TimeSeries.timestamp ∘ get_time_series_array)(T, component, name, horizon)
 end
 
 function get_time_series_timestamps(
@@ -417,10 +404,8 @@ function get_time_series_multiple(
                 ts_type,
                 storage,
                 ts_metadata,
-                1,
-                1,
-                length(ts_metadata),
-                get_count(ts_metadata),
+                UnitRange(1, length(ts_metadata)),
+                UnitRange(1, get_count(ts_metadata)),
             )
             if !isnothing(filter_func) && !filter_func(ts)
                 continue

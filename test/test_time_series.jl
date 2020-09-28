@@ -497,15 +497,23 @@ end
     ts = IS.SingleTimeSeries(name, ta)
     IS.add_time_series!(sys, component, ts)
 
-    time_series = IS.get_time_series(IS.SingleTimeSeries, component, name; start_time = dates[1])
+    time_series =
+        IS.get_time_series(IS.SingleTimeSeries, component, name; start_time = dates[1])
     @test TimeSeries.timestamp(IS.get_data(time_series))[1] == dates[1]
     @test length(time_series) == 24
 
-    time_series = IS.get_time_series(IS.SingleTimeSeries, component, name; start_time = dates[3])
+    time_series =
+        IS.get_time_series(IS.SingleTimeSeries, component, name; start_time = dates[3])
     @test TimeSeries.timestamp(IS.get_data(time_series))[1] == dates[3]
     @test length(time_series) == 22
 
-    time_series = IS.get_time_series(IS.SingleTimeSeries, component, name; start_time = dates[5], len = 10)
+    time_series = IS.get_time_series(
+        IS.SingleTimeSeries,
+        component,
+        name;
+        start_time = dates[5],
+        len = 10,
+    )
     @test TimeSeries.timestamp(IS.get_data(time_series))[1] == dates[5]
     @test length(time_series) == 10
 end
@@ -588,8 +596,7 @@ end
     name2b = "val2b"
     name_mapping = Dict(name2a => name2b)
     IS.copy_time_series!(component2, component; name_mapping = name_mapping)
-    time_series =
-        IS.get_time_series(IS.SingleTimeSeries, component2, name2b)
+    time_series = IS.get_time_series(IS.SingleTimeSeries, component2, name2b)
     @test time_series isa IS.SingleTimeSeries
     @test IS.get_initial_time(time_series) == initial_time2
     @test IS.get_name(time_series) == name2b
