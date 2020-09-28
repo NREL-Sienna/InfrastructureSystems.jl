@@ -277,6 +277,14 @@ function TimeSeriesParsedInfo(metadata::TimeSeriesFileMetadata, raw_data::RawTim
     )
 end
 
+function make_time_array(info::TimeSeriesParsedInfo)
+    data_dict = info.data.data
+    series_length = info.data.length
+    ini_time = info.data.initial_time
+    timestamps = range(ini_time; length = series_length, step = info.resolution)
+    return TimeSeries.TimeArray(timestamps, data_dict[get_name(info.component)])
+end
+
 struct TimeSeriesCache
     time_series_infos::Vector{TimeSeriesParsedInfo}
     data_files::Dict{String, RawTimeSeries}
