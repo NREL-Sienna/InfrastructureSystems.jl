@@ -144,9 +144,9 @@ function Deterministic(info::TimeSeriesParsedInfo)
     return Deterministic(
         info.name,
         info.data,
+        info.resolution,
         normalization_factor = info.normalization_factor,
         scaling_factor_multiplier = info.scaling_factor_multiplier,
-        resolution = info.resolution,
     )
 end
 
