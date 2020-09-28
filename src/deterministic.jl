@@ -30,7 +30,7 @@ function Deterministic(
             end
         else
             try
-                data[k] = Vector{Float64}()
+                data[k] = Vector{Float64}(v...)
             catch e
                 throw(ArgumentError("The values in the data dict are in an invalid format. Resulting error: $e"))
             end
@@ -136,7 +136,7 @@ end
 function Deterministic(info::TimeSeriesParsedInfo)
     return Deterministic(
         info.name,
-        data,
+        info.data,
         normalization_factor = info.normalization_factor,
         scaling_factor_multiplier = info.scaling_factor_multiplier,
         resolution = info.resolution,
