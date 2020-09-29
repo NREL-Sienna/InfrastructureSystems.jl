@@ -215,7 +215,7 @@ end
     @test !IS.has_time_series(component)
 
     file = joinpath(FORECASTS_DIR, "ComponentsAsColumnsNoTime.json")
-    IS.add_time_series_from_file_metadata!(data, IS.InfrastructureSystemsComponent, file)
+    IS.add_time_series!(data, IS.InfrastructureSystemsComponent, file)
     @test IS.has_time_series(component)
 
     all_time_series = get_all_time_series(data)
@@ -253,7 +253,7 @@ end
     IS.add_component!(data, component)
     @test !IS.has_time_series(component)
     file = joinpath(FORECASTS_DIR, "ForecastPointers.json")
-    IS.add_time_series_from_file_metadata!(data, IS.InfrastructureSystemsComponent, file)
+    IS.add_time_series!(data, IS.InfrastructureSystemsComponent, file)
     @test IS.has_time_series(component)
 
     sys = IS.SystemData()
