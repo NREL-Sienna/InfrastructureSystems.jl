@@ -91,7 +91,19 @@ function _check_start_time(start_time, ts_metadata::TimeSeriesMetadata)
 end
 
 """
-Return a time_series for the entire time series range stored for these parameters.
+Return a time series corresponding to the given parameters.
+
+# Arguments
+- `::Type{T}`: Concrete subtype of TimeSeriesData to return
+- `component::InfrastructureSystemsComponent`: Component containing the time series
+- `name::AbstractString`: name of time series
+- `start_time::Union{Nothing, Dates.DateTime} = nothing`: If nothing, use the
+  `initial_timestamp` of the time series. If T is a subtype of Forecast then `start_time`
+  must be a multiple of the forecast interval.
+- `len::Union{Nothing, Int} = nothing`: Length in the time dimension. If nothing, use the
+  entire length.
+- `count::Int = 1`: Only applicable to subtypes of Forecast. Number of forecast windows
+  starting at `start_time` to return.
 """
 function get_time_series(
     ::Type{T},
