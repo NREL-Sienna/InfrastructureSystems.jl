@@ -111,6 +111,8 @@ function serialize_time_series!(
             _append_item!(path, "components", component_name)
         end
     end
+
+    return
 end
 
 function _write_time_series_attributes!(
