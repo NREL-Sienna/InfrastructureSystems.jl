@@ -38,6 +38,7 @@ component.
 # Arguments
 - `name::AbstractString`: user-defined name
 - `filename::AbstractString`: name of CSV file containing data
+- `component::InfrastructureSystemsComponent`: component associated with the data
 - `normalization_factor::NormalizationFactor = 1.0`: optional normalization factor to apply
   to each data entry
 - `scaling_factor_multiplier::Union{Nothing, Function} = nothing`: If the data are scaling
@@ -52,7 +53,7 @@ function SingleTimeSeries(
     scaling_factor_multiplier::Union{Nothing, Function} = nothing,
 )
     component_name = get_name(component)
-    ta = read_time_series(filename, component_name)
+    ta = read_time_series(SingleTimeSeries, filename, component_name)
     ta = handle_normalization_factor(ta[Symbol(component_name)], normalization_factor)
     return SingleTimeSeries(name, ta, scaling_factor_multiplier)
 end
@@ -107,6 +108,16 @@ function SingleTimeSeriesMetadata(ts::SingleTimeSeries)
         get_uuid(ts),
         length(ts),
         get_scaling_factor_multiplier(ts),
+    )
+end
+
+function SingleTimeSeries(info::TimeSeriesParsedInfo)
+    data = make_time_array(info)
+    ts = handle_normalization_factor(data, info.normalization_factor)
+    return SingleTimeSeries(
+        name = info.name,
+        data = ts,
+        scaling_factor_multiplier = info.scaling_factor_multiplier,
     )
 end
 

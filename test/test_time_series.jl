@@ -82,6 +82,64 @@
     #@test IS.get_uuid(forecast) == IS.get_uuid(var2)
 end
 
+@testset "Test add Deterministic" begin
+    initial_time = Dates.DateTime("2020-09-01")
+    resolution = Dates.Hour(1)
+    other_time = initial_time + resolution
+    name = "test"
+    horizon = 24
+    data_vec = Dict(initial_time => ones(horizon), other_time => ones(horizon))
+    data_tuple =
+        Dict(initial_time => tuple(ones(horizon)...), other_time => tuple(ones(horizon)...))
+    for d in [data_vec, data_tuple]
+        @testset "Add deterministic from $(typeof(d))" begin
+            sys = IS.SystemData()
+            component_name = "Component1"
+            component = IS.TestComponent(component_name, 5)
+            IS.add_component!(sys, component)
+            forecast = IS.Deterministic(name, d; resolution = resolution)
+            @test IS.get_initial_timestamp(forecast) == initial_time
+            IS.add_time_series!(sys, component, forecast)
+            @test IS.has_time_series(component)
+        end
+    end
+
+    data_ts = Dict(
+        initial_time => TimeSeries.TimeArray(
+            range(initial_time; length = horizon, step = resolution),
+            ones(horizon),
+        ),
+        other_time => TimeSeries.TimeArray(
+            range(other_time; length = horizon, step = resolution),
+            ones(horizon),
+        ),
+    )
+    sys = IS.SystemData()
+    component_name = "Component1"
+    component = IS.TestComponent(component_name, 5)
+    IS.add_component!(sys, component)
+    forecast = IS.Deterministic(name, data_ts)
+    @test IS.get_initial_timestamp(forecast) == initial_time
+    IS.add_time_series!(sys, component, forecast)
+    @test IS.has_time_series(component)
+
+    data_ts_two_cols = Dict(
+        initial_time => TimeSeries.TimeArray(
+            range(initial_time; length = horizon, step = resolution),
+            ones(horizon, 2),
+        ),
+        other_time => TimeSeries.TimeArray(
+            range(other_time; length = horizon, step = resolution),
+            ones(horizon, 2),
+        ),
+    )
+    sys = IS.SystemData()
+    component_name = "Component1"
+    component = IS.TestComponent(component_name, 5)
+    IS.add_component!(sys, component)
+    @test_throws ArgumentError IS.Deterministic(name, data_ts_two_cols)
+end
+
 @testset "Test add SingleTimeSeries" begin
     sys = IS.SystemData()
     name = "Component1"
@@ -188,6 +246,31 @@ end
     #@test IS.get_time_series_interval(data) == IS.UNINITIALIZED_PERIOD
     #@test IS.get_time_series_horizon(data) == IS.get_horizon(time_series)
     @test IS.get_time_series_resolution(data) == IS.get_resolution(time_series)
+
+    data = IS.SystemData()
+    name = "Component1"
+    component = IS.TestComponent(name, 5)
+    IS.add_component!(data, component)
+    @test !IS.has_time_series(component)
+    file = joinpath(FORECASTS_DIR, "ForecastPointers.json")
+    IS.add_time_series_from_file_metadata!(data, IS.InfrastructureSystemsComponent, file)
+    @test IS.has_time_series(component)
+
+    sys = IS.SystemData()
+    name = "Component1"
+    component = IS.TestComponent(name, 5)
+    IS.add_component!(sys, component)
+    @test !IS.has_time_series(component)
+    file = joinpath(FORECASTS_DIR, "DateTimeAsColumnDeterministic.csv")
+    raw_data = IS.read_time_series(IS.Deterministic, file, "Component1")
+    data = IS.Deterministic("test", file, component; resolution = Dates.Hour(1))
+    IS.add_time_series!(sys, component, data)
+    @test IS.has_time_series(component)
+    ini_time = IS.get_initial_timestamp(data)
+    retrieved_data =
+        IS.get_time_series(IS.Deterministic, component, "test"; start_time = ini_time)
+    @test IS.get_name(data) == IS.get_name(retrieved_data)
+    @test IS.get_resolution(data) == IS.get_resolution(retrieved_data)
 end
 
 @testset "Test add_time_series" begin

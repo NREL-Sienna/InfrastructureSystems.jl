@@ -109,10 +109,12 @@ function add_time_series_from_file_metadata!(
     resolution = nothing,
 ) where {T <: InfrastructureSystemsComponent}
     cache = TimeSeriesCache()
-
     for metadata in file_metadata
-        add_time_series_from_file_metadata_internal!(data, T, cache, metadata, resolution)
+        if resolution === nothing || metada.resolution == resolution
+            add_time_series_from_file_metadata_internal!(data, T, cache, metadata)
+        end
     end
+    return
 end
 
 """
@@ -188,15 +190,11 @@ function add_time_series_from_file_metadata_internal!(
     ::Type{T},
     cache::TimeSeriesCache,
     file_metadata::TimeSeriesFileMetadata,
-    resolution,
 ) where {T <: InfrastructureSystemsComponent}
     set_component!(file_metadata, data, InfrastructureSystems)
     component = file_metadata.component
-
-    ts = make_time_series!(cache, file_metadata, resolution)
-    if !isnothing(ts)
-        add_time_series!(data, component, ts)
-    end
+    time_series = make_time_series!(cache, file_metadata)
+    add_time_series!(data, component, time_series)
 end
 
 """
@@ -224,13 +222,9 @@ Return a time series from TimeSeriesFileMetadata.
 - `ts_file_metadata::TimeSeriesFileMetadata`: metadata
 - `resolution::{Nothing, Dates.Period}`: skip any time_series that don't match this resolution
 """
-function make_time_series!(
-    cache::TimeSeriesCache,
-    ts_file_metadata::TimeSeriesFileMetadata,
-    resolution,
-)
+function make_time_series!(cache::TimeSeriesCache, ts_file_metadata::TimeSeriesFileMetadata)
     info = add_time_series_info!(cache, ts_file_metadata)
-    return _make_time_series(info, resolution)
+    return ts_file_metadata.time_series_type(info)
 end
 
 # TODO DT: probably not needed any longer
@@ -249,22 +243,24 @@ end
 #    _attach_time_series_and_serialize!(data, component, ts_metadata, time_series)
 #end
 
-function _make_time_series(info::TimeSeriesParsedInfo, resolution)
-    ta = info.data[Symbol(get_name(info.component))]
-    res = get_resolution(ta)
-    if resolution !== nothing && res != resolution
-        @debug "Skip time_series with resolution=$res; doesn't match user=$resolution"
-        return
-    end
-
-    ta = handle_normalization_factor(ta, info.normalization_factor)
-    ts = info.time_series_type(info.name, ta, info.scaling_factor_multiplier)
-    @debug "Created $ts"
-    return ts
-end
+# TODO DT: probably not needed any longer
+#function _add_time_series!(
+#    data::SystemData,
+#    component::InfrastructureSystemsComponent,
+#    name::AbstractString,
+#    time_series::TimeSeries.TimeArray,
+#    normalization_factor,
+#    scaling_factor_multiplier,
+#)
+#    time_series = handle_normalization_factor(time_series, normalization_factor)
+#    # TODO: This code path needs to accept a metdata file or parameters telling it which
+#    # type of time_series to create.
+#    ts_metadata = DeterministicMetadata(name, time_series, scaling_factor_multiplier)
+#    _attach_time_series_and_serialize!(data, component, ts_metadata, time_series)
+#end
 
 function add_time_series_info!(cache::TimeSeriesCache, metadata::TimeSeriesFileMetadata)
-    time_series = _add_time_series_info!(cache, metadata.data_file, metadata.component_name)
+    time_series = _add_time_series_info!(cache, metadata)
     info = TimeSeriesParsedInfo(metadata, time_series)
     @debug "Added TimeSeriesParsedInfo" metadata
     return info

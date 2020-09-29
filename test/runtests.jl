@@ -5,6 +5,7 @@ import TimeSeries
 import UUIDs
 import JSON3
 using DataStructures: SortedDict
+using DataFrames
 
 import InfrastructureSystems
 const IS = InfrastructureSystems

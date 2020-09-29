@@ -1,3 +1,10 @@
+"""Wraps the data read from the text files with time series"""
+struct RawTimeSeries
+    initial_time::Dates.DateTime
+    data::Dict
+    length::Int
+end
+
 """Describes how to construct time_series from raw time series data files."""
 mutable struct TimeSeriesFileMetadata
     "User description of simulation"
@@ -16,9 +23,10 @@ mutable struct TimeSeriesFileMetadata
     normalization_factor::Union{String, Float64}
     "Path to the time series data file"
     data_file::String
+    "Resolution of the data being parsed in milliseconds"
+    resolution::Dates.Period
     percentiles::Vector{Float64}
-    time_series_type_module::String
-    time_series_type::String
+    time_series_type::DataType
     "Calling module must set."
     component::Union{Nothing, InfrastructureSystemsComponent}
     "Applicable when data are scaling factors. Accessor function on component to apply to
@@ -34,6 +42,7 @@ function TimeSeriesFileMetadata(;
     name,
     normalization_factor,
     data_file,
+    resolution,
     percentiles,
     time_series_type_module,
     time_series_type,
@@ -47,9 +56,9 @@ function TimeSeriesFileMetadata(;
         name,
         normalization_factor,
         data_file,
+        resolution,
         percentiles,
-        time_series_type_module,
-        time_series_type,
+        get_type_from_strings(time_series_type_module, time_series_type),
         nothing,
         scaling_factor_multiplier,
         scaling_factor_multiplier_module,
@@ -63,6 +72,7 @@ function read_time_series_file_metadata(file_path::AbstractString)
             metadata = Vector{TimeSeriesFileMetadata}()
             data = JSON3.read(io, Array)
             for item in data
+                parsed_resolution = Dates.Millisecond(item["resolution"])
                 category = _get_category(item["category"])
                 normalization_factor = item["normalization_factor"]
                 if !isa(normalization_factor, AbstractString)
@@ -81,6 +91,7 @@ function read_time_series_file_metadata(file_path::AbstractString)
                         name = item["name"],
                         normalization_factor = normalization_factor,
                         data_file = item["data_file"],
+                        resolution = parsed_resolution,
                         # Use default values until CDM data is updated.
                         percentiles = get(item, "percentiles", []),
                         time_series_type_module = get(
@@ -111,6 +122,7 @@ function read_time_series_file_metadata(file_path::AbstractString)
                     category = row.category,
                     component_name = row.component_name,
                     name = row.name,
+                    resolution = row.resolution,
                     normalization_factor = row.normalization_factor,
                     data_file = row.data_file,
                     percentiles = [],
@@ -159,12 +171,15 @@ function handle_normalization_factor(
     return data
 end
 
+get_max_value(ta::TimeSeries.TimeArray) = maximum(TimeSeries.values(ta))
+get_max_value(ta::Vector) = maximum(ta)
+
 function handle_normalization_factor(
-    ta::TimeSeries.TimeArray,
+    ta::Union{TimeSeries.AbstractTimeSeries, AbstractArray},
     normalization_factor::NormalizationFactor,
 )
     if normalization_factor isa NormalizationTypes.NormalizationType
-        max_value = maximum(TimeSeries.values(ta))
+        max_value = get_max_value(ta)
         ta = ta ./ max_value
         @debug "Normalize by max value" max_value
     else
@@ -184,10 +199,10 @@ struct TimeSeriesParsedInfo
     component::InfrastructureSystemsComponent
     name::String  # Component field on which time series data is based.
     normalization_factor::NormalizationFactor
-    data::TimeSeries.TimeArray
+    data::RawTimeSeries
     percentiles::Vector{Float64}
     file_path::String
-    time_series_type::DataType
+    resolution::Dates.Period
     scaling_factor_multiplier::Union{Nothing, Function}
 
     function TimeSeriesParsedInfo(
@@ -198,7 +213,7 @@ struct TimeSeriesParsedInfo
         data,
         percentiles,
         file_path,
-        time_series_type,
+        resolution,
         scaling_factor_multiplier = nothing,
     )
         new(
@@ -209,16 +224,13 @@ struct TimeSeriesParsedInfo
             data,
             percentiles,
             abspath(file_path),
-            time_series_type,
+            resolution,
             scaling_factor_multiplier,
         )
     end
 end
 
-function TimeSeriesParsedInfo(metadata::TimeSeriesFileMetadata, ta::TimeSeries.TimeArray)
-    ts_type =
-        get_type_from_strings(metadata.time_series_type_module, metadata.time_series_type)
-
+function TimeSeriesParsedInfo(metadata::TimeSeriesFileMetadata, raw_data::RawTimeSeries)
     if (
         metadata.scaling_factor_multiplier === nothing &&
         metadata.scaling_factor_multiplier_module !== nothing
@@ -254,35 +266,35 @@ function TimeSeriesParsedInfo(metadata::TimeSeriesFileMetadata, ta::TimeSeries.T
         metadata.component,
         metadata.name,
         normalization_factor,
-        ta,
+        raw_data,
         metadata.percentiles,
         metadata.data_file,
-        ts_type,
+        metadata.resolution,
         multiplier_func,
     )
 end
 
+function make_time_array(info::TimeSeriesParsedInfo)
+    data_dict = info.data.data
+    series_length = info.data.length
+    ini_time = info.data.initial_time
+    timestamps = range(ini_time; length = series_length, step = info.resolution)
+    return TimeSeries.TimeArray(timestamps, data_dict[get_name(info.component)])
+end
+
 struct TimeSeriesCache
     time_series_infos::Vector{TimeSeriesParsedInfo}
-    data_files::Dict{String, TimeSeries.TimeArray}
+    data_files::Dict{String, RawTimeSeries}
 end
 
 function TimeSeriesCache()
-    return TimeSeriesCache(
-        Vector{TimeSeriesParsedInfo}(),
-        Dict{String, TimeSeries.TimeArray}(),
-    )
+    return TimeSeriesCache(Vector{TimeSeriesParsedInfo}(), Dict{String, Any}())
 end
 
-function _add_time_series_info!(
-    cache::TimeSeriesCache,
-    data_file::AbstractString,
-    component_name::Union{Nothing, String},
-)
-    if !haskey(cache.data_files, data_file)
-        cache.data_files[data_file] = read_time_series(data_file, component_name)
-        @debug "Added time series file" data_file
+function _add_time_series_info!(cache::TimeSeriesCache, metadata::TimeSeriesFileMetadata)
+    if !haskey(cache.data_files, metadata.data_file)
+        cache.data_files[metadata.data_file] = read_time_series(metadata)
+        @debug "Added time series file" metadata.data_file
     end
-
-    return cache.data_files[data_file]
+    return cache.data_files[metadata.data_file]
 end
