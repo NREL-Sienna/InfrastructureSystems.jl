@@ -89,24 +89,9 @@ end
     name = "test"
     horizon = 24
     data_vec = Dict(initial_time => ones(horizon), other_time => ones(horizon))
-    data_df = Dict(
-        initial_time => DataFrames.DataFrame(data = ones(horizon)),
-        other_time => DataFrames.DataFrame(data = ones(horizon)),
-    )
-    data_ts = Dict(
-        initial_time => TimeSeries.TimeArray(
-            range(initial_time; length = horizon, step = resolution),
-            ones(horizon),
-        ),
-        other_time => TimeSeries.TimeArray(
-            range(other_time; length = horizon, step = resolution),
-            ones(horizon),
-        ),
-    )
     data_tuple =
         Dict(initial_time => tuple(ones(horizon)...), other_time => tuple(ones(horizon)...))
-
-    for d in [data_vec, data_df, data_ts, data_tuple]
+    for d in [data_vec, data_tuple]
         @testset "Add deterministic from $(typeof(d))" begin
             sys = IS.SystemData()
             component_name = "Component1"
@@ -119,10 +104,25 @@ end
         end
     end
 
-    data_df_twocols = Dict(
-        initial_time => DataFrames.DataFrame(ones(2, horizon)),
-        other_time => DataFrames.DataFrame(ones(2, horizon)),
+    data_ts = Dict(
+        initial_time => TimeSeries.TimeArray(
+            range(initial_time; length = horizon, step = resolution),
+            ones(horizon),
+        ),
+        other_time => TimeSeries.TimeArray(
+            range(other_time; length = horizon, step = resolution),
+            ones(horizon),
+        ),
     )
+    sys = IS.SystemData()
+    component_name = "Component1"
+    component = IS.TestComponent(component_name, 5)
+    IS.add_component!(sys, component)
+    forecast = IS.Deterministic(name, data_ts)
+    @test IS.get_initial_timestamp(forecast) == initial_time
+    IS.add_time_series!(sys, component, forecast)
+    @test IS.has_time_series(component)
+
     data_ts_two_cols = Dict(
         initial_time => TimeSeries.TimeArray(
             range(initial_time; length = horizon, step = resolution),
@@ -133,14 +133,11 @@ end
             ones(horizon, 2),
         ),
     )
-    for bad_data in [data_ts_two_cols, data_df_twocols]
-        sys = IS.SystemData()
-        component_name = "Component1"
-        component = IS.TestComponent(component_name, 5)
-        IS.add_component!(sys, component)
-        @test_throws ArgumentError IS.Deterministic(name, bad_data; resolution = resolution)
-    end
-
+    sys = IS.SystemData()
+    component_name = "Component1"
+    component = IS.TestComponent(component_name, 5)
+    IS.add_component!(sys, component)
+    @test_throws ArgumentError IS.Deterministic(name, data_ts_two_cols)
 end
 
 @testset "Test add SingleTimeSeries" begin

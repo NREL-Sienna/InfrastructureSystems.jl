@@ -1,9 +1,46 @@
 """
-Construct Deterministic from a Dict of TimeArrays, DataFrames or Arrays.
+Construct Deterministic from a SortedDict of Arrays.
 
 # Arguments
 - `name::AbstractString`: user-defined name
-- `data::Union{Dict{Dates.DateTime, Any}, SortedDict.Dict{Dates.DateTime, Any}}`: time series data. The values in the dictionary should be TimeSeries.TimeArray or be able to be converted
+- `input_data::AbstractDict{Dates.DateTime, Vector{Float64}}`: time series data.
+- `resolution::Dates.Period`: The resolution of the forecast in Dates.Period`
+- `normalization_factor::NormalizationFactor = 1.0`: optional normalization factor to apply
+  to each data entry
+- `scaling_factor_multiplier::Union{Nothing, Function} = nothing`: If the data are scaling
+  factors then this function will be called on the component and applied to the data when
+  [`get_time_series_array`](@ref) is called.
+"""
+function Deterministic(
+    name::AbstractString,
+    input_data::AbstractDict{Dates.DateTime, Vector{Float64}};
+    resolution::Dates.Period,
+    normalization_factor::NormalizationFactor = 1.0,
+    scaling_factor_multiplier::Union{Nothing, Function} = nothing,
+)
+
+    if !isa(input_data, SortedDict)
+        input_data = SortedDict(input_data...)
+    end
+    data = handle_normalization_factor(input_data, normalization_factor)
+    initial_timestamp = first(keys(data))
+    horizon = length(first(values(data)))
+    return Deterministic(
+        name,
+        initial_timestamp,
+        horizon,
+        resolution,
+        data,
+        scaling_factor_multiplier,
+    )
+end
+
+"""
+Construct Deterministic from a Dict of TimeArrays.
+
+# Arguments
+- `name::AbstractString`: user-defined name
+- `input_data::AbstractDict{Dates.DateTime, TimeSeries.TimeArray}`: time series data.
 - `normalization_factor::NormalizationFactor = 1.0`: optional normalization factor to apply
   to each data entry
 - `scaling_factor_multiplier::Union{Nothing, Function} = nothing`: If the data are scaling
@@ -11,59 +48,70 @@ Construct Deterministic from a Dict of TimeArrays, DataFrames or Arrays.
   [`get_time_series_array`](@ref) is called.
 - `timestamp = :timestamp`: If the values are DataFrames is passed then this must be the column name that
   contains timestamps.
-- `resolution = nothing : If the values are a Matrix or a Vector, then this must be the resolution of the forecast in Dates.Period`
 """
 function Deterministic(
     name::AbstractString,
-    input_data::Union{Dict{Dates.DateTime, <:Any}, SortedDict{Dates.DateTime, <:Any}};
+    input_data::AbstractDict{Dates.DateTime, <:TimeSeries.TimeArray};
     normalization_factor::NormalizationFactor = 1.0,
     scaling_factor_multiplier::Union{Nothing, Function} = nothing,
-    resolution::Union{Dates.Period, Nothing} = nothing,
 )
-
-    if eltype(input_data) == Pair{Dates.DateTime, Array{Float64, 1}}
-        data = !isa(input_data, SortedDict) ? SortedDict(input_data...) : input_data
-    else
-        data = SortedDict{Dates.DateTime, Vector{Float64}}()
-        for (k, v) in input_data
-            if isa(v, DataFrames.DataFrame)
-                if length(size(v)) > 1 && size(v)[2] > 1
-                    throw(ArgumentError("DataFrame with timestamp $k has more than one column)"))
-                end
-                data[k] = v[!, 1]
-            elseif isa(v, TimeSeries.TimeArray)
-                if length(size(v)) > 1
-                    throw(ArgumentError("TimeArray with timestamp $k has more than one column)"))
-                end
-                data[k] = TimeSeries.values(v)
-                if resolution === nothing
-                    resolution = TimeSeries.timestamp(v)[2] - TimeSeries.timestamp(v)[1]
-                end
-            else
-                try
-                    data[k] = Float64[i for i in v]
-                catch e
-                    rethrow()
-                end
-            end
+    data = SortedDict{Dates.DateTime, Vector{Float64}}()
+    resolution =
+        TimeSeries.timestamp(first(values(input_data)))[2] -
+        TimeSeries.timestamp(first(values(input_data)))[1]
+    for (k, v) in input_data
+        if length(size(v)) > 1
+            throw(ArgumentError("TimeArray with timestamp $k has more than one column)"))
         end
+        data[k] = TimeSeries.values(v)
     end
-    @assert !isempty(data)
-    if resolution === nothing
-        throw(ArgumentError("Need to pass resolution keyword argument or the data must be provided using TimeArrays"))
-    end
-
-    initial_timestamp = first(keys(data))
-    horizon = length(first(values(data)))
-    data_ = handle_normalization_factor(data, normalization_factor)
 
     return Deterministic(
         name,
-        initial_timestamp,
-        horizon,
-        resolution,
-        data_,
-        scaling_factor_multiplier,
+        data;
+        resolution = resolution,
+        normalization_factor = normalization_factor,
+        scaling_factor_multiplier = scaling_factor_multiplier,
+    )
+end
+
+"""
+Construct Deterministic from a Dict of collections of data.
+
+# Arguments
+- `name::AbstractString`: user-defined name
+- `input_data::AbstractDict{Dates.DateTime, TimeSeries.TimeArray}`: time series data. The values in the dictionary should be able to be converted to Float64
+- `resolution::Dates.Period`: The resolution of the forecast in Dates.Period`
+- `normalization_factor::NormalizationFactor = 1.0`: optional normalization factor to apply
+  to each data entry
+- `scaling_factor_multiplier::Union{Nothing, Function} = nothing`: If the data are scaling
+  factors then this function will be called on the component and applied to the data when
+  [`get_time_series_array`](@ref) is called.
+"""
+function Deterministic(
+    name::AbstractString,
+    input_data::AbstractDict{Dates.DateTime, <:Any};
+    resolution::Dates.Period,
+    normalization_factor::NormalizationFactor = 1.0,
+    scaling_factor_multiplier::Union{Nothing, Function} = nothing,
+)
+    data = SortedDict{Dates.DateTime, Vector{Float64}}()
+    for (k, v) in input_data
+        try
+            data[k] = Float64[i for i in v]
+        catch e
+            @error("The forecast data provided $(second(eltype(input_data))) can't be converted to Vector{Float64}")
+            rethrow()
+        end
+    end
+    @assert !isempty(data)
+
+    return Deterministic(
+        name,
+        data;
+        resolution = resolution,
+        normalization_factor = normalization_factor,
+        scaling_factor_multiplier = scaling_factor_multiplier,
     )
 end
 
@@ -72,17 +120,17 @@ Construct Deterministic from RawTimeSeries.
 """
 function Deterministic(
     name::AbstractString,
-    series_data::RawTimeSeries,
-    resolution::Dates.Period;
+    series_data::RawTimeSeries;
+    resolution::Dates.Period,
     normalization_factor::NormalizationFactor = 1.0,
     scaling_factor_multiplier::Union{Nothing, Function} = nothing,
 )
     return Deterministic(
         name,
         series_data.data;
+        resolution = resolution,
         normalization_factor = normalization_factor,
         scaling_factor_multiplier = scaling_factor_multiplier,
-        resolution = resolution,
     )
 end
 
@@ -111,8 +159,8 @@ function Deterministic(
     raw_data = read_time_series(Deterministic, filename, component_name)
     return Deterministic(
         name,
-        raw_data,
-        resolution;
+        raw_data;
+        resolution = resolution,
         normalization_factor = normalization_factor,
         scaling_factor_multiplier = scaling_factor_multiplier,
     )
@@ -143,8 +191,8 @@ end
 function Deterministic(info::TimeSeriesParsedInfo)
     return Deterministic(
         info.name,
-        info.data,
-        info.resolution,
+        info.data;
+        resolution = info.resolution,
         normalization_factor = info.normalization_factor,
         scaling_factor_multiplier = info.scaling_factor_multiplier,
     )
