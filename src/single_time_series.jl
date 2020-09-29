@@ -111,6 +111,16 @@ function SingleTimeSeriesMetadata(ts::SingleTimeSeries)
     )
 end
 
+function SingleTimeSeries(info::TimeSeriesParsedInfo)
+    data = make_time_array(info)
+    ts = handle_normalization_factor(data, info.normalization_factor)
+    return SingleTimeSeries(
+        name = info.name,
+        data = ts,
+        scaling_factor_multiplier = info.scaling_factor_multiplier,
+    )
+end
+
 get_initial_time(time_series::SingleTimeSeries) =
     TimeSeries.timestamp(get_data(time_series))[1]
 
@@ -216,13 +226,3 @@ function split_time_series(
 end
 
 get_columns(::Type{<:TimeSeriesMetadata}, ta::TimeSeries.TimeArray) = nothing
-
-function SingleTimeSeries(info::TimeSeriesParsedInfo)
-    data = make_time_array(info)
-    ts = handle_normalization_factor(data, info.normalization_factor)
-    return SingleTimeSeries(
-        name = info.name,
-        data = ts,
-        scaling_factor_multiplier = info.scaling_factor_multiplier,
-    )
-end
