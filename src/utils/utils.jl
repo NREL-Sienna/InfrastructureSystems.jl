@@ -343,6 +343,7 @@ end
 
 function get_type_from_strings(module_name, type)
     return getfield(Base.root_module(Base.__toplevel__, Symbol(module_name)), Symbol(type))
+end
 
 # This function is used instead of cp given
 # https://github.com/JuliaLang/julia/issues/30723
