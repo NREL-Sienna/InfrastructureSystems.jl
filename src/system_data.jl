@@ -110,7 +110,7 @@ function add_time_series_from_file_metadata!(
 ) where {T <: InfrastructureSystemsComponent}
     cache = TimeSeriesCache()
     for metadata in file_metadata
-        if resolution === nothing || metada.resolution == resolution
+        if resolution === nothing || metadata.resolution == resolution
             add_time_series_from_file_metadata_internal!(data, T, cache, metadata)
         end
     end
