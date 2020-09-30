@@ -306,6 +306,7 @@ macro forward(sender, receiver, exclusions = Symbol[])
     return esc(out)
 end
 
+
 """
 Return the resolution from a TimeArray.
 """
@@ -342,4 +343,19 @@ end
 
 function get_type_from_strings(module_name, type)
     return getfield(Base.root_module(Base.__toplevel__, Symbol(module_name)), Symbol(type))
+
+# This function is used instead of cp given
+# https://github.com/JuliaLang/julia/issues/30723
+function copy_file(src::AbstractString, dst::AbstractString)
+    try
+        run(`cp -f $(src) $(dst)`)
+    catch e
+        if Sys.iswindows()
+            run(`cmd /c copy /Y $(src) $(dst)`)
+        else
+            rethrow()
+        end
+    end
+    return
+
 end

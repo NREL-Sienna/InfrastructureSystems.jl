@@ -76,7 +76,7 @@ function from_file(
     else
         file_path, io = mktemp()
         close(io)
-        cp(filename, file_path; force = true)
+        copy_file(filename, file_path)
     end
     storage = Hdf5TimeSeriesStorage(false; filename = file_path, read_only = read_only)
     @info "Loaded time series from storage file existing=$filename new=$(storage.file_path)"
