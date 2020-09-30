@@ -84,14 +84,14 @@ Adds time_series from a metadata file or metadata descriptors.
   that includes an array of TimeSeriesFileMetadata instances or a vector.
 - `resolution::DateTime.Period=nothing`: skip time_series that don't match this resolution.
 """
-function add_time_series!(
+function add_time_series_from_file_metadata!(
     data::SystemData,
     ::Type{T},
     metadata_file::AbstractString;
     resolution = nothing,
 ) where {T <: InfrastructureSystemsComponent}
     metadata = read_time_series_file_metadata(metadata_file)
-    return add_time_series!(data, T, metadata; resolution = resolution)
+    return add_time_series_from_file_metadata!(data, T, metadata; resolution = resolution)
 end
 
 """
@@ -102,7 +102,7 @@ Adds time series data from a metadata file or metadata descriptors.
 - `file_metadata::Vector{TimeSeriesFileMetadata}`: metadata for time series
 - `resolution::DateTime.Period=nothing`: skip time_series that don't match this resolution.
 """
-function add_time_series!(
+function add_time_series_from_file_metadata!(
     data::SystemData,
     ::Type{T},
     file_metadata::Vector{TimeSeriesFileMetadata};
