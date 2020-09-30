@@ -110,7 +110,7 @@ function add_time_series_from_file_metadata!(
 ) where {T <: InfrastructureSystemsComponent}
     cache = TimeSeriesCache()
     for metadata in file_metadata
-        if resolution === nothing || metada.resolution == resolution
+        if resolution === nothing || metadata.resolution == resolution
             add_time_series_from_file_metadata_internal!(data, T, cache, metadata)
         end
     end
@@ -143,6 +143,7 @@ function add_time_series!(
         time_series;
         skip_if_present = skip_if_present,
     )
+    return
 end
 
 """
@@ -153,7 +154,7 @@ Add the same time series data to multiple components.
 - `components`: iterable of components that will store the same time series reference
 - `time_series::TimeSeriesData`: Any object of subtype TimeSeriesData
 
-This is significantly more efficent than calling add_time_series! for each component
+This is significantly more efficent than calling `add_time_series!` for each component
 individually with the same data because in this case, only one time series array is stored.
 
 Throws ArgumentError if a component is not stored in the system.
@@ -183,6 +184,7 @@ function _attach_time_series_and_serialize!(
         get_name(ts_metadata),
         ts,
     )
+    return
 end
 
 function add_time_series_from_file_metadata_internal!(
@@ -195,6 +197,7 @@ function add_time_series_from_file_metadata_internal!(
     component = file_metadata.component
     time_series = make_time_series!(cache, file_metadata)
     add_time_series!(data, component, time_series)
+    return
 end
 
 """

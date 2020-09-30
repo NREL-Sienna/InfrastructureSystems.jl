@@ -52,6 +52,8 @@ function serialize_time_series!(
     else
         add_time_series_reference!(storage, component_uuid, name, uuid)
     end
+
+    return
 end
 
 function add_time_series_reference!(
