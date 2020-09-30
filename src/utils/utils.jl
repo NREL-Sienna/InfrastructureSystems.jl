@@ -306,7 +306,6 @@ macro forward(sender, receiver, exclusions = Symbol[])
     return esc(out)
 end
 
-
 """
 Return the resolution from a TimeArray.
 """
