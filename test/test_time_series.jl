@@ -77,9 +77,8 @@
     end
     @test found == count
 
-    # TODO 1.0: same or not?
-    #@test IS.get_uuid(forecast) == IS.get_uuid(var1)
-    #@test IS.get_uuid(forecast) == IS.get_uuid(var2)
+    @test IS.get_uuid(forecast) == IS.get_uuid(var1)
+    @test IS.get_uuid(forecast) == IS.get_uuid(var2)
 end
 
 @testset "Test add Deterministic" begin

@@ -169,14 +169,7 @@ end
 function Deterministic(
     ts_metadata::DeterministicMetadata,
     data::SortedDict{Dates.DateTime, Array},
-    use_same_uuid::Bool,
 )
-    if use_same_uuid
-        uuid = get_time_series_uuid(ts_metadata)
-    else
-        uuid = UUIDs.uuid4()
-    end
-
     return Deterministic(
         name = get_name(ts_metadata),
         initial_timestamp = first(keys(data)),
@@ -184,7 +177,7 @@ function Deterministic(
         horizon = length(first(values(data))),
         data = data,
         scaling_factor_multiplier = get_scaling_factor_multiplier(ts_metadata),
-        internal = InfrastructureSystemsInternal(uuid),
+        internal = InfrastructureSystemsInternal(get_time_series_uuid(ts_metadata)),
     )
 end
 
