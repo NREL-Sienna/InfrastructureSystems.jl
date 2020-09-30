@@ -8,6 +8,6 @@
         "data_file": "DateTimeAsColumnDeterministic.csv",
         "type": "Deterministic",
         "module": "InfrastructureSystems",
-        "resolution": 3600000
+        "resolution": 3600
     }
 ]

@@ -8,6 +8,6 @@
     "data_file": "ComponentsAsColumnsNoTime.csv",
     "type": "SingleTimeSeries",
     "module": "InfrastructureSystems",
-    "resolution": 3600000
+    "resolution": 3600
   }
 ]

@@ -296,7 +296,6 @@ function deserialize_time_series(
     # Note that all range checks must occur at a higher level.
     total_rows = length(ts_metadata)
     total_columns = get_count(ts_metadata)
-    use_same_uuid = length(rows) == total_rows && length(columns) == total_columns
 
     return HDF5.h5open(storage.file_path, "r") do file
         root = _get_root(storage, file)
@@ -321,7 +320,7 @@ function deserialize_time_series(
             end
         end
 
-        new_ts = T(ts_metadata, data, use_same_uuid)
+        new_ts = T(ts_metadata, data)
     end
 end
 
