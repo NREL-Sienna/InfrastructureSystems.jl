@@ -23,7 +23,7 @@ mutable struct TimeSeriesFileMetadata
     normalization_factor::Union{String, Float64}
     "Path to the time series data file"
     data_file::String
-    "Resolution of the data being parsed in milliseconds"
+    "Resolution of the data being parsed in seconds"
     resolution::Dates.Period
     percentiles::Vector{Float64}
     time_series_type::DataType
@@ -72,7 +72,7 @@ function read_time_series_file_metadata(file_path::AbstractString)
             metadata = Vector{TimeSeriesFileMetadata}()
             data = JSON3.read(io, Array)
             for item in data
-                parsed_resolution = Dates.Millisecond(item["resolution"])
+                parsed_resolution = Dates.Millisecond(Dates.Second(item["resolution"]))
                 category = _get_category(item["category"])
                 normalization_factor = item["normalization_factor"]
                 if !isa(normalization_factor, AbstractString)
@@ -122,7 +122,7 @@ function read_time_series_file_metadata(file_path::AbstractString)
                     category = row.category,
                     component_name = row.component_name,
                     name = row.name,
-                    resolution = row.resolution,
+                    resolution = Dates.Millisecond(Dates.Second(row.resolution)),
                     normalization_factor = row.normalization_factor,
                     data_file = row.data_file,
                     percentiles = [],
