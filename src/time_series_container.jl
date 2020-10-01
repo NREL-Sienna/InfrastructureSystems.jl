@@ -111,7 +111,7 @@ function get_time_series_initial_times!(
     container::TimeSeriesContainer,
 )
     for ts_medatadata in values(container.data)
-        push!(initial_times, get_time_series_initial_times(ts_medatadata)...)
+        push!(initial_times, get_time_series_initial_times(ts_medatadata))
     end
 end
 
