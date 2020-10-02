@@ -142,7 +142,7 @@ function _check_time_series_lengths(ts::Forecast)
     end
 end
 
-get_forecast_count(params::TimeSeriesParameters) = params.forecast_params.count
+get_forecast_window_count(params::TimeSeriesParameters) = params.forecast_params.count
 generate_forecast_initial_times(params::TimeSeriesParameters) =
     generate_forecast_initial_times(params.forecast_params)
 get_forecast_horizon(params::TimeSeriesParameters) = params.forecast_params.horizon

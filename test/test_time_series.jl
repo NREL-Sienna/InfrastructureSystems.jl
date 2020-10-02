@@ -757,7 +757,7 @@ end
     IS.add_time_series!(sys, component, forecast)
 
     @test IS.get_time_series_resolution(sys) == resolution
-    @test IS.get_forecast_count(sys) == 2
+    @test IS.get_forecast_window_count(sys) == 2
     @test IS.get_forecast_horizon(sys) == horizon
     @test IS.get_forecast_initial_timestamp(sys) == initial_time
     @test IS.get_forecast_interval(sys) == second_time - initial_time

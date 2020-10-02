@@ -83,7 +83,7 @@ function Base.show(io::IO, ::MIME"text/plain", data::SystemData)
     res = res <= Dates.Minute(1) ? Dates.Second(res) : Dates.Minute(res)
     println(io, "Resolution: $res")
     if forecast_count > 0
-        println(io, "Forecast window count: $(get_forecast_count(data))")
+        println(io, "Forecast window count: $(get_forecast_window_count(data))")
         println(io, "Horizon: $(get_forecast_horizon(data))")
         println(io, "Interval: $(Dates.Minute(get_forecast_interval(data)))")
         println(io, "Total Period: $(Dates.Hour(get_forecast_total_period(data)))")
@@ -104,13 +104,12 @@ function Base.show(io::IO, ::MIME"text/html", data::SystemData)
     res = res <= Dates.Minute(1) ? Dates.Second(res) : Dates.Minute(res)
     println(io, "<p><b>Resolution</b>: $(res)</p>")
     if forecast_count > 0
-        println(io, "<p><b>Forecast window count</b>: $(get_forecast_count(data))</p>")
+        window_count = get_forecast_window_count(data)
+        period = Dates.Hour(get_forecast_total_period(data))
+        println(io, "<p><b>Forecast window count</b>: $(window_count)</p>")
         println(io, "<p><b>Horizon</b>: $(get_forecast_horizon(data))</p>")
         println(io, "<p><b>Interval</b>: $(Dates.Minute(get_forecast_interval(data)))</p>")
-        println(
-            io,
-            "<p><b>Total Period</b>: $(Dates.Hour(get_forecast_total_period(data)))</p>",
-        )
+        println(io, "<p><b>Total Period</b>: $period</p>")
     end
 end
 

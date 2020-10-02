@@ -511,7 +511,8 @@ generate_forecast_initial_times(data::SystemData) =
     generate_forecast_initial_times(data.time_series_params)
 get_forecast_total_period(data::SystemData) =
     get_forecast_total_period(data.time_series_params)
-get_forecast_count(data::SystemData) = get_forecast_count(data.time_series_params)
+get_forecast_window_count(data::SystemData) =
+    get_forecast_window_count(data.time_series_params)
 get_forecast_horizon(data::SystemData) = get_forecast_horizon(data.time_series_params)
 get_forecast_initial_timestamp(data::SystemData) =
     get_forecast_initial_timestamp(data.time_series_params)
