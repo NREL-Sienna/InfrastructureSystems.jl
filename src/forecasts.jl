@@ -1,10 +1,35 @@
 abstract type Forecast <: TimeSeriesData end
 
-Base.length(ts::Forecast) = get_horizon(ts)
-get_name(value::Forecast) = value.name
-get_percentiles(value::Forecast) = value.percentiles
-get_data(value::Forecast) = value.data
-get_scaling_factor_multiplier(value::Forecast) = value.scaling_factor_multiplier
+# Subtypes of Forecast must implement
+# - get_count
+# - get_data
+# - get_horizon
+# - get_name
+# - get_scaling_factor_multiplier
+# - get_window
+# - iterate_windows
+
+Base.length(ts::Forecast) = get_count(ts)
+
+"""
+Return the initial times in the forecast.
+"""
+function generate_initial_times(f::Forecast)
+    return generate_initial_times(get_initial_timestamp(f), get_count(f), get_interval(f))
+end
+
+"""
+Return the total period covered by the forecast.
+"""
+function get_total_period(f::Forecast)
+    return get_total_period(
+        get_initial_timestamp(f),
+        get_count(f),
+        get_interval(f),
+        get_horizon(f),
+        get_resolution(f),
+    )
+end
 
 """
 Return the count of forecast windows.
@@ -18,6 +43,9 @@ Return the forecast interval as a Dates.Period.
 """
 function get_interval(forecast::Forecast)
     k = keys(get_data(forecast))
+    if length(k) == 1
+        return Dates.Second(0)
+    end
     first_key, state = iterate(k)
     second_key, state = iterate(k, state)
     return second_key - first_key

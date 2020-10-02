@@ -230,38 +230,6 @@ function make_time_series!(cache::TimeSeriesCache, ts_file_metadata::TimeSeriesF
     return ts_file_metadata.time_series_type(info)
 end
 
-# TODO DT: probably not needed any longer
-#function _add_time_series!(
-#    data::SystemData,
-#    component::InfrastructureSystemsComponent,
-#    name::AbstractString,
-#    time_series::TimeSeries.TimeArray,
-#    normalization_factor,
-#    scaling_factor_multiplier,
-#)
-#    time_series = handle_normalization_factor(time_series, normalization_factor)
-#    # TODO: This code path needs to accept a metdata file or parameters telling it which
-#    # type of time_series to create.
-#    ts_metadata = DeterministicMetadata(name, time_series, scaling_factor_multiplier)
-#    _attach_time_series_and_serialize!(data, component, ts_metadata, time_series)
-#end
-
-# TODO DT: probably not needed any longer
-#function _add_time_series!(
-#    data::SystemData,
-#    component::InfrastructureSystemsComponent,
-#    name::AbstractString,
-#    time_series::TimeSeries.TimeArray,
-#    normalization_factor,
-#    scaling_factor_multiplier,
-#)
-#    time_series = handle_normalization_factor(time_series, normalization_factor)
-#    # TODO: This code path needs to accept a metdata file or parameters telling it which
-#    # type of time_series to create.
-#    ts_metadata = DeterministicMetadata(name, time_series, scaling_factor_multiplier)
-#    _attach_time_series_and_serialize!(data, component, ts_metadata, time_series)
-#end
-
 function add_time_series_info!(cache::TimeSeriesCache, metadata::TimeSeriesFileMetadata)
     time_series = _add_time_series_info!(cache, metadata)
     info = TimeSeriesParsedInfo(metadata, time_series)
@@ -366,30 +334,20 @@ function get_time_series_multiple(
 end
 
 """
-Return the time delta between the first two stored time_series.
-if less than two are stored, return Dates.Second(0).
-"""
-function get_time_series_interval(data::SystemData)
-    initial_times = get_time_series_initial_times(data)
-    if length(initial_times) <= 1
-        return Dates.Second(0)
-    end
-
-    return initial_times[2] - initial_times[1]
-end
-
-"""
-Return a tuple of counts of components with time_series and total time_series.
+Return a tuple of counts of components with time series and total time series and forecasts.
 """
 function get_time_series_counts(data::SystemData)
     component_count = 0
-    time_series_count = 0
+    static_time_series_count = 0
+    forecast_count = 0
     for component in iterate_components_with_time_series(data.components)
         component_count += 1
-        time_series_count += get_num_time_series(component)
+        _ts_count, _forecast_count = get_num_time_series(component)
+        static_time_series_count += _ts_count
+        forecast_count += _forecast_count
     end
 
-    return component_count, time_series_count
+    return (component_count, static_time_series_count, forecast_count)
 end
 
 """
@@ -513,7 +471,7 @@ function deserialize(::Type{SystemData}, raw; time_series_read_only = false)
         time_series_storage,
         internal,
     )
-    # Note: components need to be deserialized by the parent so that they can got through
+    # Note: components need to be deserialized by the parent so that they can go through
     # the proper checks.
     return sys
 end
@@ -549,22 +507,16 @@ end
 get_components_by_name(::Type{T}, data::SystemData, args...) where {T} =
     get_components_by_name(T, data.components, args...)
 
-#get_component_time_series(::Type{T}, data::SystemData, args...) where T =
-#    get_component_time_series(T, data.time_series, args...)
-#get_time_series(::Type{T}, data::SystemData, component, args...) where T = get_time_series(
-#    T, component, args...
-#)
-get_time_series_initial_times(data::SystemData) =
-    get_time_series_initial_times(data.components)
-get_time_series_initial_time(data::SystemData) =
-    get_time_series_initial_time(data.components)
-get_time_series_last_initial_time(data::SystemData) =
-    get_time_series_last_initial_time(data.components)
-get_time_series_horizon(data::SystemData) = get_time_series_horizon(data.time_series_params)
+generate_forecast_initial_times(data::SystemData) =
+    generate_forecast_initial_times(data.time_series_params)
+get_forecast_total_period(data::SystemData) =
+    get_forecast_total_period(data.time_series_params)
+get_forecast_count(data::SystemData) = get_forecast_count(data.time_series_params)
+get_forecast_horizon(data::SystemData) = get_forecast_horizon(data.time_series_params)
+get_forecast_initial_timestamp(data::SystemData) =
+    get_forecast_initial_timestamp(data.time_series_params)
+get_forecast_interval(data::SystemData) = get_forecast_interval(data.time_series_params)
 get_time_series_resolution(data::SystemData) =
     get_time_series_resolution(data.time_series_params)
+
 clear_components!(data::SystemData) = clear_components!(data.components)
-check_time_series_consistency(data::SystemData) =
-    check_time_series_consistency(data.components)
-validate_time_series_consistency(data::SystemData) =
-    validate_time_series_consistency(data.components)

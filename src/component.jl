@@ -230,56 +230,6 @@ function has_time_series(component::InfrastructureSystemsComponent)
     return !isnothing(container) && !isempty(container)
 end
 
-function get_time_series_initial_times(
-    ::Type{T},
-    component::InfrastructureSystemsComponent,
-) where {T <: TimeSeriesData}
-    if !has_time_series(component)
-        throw(ArgumentError("$(typeof(component)) does not have time_series"))
-    end
-    return get_time_series_initial_times(
-        time_series_data_to_metadata(T),
-        get_time_series_container(component),
-    )
-end
-
-function get_time_series_initial_times(
-    ::Type{T},
-    component::InfrastructureSystemsComponent,
-    name::AbstractString,
-) where {T <: TimeSeriesData}
-    if !has_time_series(component)
-        throw(ArgumentError("$(typeof(component)) does not have time_series"))
-    end
-    return get_time_series_initial_times(
-        time_series_data_to_metadata(T),
-        get_time_series_container(component),
-        name,
-    )
-end
-
-function get_time_series_initial_times!(
-    initial_times::Set{Dates.DateTime},
-    component::InfrastructureSystemsComponent,
-)
-    if !has_time_series(component)
-        throw(ArgumentError("$(typeof(component)) does not have time_series"))
-    end
-
-    get_time_series_initial_times!(initial_times, get_time_series_container(component))
-end
-
-function get_time_series_initial_times(component::InfrastructureSystemsComponent)
-    if !has_time_series(component)
-        throw(ArgumentError("$(typeof(component)) does not have time_series"))
-    end
-
-    initial_times = Set{Dates.DateTime}()
-    get_time_series_initial_times!(initial_times, component)
-
-    return sort!(collect(initial_times))
-end
-
 """
 Efficiently add all time_series in one component to another by copying the underlying
 references.
@@ -355,10 +305,22 @@ end
 function get_num_time_series(component::InfrastructureSystemsComponent)
     container = get_time_series_container(component)
     if isnothing(container)
-        return 0
+        return (0, 0)
     end
 
-    return length(container.data)
+    static_ts_count = 0
+    forecast_count = 0
+    for key in keys(container.data)
+        if key.time_series_type <: StaticTimeSeriesMetadata
+            static_ts_count += 1
+        elseif key.time_series_type <: ForecastMetadata
+            forecast_count += 1
+        else
+            error("panic")
+        end
+    end
+
+    return (static_ts_count, forecast_count)
 end
 
 function get_time_series(
@@ -472,35 +434,6 @@ function set_time_series_storage!(
     if !isnothing(container)
         set_time_series_storage!(container, storage)
     end
-end
-
-function validate_time_series_consistency(component::InfrastructureSystemsComponent)
-    # TODO 1.0
-    # Initial times for each name must be identical.
-    #initial_times = Dict{String, Vector{Dates.DateTime}}()
-    #for key in keys(get_time_series_container(component).data)
-    #    if !haskey(initial_times, key.name)
-    #        initial_times[key.name] = Vector{Dates.DateTime}()
-    #    end
-    #    push!(initial_times[key.name], key.initial_time)
-    #end
-
-    #if isempty(initial_times)
-    #    return true
-    #end
-
-    #base_its = nothing
-    #for (name, its) in initial_times
-    #    sort!(its)
-    #    if isnothing(base_its)
-    #        base_its = its
-    #    elseif its != base_its
-    #        @error "initial times don't match" base_its, its
-    #        return false
-    #    end
-    #end
-
-    return true
 end
 
 function _get_time_series_storage(component::InfrastructureSystemsComponent)

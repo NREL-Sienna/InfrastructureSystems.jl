@@ -66,39 +66,52 @@ function Base.show(io::IO, data::SystemData)
 end
 
 function Base.show(io::IO, ::MIME"text/plain", data::SystemData)
+    component_count, ts_count, forecast_count = get_time_series_counts(data)
     show(io, MIME"text/plain"(), data.components)
     println(io, "\n")
 
     println(io, "TimeSeriesContainer")
-    println(io, "=========")
+    println(io, "===================")
+    println(io, "Components with time series data: $component_count")
+    println(io, "Total StaticTimeSeries: $ts_count")
+    println(io, "Total Forecasts: $forecast_count")
+    if component_count == 0
+        return
+    end
+
     res = get_time_series_resolution(data)
     res = res <= Dates.Minute(1) ? Dates.Second(res) : Dates.Minute(res)
-    println(io, "Resolution: $(res)")
-    println(io, "Horizon: $(get_time_series_horizon(data))")
-    # TODO DT: broken
-    #initial_times = [string(x) for x in get_time_series_initial_times(data)]
-    #println(io, "Initial Times: $(join(initial_times, ", "))")
-    #println(io, "Interval: $(get_time_series_interval(data))")
-    component_count, time_series_count = get_time_series_counts(data)
-    println(io, "Components with TimeSeriesContainer: $component_count")
-    println(io, "Total TimeSeriesContainer: $time_series_count")
+    println(io, "Resolution: $res")
+    if forecast_count > 0
+        println(io, "Forecast window count: $(get_forecast_count(data))")
+        println(io, "Horizon: $(get_forecast_horizon(data))")
+        println(io, "Interval: $(Dates.Minute(get_forecast_interval(data)))")
+        println(io, "Total Period: $(Dates.Hour(get_forecast_total_period(data)))")
+    end
 end
 
 function Base.show(io::IO, ::MIME"text/html", data::SystemData)
     show(io, MIME"text/html"(), data.components)
     println(io, "\n")
 
+    component_count, ts_count, forecast_count = get_time_series_counts(data)
+    println(io, "<h2>TimeSeriesContainer</h2>")
+    println(io, "<p><b>Components with time series data</b>: $component_count</p>")
+    println(io, "<p><b>Total StaticTimeSeries</b>: $ts_count</p>")
+    println(io, "<p><b>Total Forecasts</b>: $forecast_count</p>")
+
     res = get_time_series_resolution(data)
     res = res <= Dates.Minute(1) ? Dates.Second(res) : Dates.Minute(res)
-    println(io, "<h2>TimeSeriesContainer</h2>")
     println(io, "<p><b>Resolution</b>: $(res)</p>")
-    println(io, "<p><b>Horizon</b>: $(get_time_series_horizon(data))</p>")
-    initial_times = [string(x) for x in get_time_series_initial_times(data)]
-    println(io, "<p><b>Initial Times</b>: $(join(initial_times, ", "))</p>")
-    println(io, "<p><b>Interval</b>: $(get_time_series_interval(data))</p>")
-    component_count, time_series_count = get_time_series_counts(data)
-    println(io, "<p><b>Components with TimeSeriesContainer</b>: $component_count</p>")
-    println(io, "<p><b>Total TimeSeriesContainer</b>: $time_series_count</p>")
+    if forecast_count > 0
+        println(io, "<p><b>Forecast window count</b>: $(get_forecast_count(data))</p>")
+        println(io, "<p><b>Horizon</b>: $(get_forecast_horizon(data))</p>")
+        println(io, "<p><b>Interval</b>: $(Dates.Minute(get_forecast_interval(data)))</p>")
+        println(
+            io,
+            "<p><b>Total Period</b>: $(Dates.Hour(get_forecast_total_period(data)))</p>",
+        )
+    end
 end
 
 function Base.summary(ist::InfrastructureSystemsComponent)
@@ -206,41 +219,4 @@ function convert_compound_period(period::Union{Dates.TimePeriod, Dates.DatePerio
     remainder = period % Dates.Millisecond(1000) #finding the remainding milliseconds
     total = weeks + days + hours + minutes + seconds + remainder
     return total
-end
-
-function create_time_series_df(container::TimeSeriesContainer)
-    initial_times = _get_time_series_initial_times(container.data)
-    dfs = Vector{DataFrames.DataFrame}()
-
-    for (i, initial_time) in enumerate(initial_times)
-        if i > MAX_SHOW_FORECAST_INITIAL_TIMES
-            break
-        end
-        counts = Dict{String, Int}()
-        rows = []
-
-        for (key, values) in container.data
-            if key.initial_time != initial_time
-                continue
-            end
-
-            type_str = strip_module_name(string(key.time_series_type))
-            counts[type_str] = length(values)
-            parents =
-                [strip_module_name(string(x)) for x in supertypes(key.time_series_type)]
-            row = (
-                ConcreteType = type_str,
-                SuperTypes = join(parents, " <: "),
-                Count = length(values),
-            )
-            push!(rows, row)
-        end
-
-        sort!(rows, by = x -> x.ConcreteType)
-
-        df = DataFrames.DataFrame(rows)
-        push!(dfs, df)
-    end
-
-    return initial_times, dfs
 end
