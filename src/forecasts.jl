@@ -18,6 +18,9 @@ Return the forecast interval as a Dates.Period.
 """
 function get_interval(forecast::Forecast)
     k = keys(get_data(forecast))
+    if length(k) == 1
+        return Dates.Second(0)
+    end
     first_key, state = iterate(k)
     second_key, state = iterate(k, state)
     return second_key - first_key
