@@ -103,7 +103,6 @@ end
     # by concrete type
     components = IS.get_components(IS.TestComponent, container, x -> (IS.get_val(x) < 5))
     @test length(components) == 0
-
 end
 
 @testset "Test get_component" begin
