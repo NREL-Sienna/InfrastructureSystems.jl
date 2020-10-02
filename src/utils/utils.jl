@@ -357,5 +357,31 @@ function copy_file(src::AbstractString, dst::AbstractString)
         end
     end
     return
+end
 
+function generate_initial_times(
+    initial_timestamp::Dates.DateTime,
+    count::Int,
+    interval::Dates.Period,
+)
+    if count == 0
+        return
+    elseif count == 1
+        @assert interval == Dates.Second(0)
+        range(initial_timestamp; stop = initial_timestamp, step = Dates.Second(1))
+    end
+    @assert interval != Dates.Second(0) "initial_timestamp=$initial_timestamp interval=$interval count=$count"
+    return range(initial_timestamp; length = count, step = interval)
+end
+
+function get_total_period(
+    initial_timestamp::Dates.DateTime,
+    count::Int,
+    interval::Dates.Period,
+    horizon::Int,
+    resolution::Dates.Period,
+)
+    last_it = initial_timestamp + interval * count
+    last_timestamp = last_it + resolution * (horizon - 1)
+    return last_timestamp - initial_timestamp
 end

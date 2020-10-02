@@ -18,7 +18,6 @@ function Deterministic(
     normalization_factor::NormalizationFactor = 1.0,
     scaling_factor_multiplier::Union{Nothing, Function} = nothing,
 )
-
     if !isa(input_data, SortedDict)
         input_data = SortedDict(input_data...)
     end

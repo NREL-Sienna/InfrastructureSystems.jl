@@ -11,8 +11,6 @@
         range(initial_time; length = 365, step = resolution),
         ones(365),
     )
-    initial_time = Dates.DateTime("2020-09-01")
-    resolution = Dates.Hour(1)
     other_time = initial_time + resolution
     name = "test"
     horizon = 24
@@ -26,7 +24,6 @@
         resolution = resolution,
     )
     IS.add_time_series!(sys, component, forecast)
-    # This still returns a forecast object. Requires update of the interfaces
     var1 = IS.get_time_series(IS.Deterministic, component, name; start_time = initial_time)
     @test length(var1.data) == 1
     var2 = IS.get_time_series(
@@ -193,6 +190,14 @@ end
         start_time = initial_time - Dates.Day(10),
         len = 12,
     )
+
+    # Conflicting resolution
+    data = TimeSeries.TimeArray(
+        range(initial_time; length = 365, step = Dates.Minute(5)),
+        ones(365),
+    )
+    data = IS.SingleTimeSeries(data = data, name = "test_d")
+    @test_throws IS.ConflictingInputsError IS.add_time_series!(sys, component, data)
 end
 
 @testset "Test read_time_series_file_metadata" begin
@@ -235,15 +240,6 @@ end
 
     all_time_series = get_all_time_series(data)
     @test length(collect(all_time_series)) == 1
-
-    # TODO DT: these are broken and may not be needed
-    #@test IS.get_time_series_initial_times(data) == [it]
-    #unique_its = Set{Dates.DateTime}()
-    #IS.get_time_series_initial_times!(unique_its, component) == [it]
-    #@test collect(unique_its) == [it]
-    #@test IS.get_time_series_initial_time(data) == it
-    #@test IS.get_time_series_interval(data) == IS.UNINITIALIZED_PERIOD
-    #@test IS.get_time_series_horizon(data) == IS.get_horizon(time_series)
     @test IS.get_time_series_resolution(data) == IS.get_resolution(time_series)
 
     data = IS.SystemData()
@@ -394,82 +390,6 @@ end
     time_series = IS.get_time_series(IS.SingleTimeSeries, component, name)
     @test time_series isa IS.SingleTimeSeries
 end
-
-#=
-@testset "Test time_series initial times" begin
-    sys = IS.SystemData()
-
-    @test_throws ArgumentError IS.get_time_series_initial_time(sys)
-    @test_throws ArgumentError IS.get_time_series_last_initial_time(sys)
-
-    dates1 = collect(
-        Dates.DateTime("2020-01-01T00:00:00"):Dates.Hour(1):Dates.DateTime("2020-01-01T23:00:00"),
-    )
-    dates2 = collect(
-        Dates.DateTime("2020-01-02T00:00:00"):Dates.Hour(1):Dates.DateTime("2020-01-02T23:00:00"),
-    )
-    data = collect(1:24)
-    components = []
-
-    name = "val"
-    for i in 1:2
-        name = "Component" * string(i)
-        component = IS.TestComponent(name, i)
-        IS.add_component!(sys, component)
-        push!(components, component)
-        if i == 1
-            dates1_ = dates1
-            dates2_ = dates2
-        else
-            dates1_ = dates1 .+ Dates.Hour(1)
-            dates2_ = dates2 .+ Dates.Hour(1)
-        end
-        ta1 = TimeSeries.TimeArray(dates1_, data, [IS.get_name(component)])
-        ta2 = TimeSeries.TimeArray(dates2_, data, [IS.get_name(component)])
-        ts1 = IS.SingleTimeSeries(name, ta1)
-        ts2 = IS.SingleTimeSeries(name, ta2)
-        IS.add_time_series!(sys, component, ts1)
-        IS.add_time_series!(sys, component, ts2)
-    end
-
-    initial_times = IS.get_time_series_initial_times(sys)
-    @test length(initial_times) == 4
-
-    first_initial_time = dates1[1]
-    last_initial_time = dates2[1] + Dates.Hour(1)
-    @test IS.get_time_series_initial_time(sys) == first_initial_time
-    @test IS.get_time_series_last_initial_time(sys) == last_initial_time
-
-    @test_logs(
-        (:error, r"initial times don't match"),
-        @test !IS.validate_time_series_consistency(sys)
-    )
-    @test_logs(
-        (:error, r"initial times don't match"),
-        @test_throws IS.DataFormatError !IS.check_time_series_consistency(sys)
-    )
-
-    @test IS.get_time_series_counts(sys) == (2, 4)
-
-    IS.clear_time_series!(sys)
-    for component in components
-        ta1 = TimeSeries.TimeArray(dates1, data, [IS.get_name(component)])
-        ta2 = TimeSeries.TimeArray(dates2, data, [IS.get_name(component)])
-        ts1 = IS.SingleTimeSeries(name, ta1)
-        ts2 = IS.SingleTimeSeries(name, ta2)
-        IS.add_time_series!(sys, component, ts1)
-        IS.add_time_series!(sys, component, ts2)
-    end
-
-    expected = [dates1[1], dates2[1]]
-    for component in components
-        @test IS.get_time_series_initial_times(IS.SingleTimeSeries, component) == expected
-    end
-
-    @test IS.validate_time_series_consistency(sys)
-    IS.get_time_series_interval(sys) == dates2[1] - dates1[1]
-end
-=#
 
 @testset "Test remove_time_series" begin
     data = create_system_data(; with_time_series = true)
@@ -812,4 +732,122 @@ end
     ta = TimeSeries.TimeArray(dates, collect(1:24), [IS.get_name(component)])
     time_series = IS.SingleTimeSeries(name = "val", data = ta)
     @test_throws ArgumentError IS.add_time_series!(sys, component, time_series)
+end
+
+@testset "Test system time series parameters" begin
+    sys = IS.SystemData()
+    name = "Component1"
+    component = IS.TestComponent(name, 5)
+    IS.add_component!(sys, component)
+
+    resolution = Dates.Hour(1)
+    initial_time = Dates.DateTime("2020-09-01")
+    second_time = initial_time + resolution
+    name = "test"
+    horizon = 24
+    data = SortedDict(initial_time => ones(horizon), second_time => ones(horizon))
+
+    forecast = IS.Deterministic(
+        data = data,
+        name = name,
+        initial_timestamp = initial_time,
+        horizon = horizon,
+        resolution = resolution,
+    )
+    IS.add_time_series!(sys, component, forecast)
+
+    @test IS.get_time_series_resolution(sys) == resolution
+    @test IS.get_forecast_window_count(sys) == 2
+    @test IS.get_forecast_horizon(sys) == horizon
+    @test IS.get_forecast_initial_timestamp(sys) == initial_time
+    @test IS.get_forecast_interval(sys) == second_time - initial_time
+    @test IS.generate_forecast_initial_times(sys) == [initial_time, second_time]
+    @test IS.generate_initial_times(forecast) == IS.generate_forecast_initial_times(sys)
+    @test Dates.Hour(IS.get_forecast_total_period(sys)) ==
+          Dates.Hour(second_time - initial_time) + Dates.Hour(resolution * horizon)
+    @test IS.get_forecast_total_period(sys) == IS.get_total_period(forecast)
+end
+
+@testset "Test conflicting time series parameters" begin
+    sys = IS.SystemData()
+    name = "Component1"
+    component = IS.TestComponent(name, 5)
+    IS.add_component!(sys, component)
+
+    # Set baseline parameters for the rest of the tests.
+    resolution = Dates.Hour(1)
+    initial_time = Dates.DateTime("2020-09-01")
+    second_time = initial_time + resolution
+    name = "test"
+    horizon = 24
+    data = SortedDict(initial_time => ones(horizon), second_time => ones(horizon))
+
+    forecast = IS.Deterministic(
+        data = data,
+        name = name,
+        initial_timestamp = initial_time,
+        horizon = horizon,
+        resolution = resolution,
+    )
+    IS.add_time_series!(sys, component, forecast)
+
+    # Conflicting initial time
+    initial_time2 = Dates.DateTime("2020-09-02")
+    name = "test2"
+    data = SortedDict(initial_time2 => ones(horizon), second_time => ones(horizon))
+
+    forecast = IS.Deterministic(
+        data = data,
+        name = name,
+        initial_timestamp = initial_time2,
+        horizon = horizon,
+        resolution = resolution,
+    )
+    @test_throws IS.ConflictingInputsError IS.add_time_series!(sys, component, forecast)
+
+    # Conflicting resolution
+    resolution2 = Dates.Minute(5)
+    name = "test2"
+    data = SortedDict(initial_time => ones(horizon), second_time => ones(horizon))
+
+    forecast = IS.Deterministic(
+        data = data,
+        name = name,
+        initial_timestamp = initial_time2,
+        horizon = horizon,
+        resolution = resolution2,
+    )
+    @test_throws IS.ConflictingInputsError IS.add_time_series!(sys, component, forecast)
+
+    # Conflicting horizon
+    name = "test2"
+    horizon2 = 23
+    data = SortedDict(initial_time => ones(horizon2), second_time => ones(horizon2))
+
+    forecast = IS.Deterministic(
+        data = data,
+        name = name,
+        initial_timestamp = initial_time2,
+        horizon = horizon2,
+        resolution = resolution,
+    )
+    @test_throws IS.ConflictingInputsError IS.add_time_series!(sys, component, forecast)
+
+    # Conflicting count
+    name = "test3"
+    third_time = second_time + resolution
+    data = SortedDict(
+        initial_time => ones(horizon),
+        second_time => ones(horizon),
+        third_time => ones(horizon),
+    )
+
+    forecast = IS.Deterministic(
+        data = data,
+        name = name,
+        initial_timestamp = initial_time,
+        horizon = horizon,
+        resolution = resolution,
+    )
+    @test_throws IS.ConflictingInputsError IS.add_time_series!(sys, component, forecast)
 end

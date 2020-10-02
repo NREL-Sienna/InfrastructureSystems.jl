@@ -1,79 +1,115 @@
 const UNINITIALIZED_DATETIME = Dates.DateTime(Dates.Minute(0))
+const UNINITIALIZED_LENGTH = 0
 const UNINITIALIZED_PERIOD = Dates.Period(Dates.Minute(0))
-const UNINITIALIZED_HORIZON = 0
+
+mutable struct ForecastParameters <: InfrastructureSystemsType
+    horizon::Int
+    initial_timestamp::Dates.DateTime
+    interval::Dates.Period
+    count::Int
+end
+
+function ForecastParameters(;
+    horizon = UNINITIALIZED_LENGTH,
+    initial_timestamp = UNINITIALIZED_DATETIME,
+    interval = UNINITIALIZED_PERIOD,
+    count = UNINITIALIZED_LENGTH,
+)
+    return ForecastParameters(horizon, initial_timestamp, interval, count)
+end
+
+function _is_uninitialized(params::ForecastParameters)
+    return params.horizon == UNINITIALIZED_LENGTH &&
+           params.initial_timestamp == UNINITIALIZED_DATETIME &&
+           params.interval == UNINITIALIZED_PERIOD &&
+           params.count == UNINITIALIZED_LENGTH
+end
+
+function reset_info!(params::ForecastParameters)
+    params.horizon = UNINITIALIZED_LENGTH
+    params.initial_timestamp = UNINITIALIZED_DATETIME
+    params.interval = UNINITIALIZED_PERIOD
+    params.count = UNINITIALIZED_LENGTH
+end
+
+function generate_forecast_initial_times(params::ForecastParameters)
+    return generate_initial_times(params.initial_timestamp, params.count, params.interval)
+end
 
 mutable struct TimeSeriesParameters <: InfrastructureSystemsType
     resolution::Dates.Period
-    horizon::Int
+    forecast_params::ForecastParameters
 end
 
 function TimeSeriesParameters(;
     resolution = UNINITIALIZED_PERIOD,
-    horizon = UNINITIALIZED_HORIZON,
+    forecast_params = ForecastParameters(),
 )
-    return TimeSeriesParameters(resolution, horizon)
+    return TimeSeriesParameters(resolution, forecast_params)
 end
 
-function reset_info!(time_series::TimeSeriesParameters)
-    time_series.resolution = UNINITIALIZED_PERIOD
-    time_series.horizon = UNINITIALIZED_HORIZON
-    @info "Reset system time_series information."
+function reset_info!(params::TimeSeriesParameters)
+    params.resolution = UNINITIALIZED_PERIOD
+    reset_info!(params.forecast_params)
+    @info "Reset system time series parameters."
 end
 
-function is_uninitialized(time_series::TimeSeriesParameters)
-    return time_series.resolution == UNINITIALIZED_PERIOD &&
-           time_series.horizon == UNINITIALIZED_HORIZON
+function _is_uninitialized(params::TimeSeriesParameters)
+    return params.resolution == UNINITIALIZED_PERIOD
 end
 
-function _verify_time_series(params::TimeSeriesParameters, time_series::Forecast)
-    if time_series.resolution != params.resolution
-        throw(DataFormatError(
-            "time series resolution $(time_series.resolution) does not match system " *
+function _check_time_series(params::TimeSeriesParameters, ts::TimeSeriesData)
+    res = get_resolution(ts)
+    if res != params.resolution
+        throw(ConflictingInputsError(
+            "time series resolution $res does not match system " *
             "resolution $(params.resolution)",
         ))
     end
+    _check_forecast_params(params, ts)
+end
 
-    if get_horizon(time_series) != params.horizon
-        throw(DataFormatError(
-            "time series horizon $(get_horizon(time_series)) does not match system " *
-            "horizon $(params.horizon)",
+_check_forecast_params(params::TimeSeriesParameters, ts::StaticTimeSeries) = nothing
+
+function _check_forecast_params(ts_params::TimeSeriesParameters, forecast::Forecast)
+    count = get_count(forecast)
+    horizon = get_horizon(forecast)
+    initial_timestamp = get_initial_timestamp(forecast)
+
+    params = ts_params.forecast_params
+    if count != params.count
+        throw(ConflictingInputsError("forecast count $count does not match system count $(params.count)"))
+    end
+
+    if horizon != params.horizon
+        throw(ConflictingInputsError("forecast horizon $horizon does not match system horizon $(params.horizon)"))
+    end
+
+    if initial_timestamp != params.initial_timestamp
+        throw(ConflictingInputsError(
+            "forecast initial_timestamp $initial_timestamp does not match system " *
+            "initial_timestamp $(params.initial_timestamp)",
         ))
     end
+
     return
 end
 
-function check_add_time_series!(params::TimeSeriesParameters, ts::Forecast)
-    if is_uninitialized(params)
-        # This is the first time_series added.
-        params.horizon = get_horizon(ts)
+function check_add_time_series!(params::TimeSeriesParameters, ts::TimeSeriesData)
+    _check_time_series_lengths(ts)
+    if _is_uninitialized(params)
+        # This is the first time series added.
         params.resolution = get_resolution(ts)
     end
 
-    # This will throw if something is invalid.
-    _verify_time_series(params, ts)
-    _check_time_series_lengths(ts)
-    return
-end
-
-function _verify_time_series(params::TimeSeriesParameters, time_series::StaticTimeSeries)
-    if get_resolution(time_series) != params.resolution
-        throw(DataFormatError(
-            "time series resolution get_resolution(time_series) does not match system " *
-            "resolution $(params.resolution)",
-        ))
-    end
-    return
-end
-
-function check_add_time_series!(params::TimeSeriesParameters, ts::StaticTimeSeries)
-    if is_uninitialized(params)
-        # This is the first time_series added.
-        params.resolution = get_resolution(ts)
+    if ts isa Forecast && _is_uninitialized(params.forecast_params)
+        params.forecast_params.horizon = get_horizon(ts)
+        params.forecast_params.initial_timestamp = get_initial_timestamp(ts)
+        params.forecast_params.interval = get_interval(ts)
+        params.forecast_params.count = get_count(ts)
     end
 
-    # This will throw if something is invalid.
-    _verify_time_series(params, ts)
-    _check_time_series_lengths(ts)
+    _check_time_series(params, ts)
     return
 end
 
@@ -91,22 +127,38 @@ function _check_time_series_lengths(ts::StaticTimeSeries)
     if difft != get_resolution(ts)
         throw(ConflictingInputsError("resolution mismatch: $difft $(get_resolution(ts))"))
     end
+    return
 end
 
 function _check_time_series_lengths(ts::Forecast)
-    len = length(ts)
-    if len < 2
-        throw(ArgumentError("data array length must be at least 2: $len"))
+    horizon = get_horizon(ts)
+    if horizon < 2
+        throw(ArgumentError("horizon must be at least 2: $horizon"))
     end
     for data in values(get_data(ts))
-        if length(data) != len
-            throw(ConflictingInputsError("length mismatch: $(length(data)) $len"))
+        if length(data) != horizon
+            throw(ConflictingInputsError("length mismatch: $(length(data)) $horizon"))
         end
     end
 end
 
-"""Return the horizon for all time_series."""
-get_time_series_horizon(time_series::TimeSeriesParameters) = time_series.horizon
+get_forecast_window_count(params::TimeSeriesParameters) = params.forecast_params.count
+generate_forecast_initial_times(params::TimeSeriesParameters) =
+    generate_forecast_initial_times(params.forecast_params)
+get_forecast_horizon(params::TimeSeriesParameters) = params.forecast_params.horizon
+get_forecast_initial_timestamp(params::TimeSeriesParameters) =
+    params.forecast_params.initial_timestamp
+get_forecast_interval(params::TimeSeriesParameters) = params.forecast_params.interval
+get_time_series_resolution(params::TimeSeriesParameters) = params.resolution
 
-"""Return the resolution for all time_series."""
-get_time_series_resolution(time_series::TimeSeriesParameters) = time_series.resolution
+function get_forecast_total_period(p::TimeSeriesParameters)
+    f = p.forecast_params
+    _is_uninitialized(f) && return Dates.Second(0)
+    return get_total_period(
+        f.initial_timestamp,
+        f.count,
+        f.interval,
+        f.horizon,
+        p.resolution,
+    )
+end

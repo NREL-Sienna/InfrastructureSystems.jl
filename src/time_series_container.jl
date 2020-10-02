@@ -81,40 +81,6 @@ function get_time_series(
     return container.data[key]
 end
 
-function get_time_series_initial_times(
-    ::Type{T},
-    container::TimeSeriesContainer,
-) where {T <: TimeSeriesMetadata}
-    for (key, ts_metadata) in keys(container.data)
-        if key.time_series_type <: T
-            return get_time_series_initial_times(ts_metadata)
-        end
-    end
-    return Vector{Dates.DateTime}()
-end
-
-function get_time_series_initial_times(
-    ::Type{T},
-    container::TimeSeriesContainer,
-    name::AbstractString,
-) where {T <: TimeSeriesMetadata}
-    ts_metadata = get(container.data, TimeSeriesKey(T, name), nothing)
-    if ts_metadata === nothing
-        return Vector{Dates.DateTime}()
-    else
-        return get_time_series_initial_times(ts_metadata)
-    end
-end
-
-function get_time_series_initial_times!(
-    initial_times::Set{Dates.DateTime},
-    container::TimeSeriesContainer,
-)
-    for ts_medatadata in values(container.data)
-        push!(initial_times, get_time_series_initial_times(ts_medatadata)...)
-    end
-end
-
 function get_time_series_names(
     ::Type{T},
     container::TimeSeriesContainer,
