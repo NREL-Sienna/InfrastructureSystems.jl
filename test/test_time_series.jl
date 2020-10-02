@@ -740,6 +740,8 @@ end
     component = IS.TestComponent(name, 5)
     IS.add_component!(sys, component)
 
+    @test IS.generate_forecast_initial_times(sys) == []
+
     resolution = Dates.Hour(1)
     initial_time = Dates.DateTime("2020-09-01")
     second_time = initial_time + resolution

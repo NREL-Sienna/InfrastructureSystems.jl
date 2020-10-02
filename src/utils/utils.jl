@@ -365,7 +365,7 @@ function generate_initial_times(
     interval::Dates.Period,
 )
     if count == 0
-        return
+        return []
     elseif count == 1
         @assert interval == Dates.Second(0)
         range(initial_timestamp; stop = initial_timestamp, step = Dates.Second(1))
