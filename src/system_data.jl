@@ -507,7 +507,8 @@ end
 get_components_by_name(::Type{T}, data::SystemData, args...) where {T} =
     get_components_by_name(T, data.components, args...)
 
-get_forecast_initial_times(data::SystemData) = get_forecast_initial_times(data.time_series_params)
+get_forecast_initial_times(data::SystemData) =
+    get_forecast_initial_times(data.time_series_params)
 get_forecast_total_period(data::SystemData) =
     get_forecast_total_period(data.time_series_params)
 get_forecast_window_count(data::SystemData) =
