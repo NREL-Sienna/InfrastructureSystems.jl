@@ -139,19 +139,23 @@ function Base.show(io::IO, ::MIME"text/plain", ist::InfrastructureSystemsCompone
     end
 end
 
-function Base.show(
-    io::IO,
-    ::MIME"text/plain",
-    ists::Vector{<:InfrastructureSystemsComponent},
-)
-    println(io, summary(ists))
-    for i in 1:length(ists)
-        if isassigned(ists, i)
-            println(io, "$(summary(ists[i]))")
+function Base.show(io::IO, ist::InfrastructureSystemsComponent)
+    print(io, string(nameof(typeof(ist))), "(")
+    is_first = true
+    for (name, field_type) in zip(fieldnames(typeof(ist)), fieldtypes(typeof(ist)))
+        if field_type <: TimeSeriesContainer || field_type <: InfrastructureSystemsInternal
+            continue
         else
-            println(io, Base.undef_ref_str)
+            val = getfield(ist, name)
         end
+        if is_first
+            is_first = false
+        else
+            print(io, ", ")
+        end
+        print(io, val)
     end
+    print(io, ")")
 end
 
 function create_components_df(components::Components)
