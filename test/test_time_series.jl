@@ -740,7 +740,7 @@ end
     component = IS.TestComponent(name, 5)
     IS.add_component!(sys, component)
 
-    @test IS.generate_forecast_initial_times(sys) == []
+    @test IS.get_forecast_initial_times(sys) == []
 
     resolution = Dates.Hour(1)
     initial_time = Dates.DateTime("2020-09-01")
@@ -763,8 +763,8 @@ end
     @test IS.get_forecast_horizon(sys) == horizon
     @test IS.get_forecast_initial_timestamp(sys) == initial_time
     @test IS.get_forecast_interval(sys) == second_time - initial_time
-    @test IS.generate_forecast_initial_times(sys) == [initial_time, second_time]
-    @test IS.generate_initial_times(forecast) == IS.generate_forecast_initial_times(sys)
+    @test IS.get_forecast_initial_times(sys) == [initial_time, second_time]
+    @test IS.get_initial_times(forecast) == IS.get_forecast_initial_times(sys)
     @test Dates.Hour(IS.get_forecast_total_period(sys)) ==
           Dates.Hour(second_time - initial_time) + Dates.Hour(resolution * horizon)
     @test IS.get_forecast_total_period(sys) == IS.get_total_period(forecast)

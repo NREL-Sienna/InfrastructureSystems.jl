@@ -32,8 +32,8 @@ function reset_info!(params::ForecastParameters)
     params.count = UNINITIALIZED_LENGTH
 end
 
-function generate_forecast_initial_times(params::ForecastParameters)
-    return generate_initial_times(params.initial_timestamp, params.count, params.interval)
+function get_forecast_initial_times(params::ForecastParameters)
+    return get_initial_times(params.initial_timestamp, params.count, params.interval)
 end
 
 mutable struct TimeSeriesParameters <: InfrastructureSystemsType
@@ -143,8 +143,7 @@ function _check_time_series_lengths(ts::Forecast)
 end
 
 get_forecast_window_count(params::TimeSeriesParameters) = params.forecast_params.count
-generate_forecast_initial_times(params::TimeSeriesParameters) =
-    generate_forecast_initial_times(params.forecast_params)
+get_forecast_initial_times(params::TimeSeriesParameters) = get_forecast_initial_times(params.forecast_params)
 get_forecast_horizon(params::TimeSeriesParameters) = params.forecast_params.horizon
 get_forecast_initial_timestamp(params::TimeSeriesParameters) =
     params.forecast_params.initial_timestamp

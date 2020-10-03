@@ -14,8 +14,8 @@ Base.length(ts::Forecast) = get_count(ts)
 """
 Return the initial times in the forecast.
 """
-function generate_initial_times(f::Forecast)
-    return generate_initial_times(get_initial_timestamp(f), get_count(f), get_interval(f))
+function get_initial_times(f::Forecast)
+    return get_initial_times(get_initial_timestamp(f), get_count(f), get_interval(f))
 end
 
 """

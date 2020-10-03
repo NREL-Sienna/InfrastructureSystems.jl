@@ -359,7 +359,7 @@ function copy_file(src::AbstractString, dst::AbstractString)
     return
 end
 
-function generate_initial_times(
+function get_initial_times(
     initial_timestamp::Dates.DateTime,
     count::Int,
     interval::Dates.Period,
