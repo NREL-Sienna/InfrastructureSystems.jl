@@ -31,14 +31,15 @@ function Probabilistic(
     end
     data = handle_normalization_factor(input_data, normalization_factor)
 
-
-    return Probabilistic(name,
-                        initial_timestamp,
-                        horizon,
-                        resolution,
-                        percentiles,
-                        data,
-                        scaling_factor_multiplier)
+    return Probabilistic(
+        name,
+        initial_timestamp,
+        horizon,
+        resolution,
+        percentiles,
+        data,
+        scaling_factor_multiplier,
+    )
 end
 
 """
@@ -81,7 +82,6 @@ function Probabilistic(
     )
 end
 
-
 """
 Construct Deterministic from RawTimeSeries.
 """
@@ -108,14 +108,14 @@ function Probabilistic(
     data::SortedDict{Dates.DateTime, Array},
 )
     return Probabilistic(
-            name = get_name(ts_metadata),
-            percentiled = get_percentiles(ta_metadata),
-            initial_timestamp = first(keys(data)),
-            resolution = get_resolution(ts_metadata),
-            horizon = length(first(values(data))),
-            data = data,
-            scaling_factor_multiplier = get_scaling_factor_multiplier(ts_metadata),
-            internal = InfrastructureSystemsInternal(get_time_series_uuid(ts_metadata)),
+        name = get_name(ts_metadata),
+        percentiled = get_percentiles(ta_metadata),
+        initial_timestamp = first(keys(data)),
+        resolution = get_resolution(ts_metadata),
+        horizon = length(first(values(data))),
+        data = data,
+        scaling_factor_multiplier = get_scaling_factor_multiplier(ts_metadata),
+        internal = InfrastructureSystemsInternal(get_time_series_uuid(ts_metadata)),
     )
 end
 
