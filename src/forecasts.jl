@@ -52,6 +52,30 @@ function get_interval(forecast::Forecast)
 end
 
 """
+Return the forecast window corresponsing to initial_time.
+"""
+function get_window(forecast::Forecast, initial_time::Dates.DateTime)
+    return TimeSeries.TimeArray(
+        make_timestamps(forecast, initial_time),
+        forecast.data[initial_time],
+    )
+end
+
+"""
+Return the forecast window corresponsing to interval index.
+"""
+function get_window(forecast::Forecast, index::Int)
+    return get_window(forecast, index_to_initial_time(forecast, index))
+end
+
+"""
+Iterate over all forecast windows.
+"""
+function iterate_windows(forecast::Forecast)
+    return (get_window(forecast, it) for it in keys(forecast.data))
+end
+
+"""
 Return the Dates.DateTime corresponding to an interval index.
 """
 function index_to_initial_time(forecast::Forecast, index::Int)
