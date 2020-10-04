@@ -31,14 +31,15 @@ function Probabilistic(
     end
     data = handle_normalization_factor(input_data, normalization_factor)
 
-
-    return Probabilistic(name,
-                        initial_timestamp,
-                        horizon,
-                        resolution,
-                        percentiles,
-                        data,
-                        scaling_factor_multiplier)
+    return Probabilistic(
+        name,
+        initial_timestamp,
+        horizon,
+        resolution,
+        percentiles,
+        data,
+        scaling_factor_multiplier,
+    )
 end
 
 """
@@ -80,7 +81,6 @@ function Probabilistic(
         scaling_factor_multiplier = scaling_factor_multiplier,
     )
 end
-
 
 """
 Construct Deterministic from RawTimeSeries.
