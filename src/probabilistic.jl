@@ -109,7 +109,7 @@ function Probabilistic(
 )
     return Probabilistic(
             name = get_name(ts_metadata),
-            percentiled = get_percentiles(ta_metadata),
+            percentiles = get_percentiles(ts_metadata),
             initial_timestamp = first(keys(data)),
             resolution = get_resolution(ts_metadata),
             horizon = length(first(values(data))),
