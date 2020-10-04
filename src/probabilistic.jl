@@ -3,7 +3,7 @@ Construct Probabilistic from a SortedDict of Arrays.
 
 # Arguments
 - `name::AbstractString`: user-defined name
-- `input_data::AbstractDict{Dates.DateTime, Vector{Float64}}`: time series data.
+- `input_data::AbstractDict{Dates.DateTime, Matrix{Float64}}`: time series data.
 - `percentiles`: Percentiles represented in the probabilistic forecast
 - `resolution::Dates.Period`: The resolution of the forecast in Dates.Period`
 - `normalization_factor::NormalizationFactor = 1.0`: optional normalization factor to apply
