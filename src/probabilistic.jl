@@ -108,14 +108,14 @@ function Probabilistic(
     data::SortedDict{Dates.DateTime, Array},
 )
     return Probabilistic(
-        name = get_name(ts_metadata),
-        percentiled = get_percentiles(ta_metadata),
-        initial_timestamp = first(keys(data)),
-        resolution = get_resolution(ts_metadata),
-        horizon = length(first(values(data))),
-        data = data,
-        scaling_factor_multiplier = get_scaling_factor_multiplier(ts_metadata),
-        internal = InfrastructureSystemsInternal(get_time_series_uuid(ts_metadata)),
+            name = get_name(ts_metadata),
+            percentiles = get_percentiles(ts_metadata),
+            initial_timestamp = first(keys(data)),
+            resolution = get_resolution(ts_metadata),
+            horizon = length(first(values(data))),
+            data = data,
+            scaling_factor_multiplier = get_scaling_factor_multiplier(ts_metadata),
+            internal = InfrastructureSystemsInternal(get_time_series_uuid(ts_metadata)),
     )
 end
 

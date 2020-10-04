@@ -136,6 +136,26 @@ end
     @test_throws ArgumentError IS.Deterministic(name, data_ts_two_cols)
 end
 
+@testset "Test add Probabilistic" begin
+    initial_time = Dates.DateTime("2020-09-01")
+    resolution = Dates.Hour(1)
+    other_time = initial_time + resolution
+    name = "test"
+    horizon = 24
+    data_vec = Dict(initial_time => ones(horizon, 99), other_time => ones(horizon, 99))
+    d = data_vec
+    sys = IS.SystemData()
+    component_name = "Component1"
+    component = IS.TestComponent(component_name, 5)
+    IS.add_component!(sys, component)
+    forecast = IS.Probabilistic(name, d, ones(99); resolution = resolution)
+    IS.add_time_series!(sys, component, forecast)
+    @test IS.has_time_series(component)
+    @test IS.get_initial_timestamp(forecast) == initial_time
+    forecast_retrieved = IS.get_time_series(IS.Probabilistic, component, "test"; start_time = initial_time)
+    @test IS.get_initial_timestamp(forecast_retrieved) == initial_time
+end
+
 @testset "Test add SingleTimeSeries" begin
     sys = IS.SystemData()
     name = "Component1"
