@@ -203,24 +203,6 @@ function create_components_df(components::Components)
     return DataFrames.DataFrame(rows)
 end
 
-function Base.show(
-    io::IO,
-    ::MIME"text/plain",
-    period::Union{Dates.TimePeriod, Dates.DatePeriod},
-)
-    total = convert_compound_period(period)
-    println(io, "$total")
-end
-
-function Base.show(
-    io::IO,
-    ::MIME"text/html",
-    period::Union{Dates.TimePeriod, Dates.DatePeriod},
-)
-    total = convert_compound_period(period)
-    println(io, "<p>$total</p>")
-end
-
 ## This function takes in a time period or date period and returns a compound period
 function convert_compound_period(period::Union{Dates.TimePeriod, Dates.DatePeriod})
     period = time_period_conversion(period)
