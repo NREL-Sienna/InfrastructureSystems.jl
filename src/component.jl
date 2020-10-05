@@ -37,13 +37,18 @@ end
 
 function _get_columns(start_time, count, ts_metadata::ForecastMetadata)
     offset = start_time - get_initial_timestamp(ts_metadata)
-    interval = get_interval(ts_metadata)
-    index = Int(offset / interval) + 1
+    interval = time_period_conversion(get_interval(ts_metadata))
+    window_count = get_count(ts_metadata)
+    if window_count > 1
+        index = Int(offset / interval) + 1
+    else
+        @assert interval == Dates.Millisecond(0)
+        index = 1
+    end
 
     if index + count - 1 > get_count(ts_metadata)
         throw(ArgumentError("The requested start_time $start_time and count $count are invalid"))
     end
-
     return UnitRange(index, index + count - 1)
 end
 
@@ -81,8 +86,9 @@ function _check_start_time(start_time, ts_metadata::TimeSeriesMetadata)
     end
 
     if typeof(ts_metadata) <: ForecastMetadata
+        window_count = get_count(ts_metadata)
         interval = get_interval(ts_metadata)
-        if time_diff % interval != Dates.Second(0)
+        if window_count > 1 && time_diff % interval != Dates.Second(0)
             throw(ArgumentError("start_time=$start_time is not on a multiple of interval=$interval"))
         end
     end
