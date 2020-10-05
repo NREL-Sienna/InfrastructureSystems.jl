@@ -20,8 +20,8 @@
     IS.add_time_series!(sys, component, forecast)
     var1 = IS.get_time_series(IS.Deterministic, component, name; start_time = initial_time)
     @test length(var1.data) == 2
-    @test get_horizon(var1) == horizon
-    @test get_initial_timestamp(var1) == initial_time
+    @test IS.get_horizon(var1) == horizon
+    @test IS.get_initial_timestamp(var1) == initial_time
 
     var2 = IS.get_time_series(
         IS.Deterministic,
