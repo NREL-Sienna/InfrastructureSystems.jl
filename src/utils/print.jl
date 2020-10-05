@@ -158,6 +158,27 @@ function Base.show(io::IO, ist::InfrastructureSystemsComponent)
     print(io, ")")
 end
 
+function Base.show(io::IO, ::MIME"text/plain", it::FlattenIteratorWrapper)
+    println(io, "$(eltype(it)) Counts: ")
+    for (ctype, count) in _get_type_counts(it)
+        println(io, "$ctype: $count")
+    end
+end
+
+function _get_type_counts(it::FlattenIteratorWrapper)
+    data = SortedDict()
+    for component in it
+        ctype = string(typeof(component))
+        if !haskey(data, ctype)
+            data[ctype] = 1
+        else
+            data[ctype] += 1
+        end
+    end
+
+    return data
+end
+
 function create_components_df(components::Components)
     counts = Dict{String, Int}()
     rows = []

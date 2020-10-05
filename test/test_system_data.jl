@@ -18,6 +18,12 @@
     end
     @test i == 1
 
+    io = IOBuffer()
+    show(io, "text/plain", components)
+    output = String(take!(io))
+    expected = "TestComponent: $i"
+    @test occursin(expected, output)
+
     IS.remove_component!(data, collect(components)[1])
     components = IS.get_components(IS.TestComponent, data)
     @test length(components) == 0
