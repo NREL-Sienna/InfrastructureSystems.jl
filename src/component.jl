@@ -45,6 +45,9 @@ function _get_columns(start_time, count, ts_metadata::ForecastMetadata)
         @assert interval == Dates.Millisecond(0)
         index = 1
     end
+    if count === nothing
+        count = window_count - index + 1
+    end
 
     if index + count - 1 > get_count(ts_metadata)
         throw(ArgumentError("The requested start_time $start_time and count $count are invalid"))
@@ -108,8 +111,8 @@ Return a time series corresponding to the given parameters.
   must be a multiple of the forecast interval.
 - `len::Union{Nothing, Int} = nothing`: Length in the time dimension. If nothing, use the
   entire length.
-- `count::Int = 1`: Only applicable to subtypes of Forecast. Number of forecast windows
-  starting at `start_time` to return.
+- `count::Union{Nothing, Int} = nothing`: Only applicable to subtypes of Forecast. Number
+  of forecast windows starting at `start_time` to return. Defaults to all available.
 """
 function get_time_series(
     ::Type{T},
@@ -117,7 +120,7 @@ function get_time_series(
     name::AbstractString;
     start_time::Union{Nothing, Dates.DateTime} = nothing,
     len::Union{Nothing, Int} = nothing,
-    count::Int = 1,
+    count::Union{Nothing, Int} = nothing,
 ) where {T <: TimeSeriesData}
     if !has_time_series(component)
         throw(ArgumentError("no forecasts are stored in $component"))

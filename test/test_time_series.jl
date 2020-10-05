@@ -25,7 +25,9 @@
     )
     IS.add_time_series!(sys, component, forecast)
     var1 = IS.get_time_series(IS.Deterministic, component, name; start_time = initial_time)
-    @test length(var1.data) == 1
+    @test length(var1.data) == 2
+    @test get_initial_timestamp(var1) == initial_time
+
     var2 = IS.get_time_series(
         IS.Deterministic,
         component,
@@ -34,6 +36,7 @@
         count = 2,
     )
     @test length(var2.data) == 2
+
     var3 = IS.get_time_series(IS.Deterministic, component, name; start_time = other_time)
     @test length(var2.data) == 2
     # Throws errors
@@ -56,11 +59,11 @@
     @test count == 2
 
     window1 = IS.get_window(var2, initial_time)
-    @assert window1 isa TimeSeries.TimeArray
-    @assert TimeSeries.timestamp(window1)[1] == initial_time
+    @test window1 isa TimeSeries.TimeArray
+    @test TimeSeries.timestamp(window1)[1] == initial_time
     window2 = IS.get_window(var2, other_time)
-    @assert window2 isa TimeSeries.TimeArray
-    @assert TimeSeries.timestamp(window2)[1] == other_time
+    @test window2 isa TimeSeries.TimeArray
+    @test TimeSeries.timestamp(window2)[1] == other_time
 
     found = 0
     for ta in IS.iterate_windows(var2)
@@ -789,6 +792,58 @@ end
     @test Dates.Hour(IS.get_forecast_total_period(sys)) ==
           Dates.Hour(second_time - initial_time) + Dates.Hour(resolution * horizon)
     @test IS.get_forecast_total_period(sys) == IS.get_total_period(forecast)
+end
+
+@testset "Test get_time_series options" begin
+    for in_memory in (true, false)
+        sys = IS.SystemData(time_series_in_memory = in_memory)
+        name = "Component1"
+        component = IS.TestComponent(name, 5)
+        IS.add_component!(sys, component)
+
+        # Set baseline parameters for the rest of the tests.
+        resolution = Dates.Minute(5)
+        interval = Dates.Hour(1)
+        initial_timestamp = Dates.DateTime("2020-09-01")
+        initial_times = collect(range(initial_timestamp, length = 24, step = interval))
+        name = "test"
+        horizon = 24
+        data = SortedDict(it => ones(horizon) * i for (i, it) in enumerate(initial_times))
+
+        forecast = IS.Deterministic(
+            data = data,
+            name = name,
+            initial_timestamp = initial_timestamp,
+            horizon = horizon,
+            resolution = resolution,
+        )
+        IS.add_time_series!(sys, component, forecast)
+        @test IS.get_forecast_window_count(sys) == length(data)
+
+        f2 = IS.get_time_series(IS.Deterministic, component, name)
+        @test IS.get_count(f2) == length(data)
+        @test IS.get_initial_timestamp(f2) == initial_times[1]
+        for (i, window) in enumerate(IS.iterate_windows(f2))
+            @test TimeSeries.values(window) == data[initial_times[i]]
+        end
+
+        offset = 12
+        count = 5
+        it = initial_times[offset]
+        f2 = IS.get_time_series(IS.Deterministic, component, name; start_time = it, count = count)
+        @test IS.get_initial_timestamp(f2) == it
+        @test IS.get_count(f2) == count
+        for (i, window) in enumerate(IS.iterate_windows(f2))
+            @test TimeSeries.values(window) == data[initial_times[i + offset - 1]]
+        end
+
+        @test_throws ArgumentError IS.get_time_series(
+            IS.Deterministic,
+            component,
+            name;
+            start_time = it + Dates.Minute(1),
+        )
+    end
 end
 
 @testset "Test conflicting time series parameters" begin

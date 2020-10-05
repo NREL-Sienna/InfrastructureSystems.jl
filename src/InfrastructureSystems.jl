@@ -34,7 +34,7 @@ Required interface functions for subtypes:
 - get_internal()
 
 Optional interface functions:
-- get_time_series()
+- get_time_series_container()
 
 Subtypes may contain time series.
 """
