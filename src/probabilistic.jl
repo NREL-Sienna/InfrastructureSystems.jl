@@ -24,22 +24,13 @@ function Probabilistic(
         input_data = SortedDict(input_data...)
     end
     data = handle_normalization_factor(input_data, normalization_factor)
-    initial_timestamp = first(keys(data))
-    horizon, quantile_count = size(first(values(data)))
+    quantile_count = size(first(values(data)))[2]
     if quantile_count != length(percentiles)
         throw(ArgumentError("The amount of elements in the data doesn't match the length of the percentiles"))
     end
     data = handle_normalization_factor(input_data, normalization_factor)
 
-    return Probabilistic(
-        name,
-        initial_timestamp,
-        horizon,
-        resolution,
-        percentiles,
-        data,
-        scaling_factor_multiplier,
-    )
+    return Probabilistic(name, resolution, percentiles, data, scaling_factor_multiplier)
 end
 
 """
@@ -110,9 +101,7 @@ function Probabilistic(
     return Probabilistic(
         name = get_name(ts_metadata),
         percentiles = get_percentiles(ts_metadata),
-        initial_timestamp = first(keys(data)),
         resolution = get_resolution(ts_metadata),
-        horizon = length(first(values(data))),
         data = data,
         scaling_factor_multiplier = get_scaling_factor_multiplier(ts_metadata),
         internal = InfrastructureSystemsInternal(get_time_series_uuid(ts_metadata)),
@@ -149,9 +138,14 @@ function get_array_for_hdf(forecast::Probabilistic)
     percentile_count = length(get_percentiles(forecast))
     horizon = get_horizon(forecast)
     data = get_data(forecast)
+
     data_for_hdf = Array{Float64, 3}(undef, interval_count, horizon, percentile_count)
     for (ix, f) in enumerate(values(data))
         data_for_hdf[ix, :, :] = f
     end
     return data_for_hdf
+end
+
+function get_horizon(forecast::Probabilistic)
+    return size(first(values(get_data(forecast))))[1]
 end

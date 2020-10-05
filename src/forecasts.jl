@@ -39,6 +39,13 @@ function get_count(forecast::Forecast)
 end
 
 """
+Return the initial_timestamp of the forecast.
+"""
+function get_initial_timestamp(forecast::Forecast)
+    return first(keys(get_data(forecast)))
+end
+
+"""
 Return the forecast interval as a Dates.Period.
 """
 function get_interval(forecast::Forecast)

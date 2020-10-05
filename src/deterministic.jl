@@ -22,16 +22,7 @@ function Deterministic(
         input_data = SortedDict(input_data...)
     end
     data = handle_normalization_factor(input_data, normalization_factor)
-    initial_timestamp = first(keys(data))
-    horizon = length(first(values(data)))
-    return Deterministic(
-        name,
-        initial_timestamp,
-        horizon,
-        resolution,
-        data,
-        scaling_factor_multiplier,
-    )
+    return Deterministic(name, resolution, data, scaling_factor_multiplier)
 end
 
 """
@@ -171,9 +162,7 @@ function Deterministic(
 )
     return Deterministic(
         name = get_name(ts_metadata),
-        initial_timestamp = first(keys(data)),
         resolution = get_resolution(ts_metadata),
-        horizon = length(first(values(data))),
         data = data,
         scaling_factor_multiplier = get_scaling_factor_multiplier(ts_metadata),
         internal = InfrastructureSystemsInternal(get_time_series_uuid(ts_metadata)),
@@ -226,4 +215,8 @@ function Deterministic(forecast::Deterministic, data::SortedDict{Dates.DateTime,
     end
 
     return Deterministic(vals...)
+end
+
+function get_horizon(forecast::Deterministic)
+    return length(first(values(get_data(forecast))))
 end

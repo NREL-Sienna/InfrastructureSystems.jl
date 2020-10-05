@@ -310,11 +310,8 @@ function deserialize_time_series(
             data[start_time] = path["data"][rows, columns.start]
         else
             data_read = path["data"][rows, columns]
-            for (i, it) in enumerate(range(
-                start_time;
-                length = length(columns),
-                step = interval,
-            ))
+            for (i, it) in
+                enumerate(range(start_time; length = length(columns), step = interval))
                 data[it] = @view data_read[1:length(rows), i]
             end
         end

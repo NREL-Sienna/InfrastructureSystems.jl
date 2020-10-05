@@ -16,16 +16,11 @@
     horizon = 24
     data = SortedDict(initial_time => ones(horizon), other_time => ones(horizon))
 
-    forecast = IS.Deterministic(
-        data = data,
-        name = name,
-        initial_timestamp = initial_time,
-        horizon = horizon,
-        resolution = resolution,
-    )
+    forecast = IS.Deterministic(data = data, name = name, resolution = resolution)
     IS.add_time_series!(sys, component, forecast)
     var1 = IS.get_time_series(IS.Deterministic, component, name; start_time = initial_time)
     @test length(var1.data) == 2
+    @test get_horizon(var1) == horizon
     @test get_initial_timestamp(var1) == initial_time
 
     var2 = IS.get_time_series(
@@ -499,15 +494,13 @@ end
     ts = IS.SingleTimeSeries(name, ta)
     IS.add_time_series!(sys, component, ts)
 
-    time_series =
-        IS.get_time_series(IS.SingleTimeSeries, component, name; start_time = dates[1])
-    @test TimeSeries.timestamp(IS.get_data(time_series))[1] == dates[1]
-    @test length(time_series) == 24
+    ts = IS.get_time_series(IS.SingleTimeSeries, component, name; start_time = dates[1])
+    @test TimeSeries.timestamp(IS.get_data(ts))[1] == dates[1]
+    @test length(ts) == 24
 
-    time_series =
-        IS.get_time_series(IS.SingleTimeSeries, component, name; start_time = dates[3])
-    @test TimeSeries.timestamp(IS.get_data(time_series))[1] == dates[3]
-    @test length(time_series) == 22
+    ts = IS.get_time_series(IS.SingleTimeSeries, component, name; start_time = dates[3])
+    @test TimeSeries.timestamp(IS.get_data(ts))[1] == dates[3]
+    @test length(ts) == 22
 
     time_series = IS.get_time_series(
         IS.SingleTimeSeries,
@@ -773,13 +766,7 @@ end
     horizon = 24
     data = SortedDict(initial_time => ones(horizon), second_time => ones(horizon))
 
-    forecast = IS.Deterministic(
-        data = data,
-        name = name,
-        initial_timestamp = initial_time,
-        horizon = horizon,
-        resolution = resolution,
-    )
+    forecast = IS.Deterministic(data = data, name = name, resolution = resolution)
     IS.add_time_series!(sys, component, forecast)
 
     @test IS.get_time_series_resolution(sys) == resolution
@@ -810,13 +797,7 @@ end
         horizon = 24
         data = SortedDict(it => ones(horizon) * i for (i, it) in enumerate(initial_times))
 
-        forecast = IS.Deterministic(
-            data = data,
-            name = name,
-            initial_timestamp = initial_timestamp,
-            horizon = horizon,
-            resolution = resolution,
-        )
+        forecast = IS.Deterministic(data = data, name = name, resolution = resolution)
         IS.add_time_series!(sys, component, forecast)
         @test IS.get_forecast_window_count(sys) == length(data)
 
@@ -830,11 +811,35 @@ end
         offset = 12
         count = 5
         it = initial_times[offset]
-        f2 = IS.get_time_series(IS.Deterministic, component, name; start_time = it, count = count)
+        f2 = IS.get_time_series(
+            IS.Deterministic,
+            component,
+            name;
+            start_time = it,
+            count = count,
+        )
         @test IS.get_initial_timestamp(f2) == it
         @test IS.get_count(f2) == count
+        @test IS.get_horizon(f2) == horizon
         for (i, window) in enumerate(IS.iterate_windows(f2))
             @test TimeSeries.values(window) == data[initial_times[i + offset - 1]]
+        end
+
+        horizon -= 1
+        f2 = IS.get_time_series(
+            IS.Deterministic,
+            component,
+            name;
+            start_time = it,
+            count = count,
+            len = horizon,
+        )
+        @test IS.get_initial_timestamp(f2) == it
+        @test IS.get_count(f2) == count
+        @test IS.get_horizon(f2) == horizon
+        for (i, window) in enumerate(IS.iterate_windows(f2))
+            @test TimeSeries.values(window) ==
+                  data[initial_times[i + offset - 1]][1:horizon]
         end
 
         @test_throws ArgumentError IS.get_time_series(
@@ -860,13 +865,7 @@ end
     horizon = 24
     data = SortedDict(initial_time => ones(horizon), second_time => ones(horizon))
 
-    forecast = IS.Deterministic(
-        data = data,
-        name = name,
-        initial_timestamp = initial_time,
-        horizon = horizon,
-        resolution = resolution,
-    )
+    forecast = IS.Deterministic(data = data, name = name, resolution = resolution)
     IS.add_time_series!(sys, component, forecast)
 
     # Conflicting initial time
@@ -874,13 +873,7 @@ end
     name = "test2"
     data = SortedDict(initial_time2 => ones(horizon), second_time => ones(horizon))
 
-    forecast = IS.Deterministic(
-        data = data,
-        name = name,
-        initial_timestamp = initial_time2,
-        horizon = horizon,
-        resolution = resolution,
-    )
+    forecast = IS.Deterministic(data = data, name = name, resolution = resolution)
     @test_throws IS.ConflictingInputsError IS.add_time_series!(sys, component, forecast)
 
     # Conflicting resolution
@@ -888,13 +881,7 @@ end
     name = "test2"
     data = SortedDict(initial_time => ones(horizon), second_time => ones(horizon))
 
-    forecast = IS.Deterministic(
-        data = data,
-        name = name,
-        initial_timestamp = initial_time2,
-        horizon = horizon,
-        resolution = resolution2,
-    )
+    forecast = IS.Deterministic(data = data, name = name, resolution = resolution2)
     @test_throws IS.ConflictingInputsError IS.add_time_series!(sys, component, forecast)
 
     # Conflicting horizon
@@ -902,13 +889,7 @@ end
     horizon2 = 23
     data = SortedDict(initial_time => ones(horizon2), second_time => ones(horizon2))
 
-    forecast = IS.Deterministic(
-        data = data,
-        name = name,
-        initial_timestamp = initial_time2,
-        horizon = horizon2,
-        resolution = resolution,
-    )
+    forecast = IS.Deterministic(data = data, name = name, resolution = resolution)
     @test_throws IS.ConflictingInputsError IS.add_time_series!(sys, component, forecast)
 
     # Conflicting count
@@ -920,12 +901,6 @@ end
         third_time => ones(horizon),
     )
 
-    forecast = IS.Deterministic(
-        data = data,
-        name = name,
-        initial_timestamp = initial_time,
-        horizon = horizon,
-        resolution = resolution,
-    )
+    forecast = IS.Deterministic(data = data, name = name, resolution = resolution)
     @test_throws IS.ConflictingInputsError IS.add_time_series!(sys, component, forecast)
 end

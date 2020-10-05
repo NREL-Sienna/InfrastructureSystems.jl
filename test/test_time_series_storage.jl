@@ -89,13 +89,7 @@ function test_get_subset(storage::IS.TimeSeriesStorage)
     horizon = 24
     data = SortedDict(initial_time1 => ones(horizon), initial_time2 => ones(horizon))
 
-    ts = IS.Deterministic(
-        data = data,
-        name = name,
-        initial_timestamp = initial_time1,
-        horizon = horizon,
-        resolution = resolution,
-    )
+    ts = IS.Deterministic(data = data, name = name, resolution = resolution)
     IS.serialize_time_series!(storage, IS.get_uuid(component), name, ts)
     ts_metadata = make_metadata(ts)
     rows = UnitRange(1, horizon)
