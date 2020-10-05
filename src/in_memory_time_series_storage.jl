@@ -152,8 +152,8 @@ function deserialize_time_series(
 
     new_ts = Deterministic(ts, data)
     set_horizon!(new_ts, length(rows))
-    if rows.start > 1
-        set_initial_timestamp!(new_ts, start_time + rows.start * resolution)
+    if columns.start > 1
+        set_initial_timestamp!(new_ts, start_time)
     end
 
     return new_ts

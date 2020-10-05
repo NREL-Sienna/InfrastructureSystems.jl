@@ -303,15 +303,17 @@ function deserialize_time_series(
         @assert length(attributes["dataset_size"]) == 2
         @debug "deserializing a Forecast" T
         data = SortedDict{Dates.DateTime, Array}()
-        start_time = attributes["start_time"]
+        initial_timestamp = attributes["start_time"]
+        interval = attributes["interval"]
+        start_time = initial_timestamp + interval * (columns.start - 1)
         if length(columns) == 1
             data[start_time] = path["data"][rows, columns.start]
         else
             data_read = path["data"][rows, columns]
             for (i, it) in enumerate(range(
-                attributes["start_time"];
+                start_time;
                 length = length(columns),
-                step = attributes["interval"],
+                step = interval,
             ))
                 data[it] = @view data_read[1:length(rows), i]
             end
