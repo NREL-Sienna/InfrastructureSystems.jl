@@ -137,7 +137,7 @@ function _check_time_series_lengths(ts::Forecast)
     end
     for data in values(get_data(ts))
         if size(data)[1] != horizon
-            throw(ConflictingInputsError("length mismatch: $(length(data)) $horizon"))
+            throw(ConflictingInputsError("length mismatch: $(size(data)[1]) $horizon"))
         end
     end
 end

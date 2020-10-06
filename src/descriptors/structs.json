@@ -62,16 +62,6 @@
           "comment": "user-defined name"
         },
         {
-          "name": "initial_timestamp",
-          "data_type": "Dates.DateTime",
-          "comment": "first timestamp in forecast"
-        },
-        {
-          "name": "horizon",
-          "data_type": "Int",
-          "comment": "length of this time series"
-        },
-        {
           "name": "resolution",
           "data_type": "Dates.Period",
           "comment": "forecast resolution"
@@ -160,16 +150,6 @@
           "name": "name",
           "data_type": "String",
           "comment": "user-defined name"
-        },
-        {
-          "name": "initial_timestamp",
-          "data_type": "Dates.DateTime",
-          "comment": "first timestamp in forecast"
-        },
-        {
-          "name": "horizon",
-          "data_type": "Int",
-          "comment": "length of this time series"
         },
         {
           "name": "resolution",
@@ -265,16 +245,6 @@
           "name": "name",
           "data_type": "String",
           "comment": "user-defined name"
-        },
-        {
-          "name": "initial_timestamp",
-          "data_type": "Dates.DateTime",
-          "comment": "first timestamp in forecast"
-        },
-        {
-          "name": "horizon",
-          "data_type": "Int",
-          "comment": "length of this time series"
         },
         {
           "name": "resolution",

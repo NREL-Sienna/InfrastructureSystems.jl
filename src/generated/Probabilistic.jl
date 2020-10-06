@@ -4,8 +4,6 @@ This file is auto-generated. Do not edit.
 """
     mutable struct Probabilistic <: Forecast
         name::String
-        initial_timestamp::Dates.DateTime
-        horizon::Int
         resolution::Dates.Period
         percentiles::Vector{Float64}
         data::SortedDict{Dates.DateTime, Array}
@@ -17,8 +15,6 @@ A Probabilistic forecast for a particular data field in a Component.
 
 # Arguments
 - `name::String`: user-defined name
-- `initial_timestamp::Dates.DateTime`: first timestamp in forecast
-- `horizon::Int`: length of this time series
 - `resolution::Dates.Period`: forecast resolution
 - `percentiles::Vector{Float64}`: Percentiles for the probabilistic forecast
 - `data::SortedDict{Dates.DateTime, Array}`: timestamp - scalingfactor
@@ -28,10 +24,6 @@ A Probabilistic forecast for a particular data field in a Component.
 mutable struct Probabilistic <: Forecast
     "user-defined name"
     name::String
-    "first timestamp in forecast"
-    initial_timestamp::Dates.DateTime
-    "length of this time series"
-    horizon::Int
     "forecast resolution"
     resolution::Dates.Period
     "Percentiles for the probabilistic forecast"
@@ -43,20 +35,16 @@ mutable struct Probabilistic <: Forecast
     internal::InfrastructureSystemsInternal
 end
 
-function Probabilistic(name, initial_timestamp, horizon, resolution, percentiles, data, scaling_factor_multiplier=nothing, )
-    Probabilistic(name, initial_timestamp, horizon, resolution, percentiles, data, scaling_factor_multiplier, InfrastructureSystemsInternal(), )
+function Probabilistic(name, resolution, percentiles, data, scaling_factor_multiplier=nothing, )
+    Probabilistic(name, resolution, percentiles, data, scaling_factor_multiplier, InfrastructureSystemsInternal(), )
 end
 
-function Probabilistic(; name, initial_timestamp, horizon, resolution, percentiles, data, scaling_factor_multiplier=nothing, internal=InfrastructureSystemsInternal(), )
-    Probabilistic(name, initial_timestamp, horizon, resolution, percentiles, data, scaling_factor_multiplier, internal, )
+function Probabilistic(; name, resolution, percentiles, data, scaling_factor_multiplier=nothing, internal=InfrastructureSystemsInternal(), )
+    Probabilistic(name, resolution, percentiles, data, scaling_factor_multiplier, internal, )
 end
 
 """Get [`Probabilistic`](@ref) `name`."""
 get_name(value::Probabilistic) = value.name
-"""Get [`Probabilistic`](@ref) `initial_timestamp`."""
-get_initial_timestamp(value::Probabilistic) = value.initial_timestamp
-"""Get [`Probabilistic`](@ref) `horizon`."""
-get_horizon(value::Probabilistic) = value.horizon
 """Get [`Probabilistic`](@ref) `resolution`."""
 get_resolution(value::Probabilistic) = value.resolution
 """Get [`Probabilistic`](@ref) `percentiles`."""
@@ -70,10 +58,6 @@ get_internal(value::Probabilistic) = value.internal
 
 """Set [`Probabilistic`](@ref) `name`."""
 set_name!(value::Probabilistic, val) = value.name = val
-"""Set [`Probabilistic`](@ref) `initial_timestamp`."""
-set_initial_timestamp!(value::Probabilistic, val) = value.initial_timestamp = val
-"""Set [`Probabilistic`](@ref) `horizon`."""
-set_horizon!(value::Probabilistic, val) = value.horizon = val
 """Set [`Probabilistic`](@ref) `resolution`."""
 set_resolution!(value::Probabilistic, val) = value.resolution = val
 """Set [`Probabilistic`](@ref) `percentiles`."""

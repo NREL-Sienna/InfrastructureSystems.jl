@@ -150,13 +150,7 @@ function deserialize_time_series(
         data[it] = @view full_data[initial_time][rows]
     end
 
-    new_ts = Deterministic(ts, data)
-    set_horizon!(new_ts, length(rows))
-    if rows.start > 1
-        set_initial_timestamp!(new_ts, start_time + rows.start * resolution)
-    end
-
-    return new_ts
+    return Deterministic(ts, data)
 end
 
 function clear_time_series!(storage::InMemoryTimeSeriesStorage)
