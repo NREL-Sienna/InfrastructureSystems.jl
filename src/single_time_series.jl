@@ -222,3 +222,7 @@ function SingleTimeSeries(time_series::SingleTimeSeries, data::TimeSeries.TimeAr
 end
 
 get_columns(::Type{<:TimeSeriesMetadata}, ta::TimeSeries.TimeArray) = nothing
+
+function make_time_array(time_series::SingleTimeSeries)
+    return get_data(time_series)
+end
