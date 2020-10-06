@@ -851,6 +851,69 @@ end
     end
 end
 
+@testset "Test get_time_series_array SingleTimeSeries" begin
+    sys = IS.SystemData()
+    name = "Component1"
+    component = IS.TestComponent(name, 5)
+    IS.add_component!(sys, component)
+
+    dates = create_dates("2020-01-01T00:00:00", Dates.Hour(1), "2020-01-01T23:00:00")
+    data = collect(1:24)
+    ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
+    name = "val"
+    ts = IS.SingleTimeSeries(name, ta; scaling_factor_multiplier = IS.get_val)
+    IS.add_time_series!(sys, component, ts)
+    ta2 = IS.get_time_series_array(IS.SingleTimeSeries, component, name)
+    @test ta2 isa TimeSeries.TimeArray
+    @test TimeSeries.timestamp(ta2) == dates
+    @test TimeSeries.values(ta2) == data * IS.get_val(component)
+
+    IS.clear_time_series!(sys)
+
+    ts = IS.SingleTimeSeries(name, ta)
+    IS.add_time_series!(sys, component, ts)
+    ta2 = IS.get_time_series_array(IS.SingleTimeSeries, component, name)
+    @test ta2 isa TimeSeries.TimeArray
+    @test TimeSeries.timestamp(ta2) == dates
+    @test TimeSeries.values(ta2) == data
+    @test IS.get_time_series_timestamps(IS.SingleTimeSeries, component, name) == dates
+    @test IS.get_time_series_values(IS.SingleTimeSeries, component, name) == data
+end
+
+@testset "Test get_time_series_array Deterministic" begin
+    sys = IS.SystemData()
+    name = "Component1"
+    component = IS.TestComponent(name, 5)
+    IS.add_component!(sys, component)
+
+    resolution = Dates.Minute(5)
+    interval = Dates.Hour(1)
+    initial_timestamp = Dates.DateTime("2020-09-01")
+    initial_times = collect(range(initial_timestamp, length = 2, step = interval))
+    name = "test"
+    horizon = 24
+    data = SortedDict(it => ones(horizon) * i for (i, it) in enumerate(initial_times))
+
+    forecast = IS.Deterministic(
+        data = data,
+        name = name,
+        resolution = resolution;
+        scaling_factor_multiplier = IS.get_val,
+    )
+    IS.add_time_series!(sys, component, forecast)
+    start_time = initial_timestamp + interval
+    ta2 =
+        IS.get_time_series_array(IS.Deterministic, component, name; start_time = start_time)
+    @test ta2 isa TimeSeries.TimeArray
+    @test TimeSeries.timestamp(ta2) ==
+          collect(range(start_time, length = horizon, step = resolution))
+    @test TimeSeries.values(ta2) == data[initial_times[2]] * IS.get_val(component)
+end
+
+@testset "Test get_time_series_array Probabilistic" begin
+    # TODO 1.0
+end
+
 @testset "Test conflicting time series parameters" begin
     sys = IS.SystemData()
     name = "Component1"

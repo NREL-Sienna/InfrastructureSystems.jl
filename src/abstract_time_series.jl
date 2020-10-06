@@ -20,3 +20,8 @@ Components store references to these through TimeSeriesMetadata values so that d
 reside on storage media instead of memory.
 """
 abstract type TimeSeriesData <: InfrastructureSystemsComponent end
+
+# Subtypes must implement
+# - Base.length
+# - get_resolution
+# - make_time_array

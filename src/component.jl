@@ -155,16 +155,9 @@ function get_time_series_array(
     name::AbstractString;
     start_time::Union{Nothing, Dates.DateTime} = nothing,
     len::Union{Nothing, Int} = nothing,
-    count::Int = 1,
 ) where {T <: TimeSeriesData}
-    time_series = get_time_series(
-        T,
-        component,
-        name;
-        start_time = start_time,
-        len = len,
-        count = count,
-    )
+    time_series =
+        get_time_series(T, component, name; start_time = start_time, len = len, count = 1)
     return get_time_series_array(component, time_series)
 end
 
@@ -172,7 +165,7 @@ function get_time_series_array(
     component::InfrastructureSystemsComponent,
     time_series::TimeSeriesData,
 )
-    ta = get_data(time_series)
+    ta = make_time_array(time_series)
     multiplier = get_scaling_factor_multiplier(time_series)
     if multiplier === nothing
         return ta
@@ -187,7 +180,6 @@ function get_time_series_timestamps(
     name::AbstractString;
     start_time::Union{Nothing, Dates.DateTime} = nothing,
     len::Union{Nothing, Int} = nothing,
-    count::Int = 1,
 ) where {T <: TimeSeriesData}
     return TimeSeries.timestamp(get_time_series_array(
         T,
@@ -195,7 +187,6 @@ function get_time_series_timestamps(
         name;
         start_time = start_time,
         len = len,
-        count = count,
     ))
 end
 
@@ -215,7 +206,6 @@ function get_time_series_values(
     name::AbstractString;
     start_time::Union{Nothing, Dates.DateTime} = nothing,
     len::Union{Nothing, Int} = nothing,
-    count::Int = 1,
 ) where {T <: TimeSeriesData}
     return TimeSeries.values(get_time_series_array(
         T,
@@ -223,7 +213,6 @@ function get_time_series_values(
         name;
         start_time = start_time,
         len = len,
-        count = count,
     ))
 end
 

@@ -220,3 +220,15 @@ end
 function get_horizon(forecast::Deterministic)
     return length(first(values(get_data(forecast))))
 end
+
+function make_time_array(forecast::Deterministic)
+    # Artificial limitation to reduce scope.
+    @assert get_count(forecast) == 1
+    timestamps = range(
+        get_initial_timestamp(forecast);
+        step = get_resolution(forecast),
+        length = get_horizon(forecast),
+    )
+    data = first(values(get_data(forecast)))
+    return TimeSeries.TimeArray(timestamps, data)
+end
