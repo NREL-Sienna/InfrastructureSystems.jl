@@ -220,7 +220,7 @@ end
 end
 
 @testset "Test Deterministic with a wrapped SingleTimeSeries" begin
-    for in_memory in (true,)
+    for in_memory in (true, false)
         sys = IS.SystemData(time_series_in_memory = in_memory)
         component = IS.TestComponent("Component1", 5)
         IS.add_component!(sys, component)
@@ -256,12 +256,14 @@ end
         last_val_index = last_it_index + horizon - 1
         @test TimeSeries.values(windows[exp_length]) == data[last_it_index:last_val_index]
 
+        # Must start on a window.
         @test_throws ArgumentError IS.get_time_series(
             IS.Deterministic,
             component,
             name;
             start_time = dates[2],
         )
+        # Must pass a full horizon.
         @test_throws ArgumentError IS.get_time_series(
             IS.Deterministic,
             component,

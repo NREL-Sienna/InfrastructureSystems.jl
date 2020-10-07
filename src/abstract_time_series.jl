@@ -10,7 +10,7 @@ abstract type ForecastMetadata <: TimeSeriesMetadata end
 abstract type StaticTimeSeriesMetadata <: TimeSeriesMetadata end
 
 get_count(ts::StaticTimeSeriesMetadata) = 1
-get_initial_timestamp(ts::StaticTimeSeriesMetadata) = get_initial_time(ts)
+get_initial_timestamp(ts::StaticTimeSeriesMetadata) = get_initial_timestamp(ts)
 Base.length(ts::StaticTimeSeriesMetadata) = get_length(ts)
 Base.length(ts::ForecastMetadata) = get_horizon(ts)
 

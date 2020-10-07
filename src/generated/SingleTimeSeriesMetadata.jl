@@ -5,7 +5,7 @@ This file is auto-generated. Do not edit.
     mutable struct SingleTimeSeriesMetadata <: StaticTimeSeriesMetadata
         name::String
         resolution::Dates.Period
-        initial_time::Dates.DateTime
+        initial_timestamp::Dates.DateTime
         time_series_uuid::UUIDs.UUID
         length::Int
         scaling_factor_multiplier::Union{Nothing, Function}
@@ -17,7 +17,7 @@ A TimeSeries Data object in contigous form.
 # Arguments
 - `name::String`: user-defined name
 - `resolution::Dates.Period`
-- `initial_time::Dates.DateTime`: time series availability time
+- `initial_timestamp::Dates.DateTime`: time series availability time
 - `time_series_uuid::UUIDs.UUID`: reference to time series data
 - `length::Int`: length of this time series
 - `scaling_factor_multiplier::Union{Nothing, Function}`: Applicable when the time series data are scaling factors. Called on the associated component to convert the values.
@@ -28,7 +28,7 @@ mutable struct SingleTimeSeriesMetadata <: StaticTimeSeriesMetadata
     name::String
     resolution::Dates.Period
     "time series availability time"
-    initial_time::Dates.DateTime
+    initial_timestamp::Dates.DateTime
     "reference to time series data"
     time_series_uuid::UUIDs.UUID
     "length of this time series"
@@ -38,20 +38,20 @@ mutable struct SingleTimeSeriesMetadata <: StaticTimeSeriesMetadata
     internal::InfrastructureSystemsInternal
 end
 
-function SingleTimeSeriesMetadata(name, resolution, initial_time, time_series_uuid, length, scaling_factor_multiplier=nothing, )
-    SingleTimeSeriesMetadata(name, resolution, initial_time, time_series_uuid, length, scaling_factor_multiplier, InfrastructureSystemsInternal(), )
+function SingleTimeSeriesMetadata(name, resolution, initial_timestamp, time_series_uuid, length, scaling_factor_multiplier=nothing, )
+    SingleTimeSeriesMetadata(name, resolution, initial_timestamp, time_series_uuid, length, scaling_factor_multiplier, InfrastructureSystemsInternal(), )
 end
 
-function SingleTimeSeriesMetadata(; name, resolution, initial_time, time_series_uuid, length, scaling_factor_multiplier=nothing, internal=InfrastructureSystemsInternal(), )
-    SingleTimeSeriesMetadata(name, resolution, initial_time, time_series_uuid, length, scaling_factor_multiplier, internal, )
+function SingleTimeSeriesMetadata(; name, resolution, initial_timestamp, time_series_uuid, length, scaling_factor_multiplier=nothing, internal=InfrastructureSystemsInternal(), )
+    SingleTimeSeriesMetadata(name, resolution, initial_timestamp, time_series_uuid, length, scaling_factor_multiplier, internal, )
 end
 
 """Get [`SingleTimeSeriesMetadata`](@ref) `name`."""
 get_name(value::SingleTimeSeriesMetadata) = value.name
 """Get [`SingleTimeSeriesMetadata`](@ref) `resolution`."""
 get_resolution(value::SingleTimeSeriesMetadata) = value.resolution
-"""Get [`SingleTimeSeriesMetadata`](@ref) `initial_time`."""
-get_initial_time(value::SingleTimeSeriesMetadata) = value.initial_time
+"""Get [`SingleTimeSeriesMetadata`](@ref) `initial_timestamp`."""
+get_initial_timestamp(value::SingleTimeSeriesMetadata) = value.initial_timestamp
 """Get [`SingleTimeSeriesMetadata`](@ref) `time_series_uuid`."""
 get_time_series_uuid(value::SingleTimeSeriesMetadata) = value.time_series_uuid
 """Get [`SingleTimeSeriesMetadata`](@ref) `length`."""
@@ -65,8 +65,8 @@ get_internal(value::SingleTimeSeriesMetadata) = value.internal
 set_name!(value::SingleTimeSeriesMetadata, val) = value.name = val
 """Set [`SingleTimeSeriesMetadata`](@ref) `resolution`."""
 set_resolution!(value::SingleTimeSeriesMetadata, val) = value.resolution = val
-"""Set [`SingleTimeSeriesMetadata`](@ref) `initial_time`."""
-set_initial_time!(value::SingleTimeSeriesMetadata, val) = value.initial_time = val
+"""Set [`SingleTimeSeriesMetadata`](@ref) `initial_timestamp`."""
+set_initial_timestamp!(value::SingleTimeSeriesMetadata, val) = value.initial_timestamp = val
 """Set [`SingleTimeSeriesMetadata`](@ref) `time_series_uuid`."""
 set_time_series_uuid!(value::SingleTimeSeriesMetadata, val) = value.time_series_uuid = val
 """Set [`SingleTimeSeriesMetadata`](@ref) `length`."""

@@ -336,7 +336,7 @@ function get_resolution(ts::TimeSeries.TimeArray)
     return res[1]
 end
 
-function get_initial_time(data::TimeSeries.TimeArray)
+function get_initial_timestamp(data::TimeSeries.TimeArray)
     return TimeSeries.timestamp(data)[1]
 end
 

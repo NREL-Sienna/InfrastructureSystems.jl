@@ -21,12 +21,12 @@
         {
           "name": "interval",
           "data_type": "Dates.Period",
-          "comment": "time series availability time"
+          "comment": "step time between forecast windows"
         },
         {
           "name": "count",
           "data_type": "Int",
-          "comment": "time series availability time"
+          "comment": "number of forecast windows"
         },
         {
           "name": "time_series_uuid",
@@ -53,7 +53,7 @@
       "supertype": "ForecastMetadata"
     },
     {
-      "struct_name": "Deterministic",
+      "struct_name": "DeterministicStandard",
       "docstring": "A deterministic forecast for a particular data field in a Component.",
       "fields": [
         {
@@ -106,12 +106,12 @@
         {
           "name": "interval",
           "data_type": "Dates.Period",
-          "comment": "time series availability time"
+          "comment": "step time between forecast windows"
         },
         {
           "name": "count",
           "data_type": "Int",
-          "comment": "time series availability time"
+          "comment": "number of forecast windows"
         },
         {
           "name": "percentiles",
@@ -201,7 +201,7 @@
         {
           "name": "interval",
           "data_type": "Dates.Period",
-          "comment": "time series availability time"
+          "comment": "step time between forecast windows"
         },
         {
           "name": "scenario_count",
@@ -211,7 +211,7 @@
         {
           "name": "count",
           "data_type": "Int",
-          "comment": "time series availability time"
+          "comment": "number of forecast windows"
         },
         {
           "name": "time_series_uuid",
@@ -289,7 +289,7 @@
           "data_type": "Dates.Period"
         },
         {
-          "name": "initial_time",
+          "name": "initial_timestamp",
           "data_type": "Dates.DateTime",
           "comment": "time series availability time"
         },

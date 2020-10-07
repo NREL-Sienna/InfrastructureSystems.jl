@@ -1,5 +1,5 @@
 include("DeterministicMetadata.jl")
-include("Deterministic.jl")
+include("DeterministicStandard.jl")
 include("ProbabilisticMetadata.jl")
 include("Probabilistic.jl")
 include("ScenariosMetadata.jl")
@@ -10,7 +10,6 @@ include("SingleTimeSeries.jl")
 export get_count
 export get_data
 export get_horizon
-export get_initial_time
 export get_initial_timestamp
 export get_interval
 export get_length
@@ -23,7 +22,6 @@ export get_time_series_uuid
 export set_count!
 export set_data!
 export set_horizon!
-export set_initial_time!
 export set_initial_timestamp!
 export set_interval!
 export set_length!
