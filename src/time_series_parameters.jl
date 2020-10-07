@@ -48,6 +48,39 @@ function TimeSeriesParameters(;
     return TimeSeriesParameters(resolution, forecast_params)
 end
 
+function TimeSeriesParameters(ts::StaticTimeSeries)
+    return TimeSeriesParameters(resolution = get_resolution(ts))
+end
+
+function TimeSeriesParameters(ts::Forecast)
+    forecast_params = ForecastParameters(
+        count = get_count(ts),
+        horizon = get_horizon(ts),
+        initial_timestamp = get_initial_timestamp(ts),
+        interval = get_interval(ts),
+    )
+    return TimeSeriesParameters(get_resolution(ts), forecast_params)
+end
+
+function TimeSeriesParameters(
+    initial_timestamp::Dates.DateTime,
+    resolution::Dates.Period,
+    len::Int,
+    horizon::Int,
+    interval::Dates.Period,
+)
+    last_timestamp = initial_timestamp + resolution * len
+    last_initial_time = last_timestamp - resolution * horizon
+    count = length(range(initial_timestamp, step = interval, stop = last_initial_time))
+    fparams = ForecastParameters(
+        horizon = horizon,
+        initial_timestamp = initial_timestamp,
+        interval = interval,
+        count = count,
+    )
+    return TimeSeriesParameters(resolution, fparams)
+end
+
 function reset_info!(params::TimeSeriesParameters)
     params.resolution = UNINITIALIZED_PERIOD
     reset_info!(params.forecast_params)
@@ -58,36 +91,37 @@ function _is_uninitialized(params::TimeSeriesParameters)
     return params.resolution == UNINITIALIZED_PERIOD
 end
 
-function _check_time_series(params::TimeSeriesParameters, ts::TimeSeriesData)
-    res = get_resolution(ts)
-    if res != params.resolution
+function _check_time_series(params::TimeSeriesParameters, other::TimeSeriesParameters)
+    if other.resolution != params.resolution
         throw(ConflictingInputsError(
-            "time series resolution $res does not match system " *
+            "time series resolution $(other.resolution) does not match system " *
             "resolution $(params.resolution)",
         ))
     end
-    _check_forecast_params(params, ts)
+    _check_forecast_params(params, other)
 end
 
-_check_forecast_params(params::TimeSeriesParameters, ts::StaticTimeSeries) = nothing
-
-function _check_forecast_params(ts_params::TimeSeriesParameters, forecast::Forecast)
-    count = get_count(forecast)
-    horizon = get_horizon(forecast)
-    initial_timestamp = get_initial_timestamp(forecast)
-
+function _check_forecast_params(
+    ts_params::TimeSeriesParameters,
+    ts_other::TimeSeriesParameters,
+)
     params = ts_params.forecast_params
-    if count != params.count
-        throw(ConflictingInputsError("forecast count $count does not match system count $(params.count)"))
+    other = ts_other.forecast_params
+    if _is_uninitialized(params) != _is_uninitialized(other)
+        throw(ConflictingInputsError("forecast parameter mismatch"))
     end
 
-    if horizon != params.horizon
-        throw(ConflictingInputsError("forecast horizon $horizon does not match system horizon $(params.horizon)"))
+    if other.count != params.count
+        throw(ConflictingInputsError("forecast count $(other.count) does not match system count $(params.count)"))
     end
 
-    if initial_timestamp != params.initial_timestamp
+    if other.horizon != params.horizon
+        throw(ConflictingInputsError("forecast horizon $(other.horizon) does not match system horizon $(params.horizon)"))
+    end
+
+    if other.initial_timestamp != params.initial_timestamp
         throw(ConflictingInputsError(
-            "forecast initial_timestamp $initial_timestamp does not match system " *
+            "forecast initial_timestamp $(other.initial_timestamp) does not match system " *
             "initial_timestamp $(params.initial_timestamp)",
         ))
     end
@@ -96,20 +130,25 @@ function _check_forecast_params(ts_params::TimeSeriesParameters, forecast::Forec
 end
 
 function check_add_time_series!(params::TimeSeriesParameters, ts::TimeSeriesData)
+    check_add_time_series!(params, TimeSeriesParameters(ts))
     _check_time_series_lengths(ts)
+end
+
+function check_add_time_series!(params::TimeSeriesParameters, other::TimeSeriesParameters)
     if _is_uninitialized(params)
         # This is the first time series added.
-        params.resolution = get_resolution(ts)
+        params.resolution = other.resolution
     end
 
-    if ts isa Forecast && _is_uninitialized(params.forecast_params)
-        params.forecast_params.horizon = get_horizon(ts)
-        params.forecast_params.initial_timestamp = get_initial_timestamp(ts)
-        params.forecast_params.interval = get_interval(ts)
-        params.forecast_params.count = get_count(ts)
+    if !_is_uninitialized(other.forecast_params) &&
+       _is_uninitialized(params.forecast_params)
+        params.forecast_params.horizon = other.forecast_params.horizon
+        params.forecast_params.initial_timestamp = other.forecast_params.initial_timestamp
+        params.forecast_params.interval = other.forecast_params.interval
+        params.forecast_params.count = other.forecast_params.count
     end
 
-    _check_time_series(params, ts)
+    _check_time_series(params, other)
     return
 end
 
@@ -135,9 +174,9 @@ function _check_time_series_lengths(ts::Forecast)
     if horizon < 2
         throw(ArgumentError("horizon must be at least 2: $horizon"))
     end
-    for data in values(get_data(ts))
-        if size(data)[1] != horizon
-            throw(ConflictingInputsError("length mismatch: $(size(data)[1]) $horizon"))
+    for window in iterate_windows(ts)
+        if size(window)[1] != horizon
+            throw(ConflictingInputsError("length mismatch: $(size(window)[1]) $horizon"))
         end
     end
 end
