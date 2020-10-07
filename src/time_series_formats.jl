@@ -19,7 +19,7 @@ function read_time_series(
     kwargs...,
 ) where {T <: TimeSeriesData}
     if !isfile(data_file)
-        msg = "TimeSeries file doesn't exist : $(metadata.data_file)"
+        msg = "TimeSeries file doesn't exist : $(data_file)"
         throw(DataFormatError(msg))
     end
 
