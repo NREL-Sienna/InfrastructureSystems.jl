@@ -129,13 +129,24 @@ function deserialize_time_series(
     end
 
     ts = storage.data[uuid].ts
+    if ts isa SingleTimeSeries
+        return deserialize_deterministic_from_single_time_series(
+            storage,
+            ts_metadata,
+            rows,
+            columns,
+            length(ts),
+        )
+    end
+
     total_rows = length(ts_metadata)
     total_columns = get_count(ts_metadata)
     if length(rows) == total_rows && length(columns) == total_columns
         return ts
     end
 
-    full_data = get_data(ts)
+    @assert ts.forecast isa DeterministicStandard
+    full_data = get_data(ts.forecast)
     initial_timestamp = get_initial_timestamp(ts)
     resolution = get_resolution(ts)
     interval = get_interval(ts)

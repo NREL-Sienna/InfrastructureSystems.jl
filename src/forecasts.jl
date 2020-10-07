@@ -32,43 +32,6 @@ function get_total_period(f::Forecast)
 end
 
 """
-Return the count of forecast windows.
-"""
-function get_count(forecast::Forecast)
-    return length(get_data(forecast))
-end
-
-"""
-Return the initial_timestamp of the forecast.
-"""
-function get_initial_timestamp(forecast::Forecast)
-    return first(keys(get_data(forecast)))
-end
-
-"""
-Return the forecast interval as a Dates.Period.
-"""
-function get_interval(forecast::Forecast)
-    k = keys(get_data(forecast))
-    if length(k) == 1
-        return Dates.Second(0)
-    end
-    first_key, state = iterate(k)
-    second_key, state = iterate(k, state)
-    return second_key - first_key
-end
-
-"""
-Return the forecast window corresponsing to initial_time.
-"""
-function get_window(forecast::Forecast, initial_time::Dates.DateTime)
-    return TimeSeries.TimeArray(
-        make_timestamps(forecast, initial_time),
-        forecast.data[initial_time],
-    )
-end
-
-"""
 Return the forecast window corresponsing to interval index.
 """
 function get_window(forecast::Forecast, index::Int)

@@ -19,7 +19,7 @@
     forecast = IS.Deterministic(data = data, name = name, resolution = resolution)
     IS.add_time_series!(sys, component, forecast)
     var1 = IS.get_time_series(IS.Deterministic, component, name; start_time = initial_time)
-    @test length(var1.data) == 2
+    @test length(var1) == 2
     @test IS.get_horizon(var1) == horizon
     @test IS.get_initial_timestamp(var1) == initial_time
 
@@ -30,10 +30,10 @@
         start_time = initial_time,
         count = 2,
     )
-    @test length(var2.data) == 2
+    @test length(var2) == 2
 
     var3 = IS.get_time_series(IS.Deterministic, component, name; start_time = other_time)
-    @test length(var2.data) == 2
+    @test length(var2) == 2
     # Throws errors
     @test_throws ArgumentError IS.get_time_series(
         IS.Deterministic,
@@ -91,7 +91,7 @@ end
             component_name = "Component1"
             component = IS.TestComponent(component_name, 5)
             IS.add_component!(sys, component)
-            forecast = IS.Deterministic(name, d; resolution = resolution)
+            forecast = IS.Deterministic(name, d, resolution)
             @test IS.get_initial_timestamp(forecast) == initial_time
             IS.add_time_series!(sys, component, forecast)
             @test IS.has_time_series(component)
@@ -219,6 +219,58 @@ end
     @test_throws IS.ConflictingInputsError IS.add_time_series!(sys, component, data)
 end
 
+@testset "Test Deterministic with a wrapped SingleTimeSeries" begin
+    for in_memory in (true,)
+        sys = IS.SystemData(time_series_in_memory = in_memory)
+        component = IS.TestComponent("Component1", 5)
+        IS.add_component!(sys, component)
+
+        resolution = Dates.Minute(5)
+        dates = create_dates("2020-01-01T00:00:00", resolution, "2020-01-01T23:00:00")
+        data = collect(1:length(dates))
+        ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
+        name = "val"
+        ts = IS.SingleTimeSeries(name, ta)
+        IS.add_time_series!(sys, component, ts)
+        horizon = 6
+        interval = Dates.Hour(1)
+        IS.transform_single_time_series!(sys, IS.Deterministic, horizon, interval)
+
+        # The original should still be readable.
+        single_vals = IS.get_time_series_values(IS.SingleTimeSeries, component, name)
+        @test single_vals == data
+
+        # Get the transformed forecast.
+        forecast = IS.get_time_series(IS.Deterministic, component, name)
+        window = IS.get_window(forecast, dates[1])
+        @test window isa TimeSeries.TimeArray
+        @test TimeSeries.timestamp(window) == TimeSeries.timestamp(ta[1:horizon])
+        @test TimeSeries.values(window) == TimeSeries.values(ta[1:horizon])
+
+        windows = collect(IS.iterate_windows(forecast))
+        exp_length = Dates.Hour(last(dates) - first(dates)).value
+        @test length(windows) == exp_length
+        last_initial_time = last(dates) - interval
+        last_it_index = length(dates) - Int(Dates.Minute(interval) / resolution)
+        @test last_initial_time == dates[last_it_index]
+        last_val_index = last_it_index + horizon - 1
+        @test TimeSeries.values(windows[exp_length]) == data[last_it_index:last_val_index]
+
+        @test_throws ArgumentError IS.get_time_series(
+            IS.Deterministic,
+            component,
+            name;
+            start_time = dates[2],
+        )
+        @test_throws ArgumentError IS.get_time_series(
+            IS.Deterministic,
+            component,
+            name;
+            len = horizon - 1,
+        )
+    end
+end
+
 @testset "Test read_time_series_file_metadata" begin
     file = joinpath(FORECASTS_DIR, "ComponentsAsColumnsNoTime.json")
     time_series = IS.read_time_series_file_metadata(file)
@@ -250,7 +302,7 @@ end
         typeof(time_series),
         component,
         IS.get_name(time_series);
-        start_time = IS.get_initial_time(time_series),
+        start_time = IS.get_initial_timestamp(time_series),
     )
     @test length(time_series) == length(time_series2)
     @test IS.get_initial_timestamp(time_series) == IS.get_initial_timestamp(time_series2)
@@ -277,7 +329,7 @@ end
     @test !IS.has_time_series(component)
     file = joinpath(FORECASTS_DIR, "DateTimeAsColumnDeterministic.csv")
     raw_data = IS.read_time_series(IS.Deterministic, file, "Component1")
-    data = IS.Deterministic("test", file, component; resolution = Dates.Hour(1))
+    data = IS.Deterministic("test", file, component, Dates.Hour(1))
     IS.add_time_series!(sys, component, data)
     @test IS.has_time_series(component)
     ini_time = IS.get_initial_timestamp(data)
@@ -533,7 +585,7 @@ end
     IS.copy_time_series!(component2, component)
     time_series = IS.get_time_series(IS.SingleTimeSeries, component2, name)
     @test time_series isa IS.SingleTimeSeries
-    @test IS.get_initial_time(time_series) == initial_time
+    @test IS.get_initial_timestamp(time_series) == initial_time
     @test IS.get_name(time_series) == name
 end
 
@@ -559,7 +611,7 @@ end
     IS.copy_time_series!(component2, component; name_mapping = name_mapping)
     time_series = IS.get_time_series(IS.SingleTimeSeries, component2, name2)
     @test time_series isa IS.SingleTimeSeries
-    @test IS.get_initial_time(time_series) == initial_time
+    @test IS.get_initial_timestamp(time_series) == initial_time
     @test IS.get_name(time_series) == name2
 end
 
@@ -593,7 +645,7 @@ end
     IS.copy_time_series!(component2, component; name_mapping = name_mapping)
     time_series = IS.get_time_series(IS.SingleTimeSeries, component2, name2b)
     @test time_series isa IS.SingleTimeSeries
-    @test IS.get_initial_time(time_series) == initial_time2
+    @test IS.get_initial_timestamp(time_series) == initial_time2
     @test IS.get_name(time_series) == name2b
     @test_throws ArgumentError IS.get_time_series(IS.SingleTimeSeries, component2, name2a)
 end

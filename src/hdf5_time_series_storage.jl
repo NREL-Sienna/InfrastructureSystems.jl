@@ -298,6 +298,18 @@ function deserialize_time_series(
         root = _get_root(storage, file)
         uuid = get_time_series_uuid(ts_metadata)
         path = _get_time_series_path(root, uuid)
+        actual_type = _read_time_series_type(path)
+        if actual_type == SingleTimeSeries
+            last_index = size(path["data"])[1]
+            return deserialize_deterministic_from_single_time_series(
+                storage,
+                ts_metadata,
+                rows,
+                columns,
+                last_index,
+            )
+        end
+
         attributes = _read_time_series_attributes(storage, path, rows, T)
         @assert attributes["type"] == T
         @assert length(attributes["dataset_size"]) == 2

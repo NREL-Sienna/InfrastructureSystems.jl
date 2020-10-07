@@ -59,7 +59,9 @@ _get_columns(start_time, count, ts_metadata::StaticTimeSeriesMetadata) = UnitRan
 
 function _get_rows(start_time, len, ts_metadata::StaticTimeSeriesMetadata)
     index =
-        Int((start_time - get_initial_time(ts_metadata)) / get_resolution(ts_metadata)) + 1
+        Int(
+            (start_time - get_initial_timestamp(ts_metadata)) / get_resolution(ts_metadata),
+        ) + 1
     if len === nothing
         len = length(ts_metadata) - index + 1
     end
@@ -85,13 +87,14 @@ function _check_start_time(start_time, ts_metadata::TimeSeriesMetadata)
 
     time_diff = start_time - get_initial_timestamp(ts_metadata)
     if time_diff < Dates.Second(0)
-        throw(ArgumentError("start_time=$start_time is earlier than $(get_initial_time(ts_metadata))"))
+        throw(ArgumentError("start_time=$start_time is earlier than $(get_initial_timestamp(ts_metadata))"))
     end
 
     if typeof(ts_metadata) <: ForecastMetadata
         window_count = get_count(ts_metadata)
         interval = get_interval(ts_metadata)
-        if window_count > 1 && time_diff % interval != Dates.Second(0)
+        if window_count > 1 &&
+           Dates.Millisecond(time_diff) % Dates.Millisecond(interval) != Dates.Second(0)
             throw(ArgumentError("start_time=$start_time is not on a multiple of interval=$interval"))
         end
     end
@@ -413,6 +416,78 @@ function get_time_series_multiple(
             put!(channel, container.data[key])
         end
     end
+end
+
+"""
+Transform all instances of SingleTimeSeries to Deterministic.
+"""
+function transform_single_time_series!(
+    component::InfrastructureSystemsComponent,
+    ::Type{T},
+    sys_params::TimeSeriesParameters,
+) where {T <: Deterministic}
+    container = get_time_series_container(component)
+    for (key, ts_metadata) in container.data
+        if ts_metadata isa SingleTimeSeriesMetadata
+            resolution = get_resolution(ts_metadata)
+            params = _get_single_time_series_transformed_parameters(
+                ts_metadata,
+                T,
+                sys_params.forecast_params.horizon,
+                sys_params.forecast_params.interval,
+            )
+            check_add_time_series!(sys_params, params)
+            new_metadata = DeterministicMetadata(
+                name = get_name(ts_metadata),
+                resolution = params.resolution,
+                initial_timestamp = params.forecast_params.initial_timestamp,
+                interval = params.forecast_params.interval,
+                count = params.forecast_params.count,
+                time_series_uuid = get_time_series_uuid(ts_metadata),
+                horizon = params.forecast_params.horizon,
+                scaling_factor_multiplier = get_scaling_factor_multiplier(ts_metadata),
+                internal = get_internal(ts_metadata),
+            )
+            add_time_series!(container, new_metadata)
+            @debug "Added $new_metadata from $ts_metadata."
+        end
+    end
+end
+
+function get_single_time_series_transformed_parameters(
+    component::InfrastructureSystemsComponent,
+    ::Type{T},
+    horizon::Int,
+    interval::Dates.Period,
+) where {T <: Forecast}
+    container = get_time_series_container(component)
+    for (key, ts_metadata) in container.data
+        if ts_metadata isa SingleTimeSeriesMetadata
+            return _get_single_time_series_transformed_parameters(
+                ts_metadata,
+                T,
+                horizon,
+                interval,
+            )
+        end
+    end
+
+    throw(ArgumentError("component $(get_name(component)) does not have SingleTimeSeries"))
+end
+
+function _get_single_time_series_transformed_parameters(
+    ts_metadata::SingleTimeSeriesMetadata,
+    ::Type{T},
+    horizon::Int,
+    interval::Dates.Period,
+) where {T <: Forecast}
+    resolution = get_resolution(ts_metadata)
+    len = length(ts_metadata)
+    if len < horizon
+        throw(ConflictingInputsError("existing length=$len is shorter than horizon=$horizon"))
+    end
+    initial_timestamp = get_initial_timestamp(ts_metadata)
+    return TimeSeriesParameters(initial_timestamp, resolution, len, horizon, interval)
 end
 
 function clear_time_series_storage!(component::InfrastructureSystemsComponent)

@@ -104,7 +104,7 @@ function SingleTimeSeriesMetadata(ts::SingleTimeSeries)
     return SingleTimeSeriesMetadata(
         get_name(ts),
         get_resolution(ts),
-        get_initial_time(ts),
+        get_initial_timestamp(ts),
         get_uuid(ts),
         length(ts),
         get_scaling_factor_multiplier(ts),
@@ -121,7 +121,7 @@ function SingleTimeSeries(info::TimeSeriesParsedInfo)
     )
 end
 
-get_initial_time(time_series::SingleTimeSeries) =
+get_initial_timestamp(time_series::SingleTimeSeries) =
     TimeSeries.timestamp(get_data(time_series))[1]
 
 function get_resolution(time_series::SingleTimeSeries)
@@ -225,4 +225,16 @@ get_columns(::Type{<:TimeSeriesMetadata}, ta::TimeSeries.TimeArray) = nothing
 
 function make_time_array(time_series::SingleTimeSeries)
     return get_data(time_series)
+end
+
+function SingleTimeSeriesMetadata(ts_metadata::DeterministicMetadata)
+    return SingleTimeSeriesMetadata(
+        name = get_name(ts_metadata),
+        resolution = get_resolution(ts_metadata),
+        initial_timestamp = get_initial_timestamp(ts_metadata),
+        time_series_uuid = get_time_series_uuid(ts_metadata),
+        length = get_count(ts_metadata) * get_horizon(ts_metadata),
+        scaling_factor_multiplier = get_scaling_factor_multiplier(ts_metadata),
+        internal = get_internal(ts_metadata),
+    )
 end

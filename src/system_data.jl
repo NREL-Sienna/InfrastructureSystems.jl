@@ -351,6 +351,32 @@ function get_time_series_counts(data::SystemData)
 end
 
 """
+Transform all instances of SingleTimeSeries to Deterministic.
+"""
+function transform_single_time_series!(
+    data::SystemData,
+    ::Type{T},
+    horizon::Int,
+    interval::Dates.Period,
+) where {T <: Deterministic}
+    is_first = true
+    params = nothing
+    for component in iterate_components_with_time_series(data.components)
+        if params === nothing
+            params = get_single_time_series_transformed_parameters(
+                component,
+                T,
+                horizon,
+                interval,
+            )
+            check_add_time_series!(data.time_series_params, params)
+        end
+
+        transform_single_time_series!(component, T, params)
+    end
+end
+
+"""
 Set the component value in metadata by looking up the category in module.
 This requires that category be a string version of a component's abstract type.
 Modules can override for custom behavior.
