@@ -43,63 +43,6 @@ function Deterministic(
     ))
 end
 
-function Deterministic(;
-    name::AbstractString,
-    resolution::Dates.Period,
-    data,
-    scaling_factor_multiplier::Union{Nothing, Function} = nothing,
-    single_time_series = nothing,
-    internal = InfrastructureSystemsInternal(),
-)
-    if single_time_series === nothing
-        return Deterministic(DeterministicStandard(
-            name = name,
-            resolution = resolution,
-            data = data,
-            scaling_factor_multiplier = scaling_factor_multiplier,
-            internal = internal,
-        ))
-    end
-
-    return Deterministic(DeterministicSingleTimeSeries(
-        single_time_series = single_time_series,
-        initial_timestamp = initial_timestamp,
-        interval = interval,
-        count = count,
-        horizon = horizon,
-        internal = internal,
-    ))
-end
-
-"""
-Construct Deterministic from a SortedDict of Arrays.
-
-# Arguments
-- `name::AbstractString`: user-defined name
-- `data::AbstractDict{Dates.DateTime, Vector{Float64}}`: time series data.
-- `resolution::Dates.Period`: The resolution of the forecast in Dates.Period`
-- `normalization_factor::NormalizationFactor = 1.0`: optional normalization factor to apply
-  to each data entry
-- `scaling_factor_multiplier::Union{Nothing, Function} = nothing`: If the data are scaling
-  factors then this function will be called on the component and applied to the data when
-  [`get_time_series_array`](@ref) is called.
-"""
-function Deterministic(
-    name::AbstractString,
-    data::AbstractDict{Dates.DateTime, Vector{Float64}},
-    resolution::Dates.Period;
-    normalization_factor::NormalizationFactor = 1.0,
-    scaling_factor_multiplier::Union{Nothing, Function} = nothing,
-)
-    return Deterministic(DeterministicStandard(
-        name,
-        data,
-        resolution;
-        normalization_factor = normalization_factor,
-        scaling_factor_multiplier = scaling_factor_multiplier,
-    ))
-end
-
 """
 Construct Deterministic from a Dict of TimeArrays.
 
@@ -133,7 +76,7 @@ Construct Deterministic from a Dict of collections of data.
 
 # Arguments
 - `name::AbstractString`: user-defined name
-- `data::AbstractDict{Dates.DateTime, TimeSeries.TimeArray}`: time series data. The values
+- `data::AbstractDict{Dates.DateTime, Any}`: time series data. The values
   in the dictionary should be able to be converted to Float64
 - `resolution::Dates.Period`: The resolution of the forecast in Dates.Period`
 - `normalization_factor::NormalizationFactor = 1.0`: optional normalization factor to apply
@@ -145,38 +88,6 @@ Construct Deterministic from a Dict of collections of data.
 function Deterministic(
     name::AbstractString,
     data::AbstractDict{Dates.DateTime, <:Any},
-    resolution::Dates.Period;
-    normalization_factor::NormalizationFactor = 1.0,
-    scaling_factor_multiplier::Union{Nothing, Function} = nothing,
-)
-    return Deterministic(DeterministicStandard(
-        name,
-        data,
-        resolution;
-        normalization_factor = normalization_factor,
-        scaling_factor_multiplier = scaling_factor_multiplier,
-    ))
-end
-
-"""
-Construct a Deterministic from a SingleTimeSeries.
-"""
-function Deterministic(ts::SingleTimeSeries, count, horizon, initial_timestamp, interval)
-    return Deterministic(DeterministicSingleTimeSeries(
-        single_time_series = ts,
-        count = count,
-        horizon = horizon,
-        initial_timestamp = initial_timestamp,
-        interval = interval,
-    ))
-end
-
-"""
-Construct Deterministic from RawTimeSeries.
-"""
-function Deterministic(
-    name::AbstractString,
-    data::RawTimeSeries,
     resolution::Dates.Period;
     normalization_factor::NormalizationFactor = 1.0,
     scaling_factor_multiplier::Union{Nothing, Function} = nothing,
@@ -216,6 +127,66 @@ function Deterministic(
         name,
         filename,
         component,
+        resolution;
+        normalization_factor = normalization_factor,
+        scaling_factor_multiplier = scaling_factor_multiplier,
+    ))
+end
+
+function Deterministic(;
+    name::AbstractString,
+    resolution::Dates.Period,
+    data,
+    scaling_factor_multiplier::Union{Nothing, Function} = nothing,
+    single_time_series = nothing,
+    internal = InfrastructureSystemsInternal(),
+)
+    if single_time_series === nothing
+        return Deterministic(DeterministicStandard(
+            name = name,
+            resolution = resolution,
+            data = data,
+            scaling_factor_multiplier = scaling_factor_multiplier,
+            internal = internal,
+        ))
+    end
+
+    return Deterministic(DeterministicSingleTimeSeries(
+        single_time_series = single_time_series,
+        initial_timestamp = initial_timestamp,
+        interval = interval,
+        count = count,
+        horizon = horizon,
+        internal = internal,
+    ))
+end
+
+"""
+Construct a Deterministic from a SingleTimeSeries.
+"""
+function Deterministic(ts::SingleTimeSeries, count, horizon, initial_timestamp, interval)
+    return Deterministic(DeterministicSingleTimeSeries(
+        single_time_series = ts,
+        count = count,
+        horizon = horizon,
+        initial_timestamp = initial_timestamp,
+        interval = interval,
+    ))
+end
+
+"""
+Construct Deterministic from RawTimeSeries.
+"""
+function Deterministic(
+    name::AbstractString,
+    data::RawTimeSeries,
+    resolution::Dates.Period;
+    normalization_factor::NormalizationFactor = 1.0,
+    scaling_factor_multiplier::Union{Nothing, Function} = nothing,
+)
+    return Deterministic(DeterministicStandard(
+        name,
+        data,
         resolution;
         normalization_factor = normalization_factor,
         scaling_factor_multiplier = scaling_factor_multiplier,
