@@ -130,8 +130,8 @@ function _check_forecast_params(
 end
 
 function check_add_time_series!(params::TimeSeriesParameters, ts::TimeSeriesData)
-    check_add_time_series!(params, TimeSeriesParameters(ts))
     _check_time_series_lengths(ts)
+    check_add_time_series!(params, TimeSeriesParameters(ts))
 end
 
 function check_add_time_series!(params::TimeSeriesParameters, other::TimeSeriesParameters)

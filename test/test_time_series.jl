@@ -1004,14 +1004,24 @@ end
     component = IS.TestComponent(name, 5)
     IS.add_component!(sys, component)
 
-    # Set baseline parameters for the rest of the tests.
     resolution = Dates.Hour(1)
     initial_time = Dates.DateTime("2020-09-01")
     second_time = initial_time + resolution
     name = "test"
     horizon = 24
-    data = SortedDict(initial_time => ones(horizon), second_time => ones(horizon))
 
+    # Horizon must be greater than 1.
+    bad_data = SortedDict(initial_time => ones(1), second_time => ones(1))
+    forecast = IS.Deterministic(data = bad_data, name = name, resolution = resolution)
+    @test_throws ArgumentError IS.add_time_series!(sys, component, forecast)
+
+    # Arrays must have the same length.
+    bad_data = SortedDict(initial_time => ones(2), second_time => ones(3))
+    forecast = IS.Deterministic(data = bad_data, name = name, resolution = resolution)
+    @test_throws DimensionMismatch IS.add_time_series!(sys, component, forecast)
+
+    # Set baseline parameters for the rest of the tests.
+    data = SortedDict(initial_time => ones(horizon), second_time => ones(horizon))
     forecast = IS.Deterministic(data = data, name = name, resolution = resolution)
     IS.add_time_series!(sys, component, forecast)
 
