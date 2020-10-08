@@ -248,8 +248,8 @@ get_interval(f::Deterministic) = get_interval(f.forecast)
 get_name(f::Deterministic) = get_name(f.forecast)
 get_resolution(f::Deterministic) = get_resolution(f.forecast)
 get_scaling_factor_multiplier(f::Deterministic) = get_scaling_factor_multiplier(f.forecast)
-get_window(f::Deterministic, it::Dates.DateTime) = get_window(f.forecast, it)
-make_time_array(f::Deterministic) = make_time_array(f.forecast)
+get_window(f::Deterministic, it::Dates.DateTime; len = nothing) =
+    get_window(f.forecast, it; len = len)
 iterate_windows(f::Deterministic) = iterate_windows(f.forecast)
 
 function DeterministicMetadata(ts::Deterministic)

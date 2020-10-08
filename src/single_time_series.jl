@@ -223,8 +223,21 @@ end
 
 get_columns(::Type{<:TimeSeriesMetadata}, ta::TimeSeries.TimeArray) = nothing
 
-function make_time_array(time_series::SingleTimeSeries)
-    return get_data(time_series)
+function make_time_array(
+    time_series::SingleTimeSeries,
+    start_time::Dates.DateTime;
+    len::Union{Nothing, Int} = nothing,
+)
+    ta = get_data(time_series)
+    first_time = first(TimeSeries.timestamp(ta))
+    if start_time == first_time && (len === nothing || len == length(ta))
+        return ta
+    end
+
+    resolution = Dates.Millisecond(get_resolution(ta))
+    start_index = Int((start_time - first_time) / resolution) + 1
+    end_index = start_index + len - 1
+    return ta[start_index:end_index]
 end
 
 function SingleTimeSeriesMetadata(ts_metadata::DeterministicMetadata)

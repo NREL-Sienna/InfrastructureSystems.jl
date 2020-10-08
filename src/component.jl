@@ -121,7 +121,7 @@ Return a time series corresponding to the given parameters.
 - `name::AbstractString`: name of time series
 - `start_time::Union{Nothing, Dates.DateTime} = nothing`: If nothing, use the
   `initial_timestamp` of the time series. If T is a subtype of Forecast then `start_time`
-  must be a multiple of the forecast interval.
+  must be the first timstamp of a window.
 - `len::Union{Nothing, Int} = nothing`: Length in the time dimension. If nothing, use the
   entire length.
 - `count::Union{Nothing, Int} = nothing`: Only applicable to subtypes of Forecast. Number
@@ -157,10 +157,10 @@ function get_time_series(
 end
 
 """
-Return a TimeSeries.TimeArray for the given time series parameters.
+Return a TimeSeries.TimeArray from storage for the given time series parameters.
 
 If the data are scaling factors then the stored scaling_factor_multiplier will be called on
-the component and applied to the data.
+the component and applied to the data unless ignore_scaling_factors is true.
 """
 function get_time_series_array(
     ::Type{T},
@@ -168,25 +168,65 @@ function get_time_series_array(
     name::AbstractString;
     start_time::Union{Nothing, Dates.DateTime} = nothing,
     len::Union{Nothing, Int} = nothing,
+    ignore_scaling_factors = false,
 ) where {T <: TimeSeriesData}
-    time_series =
-        get_time_series(T, component, name; start_time = start_time, len = len, count = 1)
-    return get_time_series_array(component, time_series)
-end
-
-function get_time_series_array(
-    component::InfrastructureSystemsComponent,
-    time_series::TimeSeriesData,
-)
-    ta = make_time_array(time_series)
-    multiplier = get_scaling_factor_multiplier(time_series)
-    if multiplier === nothing
-        return ta
+    ts = get_time_series(T, component, name; start_time = start_time, len = len, count = 1)
+    if start_time === nothing
+        start_time = get_initial_timestamp(ts)
     end
 
-    return ta .* multiplier(component)
+    return get_time_series_array(
+        component,
+        ts,
+        start_time;
+        len = len,
+        ignore_scaling_factors = ignore_scaling_factors,
+    )
 end
 
+"""
+Return a TimeSeries.TimeArray for one forecast window from a cached Forecast instance.
+
+If the data are scaling factors then the stored scaling_factor_multiplier will be called on
+the component and applied to the data unless ignore_scaling_factors is true.
+"""
+function get_time_series_array(
+    component::InfrastructureSystemsComponent,
+    forecast::Forecast,
+    start_time::Dates.DateTime;
+    len = nothing,
+    ignore_scaling_factors = false,
+)
+    return _make_time_array(component, forecast, start_time, len, ignore_scaling_factors)
+end
+
+"""
+Return a TimeSeries.TimeArray from a cached StaticTimeSeries instance.
+
+If the data are scaling factors then the stored scaling_factor_multiplier will be called on
+the component and applied to the data unless ignore_scaling_factors is true.
+"""
+function get_time_series_array(
+    component::InfrastructureSystemsComponent,
+    time_series::StaticTimeSeries,
+    start_time::Union{Nothing, Dates.DateTime} = nothing;
+    len::Union{Nothing, Int} = nothing,
+    ignore_scaling_factors = false,
+)
+    if start_time === nothing
+        start_time = get_initial_timestamp(time_series)
+    end
+
+    if len === nothing
+        len = length(time_series)
+    end
+
+    return _make_time_array(component, time_series, start_time, len, ignore_scaling_factors)
+end
+
+"""
+Return a vector of timestamps from storage for the given time series parameters.
+"""
 function get_time_series_timestamps(
     ::Type{T},
     component::InfrastructureSystemsComponent,
@@ -203,15 +243,45 @@ function get_time_series_timestamps(
     ))
 end
 
+"""
+Return a vector of timestamps from a cached Forecast instance.
+"""
 function get_time_series_timestamps(
     component::InfrastructureSystemsComponent,
-    time_series::TimeSeriesData,
+    forecast::Forecast,
+    start_time::Dates.DateTime;
+    len::Union{Nothing, Int} = nothing,
 )
-    return TimeSeries.timestamp(get_time_series_array(component, time_series))
+    return TimeSeries.timestamp(get_time_series_array(
+        component,
+        forecast,
+        start_time;
+        len = len,
+    ))
 end
 
 """
-Return an Array of values for the requested time series parameters.
+Return a vector of timestamps from a cached StaticTimeSeries instance.
+"""
+function get_time_series_timestamps(
+    component::InfrastructureSystemsComponent,
+    time_series::StaticTimeSeries,
+    start_time::Union{Nothing, Dates.DateTime} = nothing;
+    len::Union{Nothing, Int} = nothing,
+)
+    return TimeSeries.timestamp(get_time_series_array(
+        component,
+        time_series,
+        start_time;
+        len = len,
+    ))
+end
+
+"""
+Return an Array of values from storage for the requested time series parameters.
+
+If the data size is small and this will be called many times, consider using the version
+that accepts a cached TimeSeriesData instance.
 """
 function get_time_series_values(
     ::Type{T},
@@ -219,6 +289,7 @@ function get_time_series_values(
     name::AbstractString;
     start_time::Union{Nothing, Dates.DateTime} = nothing,
     len::Union{Nothing, Int} = nothing,
+    ignore_scaling_factors = false,
 ) where {T <: TimeSeriesData}
     return TimeSeries.values(get_time_series_array(
         T,
@@ -226,14 +297,61 @@ function get_time_series_values(
         name;
         start_time = start_time,
         len = len,
+        ignore_scaling_factors = ignore_scaling_factors,
     ))
 end
 
+"""
+Return an Array of values for one forecast window from a cached Forecast instance.
+"""
 function get_time_series_values(
     component::InfrastructureSystemsComponent,
-    time_series::TimeSeriesData,
+    forecast::Forecast,
+    start_time::Dates.DateTime;
+    len::Union{Nothing, Int} = nothing,
+    ignore_scaling_factors = false,
+) where {T <: TimeSeriesData}
+    return TimeSeries.values(get_time_series_array(
+        component,
+        forecast,
+        start_time;
+        len = len,
+        ignore_scaling_factors = ignore_scaling_factors,
+    ))
+end
+
+"""
+Return an Array of values from a cached StaticTimeSeries instance for the requested time
+series parameters.
+"""
+function get_time_series_values(
+    component::InfrastructureSystemsComponent,
+    time_series::StaticTimeSeries,
+    start_time::Union{Nothing, Dates.DateTime} = nothing;
+    len::Union{Nothing, Int} = nothing,
+    ignore_scaling_factors = false,
 )
-    return (TimeSeries.values ∘ get_time_series_array)(component, time_series)
+    return TimeSeries.values(get_time_series_array(
+        component,
+        time_series,
+        start_time;
+        len = len,
+        ignore_scaling_factors = ignore_scaling_factors,
+    ))
+end
+
+function _make_time_array(component, time_series, start_time, len, ignore_scaling_factors)
+    ta = make_time_array(time_series, start_time; len = len)
+    if ignore_scaling_factors
+        return ta
+    end
+
+    multiplier = get_scaling_factor_multiplier(time_series)
+    if multiplier === nothing
+        return ta
+    end
+
+    return ta .* multiplier(component)
 end
 
 function has_time_series(component::InfrastructureSystemsComponent)

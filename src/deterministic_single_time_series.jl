@@ -85,32 +85,29 @@ function get_array_for_hdf(forecast::DeterministicSingleTimeSeries)
     return get_array_for_hdf(forecast.single_time_series)
 end
 
-function make_time_array(forecast::DeterministicSingleTimeSeries)
-    # Artificial limitation to reduce scope.
-    @assert get_count(forecast) == 1
-    timestamps = range(
-        get_initial_timestamp(forecast);
-        step = get_resolution(forecast),
-        length = get_horizon(forecast),
-    )
-    data = first(values(get_data(forecast)))
-    return TimeSeries.TimeArray(timestamps, data)
-end
-
-function get_window(forecast::DeterministicSingleTimeSeries, initial_time::Dates.DateTime)
+function get_window(
+    forecast::DeterministicSingleTimeSeries,
+    initial_time::Dates.DateTime;
+    len::Union{Nothing, Int} = nothing,
+)
     tdiff = Dates.Millisecond(initial_time - forecast.initial_timestamp)
     if tdiff % Dates.Millisecond(forecast.interval) != Dates.Millisecond(0)
         throw(ArgumentError("initial_time=$initial_time is not on a window boundary"))
     end
 
+    if len === nothing
+        len = forecast.horizon
+    end
+
     ta = get_data(forecast.single_time_series)
     resolution = get_resolution(forecast)
-    end_time = initial_time + (forecast.horizon - 1) * resolution
+    end_time = initial_time + (len - 1) * resolution
     timestamps = TimeSeries.timestamp(ta)
     for timestamp in (initial_time, end_time)
         @assert timestamp >= first(timestamps) && timestamp <= last(timestamps) "invalid " *
                                                                                 "timestamp=$timestamp is not within $(first(timestamps)) - $(last(timestamps))"
     end
+
     return ta[initial_time:resolution:end_time]
 end
 

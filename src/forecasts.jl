@@ -34,8 +34,8 @@ end
 """
 Return the forecast window corresponsing to interval index.
 """
-function get_window(forecast::Forecast, index::Int)
-    return get_window(forecast, index_to_initial_time(forecast, index))
+function get_window(forecast::Forecast, index::Int; len = nothing)
+    return get_window(forecast, index_to_initial_time(forecast, index); len = len)
 end
 
 """
@@ -52,10 +52,10 @@ function index_to_initial_time(forecast::Forecast, index::Int)
     return get_initial_timestamp(forecast) + get_interval(forecast) * index
 end
 
-function make_timestamps(forecast::Forecast, initial_time::Dates.DateTime)
-    return range(
-        initial_time;
-        length = get_horizon(forecast),
-        step = get_resolution(forecast),
-    )
+function make_timestamps(forecast::Forecast, initial_time::Dates.DateTime, len = nothing)
+    if len === nothing
+        len = get_horizon(forecast)
+    end
+
+    return range(initial_time; length = len, step = get_resolution(forecast))
 end

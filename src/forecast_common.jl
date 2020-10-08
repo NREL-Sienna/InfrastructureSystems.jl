@@ -37,10 +37,29 @@ Return the forecast window corresponsing to initial_time.
 """
 function get_window(
     forecast::Union{DeterministicStandard, Probabilistic},
-    initial_time::Dates.DateTime,
+    initial_time::Dates.DateTime;
+    len::Union{Nothing, Int} = nothing,
 )
-    return TimeSeries.TimeArray(
-        make_timestamps(forecast, initial_time),
-        forecast.data[initial_time],
-    )
+    horizon = get_horizon(forecast)
+    if len === nothing
+        len = horizon
+    end
+
+    data = forecast.data[initial_time]
+    if len != horizon
+        data = data[1:len]
+    end
+
+    return TimeSeries.TimeArray(make_timestamps(forecast, initial_time, len), data)
+end
+
+"""
+Return a TimeSeries.TimeArray for one forecast window.
+"""
+function make_time_array(
+    forecast::Forecast,
+    start_time::Dates.DateTime;
+    len::Union{Nothing, Int} = nothing,
+)
+    return get_window(forecast, start_time; len = len)
 end
