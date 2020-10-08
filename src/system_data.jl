@@ -212,9 +212,9 @@ function remove_time_series!(
     type = time_series_data_to_metadata(T)
     time_series = get_time_series(type, component, name)
     uuid = get_time_series_uuid(time_series)
-    # TODO: can this be atomic?
-    remove_time_series_metadata!(type, component, name)
-    remove_time_series!(data.time_series_storage, uuid, get_uuid(component), name)
+    if remove_time_series_metadata!(type, component, name)
+        remove_time_series!(data.time_series_storage, uuid, get_uuid(component), name)
+    end
 end
 
 """

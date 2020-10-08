@@ -16,15 +16,25 @@ end
 
 """
 Removes the metadata for a time_series.
-The caller must also remove the actual time series data.
+If this returns true then the caller must also remove the actual time series data.
 """
 function remove_time_series_metadata!(
     ::Type{T},
     component::InfrastructureSystemsComponent,
     name::AbstractString,
 ) where {T <: TimeSeriesMetadata}
-    remove_time_series!(T, get_time_series_container(component), name)
+    container = get_time_series_container(component)
+    remove_time_series!(T, container, name)
     @debug "Removed time_series from $component:  $name."
+    if T <: DeterministicMetadata &&
+       has_time_series(container, SingleTimeSeriesMetadata, name)
+        return false
+    elseif T <: SingleTimeSeriesMetadata &&
+           has_time_series(container, DeterministicMetadata, name)
+        return false
+    end
+
+    return true
 end
 
 function clear_time_series!(component::InfrastructureSystemsComponent)

@@ -270,6 +270,36 @@ end
             name;
             len = horizon - 1,
         )
+        # Already stored.
+        @test_throws ArgumentError IS.transform_single_time_series!(
+            sys,
+            IS.Deterministic,
+            horizon,
+            interval,
+        )
+        # Mismatched horizon
+        @test_throws IS.ConflictingInputsError IS.transform_single_time_series!(
+            sys,
+            IS.Deterministic,
+            7,
+            interval,
+        )
+        # Mismatched interval
+        @test_throws IS.ConflictingInputsError IS.transform_single_time_series!(
+            sys,
+            IS.Deterministic,
+            horizon,
+            Dates.Hour(2),
+        )
+        # Ensure that deleting one doesn't delete the other.
+        if in_memory
+            IS.remove_time_series!(IS.Deterministic, sys, component, name)
+            @test IS.get_time_series(IS.SingleTimeSeries, component, name) isa
+                  IS.SingleTimeSeries
+        else
+            IS.remove_time_series!(IS.SingleTimeSeries, sys, component, name)
+            @test IS.get_time_series(IS.Deterministic, component, name) isa IS.Deterministic
+        end
     end
 end
 

@@ -95,6 +95,14 @@ function get_time_series_names(
     return Vector{String}(collect(names))
 end
 
+function has_time_series(
+    container::TimeSeriesContainer,
+    ::Type{T},
+    name::AbstractString,
+) where {T <: TimeSeriesMetadata}
+    return haskey(container.data, TimeSeriesKey(T, name))
+end
+
 function serialize(container::TimeSeriesContainer)
     # Store a flat array of time series. Deserialization can unwind it.
     return serialize_struct.(values(container.data))
