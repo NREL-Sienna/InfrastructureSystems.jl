@@ -130,7 +130,8 @@ function get_resolution(time_series::SingleTimeSeries)
 end
 
 function get_array_for_hdf(ts::SingleTimeSeries)
-    return TimeSeries.values(ts.data)
+    data_type = eltype(TimeSeries.values(ts.data))
+    return transform_array_for_hdf(TimeSeries.values(ts.data), data_type)
 end
 
 function Base.getindex(time_series::SingleTimeSeries, args...)
