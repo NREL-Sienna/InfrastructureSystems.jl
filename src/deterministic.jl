@@ -108,22 +108,7 @@ end
 
 function Deterministic(
     name::AbstractString,
-    input_data::AbstractDict{Dates.DateTime, <:Vector{POLYNOMIAL}};
-    resolution::Dates.Period,
-    normalization_factor::NormalizationFactor = 1.0,
-    scaling_factor_multiplier::Union{Nothing, Function} = nothing,
-)
-    if !isa(input_data, SortedDict)
-        input_data = SortedDict(input_data...)
-    end
-    @assert !isempty(input_data)
-
-    return Deterministic(name, resolution, input_data, scaling_factor_multiplier)
-end
-
-function Deterministic(
-    name::AbstractString,
-    input_data::AbstractDict{Dates.DateTime, <:Vector{PWL}};
+    input_data::AbstractDict{Dates.DateTime, <:Vector};
     resolution::Dates.Period,
     normalization_factor::NormalizationFactor = 1.0,
     scaling_factor_multiplier::Union{Nothing, Function} = nothing,
