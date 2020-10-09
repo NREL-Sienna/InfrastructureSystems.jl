@@ -45,7 +45,8 @@ function Deterministic(
     normalization_factor::NormalizationFactor = 1.0,
     scaling_factor_multiplier::Union{Nothing, Function} = nothing,
 )
-    data = SortedDict{Dates.DateTime, Vector{Float64}}()
+    data_type = eltype(TimeSeries.values(first(values(input_data))))
+    data = SortedDict{Dates.DateTime, Vector{data_type}}()
     resolution =
         TimeSeries.timestamp(first(values(input_data)))[2] -
         TimeSeries.timestamp(first(values(input_data)))[1]
@@ -102,6 +103,47 @@ function Deterministic(
         resolution = resolution,
         normalization_factor = normalization_factor,
         scaling_factor_multiplier = scaling_factor_multiplier,
+    )
+end
+
+function Deterministic(
+    name::AbstractString,
+    input_data::AbstractDict{Dates.DateTime, <:Vector{POLYNOMIAL}};
+    resolution::Dates.Period,
+    normalization_factor::NormalizationFactor = 1.0,
+    scaling_factor_multiplier::Union{Nothing, Function} = nothing,
+)
+    if !isa(input_data, SortedDict)
+        input_data = SortedDict(input_data...)
+    end
+    @assert !isempty(input_data)
+
+    return Deterministic(
+        name,
+        resolution,
+        input_data,
+        scaling_factor_multiplier,
+    )
+end
+
+function Deterministic(
+    name::AbstractString,
+    input_data::AbstractDict{Dates.DateTime, <:Vector{PWL}};
+    resolution::Dates.Period,
+    normalization_factor::NormalizationFactor = 1.0,
+    scaling_factor_multiplier::Union{Nothing, Function} = nothing,
+)
+
+    if !isa(input_data, SortedDict)
+        input_data = SortedDict(input_data...)
+    end
+    @assert !isempty(input_data)
+
+    return Deterministic(
+        name,
+        resolution,
+        input_data,
+        scaling_factor_multiplier,
     )
 end
 
@@ -193,7 +235,8 @@ function DeterministicMetadata(ts::Deterministic)
 end
 
 function get_array_for_hdf(forecast::Deterministic)
-    return hcat(values(forecast.data)...)
+    data_type = eltype(first(values(forecast.data)))
+    return transform_array_for_hdf(forecast.data, data_type)
 end
 
 """
