@@ -124,7 +124,7 @@ function get_data_type(ts::TimeSeriesData)
     elseif data_type == PWL
         return "PWL"
     else
-        error("$(eltype(first(values(ts.data)))) is not supported in forecast data")
+        error("$data_type) is not supported in forecast data")
     end
 end
 
@@ -298,7 +298,7 @@ function deserialize_time_series(
         @assert attributes["type"] == T
         @debug "deserializing a StaticTimeSeries" T
         data_type = attributes["data_type"]
-        data = get_hdf_array(path, data_type, rows)
+        data = get_hdf_array(path["data"], data_type, rows)
         return T(
             ts_metadata,
             TimeSeries.TimeArray(
@@ -329,13 +329,13 @@ function deserialize_time_series(
         @assert attributes["type"] == T
         @debug "deserializing a Forecast" T
         data_type = attributes["data_type"]
-        data = get_hdf_array(path, data_type, attributes, rows, columns)
+        data = get_hdf_array(path["data"], data_type, attributes, rows, columns)
         new_ts = T(ts_metadata, data)
     end
 end
 
 function get_hdf_array(
-    path::HDF5.HDF5Group,
+    dataset,
     ::Type{<:CONSTANT},
     attributes::Dict{String, Any},
     rows::UnitRange{Int},
@@ -346,9 +346,9 @@ function get_hdf_array(
     interval = attributes["interval"]
     start_time = initial_timestamp + interval * (columns.start - 1)
     if length(columns) == 1
-        data[start_time] = path["data"][rows, columns.start]
+        data[start_time] = dataset[rows, columns.start]
     else
-        data_read = path["data"][rows, columns]
+        data_read = dataset[rows, columns]
         for (i, it) in
             enumerate(range(start_time; length = length(columns), step = interval))
             data[it] = @view data_read[1:length(rows), i]
@@ -358,7 +358,7 @@ function get_hdf_array(
 end
 
 function get_hdf_array(
-    path::HDF5.HDF5Group,
+    dataset,
     type::Type{POLYNOMIAL},
     attributes::Dict{String, Any},
     rows::UnitRange{Int},
@@ -369,9 +369,9 @@ function get_hdf_array(
     interval = attributes["interval"]
     start_time = initial_timestamp + interval * (columns.start - 1)
     if length(columns) == 1
-        data[start_time] = retransform_hdf_array(path["data"][rows, columns.start, :], type)
+        data[start_time] = retransform_hdf_array(dataset[rows, columns.start, :], type)
     else
-        data_read = retransform_hdf_array(path["data"][rows, columns, :], type)
+        data_read = retransform_hdf_array(dataset[rows, columns, :], type)
         for (i, it) in
             enumerate(range(start_time; length = length(columns), step = interval))
             data[it] = @view data_read[1:length(rows), i]
@@ -381,7 +381,7 @@ function get_hdf_array(
 end
 
 function get_hdf_array(
-    path::HDF5.HDF5Group,
+    dataset,
     type::Type{PWL},
     attributes::Dict{String, Any},
     rows::UnitRange{Int},
@@ -393,9 +393,9 @@ function get_hdf_array(
     start_time = initial_timestamp + interval * (columns.start - 1)
     if length(columns) == 1
         data[start_time] =
-            retransform_hdf_array(path["data"][rows, columns.start, :, :], type)
+            retransform_hdf_array(dataset[rows, columns.start, :, :], type)
     else
-        data_read = retransform_hdf_array(path["data"][rows, columns, :, :], type)
+        data_read = retransform_hdf_array(dataset[rows, columns, :, :], type)
         for (i, it) in
             enumerate(range(start_time; length = length(columns), step = interval))
             data[it] = @view data_read[1:length(rows), i]
@@ -404,18 +404,18 @@ function get_hdf_array(
     return data
 end
 
-function get_hdf_array(path::HDF5.HDF5Group, type::Type{<:CONSTANT}, rows::UnitRange{Int})
-    data = retransform_hdf_array(path["data"][rows], type)
+function get_hdf_array(dataset, type::Type{<:CONSTANT}, rows::UnitRange{Int})
+    data = retransform_hdf_array(dataset[rows], type)
     return data
 end
 
-function get_hdf_array(path::HDF5.HDF5Group, type::Type{POLYNOMIAL}, rows::UnitRange{Int})
-    data = retransform_hdf_array(path["data"][rows, :, :], type)
+function get_hdf_array(dataset, type::Type{POLYNOMIAL}, rows::UnitRange{Int})
+    data = retransform_hdf_array(dataset[rows, :, :], type)
     return data
 end
 
-function get_hdf_array(path::HDF5.HDF5Group, type::Type{PWL}, rows::UnitRange{Int})
-    data = retransform_hdf_array(path["data"][rows, :, :, :], type)
+function get_hdf_array(dataset, type::Type{PWL}, rows::UnitRange{Int})
+    data = retransform_hdf_array(dataset[rows, :, :, :], type)
     return data
 end
 
