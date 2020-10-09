@@ -115,6 +115,30 @@ function serialize_time_series!(
     return
 end
 
+function get_data_type(ts::TimeSeriesData)
+    if eltype(first(values(ts.data))) <: CONSTANT
+        return "CONSTANT"
+    elseif eltype(first(values(ts.data))) == POLYNOMIAL
+        return "POLYNOMIAL"
+    elseif eltype(first(values(ts.data))) == PWL
+        return "PWL"
+    else 
+        error("$(eltype(first(values(ts.data)))) is not supported in forecast data")
+    end
+end
+
+function get_data_type(ts::T) where T <: StaticTimeSeries
+    if eltype(TimeSeries.values(ts.data)) <: CONSTANT
+        return "CONSTANT"
+    elseif eltype(TimeSeries.values(ts.data)) == POLYNOMIAL
+        return "POLYNOMIAL"
+    elseif eltype(TimeSeries.values(ts.data)) == PWL
+        return "PWL"
+    else 
+        error("$(eltype(first(values(ts.data)))) is not supported in forecast data")
+    end
+end
+
 function _write_time_series_attributes!(
     storage::Hdf5TimeSeriesStorage,
     ts::T,
@@ -136,10 +160,12 @@ end
 function _write_time_series_attributes_common!(storage::Hdf5TimeSeriesStorage, ts, path)
     initial_timestamp = Dates.datetime2epochms(get_initial_timestamp(ts))
     resolution = get_resolution(ts)
+    data_type = get_data_type(ts)
     HDF5.attrs(path)["module"] = string(parentmodule(typeof(ts)))
     HDF5.attrs(path)["type"] = string(nameof(typeof(ts)))
     HDF5.attrs(path)["initial_timestamp"] = initial_timestamp
     HDF5.attrs(path)["resolution"] = time_period_conversion(resolution).value
+    HDF5.attrs(path)["data_type"] = data_type
 end
 
 function _read_time_series_attributes(
@@ -162,16 +188,23 @@ function _read_time_series_attributes(
     return data
 end
 
+global type_dict = Dict("CONSTANT" => CONSTANT, 
+    "POLYNOMIAL" => POLYNOMIAL, 
+    "PWL" => PWL
+    )
+
 function _read_time_series_attributes_common(storage::Hdf5TimeSeriesStorage, path, rows)
     initial_timestamp =
         Dates.epochms2datetime(HDF5.read(HDF5.attrs(path)["initial_timestamp"]),)
     resolution = Dates.Millisecond(HDF5.read(HDF5.attrs(path)["resolution"]))
+    data_type = type_dict[HDF5.read(HDF5.attrs(path)["data_type"])]
     return Dict(
         "type" => _read_time_series_type(path),
         "initial_timestamp" => initial_timestamp,
         "resolution" => resolution,
         "dataset_size" => size(path["data"]),
         "start_time" => initial_timestamp + resolution * (rows.start - 1),
+        "data_type" => data_type,
     )
 end
 
@@ -269,9 +302,9 @@ function deserialize_time_series(
         path = _get_time_series_path(root, uuid)
         attributes = _read_time_series_attributes(storage, path, rows, T)
         @assert attributes["type"] == T
-        @assert length(attributes["dataset_size"]) == 1
         @debug "deserializing a StaticTimeSeries" T
-        data = path["data"][rows]
+        data_type = attributes["data_type"]
+        data = get_hdf_array(path, data_type, rows)
         return T(
             ts_metadata,
             TimeSeries.TimeArray(
@@ -300,24 +333,103 @@ function deserialize_time_series(
         path = _get_time_series_path(root, uuid)
         attributes = _read_time_series_attributes(storage, path, rows, T)
         @assert attributes["type"] == T
-        @assert length(attributes["dataset_size"]) == 2
         @debug "deserializing a Forecast" T
-        data = SortedDict{Dates.DateTime, Array}()
-        initial_timestamp = attributes["start_time"]
-        interval = attributes["interval"]
-        start_time = initial_timestamp + interval * (columns.start - 1)
-        if length(columns) == 1
-            data[start_time] = path["data"][rows, columns.start]
-        else
-            data_read = path["data"][rows, columns]
-            for (i, it) in
-                enumerate(range(start_time; length = length(columns), step = interval))
-                data[it] = @view data_read[1:length(rows), i]
-            end
-        end
-
+        data_type = attributes["data_type"]
+        data = get_hdf_array(path, data_type, attributes, rows, columns)
         new_ts = T(ts_metadata, data)
     end
+end
+
+function get_hdf_array(path::HDF5.HDF5Group, type::Type{<:CONSTANT}, attributes::Dict{String,Any}, rows::UnitRange{Int64}, columns::UnitRange{Int64}) 
+    data = SortedDict{Dates.DateTime, Array}()
+    initial_timestamp = attributes["start_time"]
+    interval = attributes["interval"]
+    start_time = initial_timestamp + interval * (columns.start - 1)
+    if length(columns) == 1
+        data[start_time] = path["data"][rows, columns.start]
+    else
+        data_read = path["data"][rows, columns]
+        for (i, it) in
+            enumerate(range(start_time; length = length(columns), step = interval))
+            data[it] = @view data_read[1:length(rows), i]
+        end
+    end
+    return data
+end
+
+function get_hdf_array(path::HDF5.HDF5Group, type::Type{POLYNOMIAL}, attributes::Dict{String,Any}, rows::UnitRange{Int64}, columns::UnitRange{Int64})
+    data = SortedDict{Dates.DateTime, Array}()
+    initial_timestamp = attributes["start_time"]
+    interval = attributes["interval"]
+    start_time = initial_timestamp + interval * (columns.start - 1)
+    if length(columns) == 1
+        data[start_time] = retransform_hdf_array(path["data"][rows, columns.start, :], type)
+    else
+        data_read = retransform_hdf_array(path["data"][rows, columns, :], type)
+        for (i, it) in
+            enumerate(range(start_time; length = length(columns), step = interval))
+            data[it] = @view data_read[1:length(rows), i]
+        end
+    end
+    return data
+end
+
+function get_hdf_array(path::HDF5.HDF5Group, type::Type{PWL}, attributes::Dict{String,Any}, rows::UnitRange{Int64}, columns::UnitRange{Int64})
+    data = SortedDict{Dates.DateTime, Array}()
+    initial_timestamp = attributes["start_time"]
+    interval = attributes["interval"]
+    start_time = initial_timestamp + interval * (columns.start - 1)
+    if length(columns) == 1
+        data[start_time] = retransform_hdf_array(path["data"][rows, columns.start, :, :], type)
+    else
+        data_read = retransform_hdf_array(path["data"][rows, columns, :, :], type)
+        for (i, it) in
+            enumerate(range(start_time; length = length(columns), step = interval))
+            data[it] = @view data_read[1:length(rows), i]
+        end
+    end
+    return data
+end
+
+function get_hdf_array(path::HDF5.HDF5Group, type::Type{<:CONSTANT}, rows::UnitRange{Int64}) 
+    data= retransform_hdf_array(path["data"][rows], type)
+    return data
+end
+
+function get_hdf_array(path::HDF5.HDF5Group, type::Type{POLYNOMIAL}, rows::UnitRange{Int64})
+    data= retransform_hdf_array(path["data"][rows, :, :], type)
+    return data
+end
+
+function get_hdf_array(path::HDF5.HDF5Group, type::Type{PWL}, rows::UnitRange{Int64})
+    data= retransform_hdf_array(path["data"][rows, :, :, :], type)
+    return data
+end
+
+function retransform_hdf_array(data::Array, type::Type{<:CONSTANT})
+    return data
+end
+
+function retransform_hdf_array(data::Array, type::Type{POLYNOMIAL})
+    row, column, tuple_length =  size(data)
+    t_data = Array{POLYNOMIAL}(undef, row, column)
+    for r in 1:row, c in 1:column
+        t_data[r, c] = tuple(data[r, c, 1:tuple_length]...)
+    end
+    return t_data
+end
+
+function retransform_hdf_array(data::Array, type::Type{PWL})
+    row, column, tuple_length, array_length =  size(data)
+    t_data = Array{PWL}(undef, row, column)
+    for  r in 1:row, c in 1:column
+        tuple_array = Array{POLYNOMIAL}(undef, array_length)
+        for l in 1:array_length
+           tuple_array[l] = tuple(data[r, c, 1:tuple_length, l]...)
+        end
+        t_data[r,c] = tuple_array
+    end
+    return t_data
 end
 
 function deserialize_time_series(
