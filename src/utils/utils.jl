@@ -386,25 +386,31 @@ function get_total_period(
     return last_timestamp - initial_timestamp
 end
 
-function transform_array_for_hdf(data::SortedDict{Dates.DateTime, Vector}, data_type::Type{<:CONSTANT})
+function transform_array_for_hdf(
+    data::SortedDict{Dates.DateTime, Vector},
+    data_type::Type{<:CONSTANT},
+)
     return hcat(values(data)...)
 end
 
 function transform_array_for_hdf(data::Vector, data_type::Type{<:CONSTANT})
     return data
 end
-  
-function transform_array_for_hdf(data::SortedDict{Dates.DateTime, Vector}, data_type::Type{POLYNOMIAL})
+
+function transform_array_for_hdf(
+    data::SortedDict{Dates.DateTime, Vector},
+    data_type::Type{POLYNOMIAL},
+)
     lin_cost = hcat(values(data)...)
     rows, cols = size(lin_cost)
     @assert length(first(lin_cost)) == 2
     t_lin_cost = Array{Float64}(undef, rows, cols, 2)
     for r in 1:rows, c in 1:cols
-        tuple = lin_cost[r,c]
-        for (i,value) in enumerate(tuple)
-            t_lin_cost[r,c,i] = value
+        tuple = lin_cost[r, c]
+        for (i, value) in enumerate(tuple)
+            t_lin_cost[r, c, i] = value
         end
-    end 
+    end
     return t_lin_cost
 end
 
@@ -414,27 +420,30 @@ function transform_array_for_hdf(data::Vector, data_type::Type{POLYNOMIAL})
     t_lin_cost = Array{Float64}(undef, rows, 1, 2)
     for r in 1:rows
         tuple = data[r]
-        for (i,value) in enumerate(tuple)
-            t_lin_cost[r,1,i] = value
+        for (i, value) in enumerate(tuple)
+            t_lin_cost[r, 1, i] = value
         end
-    end 
+    end
     return t_lin_cost
 end
 
-function transform_array_for_hdf(data::SortedDict{Dates.DateTime, Vector}, data_type::Type{PWL})
+function transform_array_for_hdf(
+    data::SortedDict{Dates.DateTime, Vector},
+    data_type::Type{PWL},
+)
     quad_cost = hcat(values(data)...)
     rows, cols = size(quad_cost)
     tuple_length = length(first(quad_cost))
     @assert length(first(first(quad_cost))) == 2
     t_quad_cost = Array{Float64}(undef, rows, cols, 2, tuple_length)
     for r in 1:rows, c in 1:cols
-        tuple_array = quad_cost[r,c]
+        tuple_array = quad_cost[r, c]
         for (j, tuple) in enumerate(tuple_array)
-            for (i,value) in enumerate(tuple)
-                t_quad_cost[r,c,i,j] = value
+            for (i, value) in enumerate(tuple)
+                t_quad_cost[r, c, i, j] = value
             end
         end
-    end 
+    end
     return t_quad_cost
 end
 
@@ -444,12 +453,12 @@ function transform_array_for_hdf(data::Vector, data_type::Type{PWL})
     @assert length(first(first(data))) == 2
     t_quad_cost = Array{Float64}(undef, rows, 1, 2, tuple_length)
     for r in 1:rows
-        tuple_array = data[r,1]
+        tuple_array = data[r, 1]
         for (j, tuple) in enumerate(tuple_array)
-            for (i,value) in enumerate(tuple)
-                t_quad_cost[r,1,i,j] = value
+            for (i, value) in enumerate(tuple)
+                t_quad_cost[r, 1, i, j] = value
             end
         end
-    end 
+    end
     return t_quad_cost
 end

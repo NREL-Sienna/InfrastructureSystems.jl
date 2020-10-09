@@ -122,19 +122,19 @@ function get_data_type(ts::TimeSeriesData)
         return "POLYNOMIAL"
     elseif eltype(first(values(ts.data))) == PWL
         return "PWL"
-    else 
+    else
         error("$(eltype(first(values(ts.data)))) is not supported in forecast data")
     end
 end
 
-function get_data_type(ts::T) where T <: StaticTimeSeries
+function get_data_type(ts::T) where {T <: StaticTimeSeries}
     if eltype(TimeSeries.values(ts.data)) <: CONSTANT
         return "CONSTANT"
     elseif eltype(TimeSeries.values(ts.data)) == POLYNOMIAL
         return "POLYNOMIAL"
     elseif eltype(TimeSeries.values(ts.data)) == PWL
         return "PWL"
-    else 
+    else
         error("$(eltype(first(values(ts.data)))) is not supported in forecast data")
     end
 end
@@ -188,10 +188,7 @@ function _read_time_series_attributes(
     return data
 end
 
-global type_dict = Dict("CONSTANT" => CONSTANT, 
-    "POLYNOMIAL" => POLYNOMIAL, 
-    "PWL" => PWL
-    )
+global type_dict = Dict("CONSTANT" => CONSTANT, "POLYNOMIAL" => POLYNOMIAL, "PWL" => PWL)
 
 function _read_time_series_attributes_common(storage::Hdf5TimeSeriesStorage, path, rows)
     initial_timestamp =
@@ -340,7 +337,13 @@ function deserialize_time_series(
     end
 end
 
-function get_hdf_array(path::HDF5.HDF5Group, type::Type{<:CONSTANT}, attributes::Dict{String,Any}, rows::UnitRange{Int64}, columns::UnitRange{Int64}) 
+function get_hdf_array(
+    path::HDF5.HDF5Group,
+    type::Type{<:CONSTANT},
+    attributes::Dict{String, Any},
+    rows::UnitRange{Int64},
+    columns::UnitRange{Int64},
+)
     data = SortedDict{Dates.DateTime, Array}()
     initial_timestamp = attributes["start_time"]
     interval = attributes["interval"]
@@ -357,7 +360,13 @@ function get_hdf_array(path::HDF5.HDF5Group, type::Type{<:CONSTANT}, attributes:
     return data
 end
 
-function get_hdf_array(path::HDF5.HDF5Group, type::Type{POLYNOMIAL}, attributes::Dict{String,Any}, rows::UnitRange{Int64}, columns::UnitRange{Int64})
+function get_hdf_array(
+    path::HDF5.HDF5Group,
+    type::Type{POLYNOMIAL},
+    attributes::Dict{String, Any},
+    rows::UnitRange{Int64},
+    columns::UnitRange{Int64},
+)
     data = SortedDict{Dates.DateTime, Array}()
     initial_timestamp = attributes["start_time"]
     interval = attributes["interval"]
@@ -374,13 +383,20 @@ function get_hdf_array(path::HDF5.HDF5Group, type::Type{POLYNOMIAL}, attributes:
     return data
 end
 
-function get_hdf_array(path::HDF5.HDF5Group, type::Type{PWL}, attributes::Dict{String,Any}, rows::UnitRange{Int64}, columns::UnitRange{Int64})
+function get_hdf_array(
+    path::HDF5.HDF5Group,
+    type::Type{PWL},
+    attributes::Dict{String, Any},
+    rows::UnitRange{Int64},
+    columns::UnitRange{Int64},
+)
     data = SortedDict{Dates.DateTime, Array}()
     initial_timestamp = attributes["start_time"]
     interval = attributes["interval"]
     start_time = initial_timestamp + interval * (columns.start - 1)
     if length(columns) == 1
-        data[start_time] = retransform_hdf_array(path["data"][rows, columns.start, :, :], type)
+        data[start_time] =
+            retransform_hdf_array(path["data"][rows, columns.start, :, :], type)
     else
         data_read = retransform_hdf_array(path["data"][rows, columns, :, :], type)
         for (i, it) in
@@ -391,18 +407,18 @@ function get_hdf_array(path::HDF5.HDF5Group, type::Type{PWL}, attributes::Dict{S
     return data
 end
 
-function get_hdf_array(path::HDF5.HDF5Group, type::Type{<:CONSTANT}, rows::UnitRange{Int64}) 
-    data= retransform_hdf_array(path["data"][rows], type)
+function get_hdf_array(path::HDF5.HDF5Group, type::Type{<:CONSTANT}, rows::UnitRange{Int64})
+    data = retransform_hdf_array(path["data"][rows], type)
     return data
 end
 
 function get_hdf_array(path::HDF5.HDF5Group, type::Type{POLYNOMIAL}, rows::UnitRange{Int64})
-    data= retransform_hdf_array(path["data"][rows, :, :], type)
+    data = retransform_hdf_array(path["data"][rows, :, :], type)
     return data
 end
 
 function get_hdf_array(path::HDF5.HDF5Group, type::Type{PWL}, rows::UnitRange{Int64})
-    data= retransform_hdf_array(path["data"][rows, :, :, :], type)
+    data = retransform_hdf_array(path["data"][rows, :, :, :], type)
     return data
 end
 
@@ -411,7 +427,7 @@ function retransform_hdf_array(data::Array, type::Type{<:CONSTANT})
 end
 
 function retransform_hdf_array(data::Array, type::Type{POLYNOMIAL})
-    row, column, tuple_length =  size(data)
+    row, column, tuple_length = size(data)
     t_data = Array{POLYNOMIAL}(undef, row, column)
     for r in 1:row, c in 1:column
         t_data[r, c] = tuple(data[r, c, 1:tuple_length]...)
@@ -420,14 +436,14 @@ function retransform_hdf_array(data::Array, type::Type{POLYNOMIAL})
 end
 
 function retransform_hdf_array(data::Array, type::Type{PWL})
-    row, column, tuple_length, array_length =  size(data)
+    row, column, tuple_length, array_length = size(data)
     t_data = Array{PWL}(undef, row, column)
-    for  r in 1:row, c in 1:column
+    for r in 1:row, c in 1:column
         tuple_array = Array{POLYNOMIAL}(undef, array_length)
         for l in 1:array_length
-           tuple_array[l] = tuple(data[r, c, 1:tuple_length, l]...)
+            tuple_array[l] = tuple(data[r, c, 1:tuple_length, l]...)
         end
-        t_data[r,c] = tuple_array
+        t_data[r, c] = tuple_array
     end
     return t_data
 end

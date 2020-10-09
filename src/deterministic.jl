@@ -118,12 +118,7 @@ function Deterministic(
     end
     @assert !isempty(input_data)
 
-    return Deterministic(
-        name,
-        resolution,
-        input_data,
-        scaling_factor_multiplier,
-    )
+    return Deterministic(name, resolution, input_data, scaling_factor_multiplier)
 end
 
 function Deterministic(
@@ -133,18 +128,12 @@ function Deterministic(
     normalization_factor::NormalizationFactor = 1.0,
     scaling_factor_multiplier::Union{Nothing, Function} = nothing,
 )
-
     if !isa(input_data, SortedDict)
         input_data = SortedDict(input_data...)
     end
     @assert !isempty(input_data)
 
-    return Deterministic(
-        name,
-        resolution,
-        input_data,
-        scaling_factor_multiplier,
-    )
+    return Deterministic(name, resolution, input_data, scaling_factor_multiplier)
 end
 
 """

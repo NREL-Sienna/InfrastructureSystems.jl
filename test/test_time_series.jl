@@ -140,11 +140,11 @@ end
     other_time = initial_time + resolution
     name = "test"
     horizon = 24
-    polynomial_cost = repeat([(999.0, 1.0)],24)
-    data_polynomial = SortedDict(initial_time => polynomial_cost, other_time => polynomial_cost)
-    pwl_cost = repeat([repeat([(999.0, 1.0)],5)],24)
-    data_pwl =
-        SortedDict(initial_time => pwl_cost, other_time => pwl_cost)
+    polynomial_cost = repeat([(999.0, 1.0)], 24)
+    data_polynomial =
+        SortedDict(initial_time => polynomial_cost, other_time => polynomial_cost)
+    pwl_cost = repeat([repeat([(999.0, 1.0)], 5)], 24)
+    data_pwl = SortedDict(initial_time => pwl_cost, other_time => pwl_cost)
     for d in [data_polynomial, data_pwl]
         @testset "Add deterministic from $(typeof(d))" begin
             sys = IS.SystemData()
@@ -286,7 +286,7 @@ end
     initial_time = Dates.DateTime("2020-09-01")
     resolution = Dates.Hour(1)
     other_time = initial_time + resolution
-    polynomial_cost = repeat([(999.0, 1.0)],365)
+    polynomial_cost = repeat([(999.0, 1.0)], 365)
     data = TimeSeries.TimeArray(
         range(initial_time; length = 365, step = resolution),
         polynomial_cost,
@@ -350,11 +350,9 @@ end
     initial_time = Dates.DateTime("2020-09-01")
     resolution = Dates.Hour(1)
     other_time = initial_time + resolution
-    pwl_cost = repeat([repeat([(999.0, 1.0)],5)],365)
-    data = TimeSeries.TimeArray(
-        range(initial_time; length = 365, step = resolution),
-        pwl_cost,
-    )
+    pwl_cost = repeat([repeat([(999.0, 1.0)], 5)], 365)
+    data =
+        TimeSeries.TimeArray(range(initial_time; length = 365, step = resolution), pwl_cost)
     data = IS.SingleTimeSeries(data = data, name = "test_c")
     IS.add_time_series!(sys, component, data)
     ts1 = IS.get_time_series(
@@ -1051,9 +1049,12 @@ end
         initial_times = collect(range(initial_timestamp, length = 24, step = interval))
         name = "test"
         horizon = 24
-        data_polynomial = SortedDict(it => repeat([(999.0, 1.0*i)],24) for (i, it) in enumerate(initial_times))
+        data_polynomial = SortedDict(
+            it => repeat([(999.0, 1.0 * i)], 24) for (i, it) in enumerate(initial_times)
+        )
 
-        forecast = IS.Deterministic(data = data_polynomial, name = name, resolution = resolution)
+        forecast =
+            IS.Deterministic(data = data_polynomial, name = name, resolution = resolution)
         IS.add_time_series!(sys, component, forecast)
         @test IS.get_forecast_window_count(sys) == length(data_polynomial)
 
@@ -1078,7 +1079,8 @@ end
         @test IS.get_count(f2) == count
         @test IS.get_horizon(f2) == horizon
         for (i, window) in enumerate(IS.iterate_windows(f2))
-            @test TimeSeries.values(window) == data_polynomial[initial_times[i + offset - 1]]
+            @test TimeSeries.values(window) ==
+                  data_polynomial[initial_times[i + offset - 1]]
         end
 
         horizon -= 1
@@ -1121,8 +1123,10 @@ end
         initial_times = collect(range(initial_timestamp, length = 24, step = interval))
         name = "test"
         horizon = 24
-        data_pwl =
-            SortedDict(it => repeat([repeat([(999.0, 1.0*i)],5)],24)  for (i, it) in enumerate(initial_times))
+        data_pwl = SortedDict(
+            it => repeat([repeat([(999.0, 1.0 * i)], 5)], 24)
+            for (i, it) in enumerate(initial_times)
+        )
 
         forecast = IS.Deterministic(data = data_pwl, name = name, resolution = resolution)
         IS.add_time_series!(sys, component, forecast)
@@ -1166,7 +1170,7 @@ end
         @test IS.get_horizon(f2) == horizon
         for (i, window) in enumerate(IS.iterate_windows(f2))
             @test TimeSeries.values(window) ==
-            data_pwl[initial_times[i + offset - 1]][1:horizon]
+                  data_pwl[initial_times[i + offset - 1]][1:horizon]
         end
 
         @test_throws ArgumentError IS.get_time_series(
