@@ -303,6 +303,25 @@ end
     end
 end
 
+@testset "Test component removal with DeterministicSingleTimeSeries" begin
+    sys = IS.SystemData()
+    component = IS.TestComponent("Component1", 5)
+    IS.add_component!(sys, component)
+
+    resolution = Dates.Minute(5)
+    dates = create_dates("2020-01-01T00:00:00", resolution, "2020-01-01T23:00:00")
+    data = collect(1:length(dates))
+    ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
+    name = "val"
+    ts = IS.SingleTimeSeries(name, ta)
+    IS.add_time_series!(sys, component, ts)
+    horizon = 6
+    interval = Dates.Hour(1)
+    IS.transform_single_time_series!(sys, IS.Deterministic, horizon, interval)
+    IS.remove_component!(sys, component)
+    @test length(IS.get_components(IS.TestComponent, sys)) == 0
+end
+
 @testset "Test read_time_series_file_metadata" begin
     file = joinpath(FORECASTS_DIR, "ComponentsAsColumnsNoTime.json")
     time_series = IS.read_time_series_file_metadata(file)

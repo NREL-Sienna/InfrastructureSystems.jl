@@ -621,8 +621,14 @@ end
 function clear_time_series_storage!(component::InfrastructureSystemsComponent)
     storage = _get_time_series_storage(component)
     if !isnothing(storage)
+        # In the case of DeterministicStandard and DeterministicSingleTimeSeries the UUIDs
+        # can be shared.
+        uuids = Set{Base.UUID}()
         for (uuid, name) in get_time_series_uuids(component)
-            remove_time_series!(storage, uuid, get_uuid(component), name)
+            if !(uuid in uuids)
+                remove_time_series!(storage, uuid, get_uuid(component), name)
+                push!(uuids, uuid)
+            end
         end
     end
 end

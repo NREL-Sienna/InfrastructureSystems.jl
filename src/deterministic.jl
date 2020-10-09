@@ -266,7 +266,7 @@ function DeterministicMetadata(ts::Deterministic)
 end
 
 function deserialize_deterministic_from_single_time_series(
-    storage,
+    storage::TimeSeriesStorage,
     ts_metadata::DeterministicMetadata,
     rows,
     columns,
