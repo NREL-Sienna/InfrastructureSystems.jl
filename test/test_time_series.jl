@@ -316,29 +316,6 @@ end
         start_time = initial_time + Dates.Day(1),
     )
     @test length(IS.get_data(ts3)) == 341
-    #Throws errors
-    @test_throws ArgumentError IS.get_time_series(
-        IS.SingleTimeSeries,
-        component,
-        "test_c";
-        start_time = initial_time,
-        len = 1200,
-    )
-    @test_throws ArgumentError IS.get_time_series(
-        IS.SingleTimeSeries,
-        component,
-        "test_c";
-        start_time = initial_time - Dates.Day(10),
-        len = 12,
-    )
-
-    # Conflicting resolution
-    data = TimeSeries.TimeArray(
-        range(initial_time; length = 365, step = Dates.Minute(5)),
-        polynomial_cost,
-    )
-    data = IS.SingleTimeSeries(data = data, name = "test_d")
-    @test_throws IS.ConflictingInputsError IS.add_time_series!(sys, component, data)
 end
 
 @testset "Test add SingleTimeSeries with PWL Cost" begin
@@ -378,29 +355,6 @@ end
         start_time = initial_time + Dates.Day(1),
     )
     @test length(IS.get_data(ts3)) == 341
-    #Throws errors
-    @test_throws ArgumentError IS.get_time_series(
-        IS.SingleTimeSeries,
-        component,
-        "test_c";
-        start_time = initial_time,
-        len = 1200,
-    )
-    @test_throws ArgumentError IS.get_time_series(
-        IS.SingleTimeSeries,
-        component,
-        "test_c";
-        start_time = initial_time - Dates.Day(10),
-        len = 12,
-    )
-
-    # Conflicting resolution
-    data = TimeSeries.TimeArray(
-        range(initial_time; length = 365, step = Dates.Minute(5)),
-        pwl_cost,
-    )
-    data = IS.SingleTimeSeries(data = data, name = "test_d")
-    @test_throws IS.ConflictingInputsError IS.add_time_series!(sys, component, data)
 end
 
 @testset "Test read_time_series_file_metadata" begin
