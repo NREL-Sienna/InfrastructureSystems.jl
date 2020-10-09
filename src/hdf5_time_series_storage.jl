@@ -115,6 +115,9 @@ function serialize_time_series!(
     return
 end
 
+"""
+Return a String for the data type of the forecast data, this implementation avoids the use of `eval` on arbitrary code stored in HDF dataset.
+"""
 function get_data_type(ts::TimeSeriesData)
     data_type = eltype_data(ts)
     if data_type <: CONSTANT
@@ -336,11 +339,11 @@ end
 
 function get_hdf_array(
     dataset,
-    ::Type{<:CONSTANT},
+    ::Type{<:T},
     attributes::Dict{String, Any},
     rows::UnitRange{Int},
     columns::UnitRange{Int},
-)
+) where T <: CONSTANT
     data = SortedDict{Dates.DateTime, Array}()
     initial_timestamp = attributes["start_time"]
     interval = attributes["interval"]
