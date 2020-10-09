@@ -10,9 +10,6 @@ abstract type UnitsData end
 end
 
 const _UNIT_SYSTEM_MAP = Dict(string(x) => x for x in instances(UnitSystem))
-const CONSTANT = Real
-const POLYNOMIAL = Tuple{Float64, Float64}
-const PWL = Vector{Tuple{Float64, Float64}}
 
 mutable struct SystemUnitsSettings <: UnitsData
     base_value::Float64
