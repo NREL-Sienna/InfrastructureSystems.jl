@@ -392,8 +392,7 @@ function get_hdf_array(
     interval = attributes["interval"]
     start_time = initial_timestamp + interval * (columns.start - 1)
     if length(columns) == 1
-        data[start_time] =
-            retransform_hdf_array(dataset[rows, columns.start, :, :], type)
+        data[start_time] = retransform_hdf_array(dataset[rows, columns.start, :, :], type)
     else
         data_read = retransform_hdf_array(dataset[rows, columns, :, :], type)
         for (i, it) in
