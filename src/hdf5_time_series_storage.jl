@@ -343,7 +343,7 @@ function get_hdf_array(
     attributes::Dict{String, Any},
     rows::UnitRange{Int},
     columns::UnitRange{Int},
-) where T <: CONSTANT
+) where {T <: CONSTANT}
     data = SortedDict{Dates.DateTime, Array}()
     initial_timestamp = attributes["start_time"]
     interval = attributes["interval"]
