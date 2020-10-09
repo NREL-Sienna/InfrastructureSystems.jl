@@ -287,12 +287,16 @@ end
     resolution = Dates.Hour(1)
     other_time = initial_time + resolution
     polynomial_cost = repeat([(999.0, 1.0)], 365)
-    data = TimeSeries.TimeArray(
+    data_polynomial = TimeSeries.TimeArray(
         range(initial_time; length = 365, step = resolution),
         polynomial_cost,
     )
-    data = IS.SingleTimeSeries(data = data, name = "test_c")
+    data = IS.SingleTimeSeries(data = data_polynomial, name = "test_c")
     IS.add_time_series!(sys, component, data)
+    ts = IS.get_time_series(IS.SingleTimeSeries, component, "test_c";)
+    @test IS.get_data_type(ts) == "POLYNOMIAL"
+    @test reshape(TimeSeries.values(IS.get_data(ts)), 365) ==
+          TimeSeries.values(data_polynomial)
     ts1 = IS.get_time_series(
         IS.SingleTimeSeries,
         component,
@@ -328,10 +332,13 @@ end
     resolution = Dates.Hour(1)
     other_time = initial_time + resolution
     pwl_cost = repeat([repeat([(999.0, 1.0)], 5)], 365)
-    data =
+    data_pwl =
         TimeSeries.TimeArray(range(initial_time; length = 365, step = resolution), pwl_cost)
-    data = IS.SingleTimeSeries(data = data, name = "test_c")
+    data = IS.SingleTimeSeries(data = data_pwl, name = "test_c")
     IS.add_time_series!(sys, component, data)
+    ts = IS.get_time_series(IS.SingleTimeSeries, component, "test_c";)
+    @test IS.get_data_type(ts) == "PWL"
+    @test reshape(TimeSeries.values(IS.get_data(ts)), 365) == TimeSeries.values(data_pwl)
     ts1 = IS.get_time_series(
         IS.SingleTimeSeries,
         component,
