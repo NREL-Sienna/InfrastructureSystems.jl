@@ -95,8 +95,8 @@ function test_get_subset(storage::IS.TimeSeriesStorage)
     rows = UnitRange(1, horizon)
     columns = UnitRange(1, 2)
     ts2 = IS.deserialize_time_series(IS.Deterministic, storage, ts_metadata, rows, columns)
-    @test collect(keys(IS.get_data(ts2))) == collect(keys(IS.get_data(ts)))
-    @test collect(values(IS.get_data(ts2))) == collect(values(IS.get_data(ts)))
+    @test collect(IS.get_initial_times(ts2)) == collect(IS.get_initial_times(ts))
+    @test collect(IS.iterate_windows(ts2)) == collect(IS.iterate_windows(ts))
 
     rows = UnitRange(3, 8)
     columns = UnitRange(1, 2)
@@ -104,7 +104,7 @@ function test_get_subset(storage::IS.TimeSeriesStorage)
         IS.deserialize_time_series(IS.Deterministic, storage, ts_metadata, rows, columns)
     @test IS.get_horizon(ts_subset) == length(rows)
     @test IS.get_count(ts_subset) == columns.stop
-    @test first(keys(IS.get_data(ts_subset))) ==
+    @test IS.get_initial_timestamp(ts_subset) ==
           initial_time1 + resolution * (rows.start - 1)
 
     rows = UnitRange(2, 7)
@@ -113,7 +113,7 @@ function test_get_subset(storage::IS.TimeSeriesStorage)
         IS.deserialize_time_series(IS.Deterministic, storage, ts_metadata, rows, columns)
     @test IS.get_horizon(ts_subset) == length(rows)
     @test IS.get_count(ts_subset) == columns.stop
-    @test first(keys(IS.get_data(ts_subset))) ==
+    @test IS.get_initial_timestamp(ts_subset) ==
           initial_time1 + resolution * (rows.start - 1)
 end
 

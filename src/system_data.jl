@@ -212,9 +212,9 @@ function remove_time_series!(
     type = time_series_data_to_metadata(T)
     time_series = get_time_series(type, component, name)
     uuid = get_time_series_uuid(time_series)
-    # TODO: can this be atomic?
-    remove_time_series_metadata!(type, component, name)
-    remove_time_series!(data.time_series_storage, uuid, get_uuid(component), name)
+    if remove_time_series_metadata!(type, component, name)
+        remove_time_series!(data.time_series_storage, uuid, get_uuid(component), name)
+    end
 end
 
 """
@@ -348,6 +348,32 @@ function get_time_series_counts(data::SystemData)
     end
 
     return (component_count, static_time_series_count, forecast_count)
+end
+
+"""
+Transform all instances of SingleTimeSeries to DeterministicSingleTimeSeries.
+"""
+function transform_single_time_series!(
+    data::SystemData,
+    ::Type{T},
+    horizon::Int,
+    interval::Dates.Period,
+) where {T <: DeterministicSingleTimeSeries}
+    is_first = true
+    params = nothing
+    for component in iterate_components_with_time_series(data.components)
+        if params === nothing
+            params = get_single_time_series_transformed_parameters(
+                component,
+                T,
+                horizon,
+                interval,
+            )
+            check_add_time_series!(data.time_series_params, params)
+        end
+
+        transform_single_time_series!(component, T, params)
+    end
 end
 
 """

@@ -36,10 +36,10 @@ end
 
 function add_time_series!(
     container::TimeSeriesContainer,
-    time_series::T;
+    ts_metadata::T;
     skip_if_present = false,
 ) where {T <: TimeSeriesMetadata}
-    key = TimeSeriesKey(T, get_name(time_series))
+    key = TimeSeriesKey(T, get_name(ts_metadata))
     if haskey(container.data, key)
         if skip_if_present
             @warn "time_series $key is already present, skipping overwrite"
@@ -47,7 +47,7 @@ function add_time_series!(
             throw(ArgumentError("time_series $key is already stored"))
         end
     else
-        container.data[key] = time_series
+        container.data[key] = ts_metadata
     end
 end
 
@@ -93,6 +93,14 @@ function get_time_series_names(
     end
 
     return Vector{String}(collect(names))
+end
+
+function has_time_series(
+    container::TimeSeriesContainer,
+    ::Type{T},
+    name::AbstractString,
+) where {T <: TimeSeriesMetadata}
+    return haskey(container.data, TimeSeriesKey(T, name))
 end
 
 function serialize(container::TimeSeriesContainer)

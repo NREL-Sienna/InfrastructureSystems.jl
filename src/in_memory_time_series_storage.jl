@@ -116,7 +116,7 @@ function deserialize_time_series(
 end
 
 function deserialize_time_series(
-    ::Type{Deterministic},
+    ::Type{<:AbstractDeterministic},
     storage::InMemoryTimeSeriesStorage,
     ts_metadata::TimeSeriesMetadata,
     rows::UnitRange,
@@ -129,12 +129,23 @@ function deserialize_time_series(
     end
 
     ts = storage.data[uuid].ts
+    if ts isa SingleTimeSeries
+        return deserialize_deterministic_from_single_time_series(
+            storage,
+            ts_metadata,
+            rows,
+            columns,
+            length(ts),
+        )
+    end
+
     total_rows = length(ts_metadata)
     total_columns = get_count(ts_metadata)
     if length(rows) == total_rows && length(columns) == total_columns
         return ts
     end
 
+    @assert ts isa Deterministic
     full_data = get_data(ts)
     initial_timestamp = get_initial_timestamp(ts)
     resolution = get_resolution(ts)

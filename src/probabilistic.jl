@@ -15,8 +15,8 @@ Construct Probabilistic from a SortedDict of Arrays.
 function Probabilistic(
     name::AbstractString,
     input_data::AbstractDict{Dates.DateTime, <:Array},
-    percentiles::Vector{Float64};
-    resolution::Dates.Period,
+    percentiles::Vector{Float64},
+    resolution::Dates.Period;
     normalization_factor::NormalizationFactor = 1.0,
     scaling_factor_multiplier::Union{Nothing, Function} = nothing,
 )
@@ -66,8 +66,8 @@ function Probabilistic(
     return Probabilistic(
         name,
         data,
-        percentiles;
-        resolution = resolution,
+        percentiles,
+        resolution;
         normalization_factor = normalization_factor,
         scaling_factor_multiplier = scaling_factor_multiplier,
     )
@@ -79,16 +79,16 @@ Construct Deterministic from RawTimeSeries.
 function Probabilistic(
     name::AbstractString,
     series_data::RawTimeSeries,
-    percentiles::Vector{Float64};
-    resolution::Dates.Period,
+    percentiles::Vector{Float64},
+    resolution::Dates.Period;
     normalization_factor::NormalizationFactor = 1.0,
     scaling_factor_multiplier::Union{Nothing, Function} = nothing,
 )
     return Probabilistic(
         name,
         series_data.data,
-        percentiles;
-        resolution = resolution,
+        percentiles,
+        resolution;
         normalization_factor = normalization_factor,
         scaling_factor_multiplier = scaling_factor_multiplier,
     )
@@ -112,8 +112,8 @@ function Probabilistic(info::TimeSeriesParsedInfo)
     return Probabilistic(
         info.name,
         info.data,
-        info.percentiles;
-        resolution = info.resolution,
+        info.percentiles,
+        info.resolution;
         normalization_factor = info.normalization_factor,
         scaling_factor_multiplier = info.scaling_factor_multiplier,
     )
@@ -149,3 +149,12 @@ end
 function get_horizon(forecast::Probabilistic)
     return size(first(values(get_data(forecast))))[1]
 end
+
+get_count(forecast::Probabilistic) = get_count_common(forecast)
+get_initial_times(forecast::Probabilistic) = get_initial_times_common(forecast)
+get_initial_timestamp(forecast::Probabilistic) = get_initial_timestamp_common(forecast)
+get_interval(forecast::Probabilistic) = get_interval_common(forecast)
+get_window(forecast::Probabilistic) = get_window_common(forecast)
+get_window(f::Probabilistic, initial_time; len = nothing) =
+    get_window_common(f, initial_time; len = len)
+iterate_windows(forecast::Probabilistic) = iterate_windows_common(forecast)

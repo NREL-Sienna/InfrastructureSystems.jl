@@ -2,8 +2,9 @@ abstract type Forecast <: TimeSeriesData end
 
 # Subtypes of Forecast must implement
 # - get_count
-# - get_data
 # - get_horizon
+# - get_initial_times
+# - get_initial_timestamp
 # - get_name
 # - get_scaling_factor_multiplier
 # - get_window
@@ -11,11 +12,31 @@ abstract type Forecast <: TimeSeriesData end
 
 Base.length(ts::Forecast) = get_count(ts)
 
+abstract type AbstractDeterministic <: Forecast end
+
+# This method requires that the forecast type implement a `get_data` method like
+# Deterministic.
+function get_count_common(forecast)
+    return length(get_data(forecast))
+end
+
+# This method requires that the forecast type implement a `get_data` method like
+# Deterministic. Allows for optimized execution.
+function get_horizon_common(forecast)
+    return length(first(values(get_data(forecast))))
+end
+
 """
 Return the initial times in the forecast.
 """
 function get_initial_times(f::Forecast)
     return get_initial_times(get_initial_timestamp(f), get_count(f), get_interval(f))
+end
+
+# This method requires that the forecast type implement a `get_data` method like
+# Deterministic. Allows for optimized execution.
+function get_initial_times_common(forecast::Forecast)
+    return keys(get_data(forecast))
 end
 
 """
@@ -32,54 +53,14 @@ function get_total_period(f::Forecast)
 end
 
 """
-Return the count of forecast windows.
-"""
-function get_count(forecast::Forecast)
-    return length(get_data(forecast))
-end
-
-"""
-Return the initial_timestamp of the forecast.
-"""
-function get_initial_timestamp(forecast::Forecast)
-    return first(keys(get_data(forecast)))
-end
-
-"""
-Return the forecast interval as a Dates.Period.
-"""
-function get_interval(forecast::Forecast)
-    k = keys(get_data(forecast))
-    if length(k) == 1
-        return Dates.Second(0)
-    end
-    first_key, state = iterate(k)
-    second_key, state = iterate(k, state)
-    return second_key - first_key
-end
-
-"""
-Return the forecast window corresponsing to initial_time.
-"""
-function get_window(forecast::Forecast, initial_time::Dates.DateTime)
-    return TimeSeries.TimeArray(
-        make_timestamps(forecast, initial_time),
-        forecast.data[initial_time],
-    )
-end
-
-"""
 Return the forecast window corresponsing to interval index.
 """
-function get_window(forecast::Forecast, index::Int)
-    return get_window(forecast, index_to_initial_time(forecast, index))
+function get_window(forecast::Forecast, index::Int; len = nothing)
+    return get_window(forecast, index_to_initial_time(forecast, index); len = len)
 end
 
-"""
-Iterate over all forecast windows.
-"""
-function iterate_windows(forecast::Forecast)
-    return (get_window(forecast, it) for it in keys(forecast.data))
+function iterate_windows_common(forecast)
+    return (get_window(forecast, it) for it in keys(get_data(forecast)))
 end
 
 """
@@ -89,10 +70,59 @@ function index_to_initial_time(forecast::Forecast, index::Int)
     return get_initial_timestamp(forecast) + get_interval(forecast) * index
 end
 
-function make_timestamps(forecast::Forecast, initial_time::Dates.DateTime)
-    return range(
-        initial_time;
-        length = get_horizon(forecast),
-        step = get_resolution(forecast),
-    )
+"""
+Return a TimeSeries.TimeArray for one forecast window.
+"""
+function make_time_array(
+    forecast::Forecast,
+    start_time::Dates.DateTime;
+    len::Union{Nothing, Int} = nothing,
+)
+    return get_window(forecast, start_time; len = len)
+end
+
+function make_timestamps(forecast::Forecast, initial_time::Dates.DateTime, len = nothing)
+    if len === nothing
+        len = get_horizon(forecast)
+    end
+
+    return range(initial_time; length = len, step = get_resolution(forecast))
+end
+
+# This method requires that the forecast type implement a `get_data` method like
+# Deterministic. Allows for optimized execution.
+function get_initial_timestamp_common(forecast)
+    return first(keys(get_data(forecast)))
+end
+
+# This method requires that the forecast type implement a `get_data` method like
+# Deterministic. Allows for optimized execution.
+function get_interval_common(forecast)
+    its = get_initial_times(forecast)
+    if length(its) == 1
+        return Dates.Second(0)
+    end
+    first_it, state = iterate(its)
+    second_it, state = iterate(its, state)
+    return second_it - first_it
+end
+
+# This method requires that the forecast type implement a `get_data` method like
+# Deterministic.
+function get_window_common(
+    forecast,
+    initial_time::Dates.DateTime;
+    len::Union{Nothing, Int} = nothing,
+)
+    horizon = get_horizon(forecast)
+    if len === nothing
+        len = horizon
+    end
+
+    data = get_data(forecast)[initial_time]
+    if len != horizon
+        data = data[1:len]
+    end
+
+    return TimeSeries.TimeArray(make_timestamps(forecast, initial_time, len), data)
 end

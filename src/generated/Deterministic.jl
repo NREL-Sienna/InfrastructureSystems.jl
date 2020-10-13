@@ -2,7 +2,7 @@
 This file is auto-generated. Do not edit.
 =#
 """
-    mutable struct Deterministic <: Forecast
+    mutable struct Deterministic <: AbstractDeterministic
         name::String
         resolution::Dates.Period
         data::SortedDict{Dates.DateTime, Vector}
@@ -19,7 +19,7 @@ A deterministic forecast for a particular data field in a Component.
 - `scaling_factor_multiplier::Union{Nothing, Function}`: Applicable when the time series data are scaling factors. Called on the associated component to convert the values.
 - `internal::InfrastructureSystemsInternal`
 """
-mutable struct Deterministic <: Forecast
+mutable struct Deterministic <: AbstractDeterministic
     "user-defined name"
     name::String
     "forecast resolution"
