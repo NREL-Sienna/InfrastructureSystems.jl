@@ -204,7 +204,7 @@ end
     component_name = "Component1"
     component = IS.TestComponent(component_name, 5)
     IS.add_component!(sys, component)
-    forecast = IS.Probabilistic(name, d, ones(99); resolution = resolution)
+    forecast = IS.Probabilistic(name, d, ones(99), resolution)
     IS.add_time_series!(sys, component, forecast)
     @test IS.has_time_series(component)
     @test IS.get_initial_timestamp(forecast) == initial_time
