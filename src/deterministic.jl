@@ -17,7 +17,7 @@ Construct Deterministic from a Dict of TimeArrays.
 
 # Arguments
 - `name::AbstractString`: user-defined name
-- `data::AbstractDict{Dates.DateTime, TimeSeries.TimeArray}`: time series data.
+- `input_data::AbstractDict{Dates.DateTime, TimeSeries.TimeArray}`: time series data.
 - `normalization_factor::NormalizationFactor = 1.0`: optional normalization factor to apply
   to each data entry
 - `scaling_factor_multiplier::Union{Nothing, Function} = nothing`: If the data are scaling
@@ -58,8 +58,8 @@ Construct Deterministic from a Dict of collections of data.
 
 # Arguments
 - `name::AbstractString`: user-defined name
-- `data::AbstractDict{Dates.DateTime, Any}`: time series data. The values
-  in the dictionary should be able to be converted to Float64
+- `input_data::AbstractDict{Dates.DateTime, Any}`: time series data. The values in the
+  dictionary should be able to be converted to Float64.
 - `resolution::Dates.Period`: The resolution of the forecast in Dates.Period`
 - `normalization_factor::NormalizationFactor = 1.0`: optional normalization factor to apply
   to each data entry
