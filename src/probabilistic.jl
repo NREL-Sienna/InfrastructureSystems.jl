@@ -157,3 +157,4 @@ get_interval(forecast::Probabilistic) = get_interval_common(forecast)
 get_window(forecast::Probabilistic) = get_window_common(forecast)
 get_window(f::Probabilistic, initial_time; len = nothing) =
     get_window_common(f, initial_time; len = len)
+iterate_windows(forecast::Probabilistic) = iterate_windows_common(forecast)

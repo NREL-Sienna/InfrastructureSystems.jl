@@ -215,6 +215,7 @@ get_horizon(forecast::Deterministic) = get_horizon_common(forecast)
 get_initial_times(forecast::Deterministic) = get_initial_times_common(forecast)
 get_initial_timestamp(forecast::Deterministic) = get_initial_timestamp_common(forecast)
 get_interval(forecast::Deterministic) = get_interval_common(forecast)
+iterate_windows(forecast::Deterministic) = iterate_windows_common(forecast)
 get_window(f::Deterministic, initial_time; len = nothing) =
     get_window_common(f, initial_time; len = len)
 

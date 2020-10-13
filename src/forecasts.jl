@@ -14,13 +14,14 @@ Base.length(ts::Forecast) = get_count(ts)
 
 abstract type AbstractDeterministic <: Forecast end
 
-# This method requires that the forecast type contains a `data` field like Deterministic.
+# This method requires that the forecast type implement a `get_data` method like
+# Deterministic.
 function get_count_common(forecast)
     return length(get_data(forecast))
 end
 
-# This method requires that the forecast type contains a `data` field like Deterministic
-# and allows for optimized execution.
+# This method requires that the forecast type implement a `get_data` method like
+# Deterministic. Allows for optimized execution.
 function get_horizon_common(forecast)
     return length(first(values(get_data(forecast))))
 end
@@ -32,8 +33,8 @@ function get_initial_times(f::Forecast)
     return get_initial_times(get_initial_timestamp(f), get_count(f), get_interval(f))
 end
 
-# This method requires that the forecast type contains a `data` field like Deterministic
-# and allows for optimized execution.
+# This method requires that the forecast type implement a `get_data` method like
+# Deterministic. Allows for optimized execution.
 function get_initial_times_common(forecast::Forecast)
     return keys(get_data(forecast))
 end
@@ -58,11 +59,8 @@ function get_window(forecast::Forecast, index::Int; len = nothing)
     return get_window(forecast, index_to_initial_time(forecast, index); len = len)
 end
 
-"""
-Iterate over all forecast windows.
-"""
-function iterate_windows(forecast::Forecast)
-    return (get_window(forecast, it) for it in keys(forecast.data))
+function iterate_windows_common(forecast)
+    return (get_window(forecast, it) for it in keys(get_data(forecast)))
 end
 
 """
@@ -91,14 +89,14 @@ function make_timestamps(forecast::Forecast, initial_time::Dates.DateTime, len =
     return range(initial_time; length = len, step = get_resolution(forecast))
 end
 
-# This method requires that the forecast type contains a `data` field like Deterministic
-# and allows for optimized execution.
+# This method requires that the forecast type implement a `get_data` method like
+# Deterministic. Allows for optimized execution.
 function get_initial_timestamp_common(forecast)
     return first(keys(get_data(forecast)))
 end
 
-# This method requires that the forecast type contains a `data` field like Deterministic
-# and allows for optimized execution.
+# This method requires that the forecast type implement a `get_data` method like
+# Deterministic. Allows for optimized execution.
 function get_interval_common(forecast)
     its = get_initial_times(forecast)
     if length(its) == 1
@@ -109,7 +107,8 @@ function get_interval_common(forecast)
     return second_it - first_it
 end
 
-# This method requires that the forecast type contains a `data` field like Deterministic.
+# This method requires that the forecast type implement a `get_data` method like
+# Deterministic.
 function get_window_common(
     forecast,
     initial_time::Dates.DateTime;
@@ -120,7 +119,7 @@ function get_window_common(
         len = horizon
     end
 
-    data = forecast.data[initial_time]
+    data = get_data(forecast)[initial_time]
     if len != horizon
         data = data[1:len]
     end
