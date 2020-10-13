@@ -21,7 +21,7 @@
         {
           "name": "interval",
           "data_type": "Dates.Period",
-          "comment": "step time between forecast windows"
+          "comment": "time step between forecast windows"
         },
         {
           "name": "count",
@@ -106,7 +106,7 @@
         {
           "name": "interval",
           "data_type": "Dates.Period",
-          "comment": "step time between forecast windows"
+          "comment": "time step between forecast windows"
         },
         {
           "name": "count",
@@ -201,7 +201,7 @@
         {
           "name": "interval",
           "data_type": "Dates.Period",
-          "comment": "step time between forecast windows"
+          "comment": "time step between forecast windows"
         },
         {
           "name": "scenario_count",
@@ -363,7 +363,7 @@
         {
           "name": "interval",
           "data_type": "Dates.Period",
-          "comment": "step time between forecast windows"
+          "comment": "time step between forecast windows"
         },
         {
           "name": "count",

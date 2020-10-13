@@ -20,7 +20,7 @@ A deterministic forecast for a particular data field in a Component.
 - `name::String`: user-defined name
 - `resolution::Dates.Period`
 - `initial_timestamp::Dates.DateTime`: time series availability time
-- `interval::Dates.Period`: step time between forecast windows
+- `interval::Dates.Period`: time step between forecast windows
 - `count::Int`: number of forecast windows
 - `time_series_uuid::UUIDs.UUID`: reference to time series data
 - `horizon::Int`: length of this time series
@@ -33,7 +33,7 @@ mutable struct DeterministicMetadata <: ForecastMetadata
     resolution::Dates.Period
     "time series availability time"
     initial_timestamp::Dates.DateTime
-    "step time between forecast windows"
+    "time step between forecast windows"
     interval::Dates.Period
     "number of forecast windows"
     count::Int

@@ -15,7 +15,7 @@ A deterministic forecast for a particular data field in a Component that wraps a
 # Arguments
 - `single_time_series::SingleTimeSeries`: wrapped SingleTimeSeries object
 - `initial_timestamp::Dates.DateTime`: time series availability time
-- `interval::Dates.Period`: step time between forecast windows
+- `interval::Dates.Period`: time step between forecast windows
 - `count::Int`: number of forecast windows
 - `horizon::Int`: length of this time series
 """
@@ -24,7 +24,7 @@ mutable struct DeterministicSingleTimeSeries <: AbstractDeterministic
     single_time_series::SingleTimeSeries
     "time series availability time"
     initial_timestamp::Dates.DateTime
-    "step time between forecast windows"
+    "time step between forecast windows"
     interval::Dates.Period
     "number of forecast windows"
     count::Int

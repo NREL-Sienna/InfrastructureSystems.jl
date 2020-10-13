@@ -21,7 +21,7 @@ A Discrete Scenario Based time series for a particular data field in a Component
 - `name::String`: user-defined name
 - `resolution::Dates.Period`
 - `initial_timestamp::Dates.DateTime`: time series availability time
-- `interval::Dates.Period`: step time between forecast windows
+- `interval::Dates.Period`: time step between forecast windows
 - `scenario_count::Int64`: Number of scenarios
 - `count::Int`: number of forecast windows
 - `time_series_uuid::UUIDs.UUID`: reference to time series data
@@ -35,7 +35,7 @@ mutable struct ScenariosMetadata <: ForecastMetadata
     resolution::Dates.Period
     "time series availability time"
     initial_timestamp::Dates.DateTime
-    "step time between forecast windows"
+    "time step between forecast windows"
     interval::Dates.Period
     "Number of scenarios"
     scenario_count::Int64

@@ -21,7 +21,7 @@ A Probabilistic forecast for a particular data field in a Component.
 - `name::String`: user-defined name
 - `initial_timestamp::Dates.DateTime`: time series availability time
 - `resolution::Dates.Period`
-- `interval::Dates.Period`: step time between forecast windows
+- `interval::Dates.Period`: time step between forecast windows
 - `count::Int`: number of forecast windows
 - `percentiles::Vector{Float64}`: Percentiles for the probabilistic forecast
 - `time_series_uuid::UUIDs.UUID`: reference to time series data
@@ -35,7 +35,7 @@ mutable struct ProbabilisticMetadata <: ForecastMetadata
     "time series availability time"
     initial_timestamp::Dates.DateTime
     resolution::Dates.Period
-    "step time between forecast windows"
+    "time step between forecast windows"
     interval::Dates.Period
     "number of forecast windows"
     count::Int
