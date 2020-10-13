@@ -507,9 +507,13 @@ function get_time_series_multiple(
 
     Channel() do channel
         for key in keys(container.data)
-            if !isnothing(type) &&
-               !(time_series_metadata_to_data(key.time_series_type) <: type)
-                continue
+            if !isnothing(type)
+                if type == DeterministicSingleTimeSeries
+                    # time_series_metadata_to_data will return Deterministic here, so we
+                    # must change the type to match.
+                    type = Deterministic
+                end
+                !(time_series_metadata_to_data(key.time_series_type) <: type) && continue
             end
             if !isnothing(name) && key.name != name
                 continue

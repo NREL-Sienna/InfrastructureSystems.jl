@@ -304,7 +304,7 @@ end
         @test single_vals == data
 
         # Get the transformed forecast.
-        forecast = IS.get_time_series(IS.Deterministic, component, name)
+        forecast = IS.get_time_series(IS.DeterministicSingleTimeSeries, component, name)
         window = IS.get_window(forecast, dates[1])
         @test window isa TimeSeries.TimeArray
         @test TimeSeries.timestamp(window) == TimeSeries.timestamp(ta[1:horizon])
@@ -318,6 +318,30 @@ end
         @test last_initial_time == dates[last_it_index]
         last_val_index = last_it_index + horizon - 1
         @test TimeSeries.values(windows[exp_length]) == data[last_it_index:last_val_index]
+
+        # Do the same thing but pass Deterministic instead.
+        forecast = IS.get_time_series(IS.Deterministic, component, name)
+        window = IS.get_window(forecast, dates[1])
+        @test window isa TimeSeries.TimeArray
+        @test TimeSeries.timestamp(window) == TimeSeries.timestamp(ta[1:horizon])
+        @test TimeSeries.values(window) == TimeSeries.values(ta[1:horizon])
+
+        # Verify that get_time_series_multiple works with these types.
+        forecasts = collect(IS.get_time_series_multiple(sys))
+        @test length(forecasts) == 2
+        forecasts =
+            collect(IS.get_time_series_multiple(sys; type = IS.AbstractDeterministic))
+        @test length(forecasts) == 1
+        @test forecasts[1] isa IS.DeterministicSingleTimeSeries
+        forecasts = collect(IS.get_time_series_multiple(sys; type = IS.Deterministic))
+        @test length(forecasts) == 1
+        @test forecasts[1] isa IS.DeterministicSingleTimeSeries
+        forecasts = collect(IS.get_time_series_multiple(
+            sys;
+            type = IS.DeterministicSingleTimeSeries,
+        ))
+        @test length(forecasts) == 1
+        @test forecasts[1] isa IS.DeterministicSingleTimeSeries
 
         # Must start on a window.
         @test_throws ArgumentError IS.get_time_series(

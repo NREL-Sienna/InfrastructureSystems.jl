@@ -116,7 +116,7 @@ function deserialize_time_series(
 end
 
 function deserialize_time_series(
-    ::Type{Deterministic},
+    ::Type{<:AbstractDeterministic},
     storage::InMemoryTimeSeriesStorage,
     ts_metadata::TimeSeriesMetadata,
     rows::UnitRange,
