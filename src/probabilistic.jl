@@ -149,3 +149,11 @@ end
 function get_horizon(forecast::Probabilistic)
     return size(first(values(get_data(forecast))))[1]
 end
+
+get_count(forecast::Probabilistic) = get_count_common(forecast)
+get_initial_times(forecast::Probabilistic) = get_initial_times_common(forecast)
+get_initial_timestamp(forecast::Probabilistic) = get_initial_timestamp_common(forecast)
+get_interval(forecast::Probabilistic) = get_interval_common(forecast)
+get_window(forecast::Probabilistic) = get_window_common(forecast)
+get_window(f::Probabilistic, initial_time; len = nothing) =
+    get_window_common(f, initial_time; len = len)

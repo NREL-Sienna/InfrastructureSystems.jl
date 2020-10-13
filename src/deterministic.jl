@@ -210,9 +210,13 @@ function get_array_for_hdf(forecast::Deterministic)
     return transform_array_for_hdf(forecast.data, data_type)
 end
 
-function get_horizon(forecast::Deterministic)
-    return length(first(values(get_data(forecast))))
-end
+get_count(forecast::Deterministic) = get_count_common(forecast)
+get_horizon(forecast::Deterministic) = get_horizon_common(forecast)
+get_initial_times(forecast::Deterministic) = get_initial_times_common(forecast)
+get_initial_timestamp(forecast::Deterministic) = get_initial_timestamp_common(forecast)
+get_interval(forecast::Deterministic) = get_interval_common(forecast)
+get_window(f::Deterministic, initial_time; len = nothing) =
+    get_window_common(f, initial_time; len = len)
 
 function make_time_array(forecast::Deterministic)
     # Artificial limitation to reduce scope.
