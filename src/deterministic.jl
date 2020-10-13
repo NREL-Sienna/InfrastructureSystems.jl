@@ -32,7 +32,8 @@ function Deterministic(
     normalization_factor::NormalizationFactor = 1.0,
     scaling_factor_multiplier::Union{Nothing, Function} = nothing,
 )
-    data = SortedDict{Dates.DateTime, Vector{Float64}}()
+    data_type = eltype(TimeSeries.values(first(values(input_data))))
+    data = SortedDict{Dates.DateTime, Vector{data_type}}()
     resolution =
         TimeSeries.timestamp(first(values(input_data)))[2] -
         TimeSeries.timestamp(first(values(input_data)))[1]
@@ -78,7 +79,7 @@ function Deterministic(
         try
             data[k] = Float64[i for i in v]
         catch e
-            @error("The forecast data provided $(second(eltype(input_data))) can't be converted to Vector{Float64}")
+            @error("The forecast data provided $(eltype(input_data)) can't be converted to Vector{Float64}")
             rethrow()
         end
     end
@@ -91,6 +92,21 @@ function Deterministic(
         normalization_factor = normalization_factor,
         scaling_factor_multiplier = scaling_factor_multiplier,
     )
+end
+
+function Deterministic(
+    name::AbstractString,
+    input_data::AbstractDict{Dates.DateTime, <:Vector},
+    resolution::Dates.Period;
+    normalization_factor::NormalizationFactor = 1.0,
+    scaling_factor_multiplier::Union{Nothing, Function} = nothing,
+)
+    if !isa(input_data, SortedDict)
+        input_data = SortedDict(input_data...)
+    end
+    @assert !isempty(input_data)
+
+    return Deterministic(name, resolution, input_data, scaling_factor_multiplier)
 end
 
 """
@@ -190,9 +206,22 @@ function Deterministic(forecast::Deterministic, data::SortedDict{Dates.DateTime,
 end
 
 function get_array_for_hdf(forecast::Deterministic)
-    return hcat(values(forecast.data)...)
+    data_type = eltype(first(values(forecast.data)))
+    return transform_array_for_hdf(forecast.data, data_type)
 end
 
 function get_horizon(forecast::Deterministic)
     return length(first(values(get_data(forecast))))
+end
+
+function make_time_array(forecast::Deterministic)
+    # Artificial limitation to reduce scope.
+    @assert get_count(forecast) == 1
+    timestamps = range(
+        get_initial_timestamp(forecast);
+        step = get_resolution(forecast),
+        length = get_horizon(forecast),
+    )
+    data = first(values(get_data(forecast)))
+    return TimeSeries.TimeArray(timestamps, data)
 end
