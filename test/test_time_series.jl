@@ -234,7 +234,12 @@ end
         IS.add_time_series!(sys, component, ts)
         horizon = 6
         interval = Dates.Hour(1)
-        IS.transform_single_time_series!(sys, IS.Deterministic, horizon, interval)
+        IS.transform_single_time_series!(
+            sys,
+            IS.DeterministicSingleTimeSeries,
+            horizon,
+            interval,
+        )
 
         # The original should still be readable.
         single_vals = IS.get_time_series_values(IS.SingleTimeSeries, component, name)
@@ -273,21 +278,21 @@ end
         # Already stored.
         @test_throws ArgumentError IS.transform_single_time_series!(
             sys,
-            IS.Deterministic,
+            IS.DeterministicSingleTimeSeries,
             horizon,
             interval,
         )
         # Mismatched horizon
         @test_throws IS.ConflictingInputsError IS.transform_single_time_series!(
             sys,
-            IS.Deterministic,
+            IS.DeterministicSingleTimeSeries,
             7,
             interval,
         )
         # Mismatched interval
         @test_throws IS.ConflictingInputsError IS.transform_single_time_series!(
             sys,
-            IS.Deterministic,
+            IS.DeterministicSingleTimeSeries,
             horizon,
             Dates.Hour(2),
         )
@@ -298,7 +303,8 @@ end
                   IS.SingleTimeSeries
         else
             IS.remove_time_series!(IS.SingleTimeSeries, sys, component, name)
-            @test IS.get_time_series(IS.Deterministic, component, name) isa IS.Deterministic
+            @test IS.get_time_series(IS.Deterministic, component, name) isa
+                  IS.DeterministicSingleTimeSeries
         end
     end
 end
@@ -317,7 +323,12 @@ end
     IS.add_time_series!(sys, component, ts)
     horizon = 6
     interval = Dates.Hour(1)
-    IS.transform_single_time_series!(sys, IS.Deterministic, horizon, interval)
+    IS.transform_single_time_series!(
+        sys,
+        IS.DeterministicSingleTimeSeries,
+        horizon,
+        interval,
+    )
     IS.remove_component!(sys, component)
     @test length(IS.get_components(IS.TestComponent, sys)) == 0
 end
@@ -878,7 +889,8 @@ end
     @test IS.get_forecast_initial_timestamp(sys) == initial_time
     @test IS.get_forecast_interval(sys) == second_time - initial_time
     @test IS.get_forecast_initial_times(sys) == [initial_time, second_time]
-    @test IS.get_initial_times(forecast) == IS.get_forecast_initial_times(sys)
+    @test collect(IS.get_initial_times(forecast)) ==
+          collect(IS.get_forecast_initial_times(sys))
     @test Dates.Hour(IS.get_forecast_total_period(sys)) ==
           Dates.Hour(second_time - initial_time) + Dates.Hour(resolution * horizon)
     @test IS.get_forecast_total_period(sys) == IS.get_total_period(forecast)

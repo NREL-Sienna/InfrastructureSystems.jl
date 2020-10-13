@@ -547,13 +547,13 @@ function get_time_series_multiple(
 end
 
 """
-Transform all instances of SingleTimeSeries to Deterministic.
+Transform all instances of SingleTimeSeries to DeterministicSingleTimeSeries.
 """
 function transform_single_time_series!(
     component::InfrastructureSystemsComponent,
     ::Type{T},
     sys_params::TimeSeriesParameters,
-) where {T <: Deterministic}
+) where {T <: DeterministicSingleTimeSeries}
     container = get_time_series_container(component)
     for (key, ts_metadata) in container.data
         if ts_metadata isa SingleTimeSeriesMetadata
@@ -621,7 +621,7 @@ end
 function clear_time_series_storage!(component::InfrastructureSystemsComponent)
     storage = _get_time_series_storage(component)
     if !isnothing(storage)
-        # In the case of DeterministicStandard and DeterministicSingleTimeSeries the UUIDs
+        # In the case of Deterministic and DeterministicSingleTimeSeries the UUIDs
         # can be shared.
         uuids = Set{Base.UUID}()
         for (uuid, name) in get_time_series_uuids(component)

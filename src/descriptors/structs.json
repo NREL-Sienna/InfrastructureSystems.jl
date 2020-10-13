@@ -53,7 +53,7 @@
       "supertype": "ForecastMetadata"
     },
     {
-      "struct_name": "DeterministicStandard",
+      "struct_name": "Deterministic",
       "docstring": "A deterministic forecast for a particular data field in a Component.",
       "fields": [
         {
@@ -83,7 +83,7 @@
           "internal_default": "InfrastructureSystemsInternal()"
         }
       ],
-      "supertype": "Forecast"
+      "supertype": "AbstractDeterministic"
     },
     {
       "struct_name": "ProbabilisticMetadata",
@@ -345,6 +345,38 @@
         }
       ],
       "supertype": "StaticTimeSeries"
+    },
+    {
+      "struct_name": "DeterministicSingleTimeSeries",
+      "docstring": "A deterministic forecast for a particular data field in a Component that wraps a SingleTimeSeries.",
+      "fields": [
+        {
+          "name": "single_time_series",
+          "data_type": "SingleTimeSeries",
+          "comment": "wrapped SingleTimeSeries object"
+        },
+        {
+          "name": "initial_timestamp",
+          "data_type": "Dates.DateTime",
+          "comment": "time series availability time"
+        },
+        {
+          "name": "interval",
+          "data_type": "Dates.Period",
+          "comment": "step time between forecast windows"
+        },
+        {
+          "name": "count",
+          "data_type": "Int",
+          "comment": "number of forecast windows"
+        },
+        {
+          "name": "horizon",
+          "data_type": "Int",
+          "comment": "length of this time series"
+        }
+      ],
+      "supertype": "AbstractDeterministic"
     }
   ],
   "struct_validation_descriptors": []

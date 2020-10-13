@@ -1,4 +1,5 @@
 abstract type Forecast <: TimeSeriesData end
+abstract type AbstractDeterministic <: Forecast end
 
 # Subtypes of Forecast must implement
 # - get_count

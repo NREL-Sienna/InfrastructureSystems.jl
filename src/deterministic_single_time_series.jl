@@ -1,89 +1,8 @@
-#=
-This file is auto-generated. Do not edit.
-=#
-"""
-    mutable struct DeterministicSingleTimeSeries <: Forecast
-        single_time_series::SingleTimeSeries
-        initial_timestamp::Dates.DateTime
-        interval::Dates.Period
-        count::Int
-        horizon::Int
-    end
-
-A deterministic forecast for a particular data field in a Component that wraps a SingleTimeSeries.
-
-# Arguments
-- `single_time_series::SingleTimeSeries`: wrapped SingleTimeSeries object
-- `initial_timestamp::Dates.DateTime`: time series availability time
-- `interval::Dates.Period`: step time between forecast windows
-- `count::Int`: number of forecast windows
-- `horizon::Int`: length of this time series
-"""
-mutable struct DeterministicSingleTimeSeries <: Forecast
-    "wrapped SingleTimeSeries object"
-    single_time_series::SingleTimeSeries
-    "time series availability time"
-    initial_timestamp::Dates.DateTime
-    "step time between forecast windows"
-    interval::Dates.Period
-    "number of forecast windows"
-    count::Int
-    "length of this time series"
-    horizon::Int
-    internal::InfrastructureSystemsInternal
-end
-
-function DeterministicSingleTimeSeries(;
-    single_time_series,
-    initial_timestamp,
-    interval,
-    count,
-    horizon,
-    internal = InfrastructureSystemsInternal(),
-)
-    DeterministicSingleTimeSeries(
-        single_time_series,
-        initial_timestamp,
-        interval,
-        count,
-        horizon,
-        internal,
-    )
-end
-
-"""Get [`DeterministicSingleTimeSeries`](@ref) `single_time_series`."""
-get_single_time_series(value::DeterministicSingleTimeSeries) = value.single_time_series
-"""Get [`DeterministicSingleTimeSeries`](@ref) `initial_timestamp`."""
-get_initial_timestamp(value::DeterministicSingleTimeSeries) = value.initial_timestamp
-"""Get [`DeterministicSingleTimeSeries`](@ref) `interval`."""
-get_interval(value::DeterministicSingleTimeSeries) = value.interval
-"""Get [`DeterministicSingleTimeSeries`](@ref) `count`."""
-get_count(value::DeterministicSingleTimeSeries) = value.count
-"""Get [`DeterministicSingleTimeSeries`](@ref) `horizon`."""
-get_horizon(value::DeterministicSingleTimeSeries) = value.horizon
-"""Get [`DeterministicSingleTimeSeries`](@ref) `internal`."""
-get_internal(value::DeterministicSingleTimeSeries) = value.internal
-get_resolution(value::DeterministicSingleTimeSeries) =
-    get_resolution(value.single_time_series)
-
-"""Set [`DeterministicSingleTimeSeries`](@ref) `single_time_series`."""
-set_single_time_series!(value::DeterministicSingleTimeSeries, val) =
-    value.single_time_series = val
-"""Set [`DeterministicSingleTimeSeries`](@ref) `initial_timestamp`."""
-set_initial_timestamp!(value::DeterministicSingleTimeSeries, val) =
-    value.initial_timestamp = val
-"""Set [`DeterministicSingleTimeSeries`](@ref) `interval`."""
-set_interval!(value::DeterministicSingleTimeSeries, val) = value.interval = val
-"""Set [`DeterministicSingleTimeSeries`](@ref) `count`."""
-set_count!(value::DeterministicSingleTimeSeries, val) = value.count = val
-"""Set [`DeterministicSingleTimeSeries`](@ref) `horizon`."""
-set_horizon!(value::DeterministicSingleTimeSeries, val) = value.horizon = val
-"""Set [`DeterministicSingleTimeSeries`](@ref) `internal`."""
-set_internal!(value::DeterministicSingleTimeSeries, val) = value.internal = val
-
 function get_array_for_hdf(forecast::DeterministicSingleTimeSeries)
     return get_array_for_hdf(forecast.single_time_series)
 end
+
+get_resolution(val::DeterministicSingleTimeSeries) = get_resolution(val.single_time_series)
 
 function get_window(
     forecast::DeterministicSingleTimeSeries,
@@ -115,4 +34,56 @@ function iterate_windows(forecast::DeterministicSingleTimeSeries)
     initial_times =
         range(forecast.initial_timestamp; step = forecast.interval, length = forecast.count)
     return (get_window(forecast, it) for it in initial_times)
+end
+
+function deserialize_deterministic_from_single_time_series(
+    storage::TimeSeriesStorage,
+    ts_metadata::DeterministicMetadata,
+    rows,
+    columns,
+    last_index,
+)
+    @debug "deserializing a SingleTimeSeries"
+    horizon = get_horizon(ts_metadata)
+    interval = get_interval(ts_metadata)
+    resolution = get_resolution(ts_metadata)
+    if length(rows) != horizon
+        throw(ArgumentError("Transforming SingleTimeSeries to Deterministic requires a full horizon: $rows"))
+    end
+
+    sts_rows =
+        _translate_deterministic_offsets(horizon, interval, resolution, columns, last_index)
+    sts = deserialize_time_series(
+        SingleTimeSeries,
+        storage,
+        SingleTimeSeriesMetadata(ts_metadata),
+        sts_rows,
+        UnitRange(1, 1),
+    )
+    initial_timestamp =
+        get_initial_timestamp(ts_metadata) + (columns.start - 1) * get_interval(ts_metadata)
+    return DeterministicSingleTimeSeries(
+        sts,
+        initial_timestamp,
+        interval,
+        length(columns),
+        horizon,
+    )
+end
+
+function _translate_deterministic_offsets(
+    horizon,
+    interval,
+    resolution,
+    columns,
+    last_index,
+)
+    interval = Dates.Millisecond(interval)
+    interval_offset = Int(interval / resolution)
+    s_index = (columns.start - 1) * interval_offset + 1
+    e_index = (columns.stop - 1) * interval_offset + horizon
+    @debug "translated offsets" horizon columns s_index e_index last_index
+    @assert s_index <= last_index
+    @assert e_index <= last_index
+    return UnitRange(s_index, e_index)
 end

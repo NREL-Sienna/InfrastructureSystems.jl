@@ -145,8 +145,8 @@ function deserialize_time_series(
         return ts
     end
 
-    @assert ts.forecast isa DeterministicStandard
-    full_data = get_data(ts.forecast)
+    @assert ts isa Deterministic
+    full_data = get_data(ts)
     initial_timestamp = get_initial_timestamp(ts)
     resolution = get_resolution(ts)
     interval = get_interval(ts)

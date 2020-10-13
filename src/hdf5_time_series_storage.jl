@@ -292,7 +292,7 @@ function deserialize_time_series(
     ts_metadata::TimeSeriesMetadata,
     rows::UnitRange,
     columns::UnitRange,
-) where {T <: Deterministic}
+) where {T <: AbstractDeterministic}
     # Note that all range checks must occur at a higher level.
     return HDF5.h5open(storage.file_path, "r") do file
         root = _get_root(storage, file)

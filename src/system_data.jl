@@ -351,14 +351,14 @@ function get_time_series_counts(data::SystemData)
 end
 
 """
-Transform all instances of SingleTimeSeries to Deterministic.
+Transform all instances of SingleTimeSeries to DeterministicSingleTimeSeries.
 """
 function transform_single_time_series!(
     data::SystemData,
     ::Type{T},
     horizon::Int,
     interval::Dates.Period,
-) where {T <: Deterministic}
+) where {T <: DeterministicSingleTimeSeries}
     is_first = true
     params = nothing
     for component in iterate_components_with_time_series(data.components)
