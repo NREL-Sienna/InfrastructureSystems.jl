@@ -1,5 +1,5 @@
 # These will get encoded into each dictionary when a struct is serialized.
-const METADATA_KEY = "__metadata"
+const METADATA_KEY = "__metadata__"
 const TYPE_KEY = "type"
 const MODULE_KEY = "module"
 const PARAMETERS_KEY = "parameters"
