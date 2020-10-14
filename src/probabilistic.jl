@@ -150,6 +150,7 @@ function get_horizon(forecast::Probabilistic)
     return size(first(values(get_data(forecast))))[1]
 end
 
+eltype_data(forecast::Probabilistic) = eltype_data_common(forecast)
 get_count(forecast::Probabilistic) = get_count_common(forecast)
 get_initial_times(forecast::Probabilistic) = get_initial_times_common(forecast)
 get_initial_timestamp(forecast::Probabilistic) = get_initial_timestamp_common(forecast)
