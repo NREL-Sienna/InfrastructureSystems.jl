@@ -131,14 +131,6 @@ function get_data_type(ts::TimeSeriesData)
     end
 end
 
-function eltype_data(ts::SingleTimeSeries)
-    return eltype(TimeSeries.values(ts.data))
-end
-
-function eltype_data(ts::TimeSeriesData)
-    return eltype(first(values(ts.data)))
-end
-
 function _write_time_series_attributes!(
     storage::Hdf5TimeSeriesStorage,
     ts::T,

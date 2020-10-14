@@ -210,6 +210,7 @@ function get_array_for_hdf(forecast::Deterministic)
     return transform_array_for_hdf(forecast.data, data_type)
 end
 
+eltype_data(forecast::Deterministic) = eltype_data_common(forecast)
 get_count(forecast::Deterministic) = get_count_common(forecast)
 get_horizon(forecast::Deterministic) = get_horizon_common(forecast)
 get_initial_times(forecast::Deterministic) = get_initial_times_common(forecast)

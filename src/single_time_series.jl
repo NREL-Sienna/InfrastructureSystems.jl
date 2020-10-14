@@ -121,6 +121,8 @@ function SingleTimeSeries(info::TimeSeriesParsedInfo)
     )
 end
 
+eltype_data(ts::SingleTimeSeries) = eltype(TimeSeries.values(ts.data))
+
 get_initial_timestamp(time_series::SingleTimeSeries) =
     TimeSeries.timestamp(get_data(time_series))[1]
 

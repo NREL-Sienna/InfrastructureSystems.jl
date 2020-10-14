@@ -25,3 +25,4 @@ abstract type TimeSeriesData <: InfrastructureSystemsComponent end
 # - Base.length
 # - get_resolution
 # - make_time_array
+# - eltype_data

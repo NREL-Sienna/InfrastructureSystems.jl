@@ -16,6 +16,12 @@ abstract type AbstractDeterministic <: Forecast end
 
 # This method requires that the forecast type implement a `get_data` method like
 # Deterministic.
+function eltype_data_common(forecast::Forecast)
+    return eltype(first(values(get_data(forecast))))
+end
+
+# This method requires that the forecast type implement a `get_data` method like
+# Deterministic.
 function get_count_common(forecast)
     return length(get_data(forecast))
 end

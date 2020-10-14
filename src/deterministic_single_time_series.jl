@@ -1,3 +1,5 @@
+eltype_data(ts::DeterministicSingleTimeSeries) = eltype_data(ts.single_time_series)
+
 function get_array_for_hdf(forecast::DeterministicSingleTimeSeries)
     return get_array_for_hdf(forecast.single_time_series)
 end

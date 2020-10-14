@@ -28,7 +28,6 @@ function Probabilistic(
     if quantile_count != length(percentiles)
         throw(ArgumentError("The amount of elements in the data doesn't match the length of the percentiles"))
     end
-    data = handle_normalization_factor(input_data, normalization_factor)
 
     return Probabilistic(name, resolution, percentiles, data, scaling_factor_multiplier)
 end
@@ -150,6 +149,7 @@ function get_horizon(forecast::Probabilistic)
     return size(first(values(get_data(forecast))))[1]
 end
 
+eltype_data(forecast::Probabilistic) = eltype_data_common(forecast)
 get_count(forecast::Probabilistic) = get_count_common(forecast)
 get_initial_times(forecast::Probabilistic) = get_initial_times_common(forecast)
 get_initial_timestamp(forecast::Probabilistic) = get_initial_timestamp_common(forecast)
