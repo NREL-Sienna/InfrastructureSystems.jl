@@ -21,8 +21,7 @@ function Scenarios(
     if !isa(input_data, SortedDict)
         input_data = SortedDict(input_data...)
     end
-    data = handle_normalization_factor(input_data, normalization_factor)
-    scenario_count = size(first(values(data)))[2]
+    scenario_count = size(first(values(input_data)))[2]
     data = handle_normalization_factor(input_data, normalization_factor)
 
     return Scenarios(name, resolution, scenario_count, data, scaling_factor_multiplier)
