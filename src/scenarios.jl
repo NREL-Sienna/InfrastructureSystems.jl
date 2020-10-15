@@ -105,9 +105,9 @@ function get_array_for_hdf(forecast::Scenarios)
     horizon = get_horizon(forecast)
     data = get_data(forecast)
 
-    data_for_hdf = Array{Float64, 3}(undef, interval_count, horizon, scenario_count)
+    data_for_hdf = Array{Float64, 3}(undef, horizon, interval_count, scenario_count)
     for (ix, f) in enumerate(values(data))
-        data_for_hdf[ix, :, :] = f
+        data_for_hdf[:, ix, :] = f
     end
     return data_for_hdf
 end

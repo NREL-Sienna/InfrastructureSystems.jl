@@ -480,15 +480,15 @@ function deserialize_time_series(
         data = SortedDict{Dates.DateTime, Array}()
         start_time = attributes["start_time"]
         if length(columns) == 1
-            data[start_time] = path["data"][first(columns), rows, 1:total_percentiles]
+            data[start_time] = path["data"][rows, first(columns), 1:total_percentiles]
         else
-            data_read = path["data"][columns, rows, 1:total_percentiles]
+            data_read = path["data"][rows, columns, 1:total_percentiles]
             for (i, it) in enumerate(range(
                 attributes["start_time"];
                 length = length(columns),
                 step = attributes["interval"],
             ))
-                data[it] = @view data_read[i, 1:length(rows), 1:total_percentiles]
+                data[it] = @view data_read[1:length(rows), i,1:total_percentiles]
             end
         end
 
@@ -517,15 +517,15 @@ function deserialize_time_series(
         data = SortedDict{Dates.DateTime, Array}()
         start_time = attributes["start_time"]
         if length(columns) == 1
-            data[start_time] = path["data"][first(columns), rows, 1:total_scenarios]
+            data[start_time] = path["data"][rows, first(columns), 1:total_scenarios]
         else
-            data_read = path["data"][columns, rows, 1:total_scenarios]
+            data_read = path["data"][rows, columns, 1:total_scenarios]
             for (i, it) in enumerate(range(
                 attributes["start_time"];
                 length = length(columns),
                 step = attributes["interval"],
             ))
-                data[it] = @view data_read[i, 1:length(rows), 1:total_scenarios]
+                data[it] = @view data_read[1:length(rows), i, 1:total_scenarios]
             end
         end
 
