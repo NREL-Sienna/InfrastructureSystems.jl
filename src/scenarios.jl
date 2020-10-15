@@ -67,7 +67,7 @@ function Scenarios(
 end
 
 function Scenarios(
-    ts_metadata::ProbabilisticMetadata,
+    ts_metadata::ScenariosMetadata,
     data::SortedDict{Dates.DateTime, Array},
 )
     return Scenarios(
@@ -75,6 +75,7 @@ function Scenarios(
         scenario_count = get_scenario_count(ts_metadata),
         resolution = get_resolution(ts_metadata),
         data = data,
+
         scaling_factor_multiplier = get_scaling_factor_multiplier(ts_metadata),
         internal = InfrastructureSystemsInternal(get_time_series_uuid(ts_metadata)),
     )
@@ -84,7 +85,6 @@ function Scenarios(info::TimeSeriesParsedInfo)
     return Scenarios(
         info.name,
         info.data,
-        info.percentiles,
         info.resolution;
         normalization_factor = info.normalization_factor,
         scaling_factor_multiplier = info.scaling_factor_multiplier,
