@@ -14,7 +14,7 @@ Construct Probabilistic from a SortedDict of Arrays.
 """
 function Probabilistic(
     name::AbstractString,
-    input_data::AbstractDict{Dates.DateTime, <:Array},
+    input_data::AbstractDict{Dates.DateTime, Matrix{Float64}},
     percentiles::Vector{Float64},
     resolution::Dates.Period;
     normalization_factor::NormalizationFactor = 1.0,
@@ -54,7 +54,7 @@ function Probabilistic(
     normalization_factor::NormalizationFactor = 1.0,
     scaling_factor_multiplier::Union{Nothing, Function} = nothing,
 )
-    data = SortedDict{Dates.DateTime, Vector{Float64}}()
+    data = SortedDict{Dates.DateTime, Matrix{Float64}}()
     resolution =
         TimeSeries.timestamp(first(values(input_data)))[2] -
         TimeSeries.timestamp(first(values(input_data)))[1]
@@ -138,9 +138,9 @@ function get_array_for_hdf(forecast::Probabilistic)
     horizon = get_horizon(forecast)
     data = get_data(forecast)
 
-    data_for_hdf = Array{Float64, 3}(undef, interval_count, horizon, percentile_count)
+    data_for_hdf = Array{Float64, 3}(undef, horizon, interval_count, percentile_count)
     for (ix, f) in enumerate(values(data))
-        data_for_hdf[ix, :, :] = f
+        data_for_hdf[:, ix, :] = f
     end
     return data_for_hdf
 end

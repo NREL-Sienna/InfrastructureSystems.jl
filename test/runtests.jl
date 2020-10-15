@@ -6,6 +6,7 @@ import UUIDs
 import JSON3
 using DataStructures: SortedDict
 using DataFrames
+using Random
 
 import InfrastructureSystems
 const IS = InfrastructureSystems

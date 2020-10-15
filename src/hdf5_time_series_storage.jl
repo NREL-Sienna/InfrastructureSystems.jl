@@ -343,11 +343,11 @@ end
 
 function get_hdf_array(
     dataset,
-    ::Type{<:T},
+    ::Type{<:CONSTANT},
     attributes::Dict{String, Any},
     rows::UnitRange{Int},
     columns::UnitRange{Int},
-) where {T <: CONSTANT}
+)
     data = SortedDict{Dates.DateTime, Array}()
     initial_timestamp = attributes["start_time"]
     interval = attributes["interval"]
@@ -472,15 +472,52 @@ function deserialize_time_series(
         data = SortedDict{Dates.DateTime, Array}()
         start_time = attributes["start_time"]
         if length(columns) == 1
-            data[start_time] = path["data"][columns, rows, 1:total_percentiles]
+            data[start_time] = path["data"][rows, first(columns), 1:total_percentiles]
         else
-            data_read = path["data"][columns, rows, 1:total_percentiles]
+            data_read = path["data"][rows, columns, 1:total_percentiles]
             for (i, it) in enumerate(range(
                 attributes["start_time"];
                 length = length(columns),
                 step = attributes["interval"],
             ))
-                data[it] = @view data_read[i, 1:length(rows), 1:total_percentiles]
+                data[it] = @view data_read[1:length(rows), i, 1:total_percentiles]
+            end
+        end
+
+        new_ts = T(ts_metadata, data)
+    end
+end
+
+function deserialize_time_series(
+    ::Type{T},
+    storage::Hdf5TimeSeriesStorage,
+    ts_metadata::TimeSeriesMetadata,
+    rows::UnitRange,
+    columns::UnitRange,
+) where {T <: Scenarios}
+    # Note that all range checks must occur at a higher level.
+    total_scenarios = get_scenario_count(ts_metadata)
+
+    return HDF5.h5open(storage.file_path, "r") do file
+        root = _get_root(storage, file)
+        uuid = get_time_series_uuid(ts_metadata)
+        path = _get_time_series_path(root, uuid)
+        attributes = _read_time_series_attributes(storage, path, rows, T)
+        @assert attributes["type"] == T
+        @assert length(attributes["dataset_size"]) == 3
+        @debug "deserializing a Forecast" T
+        data = SortedDict{Dates.DateTime, Array}()
+        start_time = attributes["start_time"]
+        if length(columns) == 1
+            data[start_time] = path["data"][rows, first(columns), 1:total_scenarios]
+        else
+            data_read = path["data"][rows, columns, 1:total_scenarios]
+            for (i, it) in enumerate(range(
+                attributes["start_time"];
+                length = length(columns),
+                step = attributes["interval"],
+            ))
+                data[it] = @view data_read[1:length(rows), i, 1:total_scenarios]
             end
         end
 

@@ -199,18 +199,75 @@ end
     name = "test"
     horizon = 24
     data_vec = Dict(initial_time => ones(horizon, 99), other_time => ones(horizon, 99))
-    d = data_vec
     sys = IS.SystemData()
     component_name = "Component1"
     component = IS.TestComponent(component_name, 5)
     IS.add_component!(sys, component)
-    forecast = IS.Probabilistic(name, d, ones(99), resolution)
+    forecast = IS.Probabilistic(name, data_vec, ones(99), resolution)
     IS.add_time_series!(sys, component, forecast)
     @test IS.has_time_series(component)
     @test IS.get_initial_timestamp(forecast) == initial_time
     forecast_retrieved =
         IS.get_time_series(IS.Probabilistic, component, "test"; start_time = initial_time)
     @test IS.get_initial_timestamp(forecast_retrieved) == initial_time
+
+    data_ts = Dict(
+        initial_time => TimeSeries.TimeArray(
+            range(initial_time; length = horizon, step = resolution),
+            ones(horizon, 99),
+        ),
+        other_time => TimeSeries.TimeArray(
+            range(other_time; length = horizon, step = resolution),
+            ones(horizon, 99),
+        ),
+    )
+    sys = IS.SystemData()
+    component_name = "Component1"
+    component = IS.TestComponent(component_name, 5)
+    IS.add_component!(sys, component)
+    forecast = IS.Probabilistic(name, data_ts, ones(99))
+    IS.add_time_series!(sys, component, forecast)
+    @test IS.has_time_series(component)
+    @test IS.get_initial_timestamp(forecast) == initial_time
+end
+
+@testset "Test add Scenarios" begin
+    initial_time = Dates.DateTime("2020-09-01")
+    resolution = Dates.Hour(1)
+    other_time = initial_time + resolution
+    name = "test"
+    horizon = 24
+    data_vec = Dict(initial_time => ones(horizon, 99), other_time => ones(horizon, 99))
+    sys = IS.SystemData()
+    component_name = "Component1"
+    component = IS.TestComponent(component_name, 5)
+    IS.add_component!(sys, component)
+    forecast = IS.Scenarios(name, data_vec, resolution)
+    IS.add_time_series!(sys, component, forecast)
+    @test IS.has_time_series(component)
+    @test IS.get_initial_timestamp(forecast) == initial_time
+    forecast_retrieved =
+        IS.get_time_series(IS.Scenarios, component, "test"; start_time = initial_time)
+    @test IS.get_initial_timestamp(forecast_retrieved) == initial_time
+
+    data_ts = Dict(
+        initial_time => TimeSeries.TimeArray(
+            range(initial_time; length = horizon, step = resolution),
+            ones(horizon, 2),
+        ),
+        other_time => TimeSeries.TimeArray(
+            range(other_time; length = horizon, step = resolution),
+            ones(horizon, 2),
+        ),
+    )
+    sys = IS.SystemData()
+    component_name = "Component1"
+    component = IS.TestComponent(component_name, 5)
+    IS.add_component!(sys, component)
+    forecast = IS.Scenarios(name, data_ts)
+    IS.add_time_series!(sys, component, forecast)
+    @test IS.has_time_series(component)
+    @test IS.get_initial_timestamp(forecast) == initial_time
 end
 
 @testset "Test add SingleTimeSeries" begin
@@ -968,8 +1025,6 @@ end
     end
 end
 
-# TODO 1.0: Scenarios are broken
-#=
 @testset "Test Scenarios time_series" begin
     sys = IS.SystemData()
     name = "Component1"
@@ -981,38 +1036,60 @@ end
     horizon = 24
     resolution = Dates.Hour(1)
     scenario_count = 2
-    data = SortedDict(initial_timestamp => ones(horizon, scenario_count))
+    data_input = rand(horizon, scenario_count)
+    data = SortedDict(initial_timestamp => data_input)
     time_series = IS.Scenarios(
         name = name,
-        initial_timestamp = initial_timestamp,
-        horizon = horizon,
         resolution = resolution,
         scenario_count = scenario_count,
         data = data,
     )
     fdata = IS.get_data(time_series)
-    @test length(TimeSeries.colnames(fdata)) == 2
-    @test TimeSeries.timestamp(ta) == TimeSeries.timestamp(fdata)
-    @test TimeSeries.values(ta) == TimeSeries.values(fdata)
+    @test size(first(values(fdata)))[2] == 2
+    @test initial_timestamp == first(keys((fdata)))
+    @test data_input == first(values((fdata)))
 
     IS.add_time_series!(sys, component, time_series)
     time_series2 = IS.get_time_series(IS.Scenarios, component, name)
     @test time_series2 isa IS.Scenarios
     fdata2 = IS.get_data(time_series2)
-    @test length(TimeSeries.colnames(fdata2)) == 2
-    @test TimeSeries.timestamp(ta) == TimeSeries.timestamp(fdata2)
-    @test TimeSeries.values(ta) == TimeSeries.values(fdata2)
-
-    no_time_series = 3
-    time_series3 =
-        IS.get_time_series(IS.Scenarios, component, name, no_time_series)
-    @test time_series3 isa IS.Scenarios
-    fdata3 = IS.get_data(time_series3)
-    @test length(TimeSeries.colnames(fdata3)) == 2
-    @test TimeSeries.timestamp(ta)[1:no_time_series] == TimeSeries.timestamp(fdata3)
-    @test TimeSeries.values(ta)[1:no_time_series, :] == TimeSeries.values(fdata3)
+    @test size(first(values(fdata2)))[2] == 2
+    @test initial_timestamp == first(keys((fdata2)))
+    @test data_input == first(values((fdata2)))
 end
-=#
+
+@testset "Test Probabilistic time_series" begin
+    sys = IS.SystemData()
+    name = "Component1"
+    name = "val"
+    component = IS.TestComponent(name, 5)
+    IS.add_component!(sys, component)
+
+    initial_timestamp = Dates.DateTime("2020-01-01T00:00:00")
+    horizon = 24
+    resolution = Dates.Hour(1)
+    percentiles = 1:99
+    data_input = rand(horizon, length(percentiles))
+    data = SortedDict(initial_timestamp => data_input)
+    time_series = IS.Probabilistic(
+        name = name,
+        resolution = resolution,
+        percentiles = percentiles,
+        data = data,
+    )
+    fdata = IS.get_data(time_series)
+    @test size(first(values(fdata)))[2] == length(percentiles)
+    @test initial_timestamp == first(keys((fdata)))
+    @test data_input == first(values((fdata)))
+
+    IS.add_time_series!(sys, component, time_series)
+    time_series2 = IS.get_time_series(IS.Probabilistic, component, name)
+    @test time_series2 isa IS.Probabilistic
+    fdata2 = IS.get_data(time_series2)
+    @test size(first(values(fdata2)))[2] == length(percentiles)
+    @test initial_timestamp == first(keys((fdata2)))
+    @test data_input == first(values((fdata2)))
+end
 
 @testset "Add time_series to unsupported struct" begin
     struct TestComponentNoTimeSeries <: IS.InfrastructureSystemsComponent
@@ -1488,7 +1565,78 @@ end
 end
 
 @testset "Test get_time_series_array Probabilistic" begin
-    # TODO 1.0
+    initial_time = Dates.DateTime("2020-09-01")
+    resolution = Dates.Hour(1)
+    other_time = initial_time + resolution
+    name = "test"
+    horizon = 24
+    data1 = rand(horizon, 99)
+    data2 = rand(horizon, 99)
+    data_vec = Dict(initial_time => data1, other_time => data2)
+    sys = IS.SystemData()
+    component_name = "Component1"
+    component = IS.TestComponent(component_name, 5)
+    IS.add_component!(sys, component)
+    forecast = IS.Probabilistic(name, data_vec, ones(99), resolution)
+    IS.add_time_series!(sys, component, forecast)
+    @test IS.has_time_series(component)
+    @test IS.get_initial_timestamp(forecast) == initial_time
+    forecast_retrieved =
+        IS.get_time_series(IS.Probabilistic, component, "test"; start_time = initial_time)
+    @test IS.get_initial_timestamp(forecast_retrieved) == initial_time
+    t = IS.get_time_series_array(
+        IS.Probabilistic,
+        component,
+        "test";
+        start_time = initial_time,
+    )
+    @test size(t) == (24, 99)
+    @test TimeSeries.values(t) == data1
+
+    t = IS.get_time_series_array(
+        IS.Probabilistic,
+        component,
+        "test";
+        start_time = initial_time,
+        len = 12,
+    )
+    @test size(t) == (12, 99)
+    @test TimeSeries.values(t) == data1[1:12, :]
+end
+
+@testset "Test get_time_series_array Scenarios" begin
+    initial_time = Dates.DateTime("2020-09-01")
+    resolution = Dates.Hour(1)
+    other_time = initial_time + resolution
+    name = "test"
+    horizon = 24
+    data1 = rand(horizon, 99)
+    data2 = rand(horizon, 99)
+    data_vec = Dict(initial_time => data1, other_time => data2)
+    sys = IS.SystemData()
+    component_name = "Component1"
+    component = IS.TestComponent(component_name, 5)
+    IS.add_component!(sys, component)
+    forecast = IS.Scenarios(name, data_vec, resolution)
+    IS.add_time_series!(sys, component, forecast)
+    @test IS.has_time_series(component)
+    @test IS.get_initial_timestamp(forecast) == initial_time
+    forecast_retrieved =
+        IS.get_time_series(IS.Scenarios, component, "test"; start_time = initial_time)
+    @test IS.get_initial_timestamp(forecast_retrieved) == initial_time
+    t = IS.get_time_series_array(IS.Scenarios, component, "test"; start_time = initial_time)
+    @test size(t) == (24, 99)
+    @test TimeSeries.values(t) == data1
+
+    t = IS.get_time_series_array(
+        IS.Scenarios,
+        component,
+        "test";
+        start_time = initial_time,
+        len = 12,
+    )
+    @test size(t) == (12, 99)
+    @test TimeSeries.values(t) == data1[1:12, :]
 end
 
 @testset "Test conflicting time series parameters" begin
@@ -1516,7 +1664,7 @@ end
     # Set baseline parameters for the rest of the tests.
     data = SortedDict(initial_time => ones(horizon), second_time => ones(horizon))
     forecast = IS.Deterministic(data = data, name = name, resolution = resolution)
-    IS.add_time_series!(sys, component, forecast)
+    @test_throws IS.ConflictingInputsError IS.add_time_series!(sys, component, forecast)
 
     # Conflicting initial time
     initial_time2 = Dates.DateTime("2020-09-02")
