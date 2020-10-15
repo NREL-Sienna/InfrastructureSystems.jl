@@ -211,7 +211,7 @@ end
     forecast_retrieved =
         IS.get_time_series(IS.Probabilistic, component, "test"; start_time = initial_time)
     @test IS.get_initial_timestamp(forecast_retrieved) == initial_time
-    t = IS.get_time_series_array(IS.Scenarios, component, "test"; start_time = initial_time)
+    t = IS.get_time_series_array(IS.Probabilistic, component, "test"; start_time = initial_time)
     @test size(t) == (24, 99)
 end
 
@@ -227,7 +227,7 @@ end
     component_name = "Component1"
     component = IS.TestComponent(component_name, 5)
     IS.add_component!(sys, component)
-    forecast = IS.Scenarios(name, d, ones(99), resolution)
+    forecast = IS.Scenarios(name, d, resolution)
     IS.add_time_series!(sys, component, forecast)
     @test IS.has_time_series(component)
     @test IS.get_initial_timestamp(forecast) == initial_time
