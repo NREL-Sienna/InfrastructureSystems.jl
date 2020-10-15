@@ -120,13 +120,13 @@ function get_window_common(
     end
 
     data = get_data(forecast)[initial_time]
-    if length(size(data)) == 3
-        @assert size(data)[1] == 1
-        data = data[1, :, :]
-    end
-
-    if len != horizon
-        data = data[1:len]
+    if length(size(data)) == 2
+        # This is necessary because the Deterministic and Probabilistic are 3D Arrays
+        # We need to do this to make the data a 2D TimeArray. In a get_window the data is always count = 1
+        @assert size(data)[1] <= len
+        data = @view data[1:len, :]
+    else
+        data = @view data[1:len]
     end
 
     return TimeSeries.TimeArray(make_timestamps(forecast, initial_time, len), data)

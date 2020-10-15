@@ -351,11 +351,11 @@ end
 
 function get_hdf_array(
     dataset,
-    ::Type{<:T},
+    ::Type{<:CONSTANT},
     attributes::Dict{String, Any},
     rows::UnitRange{Int},
     columns::UnitRange{Int},
-) where {T <: CONSTANT}
+)
     data = SortedDict{Dates.DateTime, Array}()
     initial_timestamp = attributes["start_time"]
     interval = attributes["interval"]
@@ -480,7 +480,7 @@ function deserialize_time_series(
         data = SortedDict{Dates.DateTime, Array}()
         start_time = attributes["start_time"]
         if length(columns) == 1
-            data[start_time] = path["data"][1, rows, 1:total_percentiles]
+            data[start_time] = path["data"][first(columns), rows, 1:total_percentiles]
         else
             data_read = path["data"][columns, rows, 1:total_percentiles]
             for (i, it) in enumerate(range(
@@ -517,7 +517,7 @@ function deserialize_time_series(
         data = SortedDict{Dates.DateTime, Array}()
         start_time = attributes["start_time"]
         if length(columns) == 1
-            data[start_time] = path["data"][1, rows, 1:total_scenarios]
+            data[start_time] = path["data"][first(columns), rows, 1:total_scenarios]
         else
             data_read = path["data"][columns, rows, 1:total_scenarios]
             for (i, it) in enumerate(range(
