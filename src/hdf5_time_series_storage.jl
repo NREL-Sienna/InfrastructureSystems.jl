@@ -488,7 +488,7 @@ function deserialize_time_series(
                 length = length(columns),
                 step = attributes["interval"],
             ))
-                data[it] = @view data_read[1:length(rows), i,1:total_percentiles]
+                data[it] = @view data_read[1:length(rows), i, 1:total_percentiles]
             end
         end
 
