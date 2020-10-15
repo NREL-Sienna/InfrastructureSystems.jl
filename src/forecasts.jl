@@ -129,7 +129,5 @@ function get_window_common(
         data = data[1:len]
     end
 
-    @assert size(data)[1] == len
-
     return TimeSeries.TimeArray(make_timestamps(forecast, initial_time, len), data)
 end
