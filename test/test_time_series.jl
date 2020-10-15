@@ -211,7 +211,12 @@ end
     forecast_retrieved =
         IS.get_time_series(IS.Probabilistic, component, "test"; start_time = initial_time)
     @test IS.get_initial_timestamp(forecast_retrieved) == initial_time
-    t = IS.get_time_series_array(IS.Probabilistic, component, "test"; start_time = initial_time)
+    t = IS.get_time_series_array(
+        IS.Probabilistic,
+        component,
+        "test";
+        start_time = initial_time,
+    )
     @test size(t) == (24, 99)
 end
 

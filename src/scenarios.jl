@@ -28,7 +28,6 @@ function Scenarios(
     return Scenarios(name, resolution, scenario_count, data, scaling_factor_multiplier)
 end
 
-
 """
 Construct Scenarios from a Dict of TimeArrays.
 
@@ -66,16 +65,12 @@ function Scenarios(
     )
 end
 
-function Scenarios(
-    ts_metadata::ScenariosMetadata,
-    data::SortedDict{Dates.DateTime, Array},
-)
+function Scenarios(ts_metadata::ScenariosMetadata, data::SortedDict{Dates.DateTime, Array})
     return Scenarios(
         name = get_name(ts_metadata),
         scenario_count = get_scenario_count(ts_metadata),
         resolution = get_resolution(ts_metadata),
         data = data,
-
         scaling_factor_multiplier = get_scaling_factor_multiplier(ts_metadata),
         internal = InfrastructureSystemsInternal(get_time_series_uuid(ts_metadata)),
     )

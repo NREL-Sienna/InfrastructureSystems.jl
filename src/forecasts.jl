@@ -122,7 +122,7 @@ function get_window_common(
     data = get_data(forecast)[initial_time]
     if length(size(data)) == 3
         @assert size(data)[1] == 1
-        data = data[1,:,:]
+        data = data[1, :, :]
     end
 
     if len != horizon
