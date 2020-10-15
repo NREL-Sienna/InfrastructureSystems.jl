@@ -105,9 +105,9 @@ function get_array_for_hdf(forecast::Scenarios)
     horizon = get_horizon(forecast)
     data = get_data(forecast)
 
-    data_for_hdf = Array{Float64, 3}(undef, horizon, interval_count, scenario_count)
+    data_for_hdf = Array{Float64, 3}(undef, scenario_count, horizon, interval_count)
     for (ix, f) in enumerate(values(data))
-        data_for_hdf[:, ix, :] = f
+        data_for_hdf[:, :, ix] = transpose(f)
     end
     return data_for_hdf
 end
@@ -116,6 +116,7 @@ function get_horizon(forecast::Scenarios)
     return size(first(values(get_data(forecast))))[1]
 end
 
+eltype_data(forecast::Scenarios) = eltype_data_common(forecast)
 get_count(forecast::Scenarios) = get_count_common(forecast)
 get_initial_times(forecast::Scenarios) = get_initial_times_common(forecast)
 get_initial_timestamp(forecast::Scenarios) = get_initial_timestamp_common(forecast)

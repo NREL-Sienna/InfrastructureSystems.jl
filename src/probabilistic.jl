@@ -138,9 +138,9 @@ function get_array_for_hdf(forecast::Probabilistic)
     horizon = get_horizon(forecast)
     data = get_data(forecast)
 
-    data_for_hdf = Array{Float64, 3}(undef, horizon, interval_count, percentile_count)
+    data_for_hdf = Array{Float64, 3}(undef, percentile_count, horizon, interval_count)
     for (ix, f) in enumerate(values(data))
-        data_for_hdf[:, ix, :] = f
+        data_for_hdf[:, :, ix] = transpose(f)
     end
     return data_for_hdf
 end
