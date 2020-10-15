@@ -212,14 +212,14 @@ end
     @test IS.get_initial_timestamp(forecast_retrieved) == initial_time
 
     data_ts = Dict(
-    initial_time => TimeSeries.TimeArray(
-        range(initial_time; length = horizon, step = resolution),
-        ones(horizon, 99),
-    ),
-    other_time => TimeSeries.TimeArray(
-        range(other_time; length = horizon, step = resolution),
-        ones(horizon, 99),
-    ),
+        initial_time => TimeSeries.TimeArray(
+            range(initial_time; length = horizon, step = resolution),
+            ones(horizon, 99),
+        ),
+        other_time => TimeSeries.TimeArray(
+            range(other_time; length = horizon, step = resolution),
+            ones(horizon, 99),
+        ),
     )
     sys = IS.SystemData()
     component_name = "Component1"
@@ -229,7 +229,6 @@ end
     IS.add_time_series!(sys, component, forecast)
     @test IS.has_time_series(component)
     @test IS.get_initial_timestamp(forecast) == initial_time
-
 end
 
 @testset "Test add Scenarios" begin
@@ -252,14 +251,14 @@ end
     @test IS.get_initial_timestamp(forecast_retrieved) == initial_time
 
     data_ts = Dict(
-    initial_time => TimeSeries.TimeArray(
-        range(initial_time; length = horizon, step = resolution),
-        ones(horizon, 2),
-    ),
-    other_time => TimeSeries.TimeArray(
-        range(other_time; length = horizon, step = resolution),
-        ones(horizon, 2),
-    ),
+        initial_time => TimeSeries.TimeArray(
+            range(initial_time; length = horizon, step = resolution),
+            ones(horizon, 2),
+        ),
+        other_time => TimeSeries.TimeArray(
+            range(other_time; length = horizon, step = resolution),
+            ones(horizon, 2),
+        ),
     )
     sys = IS.SystemData()
     component_name = "Component1"
