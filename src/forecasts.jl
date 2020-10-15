@@ -120,9 +120,16 @@ function get_window_common(
     end
 
     data = get_data(forecast)[initial_time]
+    if length(size(data)) == 3
+        @assert size(data)[1] == 1
+        data = data[1,:,:]
+    end
+
     if len != horizon
         data = data[1:len]
     end
+
+    @assert size(data)[1] == len
 
     return TimeSeries.TimeArray(make_timestamps(forecast, initial_time, len), data)
 end
