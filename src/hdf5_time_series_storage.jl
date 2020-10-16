@@ -475,8 +475,10 @@ function deserialize_time_series(
             data[start_time] =
                 transpose(path["data"][1:total_percentiles, rows, first(columns)])
         else
-            data_read =
-                permutedims(path["data"][1:total_percentiles, rows, columns], [3, 2, 1])
+            data_read = PermutedDimsArray(
+                path["data"][1:total_percentiles, rows, columns],
+                [3, 2, 1],
+            )
             for (i, it) in enumerate(range(
                 attributes["start_time"];
                 length = length(columns),
@@ -515,7 +517,7 @@ function deserialize_time_series(
                 transpose(path["data"][1:total_scenarios, rows, first(columns)])
         else
             data_read =
-                permutedims(path["data"][1:total_scenarios, rows, columns], [3, 2, 1])
+                PermutedDimsArray(path["data"][1:total_scenarios, rows, columns], [3, 2, 1])
             for (i, it) in enumerate(range(
                 attributes["start_time"];
                 length = length(columns),
