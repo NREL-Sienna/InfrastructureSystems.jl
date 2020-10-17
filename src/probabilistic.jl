@@ -14,16 +14,13 @@ Construct Probabilistic from a SortedDict of Arrays.
 """
 function Probabilistic(
     name::AbstractString,
-    input_data::AbstractDict{Dates.DateTime, Matrix{Float64}},
-    percentiles::Vector{Float64},
+    input_data::AbstractDict,
+    percentiles::Vector,
     resolution::Dates.Period;
     normalization_factor::NormalizationFactor = 1.0,
     scaling_factor_multiplier::Union{Nothing, Function} = nothing,
 )
-    if !isa(input_data, SortedDict)
-        input_data = SortedDict(input_data...)
-    end
-    data = handle_normalization_factor(input_data, normalization_factor)
+    data = handle_normalization_factor(convert_data(input_data), normalization_factor)
     quantile_count = size(first(values(data)))[2]
     if quantile_count != length(percentiles)
         throw(ArgumentError("The amount of elements in the data doesn't match the length of the percentiles"))
@@ -78,7 +75,7 @@ Construct Deterministic from RawTimeSeries.
 function Probabilistic(
     name::AbstractString,
     series_data::RawTimeSeries,
-    percentiles::Vector{Float64},
+    percentiles::Vector,
     resolution::Dates.Period;
     normalization_factor::NormalizationFactor = 1.0,
     scaling_factor_multiplier::Union{Nothing, Function} = nothing,
@@ -93,10 +90,7 @@ function Probabilistic(
     )
 end
 
-function Probabilistic(
-    ts_metadata::ProbabilisticMetadata,
-    data::SortedDict{Dates.DateTime, Array},
-)
+function Probabilistic(ts_metadata::ProbabilisticMetadata, data::SortedDict)
     return Probabilistic(
         name = get_name(ts_metadata),
         percentiles = get_percentiles(ts_metadata),
@@ -131,6 +125,13 @@ function ProbabilisticMetadata(time_series::Probabilistic)
         get_scaling_factor_multiplier(time_series),
     )
 end
+
+convert_data(data::AbstractDict{Dates.DateTime, T}) where {T <: Matrix{<:Real}} =
+    SortedDict{Dates.DateTime, Matrix{CONSTANT}}(data...)
+convert_data(data::AbstractDict{Dates.DateTime, T}) where {T <: Matrix{<:Tuple}} =
+    SortedDict{Dates.DateTime, Matrix{POLYNOMIAL}}(data...)
+convert_data(data::AbstractDict{Dates.DateTime, T}) where {T <: Matrix{<:Matrix{<:Tuple}}} =
+    SortedDict{Dates.DateTime, Matrix{PWL}}(data...)
 
 function get_array_for_hdf(forecast::Probabilistic)
     interval_count = get_count(forecast)
