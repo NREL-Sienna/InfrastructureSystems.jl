@@ -23,5 +23,3 @@ end
 const CONSTANT = Float64
 const POLYNOMIAL = Tuple{Float64, Float64}
 const PWL = Vector{Tuple{Float64, Float64}}
-
-const DeterministicDataTypes = Union{Vector{CONSTANT}, Vector{POLYNOMIAL}, Vector{PWL}}

@@ -1,16 +1,3 @@
-convert_data(data::AbstractDict{Dates.DateTime, T}) where {T <: Vector{<:Real}} =
-    SortedDict{Dates.DateTime, Vector{CONSTANT}}(data...)
-convert_data(data::AbstractDict{Dates.DateTime, T}) where {T <: Vector{<:Tuple}} =
-    SortedDict{Dates.DateTime, Vector{POLYNOMIAL}}(data...)
-convert_data(data::AbstractDict{Dates.DateTime, T}) where {T <: Vector{<:Vector{<:Tuple}}} =
-    SortedDict{Dates.DateTime, Vector{PWL}}(data...)
-
-# Workaround for what appears to be a bug in SortedDict. If a user tries to construct
-# SortedDict(i => ones(2) for i in 1:2)
-# it won't discern the types and will return SortedDict{Any,Any,Base.Order.ForwardOrdering}
-# This will only work for the most common use case of Vector{CONSTANT}.
-convert_data(data::AbstractDict) = SortedDict{Dates.DateTime, Vector{CONSTANT}}(data...)
-
 function Deterministic(
     name::AbstractString,
     input_data::AbstractDict,
@@ -18,8 +5,7 @@ function Deterministic(
     normalization_factor::NormalizationFactor = 1.0,
     scaling_factor_multiplier::Union{Nothing, Function} = nothing,
 )
-    data = convert_data(input_data)
-    data = handle_normalization_factor(data, normalization_factor)
+    data = handle_normalization_factor(convert_data(input_data), normalization_factor)
     return Deterministic(name, data, resolution, scaling_factor_multiplier)
 end
 
@@ -156,6 +142,21 @@ function Deterministic(forecast::Deterministic, data)
 
     return Deterministic(; vals...)
 end
+
+convert_data(data::AbstractDict{Dates.DateTime, T}) where {T <: Vector{<:Real}} =
+    SortedDict{Dates.DateTime, Vector{CONSTANT}}(data...)
+convert_data(data::AbstractDict{Dates.DateTime, T}) where {T <: Vector{<:Tuple}} =
+    SortedDict{Dates.DateTime, Vector{POLYNOMIAL}}(data...)
+convert_data(data::AbstractDict{Dates.DateTime, T}) where {T <: Vector{<:Vector{<:Tuple}}} =
+    SortedDict{Dates.DateTime, Vector{PWL}}(data...)
+
+# Workaround for a bug/limitation in SortedDict. If a user tries to construct
+# SortedDict(i => ones(2) for i in 1:2)
+# it won't discern the types and will return SortedDict{Any,Any,Base.Order.ForwardOrdering}
+# https://github.com/JuliaCollections/DataStructures.jl/issues/239
+# This will only work for the most common use case of Vector{CONSTANT}.
+# For other types the user will need to create SortedDict with explicit key-value types.
+convert_data(data::AbstractDict) = SortedDict{Dates.DateTime, Vector{CONSTANT}}(data...)
 
 function get_array_for_hdf(forecast::Deterministic)
     return transform_array_for_hdf(forecast.data)
