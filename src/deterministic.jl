@@ -1,15 +1,26 @@
+convert_data(data::AbstractDict{Dates.DateTime, T}) where {T <: Vector{<:Real}} =
+    SortedDict{Dates.DateTime, Vector{CONSTANT}}(data...)
+convert_data(data::AbstractDict{Dates.DateTime, T}) where {T <: Vector{<:Tuple}} =
+    SortedDict{Dates.DateTime, Vector{POLYNOMIAL}}(data...)
+convert_data(data::AbstractDict{Dates.DateTime, T}) where {T <: Vector{<:Vector{<:Tuple}}} =
+    SortedDict{Dates.DateTime, Vector{PWL}}(data...)
+
+# Workaround for what appears to be a bug in SortedDict. If a user tries to construct
+# SortedDict(i => ones(2) for i in 1:2)
+# it won't discern the types and will return SortedDict{Any,Any,Base.Order.ForwardOrdering}
+# This will only work for the most common use case of Vector{CONSTANT}.
+convert_data(data::AbstractDict) = SortedDict{Dates.DateTime, Vector{CONSTANT}}(data...)
+
 function Deterministic(
     name::AbstractString,
-    input_data::AbstractDict{Dates.DateTime, Vector{Float64}},
+    input_data::AbstractDict,
     resolution::Dates.Period;
     normalization_factor::NormalizationFactor = 1.0,
     scaling_factor_multiplier::Union{Nothing, Function} = nothing,
 )
-    if !isa(input_data, SortedDict)
-        input_data = SortedDict(input_data...)
-    end
-    data = handle_normalization_factor(input_data, normalization_factor)
-    return Deterministic(name, resolution, data, scaling_factor_multiplier)
+    data = convert_data(input_data)
+    data = handle_normalization_factor(data, normalization_factor)
+    return Deterministic(name, data, resolution, scaling_factor_multiplier)
 end
 
 """
@@ -51,62 +62,6 @@ function Deterministic(
         normalization_factor = normalization_factor,
         scaling_factor_multiplier = scaling_factor_multiplier,
     )
-end
-
-"""
-Construct Deterministic from a Dict of collections of data.
-
-# Arguments
-- `name::AbstractString`: user-defined name
-- `input_data::AbstractDict{Dates.DateTime, Any}`: time series data. The values in the
-  dictionary should be able to be converted to Float64.
-- `resolution::Dates.Period`: The resolution of the forecast in Dates.Period`
-- `normalization_factor::NormalizationFactor = 1.0`: optional normalization factor to apply
-  to each data entry
-- `scaling_factor_multiplier::Union{Nothing, Function} = nothing`: If the data are scaling
-  factors then this function will be called on the component and applied to the data when
-  [`get_time_series_array`](@ref) is called.
-"""
-function Deterministic(
-    name::AbstractString,
-    input_data::AbstractDict{Dates.DateTime, <:Any},
-    resolution::Dates.Period;
-    normalization_factor::NormalizationFactor = 1.0,
-    scaling_factor_multiplier::Union{Nothing, Function} = nothing,
-)
-    data = SortedDict{Dates.DateTime, Vector{Float64}}()
-    for (k, v) in input_data
-        try
-            data[k] = Float64[i for i in v]
-        catch e
-            @error("The forecast data provided $(eltype(input_data)) can't be converted to Vector{Float64}")
-            rethrow()
-        end
-    end
-    @assert !isempty(data)
-
-    return Deterministic(
-        name,
-        data,
-        resolution;
-        normalization_factor = normalization_factor,
-        scaling_factor_multiplier = scaling_factor_multiplier,
-    )
-end
-
-function Deterministic(
-    name::AbstractString,
-    input_data::AbstractDict{Dates.DateTime, <:Vector},
-    resolution::Dates.Period;
-    normalization_factor::NormalizationFactor = 1.0,
-    scaling_factor_multiplier::Union{Nothing, Function} = nothing,
-)
-    if !isa(input_data, SortedDict)
-        input_data = SortedDict(input_data...)
-    end
-    @assert !isempty(input_data)
-
-    return Deterministic(name, resolution, input_data, scaling_factor_multiplier)
 end
 
 """
@@ -161,10 +116,7 @@ function Deterministic(
     )
 end
 
-function Deterministic(
-    ts_metadata::DeterministicMetadata,
-    data::SortedDict{Dates.DateTime, Array},
-)
+function Deterministic(ts_metadata::DeterministicMetadata, data::SortedDict)
     return Deterministic(
         name = get_name(ts_metadata),
         resolution = get_resolution(ts_metadata),
@@ -187,10 +139,10 @@ end
 """
 Construct a new Deterministic from an existing instance and a subset of data.
 """
-function Deterministic(forecast::Deterministic, data::SortedDict{Dates.DateTime, Vector})
+function Deterministic(forecast::Deterministic, data)
     vals = Dict{Symbol, Any}()
     for (fname, ftype) in zip(fieldnames(Deterministic), fieldtypes(Deterministic))
-        if ftype <: SortedDict{Dates.DateTime, Vector}
+        if ftype <: SortedDict
             val = data
         elseif ftype <: InfrastructureSystemsInternal
             # Need to create a new UUID.
@@ -206,8 +158,7 @@ function Deterministic(forecast::Deterministic, data::SortedDict{Dates.DateTime,
 end
 
 function get_array_for_hdf(forecast::Deterministic)
-    data_type = eltype(first(values(forecast.data)))
-    return transform_array_for_hdf(forecast.data, data_type)
+    return transform_array_for_hdf(forecast.data)
 end
 
 eltype_data(forecast::Deterministic) = eltype_data_common(forecast)

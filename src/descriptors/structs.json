@@ -62,14 +62,14 @@
           "comment": "user-defined name"
         },
         {
+          "name": "data",
+          "data_type": "Union{SortedDict{Dates.DateTime, Vector{CONSTANT}}, SortedDict{Dates.DateTime, Vector{POLYNOMIAL}}, SortedDict{Dates.DateTime, Vector{PWL}}}",
+          "comment": "timestamp - scalingfactor"
+        },
+        {
           "name": "resolution",
           "data_type": "Dates.Period",
           "comment": "forecast resolution"
-        },
-        {
-          "name": "data",
-          "data_type": "SortedDict{Dates.DateTime, Vector}",
-          "comment": "timestamp - scalingfactor"
         },
         {
           "name": "scaling_factor_multiplier",

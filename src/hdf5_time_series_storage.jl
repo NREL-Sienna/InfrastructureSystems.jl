@@ -126,8 +126,10 @@ function get_data_type(ts::TimeSeriesData)
         return "POLYNOMIAL"
     elseif data_type == PWL
         return "PWL"
+    elseif data_type <: Integer
+        return "CONSTANT"
     else
-        error("$data_type) is not supported in forecast data")
+        error("$data_type is not supported in forecast data")
     end
 end
 
@@ -348,7 +350,7 @@ function get_hdf_array(
     rows::UnitRange{Int},
     columns::UnitRange{Int},
 )
-    data = SortedDict{Dates.DateTime, Array}()
+    data = SortedDict{Dates.DateTime, Vector{Float64}}()
     initial_timestamp = attributes["start_time"]
     interval = attributes["interval"]
     start_time = initial_timestamp + interval * (columns.start - 1)
@@ -371,7 +373,7 @@ function get_hdf_array(
     rows::UnitRange{Int},
     columns::UnitRange{Int},
 )
-    data = SortedDict{Dates.DateTime, Array}()
+    data = SortedDict{Dates.DateTime, Vector{POLYNOMIAL}}()
     initial_timestamp = attributes["start_time"]
     interval = attributes["interval"]
     start_time = initial_timestamp + interval * (columns.start - 1)
@@ -394,7 +396,7 @@ function get_hdf_array(
     rows::UnitRange{Int},
     columns::UnitRange{Int},
 )
-    data = SortedDict{Dates.DateTime, Array}()
+    data = SortedDict{Dates.DateTime, Vector{PWL}}()
     initial_timestamp = attributes["start_time"]
     interval = attributes["interval"]
     start_time = initial_timestamp + interval * (columns.start - 1)
