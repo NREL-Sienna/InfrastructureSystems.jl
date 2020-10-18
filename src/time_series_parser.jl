@@ -282,16 +282,19 @@ function make_time_array(info::TimeSeriesParsedInfo)
     return TimeSeries.TimeArray(timestamps, data_dict[get_name(info.component)])
 end
 
-struct TimeSeriesCache
+struct TimeSeriesParsingCache
     time_series_infos::Vector{TimeSeriesParsedInfo}
     data_files::Dict{String, RawTimeSeries}
 end
 
-function TimeSeriesCache()
-    return TimeSeriesCache(Vector{TimeSeriesParsedInfo}(), Dict{String, Any}())
+function TimeSeriesParsingCache()
+    return TimeSeriesParsingCache(Vector{TimeSeriesParsedInfo}(), Dict{String, Any}())
 end
 
-function _add_time_series_info!(cache::TimeSeriesCache, metadata::TimeSeriesFileMetadata)
+function _add_time_series_info!(
+    cache::TimeSeriesParsingCache,
+    metadata::TimeSeriesFileMetadata,
+)
     if !haskey(cache.data_files, metadata.data_file)
         cache.data_files[metadata.data_file] = read_time_series(metadata)
         @debug "Added time series file" metadata.data_file
