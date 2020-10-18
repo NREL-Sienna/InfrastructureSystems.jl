@@ -13,16 +13,13 @@ Construct Scenarios from a SortedDict of Arrays.
 """
 function Scenarios(
     name::AbstractString,
-    input_data::AbstractDict{Dates.DateTime, Matrix{Float64}},
+    input_data::AbstractDict,
     resolution::Dates.Period;
     normalization_factor::NormalizationFactor = 1.0,
     scaling_factor_multiplier::Union{Nothing, Function} = nothing,
 )
-    if !isa(input_data, SortedDict)
-        input_data = SortedDict(input_data...)
-    end
     scenario_count = size(first(values(input_data)))[2]
-    data = handle_normalization_factor(input_data, normalization_factor)
+    data = handle_normalization_factor(convert_data(input_data), normalization_factor)
 
     return Scenarios(name, resolution, scenario_count, data, scaling_factor_multiplier)
 end
@@ -64,7 +61,7 @@ function Scenarios(
     )
 end
 
-function Scenarios(ts_metadata::ScenariosMetadata, data::SortedDict{Dates.DateTime, Array})
+function Scenarios(ts_metadata::ScenariosMetadata, data::SortedDict)
     return Scenarios(
         name = get_name(ts_metadata),
         scenario_count = get_scenario_count(ts_metadata),

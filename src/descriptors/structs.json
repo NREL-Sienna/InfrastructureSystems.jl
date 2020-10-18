@@ -258,7 +258,7 @@
         },
         {
           "name": "data",
-          "data_type": "SortedDict{Dates.DateTime, Array}",
+          "data_type": "Union{SortedDict{Dates.DateTime, Matrix{CONSTANT}}, SortedDict{Dates.DateTime, Matrix{POLYNOMIAL}}, SortedDict{Dates.DateTime, Matrix{PWL}}}",
           "comment": "timestamp - scalingfactor"
         },
         {

@@ -127,6 +127,8 @@ function get_data_type(ts::TimeSeriesData)
     elseif data_type == PWL
         return "PWL"
     elseif data_type <: Integer
+        # We currently don't convert integers stored in TimeSeries.TimeArrays to floats.
+        # This is a workaround.
         return "CONSTANT"
     else
         error("$data_type is not supported in forecast data")
@@ -512,7 +514,7 @@ function deserialize_time_series(
         @assert attributes["type"] == T
         @assert length(attributes["dataset_size"]) == 3
         @debug "deserializing a Forecast" T
-        data = SortedDict{Dates.DateTime, Array}()
+        data = SortedDict{Dates.DateTime, Matrix{attributes["data_type"]}}()
         start_time = attributes["start_time"]
         if length(columns) == 1
             data[start_time] =
