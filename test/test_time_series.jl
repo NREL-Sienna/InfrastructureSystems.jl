@@ -7,10 +7,6 @@
     initial_time = Dates.DateTime("2020-09-01")
     resolution = Dates.Hour(1)
 
-    data = TimeSeries.TimeArray(
-        range(initial_time; length = 365, step = resolution),
-        ones(365),
-    )
     other_time = initial_time + resolution
     name = "test"
     horizon = 24
@@ -82,21 +78,15 @@ end
     other_time = initial_time + resolution
     name = "test"
     horizon = 24
-    data_vec = Dict(initial_time => ones(horizon), other_time => ones(horizon))
-    data_tuple =
-        Dict(initial_time => tuple(ones(horizon)...), other_time => tuple(ones(horizon)...))
-    for d in [data_vec, data_tuple]
-        @testset "Add deterministic from $(typeof(d))" begin
-            sys = IS.SystemData()
-            component_name = "Component1"
-            component = IS.TestComponent(component_name, 5)
-            IS.add_component!(sys, component)
-            forecast = IS.Deterministic(name, d, resolution)
-            @test IS.get_initial_timestamp(forecast) == initial_time
-            IS.add_time_series!(sys, component, forecast)
-            @test IS.has_time_series(component)
-        end
-    end
+    data = Dict(initial_time => ones(horizon), other_time => ones(horizon))
+    sys = IS.SystemData()
+    component_name = "Component1"
+    component = IS.TestComponent(component_name, 5)
+    IS.add_component!(sys, component)
+    forecast = IS.Deterministic(name, data, resolution)
+    @test IS.get_initial_timestamp(forecast) == initial_time
+    IS.add_time_series!(sys, component, forecast)
+    @test IS.has_time_series(component)
 
     data_ts = Dict(
         initial_time => TimeSeries.TimeArray(
@@ -1158,7 +1148,7 @@ end
         horizon = 24
         data = SortedDict(it => ones(horizon) * i for (i, it) in enumerate(initial_times))
 
-        forecast = IS.Deterministic(data = data, name = name, resolution = resolution)
+        forecast = IS.Deterministic(name, data, resolution)
         IS.add_time_series!(sys, component, forecast)
         @test IS.get_forecast_window_count(sys) == length(data)
 
@@ -1226,7 +1216,7 @@ end
         initial_times = collect(range(initial_timestamp, length = 24, step = interval))
         name = "test"
         horizon = 24
-        data_polynomial = SortedDict(
+        data_polynomial = SortedDict{Dates.DateTime, Vector{IS.POLYNOMIAL}}(
             it => repeat([(999.0, 1.0 * i)], 24) for (i, it) in enumerate(initial_times)
         )
 
@@ -1287,7 +1277,8 @@ end
 end
 
 @testset "Test get_time_series options for PWL Cost" begin
-    for in_memory in (true, false)
+    #for in_memory in (true, false)
+    for in_memory in [false]
         sys = IS.SystemData(time_series_in_memory = in_memory)
         name = "Component1"
         component = IS.TestComponent(name, 5)
@@ -1300,7 +1291,7 @@ end
         initial_times = collect(range(initial_timestamp, length = 24, step = interval))
         name = "test"
         horizon = 24
-        data_pwl = SortedDict(
+        data_pwl = SortedDict{Dates.DateTime, Vector{IS.PWL}}(
             it => repeat([repeat([(999.0, 1.0 * i)], 5)], 24)
             for (i, it) in enumerate(initial_times)
         )
@@ -1479,12 +1470,8 @@ end
     horizon = 24
     data = SortedDict(it => ones(horizon) * i for (i, it) in enumerate(initial_times))
 
-    forecast = IS.Deterministic(
-        data = data,
-        name = name,
-        resolution = resolution;
-        scaling_factor_multiplier = IS.get_val,
-    )
+    forecast =
+        IS.Deterministic(name, data, resolution; scaling_factor_multiplier = IS.get_val)
     IS.add_time_series!(sys, component, forecast)
     start_time = initial_timestamp + interval
     # Verify all permutations with defaults.

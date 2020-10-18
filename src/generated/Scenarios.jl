@@ -6,7 +6,7 @@ This file is auto-generated. Do not edit.
         name::String
         resolution::Dates.Period
         scenario_count::Int64
-        data::SortedDict{Dates.DateTime, Array}
+        data::Union{SortedDict{Dates.DateTime, Matrix{CONSTANT}}, SortedDict{Dates.DateTime, Matrix{POLYNOMIAL}}, SortedDict{Dates.DateTime, Matrix{PWL}}}
         scaling_factor_multiplier::Union{Nothing, Function}
         internal::InfrastructureSystemsInternal
     end
@@ -17,7 +17,7 @@ A Discrete Scenario Based time series for a particular data field in a Component
 - `name::String`: user-defined name
 - `resolution::Dates.Period`: forecast resolution
 - `scenario_count::Int64`: Number of scenarios
-- `data::SortedDict{Dates.DateTime, Array}`: timestamp - scalingfactor
+- `data::Union{SortedDict{Dates.DateTime, Matrix{CONSTANT}}, SortedDict{Dates.DateTime, Matrix{POLYNOMIAL}}, SortedDict{Dates.DateTime, Matrix{PWL}}}`: timestamp - scalingfactor
 - `scaling_factor_multiplier::Union{Nothing, Function}`: Applicable when the time series data are scaling factors. Called on the associated component to convert the values.
 - `internal::InfrastructureSystemsInternal`
 """
@@ -29,7 +29,7 @@ mutable struct Scenarios <: Forecast
     "Number of scenarios"
     scenario_count::Int64
     "timestamp - scalingfactor"
-    data::SortedDict{Dates.DateTime, Array}
+    data::Union{SortedDict{Dates.DateTime, Matrix{CONSTANT}}, SortedDict{Dates.DateTime, Matrix{POLYNOMIAL}}, SortedDict{Dates.DateTime, Matrix{PWL}}}
     "Applicable when the time series data are scaling factors. Called on the associated component to convert the values."
     scaling_factor_multiplier::Union{Nothing, Function}
     internal::InfrastructureSystemsInternal

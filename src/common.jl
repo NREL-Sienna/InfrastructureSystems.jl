@@ -20,6 +20,6 @@ struct HashMismatchError <: Exception
     msg::AbstractString
 end
 
-const CONSTANT = Real
+const CONSTANT = Float64
 const POLYNOMIAL = Tuple{Float64, Float64}
 const PWL = Vector{Tuple{Float64, Float64}}

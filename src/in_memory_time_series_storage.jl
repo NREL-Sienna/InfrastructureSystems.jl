@@ -151,7 +151,7 @@ function deserialize_time_series(
     resolution = get_resolution(ts)
     interval = get_interval(ts)
     start_time = initial_timestamp + interval * (columns.start - 1)
-    data = SortedDict{Dates.DateTime, Vector}()
+    data = SortedDict{Dates.DateTime, eltype(typeof(full_data)).parameters[2]}()
     for initial_time in range(start_time; step = interval, length = length(columns))
         if rows.start == 1
             it = initial_time
