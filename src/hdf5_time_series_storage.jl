@@ -436,14 +436,14 @@ end
 function retransform_hdf_array(data::Array, T::Type{POLYNOMIAL})
     row, column, tuple_length = get_data_dims(data, T)
     if isnothing(column)
-        t_data = Array{POLYNOMIAL}(undef, row,)
+        t_data = Array{POLYNOMIAL}(undef, row)
         for r in 1:row
             t_data[r] = tuple(data[r, 1:tuple_length]...)
         end
     else
         t_data = Array{POLYNOMIAL}(undef, row, column)
         for r in 1:row, c in 1:column
-            t_data[r,c] = tuple(data[r, c, 1:tuple_length]...)
+            t_data[r, c] = tuple(data[r, c, 1:tuple_length]...)
         end
     end
     return t_data
