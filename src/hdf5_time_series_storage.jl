@@ -433,26 +433,66 @@ function retransform_hdf_array(data::Array, ::Type{<:CONSTANT})
     return data
 end
 
-function retransform_hdf_array(data::Array, ::Type{POLYNOMIAL})
-    row, column, tuple_length = size(data)
-    t_data = Array{POLYNOMIAL}(undef, row, column)
-    for r in 1:row, c in 1:column
-        t_data[r, c] = tuple(data[r, c, 1:tuple_length]...)
+function retransform_hdf_array(data::Array, T::Type{POLYNOMIAL})
+    row, column, tuple_length = get_data_dims(data, T)
+    if isnothing(column)
+        t_data = Array{POLYNOMIAL}(undef, row,)
+        for r in 1:row
+            t_data[r] = tuple(data[r, 1:tuple_length]...)
+        end
+    else
+        t_data = Array{POLYNOMIAL}(undef, row, column)
+        for r in 1:row, c in 1:column
+            t_data[r,c] = tuple(data[r, c, 1:tuple_length]...)
+        end
     end
     return t_data
 end
 
-function retransform_hdf_array(data::Array, ::Type{PWL})
-    row, column, tuple_length, array_length = size(data)
-    t_data = Array{PWL}(undef, row, column)
-    for r in 1:row, c in 1:column
-        tuple_array = Array{POLYNOMIAL}(undef, array_length)
-        for l in 1:array_length
-            tuple_array[l] = tuple(data[r, c, 1:tuple_length, l]...)
+function retransform_hdf_array(data::Array, T::Type{PWL})
+    row, column, tuple_length, array_length = get_data_dims(data, T)
+    if isnothing(column)
+        t_data = Array{PWL}(undef, row)
+        for r in 1:row
+            tuple_array = Array{POLYNOMIAL}(undef, array_length)
+            for l in 1:array_length
+                tuple_array[l] = tuple(data[r, 1:tuple_length, l]...)
+            end
+            t_data[r] = tuple_array
         end
-        t_data[r, c] = tuple_array
+    else
+        t_data = Array{PWL}(undef, row, column)
+        for r in 1:row, c in 1:column
+            tuple_array = Array{POLYNOMIAL}(undef, array_length)
+            for l in 1:array_length
+                tuple_array[l] = tuple(data[r, c, 1:tuple_length, l]...)
+            end
+            t_data[r, c] = tuple_array
+        end
     end
     return t_data
+end
+
+function get_data_dims(data::Array, ::Type{POLYNOMIAL})
+    if length(size(data)) == 2
+        row, tuple_length = size(data)
+        return (row, nothing, tuple_length)
+    elseif length(size(data)) == 3
+        return size(data)
+    else
+        error("Hdf data array is $(length(size(data)))-D array, expected 2-D or 3-D array.")
+    end
+end
+
+function get_data_dims(data::Array, ::Type{PWL})
+    if length(size(data)) == 3
+        row, tuple_length, array_length = size(data)
+        return (row, nothing, tuple_length, array_length)
+    elseif length(size(data)) == 4
+        return size(data)
+    else
+        error("Hdf data array is $(length(size(data)))-D array, expected 3-D or 4-D array.")
+    end
 end
 
 function deserialize_time_series(
