@@ -1232,6 +1232,24 @@ end
             @test TimeSeries.values(window) == data_polynomial[initial_times[i]]
         end
 
+        offset = 1
+        count = 1
+        it = initial_times[offset]
+        f2 = IS.get_time_series(
+            IS.Deterministic,
+            component,
+            name;
+            start_time = it,
+            count = count,
+        )
+        @test IS.get_initial_timestamp(f2) == it
+        @test IS.get_count(f2) == count
+        @test IS.get_horizon(f2) == horizon
+        for (i, window) in enumerate(IS.iterate_windows(f2))
+            @test TimeSeries.values(window) ==
+                  data_polynomial[initial_times[i + offset - 1]]
+        end
+
         offset = 12
         count = 5
         it = initial_times[offset]
@@ -1305,6 +1323,23 @@ end
         @test IS.get_initial_timestamp(f2) == initial_times[1]
         for (i, window) in enumerate(IS.iterate_windows(f2))
             @test TimeSeries.values(window) == data_pwl[initial_times[i]]
+        end
+
+        offset = 1
+        count = 1
+        it = initial_times[offset]
+        f2 = IS.get_time_series(
+            IS.Deterministic,
+            component,
+            name;
+            start_time = it,
+            count = count,
+        )
+        @test IS.get_initial_timestamp(f2) == it
+        @test IS.get_count(f2) == count
+        @test IS.get_horizon(f2) == horizon
+        for (i, window) in enumerate(IS.iterate_windows(f2))
+            @test TimeSeries.values(window) == data_pwl[initial_times[i + offset - 1]]
         end
 
         offset = 12
