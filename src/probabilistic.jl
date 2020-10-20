@@ -126,7 +126,7 @@ function ProbabilisticMetadata(time_series::Probabilistic)
     )
 end
 
-convert_data(data::AbstractDict{Dates.DateTime, T}) where {T <: Matrix{<:Real}} =
+convert_data(data::AbstractDict{Dates.DateTime, T}) where {T <: Matrix} =
     SortedDict{Dates.DateTime, Matrix{CONSTANT}}(data...)
 convert_data(data::AbstractDict{Dates.DateTime, T}) where {T <: Matrix{<:Tuple}} =
     SortedDict{Dates.DateTime, Matrix{POLYNOMIAL}}(data...)
