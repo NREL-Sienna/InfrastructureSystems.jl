@@ -514,7 +514,9 @@ function deserialize_time_series(
         @assert length(attributes["dataset_size"]) == 3
         @debug "deserializing a Forecast" T
         data = SortedDict{Dates.DateTime, Matrix{attributes["data_type"]}}()
-        start_time = attributes["start_time"]
+        initial_timestamp = attributes["start_time"]
+        interval = attributes["interval"]
+        start_time = initial_timestamp + interval * (first(columns) - 1)
         if length(columns) == 1
             data[start_time] =
                 transpose(path["data"][1:total_percentiles, rows, first(columns)])
@@ -524,7 +526,7 @@ function deserialize_time_series(
                 [3, 2, 1],
             )
             for (i, it) in enumerate(range(
-                attributes["start_time"];
+                start_time;
                 length = length(columns),
                 step = attributes["interval"],
             ))
@@ -555,7 +557,9 @@ function deserialize_time_series(
         @assert length(attributes["dataset_size"]) == 3
         @debug "deserializing a Forecast" T
         data = SortedDict{Dates.DateTime, Matrix{attributes["data_type"]}}()
-        start_time = attributes["start_time"]
+        initial_timestamp = attributes["start_time"]
+        interval = attributes["interval"]
+        start_time = initial_timestamp + interval * (first(columns) - 1)
         if length(columns) == 1
             data[start_time] =
                 transpose(path["data"][1:total_scenarios, rows, first(columns)])
@@ -563,7 +567,7 @@ function deserialize_time_series(
             data_read =
                 PermutedDimsArray(path["data"][1:total_scenarios, rows, columns], [3, 2, 1])
             for (i, it) in enumerate(range(
-                attributes["start_time"];
+                start_time;
                 length = length(columns),
                 step = attributes["interval"],
             ))
