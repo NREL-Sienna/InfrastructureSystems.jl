@@ -3,7 +3,7 @@ struct TimeSeriesKey <: InfrastructureSystemsType
     name::String
 end
 
-function TimeSeriesKey(;time_series_type::Type{<:TimeSeriesMetadata}, name::String)
+function TimeSeriesKey(; time_series_type::Type{<:TimeSeriesMetadata}, name::String)
     return TimeSeriesKey(time_series_type, name)
 end
 
