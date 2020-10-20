@@ -1624,12 +1624,8 @@ end
     )
     @test size(t) == (12, 99)
     @test TimeSeries.values(t) == data1[1:12, :]
-    t_other = IS.get_time_series(
-        IS.Probabilistic,
-        component,
-        "test";
-        start_time = other_time
-    )
+    t_other =
+        IS.get_time_series(IS.Probabilistic, component, "test"; start_time = other_time)
     @test collect(keys(IS.get_data(t_other)))[1] == other_time
 end
 
@@ -1666,12 +1662,8 @@ end
     )
     @test size(t) == (12, 99)
     @test TimeSeries.values(t) == data1[1:12, :]
-    t_other = IS.get_time_series(
-    IS.Probabilistic,
-    component,
-    "test";
-    start_time = other_time
-    )
+    t_other =
+        IS.get_time_series(IS.Probabilistic, component, "test"; start_time = other_time)
     @test collect(keys(IS.get_data(t_other)))[1] == other_time
 end
 
