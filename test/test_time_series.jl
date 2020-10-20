@@ -1016,69 +1016,74 @@ end
 end
 
 @testset "Test Scenarios time_series" begin
-    sys = IS.SystemData()
-    name = "Component1"
-    name = "val"
-    component = IS.TestComponent(name, 5)
-    IS.add_component!(sys, component)
+    for in_memory in (true, false)
+        sys = IS.SystemData(time_series_in_memory = in_memory)
+        sys = IS.SystemData()
+        name = "Component1"
+        name = "val"
+        component = IS.TestComponent(name, 5)
+        IS.add_component!(sys, component)
 
-    initial_timestamp = Dates.DateTime("2020-01-01T00:00:00")
-    horizon = 24
-    resolution = Dates.Hour(1)
-    scenario_count = 2
-    data_input = rand(horizon, scenario_count)
-    data = SortedDict(initial_timestamp => data_input)
-    time_series = IS.Scenarios(
-        name = name,
-        resolution = resolution,
-        scenario_count = scenario_count,
-        data = data,
-    )
-    fdata = IS.get_data(time_series)
-    @test size(first(values(fdata)))[2] == 2
-    @test initial_timestamp == first(keys((fdata)))
-    @test data_input == first(values((fdata)))
+        initial_timestamp = Dates.DateTime("2020-01-01T00:00:00")
+        horizon = 24
+        resolution = Dates.Hour(1)
+        scenario_count = 2
+        data_input = rand(horizon, scenario_count)
+        data = SortedDict(initial_timestamp => data_input)
+        time_series = IS.Scenarios(
+            name = name,
+            resolution = resolution,
+            scenario_count = scenario_count,
+            data = data,
+        )
+        fdata = IS.get_data(time_series)
+        @test size(first(values(fdata)))[2] == 2
+        @test initial_timestamp == first(keys((fdata)))
+        @test data_input == first(values((fdata)))
 
-    IS.add_time_series!(sys, component, time_series)
-    time_series2 = IS.get_time_series(IS.Scenarios, component, name)
-    @test time_series2 isa IS.Scenarios
-    fdata2 = IS.get_data(time_series2)
-    @test size(first(values(fdata2)))[2] == 2
-    @test initial_timestamp == first(keys((fdata2)))
-    @test data_input == first(values((fdata2)))
+        IS.add_time_series!(sys, component, time_series)
+        time_series2 = IS.get_time_series(IS.Scenarios, component, name)
+        @test time_series2 isa IS.Scenarios
+        fdata2 = IS.get_data(time_series2)
+        @test size(first(values(fdata2)))[2] == 2
+        @test initial_timestamp == first(keys((fdata2)))
+        @test data_input == first(values((fdata2)))
+    end
 end
 
 @testset "Test Probabilistic time_series" begin
-    sys = IS.SystemData()
-    name = "Component1"
-    name = "val"
-    component = IS.TestComponent(name, 5)
-    IS.add_component!(sys, component)
+    for in_memory in (true, false)
+        sys = IS.SystemData(time_series_in_memory = in_memory)
+        name = "Component1"
+        name = "val"
+        component = IS.TestComponent(name, 5)
+        IS.add_component!(sys, component)
 
-    initial_timestamp = Dates.DateTime("2020-01-01T00:00:00")
-    horizon = 24
-    resolution = Dates.Hour(1)
-    percentiles = 1:99
-    data_input = rand(horizon, length(percentiles))
-    data = SortedDict(initial_timestamp => data_input)
-    time_series = IS.Probabilistic(
-        name = name,
-        resolution = resolution,
-        percentiles = percentiles,
-        data = data,
-    )
-    fdata = IS.get_data(time_series)
-    @test size(first(values(fdata)))[2] == length(percentiles)
-    @test initial_timestamp == first(keys((fdata)))
-    @test data_input == first(values((fdata)))
+        initial_timestamp = Dates.DateTime("2020-01-01T00:00:00")
+        horizon = 24
+        resolution = Dates.Hour(1)
+        percentiles = 1:99
+        data_input = rand(horizon, length(percentiles))
+        data = SortedDict(initial_timestamp => data_input)
+        time_series = IS.Probabilistic(
+            name = name,
+            resolution = resolution,
+            percentiles = percentiles,
+            data = data,
+        )
+        fdata = IS.get_data(time_series)
+        @test size(first(values(fdata)))[2] == length(percentiles)
+        @test initial_timestamp == first(keys((fdata)))
+        @test data_input == first(values((fdata)))
 
-    IS.add_time_series!(sys, component, time_series)
-    time_series2 = IS.get_time_series(IS.Probabilistic, component, name)
-    @test time_series2 isa IS.Probabilistic
-    fdata2 = IS.get_data(time_series2)
-    @test size(first(values(fdata2)))[2] == length(percentiles)
-    @test initial_timestamp == first(keys((fdata2)))
-    @test data_input == first(values((fdata2)))
+        IS.add_time_series!(sys, component, time_series)
+        time_series2 = IS.get_time_series(IS.Probabilistic, component, name)
+        @test time_series2 isa IS.Probabilistic
+        fdata2 = IS.get_data(time_series2)
+        @test size(first(values(fdata2)))[2] == length(percentiles)
+        @test initial_timestamp == first(keys((fdata2)))
+        @test data_input == first(values((fdata2)))
+    end
 end
 
 @testset "Add time_series to unsupported struct" begin
