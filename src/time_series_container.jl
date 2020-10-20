@@ -1,6 +1,15 @@
-struct TimeSeriesKey
+struct TimeSeriesKey <: InfrastructureSystemsType
     time_series_type::Type{<:TimeSeriesMetadata}
     name::String
+end
+
+function TimeSeriesKey(;time_series_type::Type{<:TimeSeriesMetadata}, name::String)
+    return TimeSeriesKey(time_series_type, name)
+end
+
+function TimeSeriesKey(data::TimeSeriesData)
+    metadata_type = time_series_data_to_metadata(typeof(data))
+    return TimeSeriesKey(metadata_type, get_name(data))
 end
 
 const TimeSeriesByType = Dict{TimeSeriesKey, TimeSeriesMetadata}
