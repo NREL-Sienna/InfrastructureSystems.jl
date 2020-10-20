@@ -253,7 +253,7 @@ Return a vector of timestamps from a cached Forecast instance.
 function get_time_series_timestamps(
     component::InfrastructureSystemsComponent,
     forecast::Forecast,
-    start_time::Dates.DateTime;
+    start_time::Union{Nothing, Dates.DateTime} = nothing;
     len::Union{Nothing, Int} = nothing,
 )
     return TimeSeries.timestamp(get_time_series_array(
