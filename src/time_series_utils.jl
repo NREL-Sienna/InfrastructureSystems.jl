@@ -1,6 +1,7 @@
 const _TS_DATA_TO_METADATA_MAP = Dict(
     Deterministic => DeterministicMetadata,
     DeterministicSingleTimeSeries => DeterministicMetadata,
+    AbstractDeterministic => DeterministicMetadata,
     Probabilistic => ProbabilisticMetadata,
     Scenarios => ScenariosMetadata,
     SingleTimeSeries => SingleTimeSeriesMetadata,
