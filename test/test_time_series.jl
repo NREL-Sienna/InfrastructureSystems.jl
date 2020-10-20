@@ -1742,6 +1742,9 @@ end
     forecast = IS.Deterministic(data = data, name = name, resolution = resolution)
     IS.add_time_series!(sys, component, forecast)
     key = IS.TimeSeriesKey(forecast)
+    @test key == IS.TimeSeriesKey(IS.DeterministicMetadata, name)
+    @test key == IS.TimeSeriesKey(;time_series_type = IS.DeterministicMetadata, name = name)
+
     var1 = IS.get_time_series(IS.Deterministic, component, name; start_time = initial_time)
     var_key1 = IS.get_time_series_by_key(key, component; start_time = initial_time)
     @test length(var1) == length(var_key1)
