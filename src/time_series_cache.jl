@@ -183,7 +183,13 @@ function ForecastCache(
     end
 
     # Get one instance to assess data size.
-    vals = get_time_series_values(T, component, name; start_time = start_time, len = 1)
+    vals = get_time_series_values(
+        T,
+        component,
+        name;
+        start_time = start_time,
+        len = get_horizon(ts_metadata),
+    )
     row_size = _get_row_size(vals)
 
     count = get_count(ts_metadata)
