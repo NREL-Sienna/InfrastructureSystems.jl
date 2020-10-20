@@ -232,11 +232,10 @@ end
     cache = IS.ForecastCache(IS.Probabilistic, component, "test"; cache_size_bytes = sz)
     initial_times = collect(keys(data))
     @test cache.in_memory_count == trunc(Int, sz / (99 * 8 * 24))
-    # TODO: retrieving Probabilistic at offsets is currently broken
-    #for (i, ta) in enumerate(cache)
-    #    it = initial_times[i]
-    #    @test TimeSeries.timestamp(ta) ==
-    #          IS.get_time_series_timestamps(component, forecast, it)
-    #    @test TimeSeries.values(ta) == IS.get_time_series_values(component, forecast, it)
-    #end
+    for (i, ta) in enumerate(cache)
+        it = initial_times[i]
+        @test TimeSeries.timestamp(ta) ==
+              IS.get_time_series_timestamps(component, forecast, it)
+        @test TimeSeries.values(ta) == IS.get_time_series_values(component, forecast, it)
+    end
 end
