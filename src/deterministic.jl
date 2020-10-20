@@ -143,7 +143,7 @@ function Deterministic(forecast::Deterministic, data)
     return Deterministic(; vals...)
 end
 
-convert_data(data::AbstractDict{Dates.DateTime, T}) where {T <: Vector{<:Real}} =
+convert_data(data::AbstractDict{Dates.DateTime, T}) where {T <: Vector} =
     SortedDict{Dates.DateTime, Vector{CONSTANT}}(data...)
 convert_data(data::AbstractDict{Dates.DateTime, T}) where {T <: Vector{<:Tuple}} =
     SortedDict{Dates.DateTime, Vector{POLYNOMIAL}}(data...)
