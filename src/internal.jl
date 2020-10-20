@@ -34,7 +34,7 @@ end
 """
 Creates InfrastructureSystemsInternal with a new UUID.
 """
-InfrastructureSystemsInternal(; uuid = UUIDs.uuid4(), units_info = nothing, ext = nothing) =
+InfrastructureSystemsInternal(; uuid = make_uuid(), units_info = nothing, ext = nothing) =
     InfrastructureSystemsInternal(uuid, units_info, ext)
 
 """
@@ -74,7 +74,7 @@ end
 Assign a new UUID.
 """
 function assign_new_uuid!(obj::InfrastructureSystemsType)
-    get_internal(obj).uuid = UUIDs.uuid4()
+    get_internal(obj).uuid = make_uuid()
 end
 
 function serialize(internal::InfrastructureSystemsInternal)
@@ -119,3 +119,6 @@ function compare_values(x::InfrastructureSystemsInternal, y::InfrastructureSyste
 
     return match
 end
+
+_RNG = Random.MersenneTwister()
+make_uuid() = UUIDs.uuid4(_RNG)

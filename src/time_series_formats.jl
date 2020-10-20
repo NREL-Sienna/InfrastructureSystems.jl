@@ -178,7 +178,7 @@ function read_time_series(
     component_name = nothing;
     kwargs...,
 ) where {T <: TimeSeriesFormatDateTimeAsColumn}
-    @debug "Read CSV data from $file_path."
+    @debug "Read CSV data from $file."
     horizon = length(first(file)) - 1
     data = SortedDict{Dates.DateTime, Vector{Float64}}()
     # First element in the row is the time series. We use integer indexes not to rely on

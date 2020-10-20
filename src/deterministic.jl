@@ -143,11 +143,11 @@ function Deterministic(forecast::Deterministic, data)
     return Deterministic(; vals...)
 end
 
-convert_data(data::AbstractDict{Dates.DateTime, T}) where {T <: Vector} =
+convert_data(data::AbstractDict{Dates.DateTime, Vector{T}}) where {T} =
     SortedDict{Dates.DateTime, Vector{CONSTANT}}(data...)
-convert_data(data::AbstractDict{Dates.DateTime, T}) where {T <: Vector{<:Tuple}} =
+convert_data(data::AbstractDict{Dates.DateTime, Vector{T}}) where {T <: Tuple} =
     SortedDict{Dates.DateTime, Vector{POLYNOMIAL}}(data...)
-convert_data(data::AbstractDict{Dates.DateTime, T}) where {T <: Vector{<:Vector{<:Tuple}}} =
+convert_data(data::AbstractDict{Dates.DateTime, Vector{Vector{T}}}) where {T <: Tuple} =
     SortedDict{Dates.DateTime, Vector{PWL}}(data...)
 
 # Workaround for a bug/limitation in SortedDict. If a user tries to construct

@@ -126,11 +126,11 @@ function ProbabilisticMetadata(time_series::Probabilistic)
     )
 end
 
-convert_data(data::AbstractDict{Dates.DateTime, T}) where {T <: Matrix} =
+convert_data(data::AbstractDict{Dates.DateTime, Matrix{T}}) where {T} =
     SortedDict{Dates.DateTime, Matrix{CONSTANT}}(data...)
-convert_data(data::AbstractDict{Dates.DateTime, T}) where {T <: Matrix{<:Tuple}} =
+convert_data(data::AbstractDict{Dates.DateTime, Matrix{T}}) where {T <: Tuple} =
     SortedDict{Dates.DateTime, Matrix{POLYNOMIAL}}(data...)
-convert_data(data::AbstractDict{Dates.DateTime, T}) where {T <: Matrix{<:Matrix{<:Tuple}}} =
+convert_data(data::AbstractDict{Dates.DateTime, Matrix{Matrix{T}}}) where {T <: Tuple} =
     SortedDict{Dates.DateTime, Matrix{PWL}}(data...)
 
 function get_array_for_hdf(forecast::Probabilistic)

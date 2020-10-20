@@ -6,6 +6,7 @@ import CSV
 import DataFrames
 import Dates
 import JSON3
+import Random
 import PrettyTables
 import TimeSeries
 using DataStructures: SortedDict
@@ -87,6 +88,7 @@ include("hdf5_time_series_storage.jl")
 include("in_memory_time_series_storage.jl")
 include("time_series_formats.jl")
 include("single_time_series.jl")
+include("time_series_cache.jl")
 include("time_series_parameters.jl")
 include("time_series_utils.jl")
 include("component.jl")

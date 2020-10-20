@@ -108,7 +108,7 @@ function add_time_series_from_file_metadata!(
     file_metadata::Vector{TimeSeriesFileMetadata};
     resolution = nothing,
 ) where {T <: InfrastructureSystemsComponent}
-    cache = TimeSeriesCache()
+    cache = TimeSeriesParsingCache()
     for metadata in file_metadata
         if resolution === nothing || metadata.resolution == resolution
             add_time_series_from_file_metadata_internal!(data, T, cache, metadata)
@@ -190,7 +190,7 @@ end
 function add_time_series_from_file_metadata_internal!(
     data::SystemData,
     ::Type{T},
-    cache::TimeSeriesCache,
+    cache::TimeSeriesParsingCache,
     file_metadata::TimeSeriesFileMetadata,
 ) where {T <: InfrastructureSystemsComponent}
     set_component!(file_metadata, data, InfrastructureSystems)
@@ -221,16 +221,22 @@ end
 Return a time series from TimeSeriesFileMetadata.
 
 # Arguments
-- `cache::TimeSeriesCache`: cached data
+- `cache::TimeSeriesParsingCache`: cached data
 - `ts_file_metadata::TimeSeriesFileMetadata`: metadata
 - `resolution::{Nothing, Dates.Period}`: skip any time_series that don't match this resolution
 """
-function make_time_series!(cache::TimeSeriesCache, ts_file_metadata::TimeSeriesFileMetadata)
+function make_time_series!(
+    cache::TimeSeriesParsingCache,
+    ts_file_metadata::TimeSeriesFileMetadata,
+)
     info = add_time_series_info!(cache, ts_file_metadata)
     return ts_file_metadata.time_series_type(info)
 end
 
-function add_time_series_info!(cache::TimeSeriesCache, metadata::TimeSeriesFileMetadata)
+function add_time_series_info!(
+    cache::TimeSeriesParsingCache,
+    metadata::TimeSeriesFileMetadata,
+)
     time_series = _add_time_series_info!(cache, metadata)
     info = TimeSeriesParsedInfo(metadata, time_series)
     @debug "Added TimeSeriesParsedInfo" metadata
