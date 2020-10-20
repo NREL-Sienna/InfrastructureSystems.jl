@@ -179,9 +179,13 @@ function handle_normalization_factor(
     normalization_factor::NormalizationFactor,
 )
     if normalization_factor isa NormalizationTypes.NormalizationType
-        max_value = get_max_value(ta)
-        ta = ta ./ max_value
-        @debug "Normalize by max value" max_value
+        if normalization_factor == NormalizationTypes.MAX
+            max_value = get_max_value(ta)
+            ta = ta ./ max_value
+            @debug "Normalize by max value" max_value
+        else
+            error("support for normalization_factor=$normalization_factor not implemented")
+        end
     else
         if normalization_factor != 1.0
             ta = ta ./ normalization_factor

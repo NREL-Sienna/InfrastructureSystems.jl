@@ -189,6 +189,8 @@ Return a TimeSeries.TimeArray for one forecast window from a cached Forecast ins
 
 If the data are scaling factors then the stored scaling_factor_multiplier will be called on
 the component and applied to the data unless ignore_scaling_factors is true.
+
+See also [`ForecastCache`](@ref).
 """
 function get_time_series_array(
     component::InfrastructureSystemsComponent,
@@ -205,6 +207,8 @@ Return a TimeSeries.TimeArray from a cached StaticTimeSeries instance.
 
 If the data are scaling factors then the stored scaling_factor_multiplier will be called on
 the component and applied to the data unless ignore_scaling_factors is true.
+
+See also [`StaticTimeSeriesCache`](@ref).
 """
 function get_time_series_array(
     component::InfrastructureSystemsComponent,

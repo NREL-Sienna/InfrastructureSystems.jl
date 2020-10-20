@@ -126,7 +126,7 @@ function get_window_common(
     end
 
     data = get_data(forecast)[initial_time]
-    if length(size(data)) == 2
+    if ndims(data) == 2
         # This is necessary because the Deterministic and Probabilistic are 3D Arrays
         # We need to do this to make the data a 2D TimeArray. In a get_window the data is always count = 1
         @assert size(data)[1] <= len
