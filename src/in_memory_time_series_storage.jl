@@ -121,8 +121,7 @@ function deserialize_time_series(
     ts_metadata::TimeSeriesMetadata,
     rows::UnitRange,
     columns::UnitRange,
-) where T <: TimeSeriesData
-    # TODO 1.0: Much of this will apply to Probabilistic and Scenarios
+) where {T <: TimeSeriesData}
     uuid = get_time_series_uuid(ts_metadata)
     if !haskey(storage.data, uuid)
         throw(ArgumentError("$uuid is not stored"))
@@ -160,7 +159,11 @@ function deserialize_time_series(
         data[it] = @view full_data[initial_time][rows]
     end
 
-    return T(ts, data)
+    if T isa AbstractDeterministic
+        return Deterministic(ts, data)
+    else
+        return T(ts, data)
+    end
 end
 
 function clear_time_series!(storage::InMemoryTimeSeriesStorage)
