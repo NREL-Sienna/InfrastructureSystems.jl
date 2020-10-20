@@ -655,3 +655,38 @@ function _get_time_series_storage(component::InfrastructureSystemsComponent)
 
     return container.time_series_storage
 end
+
+function get_time_series_by_key(
+    key::TimeSeriesKey,
+    component::InfrastructureSystemsComponent;
+    start_time::Union{Nothing, Dates.DateTime} = nothing,
+    len::Union{Nothing, Int} = nothing,
+    count::Union{Nothing, Int} = nothing,
+)
+    return get_time_series(
+        time_series_metadata_to_data(key.time_series_type),
+        component,
+        key.name,
+        start_time = start_time,
+        len = len,
+        count = count,
+    )
+end
+
+function get_time_series_by_key(
+    key::TimeSeriesKey,
+    component::InfrastructureSystemsComponent,
+    name::String;
+    start_time::Union{Nothing, Dates.DateTime} = nothing,
+    len::Union{Nothing, Int} = nothing,
+    count::Union{Nothing, Int} = nothing,
+)
+    return get_time_series(
+        time_series_metadata_to_data(key.time_series_type),
+        component,
+        name,
+        start_time = start_time,
+        len = len,
+        count = count,
+    )
+end
