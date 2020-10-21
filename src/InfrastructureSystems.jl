@@ -7,6 +7,7 @@ import DataFrames
 import Dates
 import JSON3
 import Random
+import Pkg
 import PrettyTables
 import TimeSeries
 using DataStructures: SortedDict

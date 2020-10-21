@@ -210,3 +210,11 @@ deserialize(::Type{Complex{T}}, data::Dict) where {T} =
     Complex(T(data["real"]), T(data["imag"]))
 
 deserialize(::Type{Vector{Symbol}}, data::Vector) = Symbol.(data)
+
+function serialize_julia_info()
+    data = Dict{String, Any}("julia_version" => string(VERSION))
+    io = IOBuffer()
+    Pkg.status(io = io, mode = Pkg.PKGMODE_MANIFEST)
+    data["package_info"] = String(take!(io))
+    return data
+end
