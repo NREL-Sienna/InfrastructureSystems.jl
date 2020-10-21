@@ -470,6 +470,7 @@ function serialize(data::SystemData)
         write(io, text)
     end
     json_data["validation_descriptor_file"] = descriptor_base_name
+    json_data["version_info"] = serialize_julia_info()
     return json_data
 end
 

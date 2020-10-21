@@ -76,3 +76,9 @@ end
     sys2, result = validate_serialization(sys; time_series_read_only = false)
     @test result
 end
+
+@testset "Test verion info" begin
+    data = IS.serialize_julia_info()
+    @test haskey(data, "julia_version")
+    @test haskey(data, "package_info")
+end
