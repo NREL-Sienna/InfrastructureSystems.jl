@@ -215,6 +215,8 @@ function remove_time_series!(
     if remove_time_series_metadata!(component, type, name)
         remove_time_series!(data.time_series_storage, uuid, get_uuid(component), name)
     end
+
+    return
 end
 
 """
