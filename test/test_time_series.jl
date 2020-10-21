@@ -1771,13 +1771,8 @@ end
         start_time = initial_time,
         count = 2,
     )
-    var_key2 = IS.get_time_series_by_key(
-        key,
-        component,
-        name;
-        start_time = initial_time,
-        count = 2,
-    )
+    var_key2 =
+        IS.get_time_series_by_key(key, component; start_time = initial_time, count = 2)
     @test length(var2) == 2
     @test length(var2) == length(var_key2)
 
@@ -1787,12 +1782,5 @@ end
         component;
         start_time = initial_time,
         count = 3,
-    )
-    @test_throws ArgumentError IS.get_time_series_by_key(
-        key,
-        component,
-        name;
-        start_time = other_time,
-        count = 2,
     )
 end

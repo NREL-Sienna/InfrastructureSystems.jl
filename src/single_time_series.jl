@@ -1,4 +1,42 @@
 """
+    mutable struct SingleTimeSeries <: StaticTimeSeries
+        name::String
+        data::TimeSeries.TimeArray
+        scaling_factor_multiplier::Union{Nothing, Function}
+        internal::InfrastructureSystemsInternal
+    end
+
+A deterministic forecast for a particular data field in a Component.
+
+# Arguments
+- `name::String`: user-defined name
+- `data::TimeSeries.TimeArray`: timestamp - scalingfactor
+- `scaling_factor_multiplier::Union{Nothing, Function}`: Applicable when the time series
+  data are scaling factors. Called on the associated component to convert the values.
+- `internal::InfrastructureSystemsInternal`
+"""
+mutable struct SingleTimeSeries <: StaticTimeSeries
+    "user-defined name"
+    name::String
+    "timestamp - scalingfactor"
+    data::TimeSeries.TimeArray
+    "Applicable when the time series data are scaling factors. Called on the associated component to convert the values."
+    scaling_factor_multiplier::Union{Nothing, Function}
+    internal::InfrastructureSystemsInternal
+end
+
+function SingleTimeSeries(;
+    name,
+    data,
+    scaling_factor_multiplier = nothing,
+    normalization_factor = 1.0,
+    internal = InfrastructureSystemsInternal(),
+)
+    data = handle_normalization_factor(data, normalization_factor)
+    SingleTimeSeries(name, data, scaling_factor_multiplier, internal)
+end
+
+"""
 Construct SingleTimeSeries from a TimeArray or DataFrame.
 
 # Arguments
@@ -27,8 +65,13 @@ function SingleTimeSeries(
         error("fatal: $(typeof(data))")
     end
 
-    ta = handle_normalization_factor(ta, normalization_factor)
-    return SingleTimeSeries(name, ta, scaling_factor_multiplier)
+    return SingleTimeSeries(
+        name = name,
+        data = ta,
+        scaling_factor_multiplier = scaling_factor_multiplier,
+        normalization_factor = normalization_factor,
+        internal = InfrastructureSystemsInternal(),
+    )
 end
 
 """
@@ -54,8 +97,12 @@ function SingleTimeSeries(
 )
     component_name = get_name(component)
     ta = read_time_series(SingleTimeSeries, filename, component_name)
-    ta = handle_normalization_factor(ta[Symbol(component_name)], normalization_factor)
-    return SingleTimeSeries(name, ta, scaling_factor_multiplier)
+    return SingleTimeSeries(
+        name = name,
+        data = ta,
+        normalization_factor = normalization_factor,
+        scaling_factor_multiplier = scaling_factor_multiplier,
+    )
 end
 
 """
@@ -113,13 +160,32 @@ end
 
 function SingleTimeSeries(info::TimeSeriesParsedInfo)
     data = make_time_array(info)
-    ts = handle_normalization_factor(data, info.normalization_factor)
     return SingleTimeSeries(
         name = info.name,
-        data = ts,
+        data = data,
+        normalization_factor = info.normalization_factor,
         scaling_factor_multiplier = info.scaling_factor_multiplier,
     )
 end
+
+"""Get [`SingleTimeSeries`](@ref) `name`."""
+get_name(value::SingleTimeSeries) = value.name
+"""Get [`SingleTimeSeries`](@ref) `data`."""
+get_data(value::SingleTimeSeries) = value.data
+"""Get [`SingleTimeSeries`](@ref) `scaling_factor_multiplier`."""
+get_scaling_factor_multiplier(value::SingleTimeSeries) = value.scaling_factor_multiplier
+"""Get [`SingleTimeSeries`](@ref) `internal`."""
+get_internal(value::SingleTimeSeries) = value.internal
+
+"""Set [`SingleTimeSeries`](@ref) `name`."""
+set_name!(value::SingleTimeSeries, val) = value.name = val
+"""Set [`SingleTimeSeries`](@ref) `data`."""
+set_data!(value::SingleTimeSeries, val) = value.data = val
+"""Set [`SingleTimeSeries`](@ref) `scaling_factor_multiplier`."""
+set_scaling_factor_multiplier!(value::SingleTimeSeries, val) =
+    value.scaling_factor_multiplier = val
+"""Set [`SingleTimeSeries`](@ref) `internal`."""
+set_internal!(value::SingleTimeSeries, val) = value.internal = val
 
 eltype_data(ts::SingleTimeSeries) = eltype(TimeSeries.values(ts.data))
 

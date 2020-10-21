@@ -53,39 +53,6 @@
       "supertype": "ForecastMetadata"
     },
     {
-      "struct_name": "Deterministic",
-      "docstring": "A deterministic forecast for a particular data field in a Component.",
-      "fields": [
-        {
-          "name": "name",
-          "data_type": "String",
-          "comment": "user-defined name"
-        },
-        {
-          "name": "data",
-          "data_type": "Union{SortedDict{Dates.DateTime, Vector{CONSTANT}}, SortedDict{Dates.DateTime, Vector{POLYNOMIAL}}, SortedDict{Dates.DateTime, Vector{PWL}}}",
-          "comment": "timestamp - scalingfactor"
-        },
-        {
-          "name": "resolution",
-          "data_type": "Dates.Period",
-          "comment": "forecast resolution"
-        },
-        {
-          "name": "scaling_factor_multiplier",
-          "data_type": "Union{Nothing, Function}",
-          "default": "nothing",
-          "comment": "Applicable when the time series data are scaling factors. Called on the associated component to convert the values."
-        },
-        {
-          "name": "internal",
-          "data_type": "InfrastructureSystemsInternal",
-          "internal_default": "InfrastructureSystemsInternal()"
-        }
-      ],
-      "supertype": "AbstractDeterministic"
-    },
-    {
       "struct_name": "ProbabilisticMetadata",
       "docstring": "A Probabilistic forecast for a particular data field in a Component.",
       "fields": [
@@ -141,44 +108,6 @@
         }
       ],
       "supertype": "ForecastMetadata"
-    },
-    {
-      "struct_name": "Probabilistic",
-      "docstring": "A Probabilistic forecast for a particular data field in a Component.",
-      "fields": [
-        {
-          "name": "name",
-          "data_type": "String",
-          "comment": "user-defined name"
-        },
-        {
-          "name": "resolution",
-          "data_type": "Dates.Period",
-          "comment": "forecast resolution"
-        },
-        {
-          "name": "percentiles",
-          "data_type": "Vector{Float64}",
-          "comment": "Percentiles for the probabilistic forecast"
-        },
-        {
-          "name": "data",
-          "data_type": "Union{SortedDict{Dates.DateTime, Matrix{CONSTANT}}, SortedDict{Dates.DateTime, Matrix{POLYNOMIAL}}, SortedDict{Dates.DateTime, Matrix{PWL}}}",
-          "comment": "timestamp - scalingfactor"
-        },
-        {
-          "name": "scaling_factor_multiplier",
-          "data_type": "Union{Nothing, Function}",
-          "default": "nothing",
-          "comment": "Applicable when the time series data are scaling factors. Called on the associated component to convert the values."
-        },
-        {
-          "name": "internal",
-          "data_type": "InfrastructureSystemsInternal",
-          "internal_default": "InfrastructureSystemsInternal()"
-        }
-      ],
-      "supertype": "Forecast"
     },
     {
       "struct_name": "ScenariosMetadata",
@@ -238,44 +167,6 @@
       "supertype": "ForecastMetadata"
     },
     {
-      "struct_name": "Scenarios",
-      "docstring": "A Discrete Scenario Based time series for a particular data field in a Component.",
-      "fields": [
-        {
-          "name": "name",
-          "data_type": "String",
-          "comment": "user-defined name"
-        },
-        {
-          "name": "resolution",
-          "data_type": "Dates.Period",
-          "comment": "forecast resolution"
-        },
-        {
-          "name": "scenario_count",
-          "data_type": "Int64",
-          "comment": "Number of scenarios"
-        },
-        {
-          "name": "data",
-          "data_type": "Union{SortedDict{Dates.DateTime, Matrix{CONSTANT}}, SortedDict{Dates.DateTime, Matrix{POLYNOMIAL}}, SortedDict{Dates.DateTime, Matrix{PWL}}}",
-          "comment": "timestamp - scalingfactor"
-        },
-        {
-          "name": "scaling_factor_multiplier",
-          "data_type": "Union{Nothing, Function}",
-          "default": "nothing",
-          "comment": "Applicable when the time series data are scaling factors. Called on the associated component to convert the values."
-        },
-        {
-          "name": "internal",
-          "data_type": "InfrastructureSystemsInternal",
-          "internal_default": "InfrastructureSystemsInternal()"
-        }
-      ],
-      "supertype": "Forecast"
-    },
-    {
       "struct_name": "SingleTimeSeriesMetadata",
       "docstring": "A TimeSeries Data object in contigous form.",
       "fields": [
@@ -317,66 +208,6 @@
       ],
       "supertype": "StaticTimeSeriesMetadata",
       "custom_code": "get_horizon(val::SingleTimeSeriesMetadata) = get_length(val)"
-    },
-    {
-      "struct_name": "SingleTimeSeries",
-      "docstring": "A deterministic forecast for a particular data field in a Component.",
-      "fields": [
-        {
-          "name": "name",
-          "data_type": "String",
-          "comment": "user-defined name"
-        },
-        {
-          "name": "data",
-          "data_type": "TimeSeries.TimeArray",
-          "comment": "timestamp - scalingfactor"
-        },
-        {
-          "name": "scaling_factor_multiplier",
-          "data_type": "Union{Nothing, Function}",
-          "default": "nothing",
-          "comment": "Applicable when the time series data are scaling factors. Called on the associated component to convert the values."
-        },
-        {
-          "name": "internal",
-          "data_type": "InfrastructureSystemsInternal",
-          "internal_default": "InfrastructureSystemsInternal()"
-        }
-      ],
-      "supertype": "StaticTimeSeries"
-    },
-    {
-      "struct_name": "DeterministicSingleTimeSeries",
-      "docstring": "A deterministic forecast for a particular data field in a Component that wraps a SingleTimeSeries.",
-      "fields": [
-        {
-          "name": "single_time_series",
-          "data_type": "SingleTimeSeries",
-          "comment": "wrapped SingleTimeSeries object"
-        },
-        {
-          "name": "initial_timestamp",
-          "data_type": "Dates.DateTime",
-          "comment": "time series availability time"
-        },
-        {
-          "name": "interval",
-          "data_type": "Dates.Period",
-          "comment": "time step between forecast windows"
-        },
-        {
-          "name": "count",
-          "data_type": "Int",
-          "comment": "number of forecast windows"
-        },
-        {
-          "name": "horizon",
-          "data_type": "Int",
-          "comment": "length of this time series"
-        }
-      ],
-      "supertype": "AbstractDeterministic"
     }
   ],
   "struct_validation_descriptors": []
