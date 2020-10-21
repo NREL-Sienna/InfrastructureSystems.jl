@@ -132,6 +132,19 @@ function deserialize(::Type{T}, data::Dict) where {T <: InfrastructureSystemsTyp
     return deserialize_struct(T, data)
 end
 
+function deserialize_struct(::Type{TimeSeriesKey}, data::Dict)
+    vals = Dict{Symbol, Any}()
+    for (field_name, field_type) in
+        zip(fieldnames(TimeSeriesKey), fieldtypes(TimeSeriesKey))
+        val = data[string(field_name)]
+        if field_name == :time_series_type
+            val = getfield(InfrastructureSystems, Symbol(strip_module_name(val)))
+        end
+        vals[field_name] = val
+    end
+    return TimeSeriesKey(; vals...)
+end
+
 function deserialize_struct(::Type{T}, data::Dict) where {T}
     vals = Dict{Symbol, Any}()
     for (field_name, field_type) in zip(fieldnames(T), fieldtypes(T))

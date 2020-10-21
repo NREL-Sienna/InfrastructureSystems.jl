@@ -1734,3 +1734,65 @@ end
     forecast = IS.Deterministic(data = data, name = name, resolution = resolution)
     @test_throws IS.ConflictingInputsError IS.add_time_series!(sys, component, forecast)
 end
+
+@testset "Test get_time_series_by_key and TimeSeriesKey constructor" begin
+    sys = IS.SystemData()
+    name = "Component1"
+    component = IS.TestComponent(name, 5)
+    IS.add_component!(sys, component)
+
+    initial_time = Dates.DateTime("2020-09-01")
+    resolution = Dates.Hour(1)
+
+    other_time = initial_time + resolution
+    name = "test"
+    horizon = 24
+    data = SortedDict(initial_time => ones(horizon), other_time => ones(horizon))
+
+    forecast = IS.Deterministic(data = data, name = name, resolution = resolution)
+    IS.add_time_series!(sys, component, forecast)
+    key = IS.TimeSeriesKey(forecast)
+    @test key == IS.TimeSeriesKey(IS.DeterministicMetadata, name)
+    @test key ==
+          IS.TimeSeriesKey(; time_series_type = IS.DeterministicMetadata, name = name)
+
+    var1 = IS.get_time_series(IS.Deterministic, component, name; start_time = initial_time)
+    var_key1 = IS.get_time_series_by_key(key, component; start_time = initial_time)
+    @test length(var1) == length(var_key1)
+    @test IS.get_horizon(var1) == horizon
+    @test IS.get_horizon(var1) == IS.get_horizon(var_key1)
+    @test IS.get_initial_timestamp(var1) == initial_time
+    @test IS.get_initial_timestamp(var1) == IS.get_initial_timestamp(var_key1)
+
+    var2 = IS.get_time_series(
+        IS.Deterministic,
+        component,
+        name;
+        start_time = initial_time,
+        count = 2,
+    )
+    var_key2 = IS.get_time_series_by_key(
+        key,
+        component,
+        name;
+        start_time = initial_time,
+        count = 2,
+    )
+    @test length(var2) == 2
+    @test length(var2) == length(var_key2)
+
+    # Throws errors
+    @test_throws ArgumentError IS.get_time_series_by_key(
+        key,
+        component;
+        start_time = initial_time,
+        count = 3,
+    )
+    @test_throws ArgumentError IS.get_time_series_by_key(
+        key,
+        component,
+        name;
+        start_time = other_time,
+        count = 2,
+    )
+end
