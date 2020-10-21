@@ -14,6 +14,7 @@
     @test cache.in_memory_count == 168
     @test cache.common.next_time == initial_timestamp
     @test cache.common.ts === nothing
+    @test length(cache) == cache.common.num_iterations == 168
 
     # Iterate over all initial times with default cache size.
     cache = IS.ForecastCache(IS.Deterministic, component, "test")
@@ -26,7 +27,7 @@
 
     IS.reset!(cache)
     for it in initial_times
-        ta = IS.get_next_time_series_array(cache)
+        ta = IS.get_next_time_series_array!(cache)
         @test first(TimeSeries.timestamp(ta)) == it
         @test TimeSeries.timestamp(ta) ==
               IS.get_time_series_timestamps(component, forecast, it)
@@ -36,6 +37,7 @@
 
     # Iterate over all initial times with custom cache size.
     cache = IS.ForecastCache(IS.Deterministic, component, "test"; cache_size_bytes = 1024)
+    @test length(cache) == cache.common.num_iterations == 168
     for (i, ta) in enumerate(cache)
         it = initial_times[i]
         @test TimeSeries.timestamp(ta) ==
@@ -45,7 +47,7 @@
 
     IS.reset!(cache)
     for it in initial_times
-        ta = IS.get_next_time_series_array(cache)
+        ta = IS.get_next_time_series_array!(cache)
         @test TimeSeries.timestamp(ta) ==
               IS.get_time_series_timestamps(component, forecast, it)
         @test TimeSeries.values(ta) == IS.get_time_series_values(component, forecast, it)
@@ -70,7 +72,7 @@
     @test cache.in_memory_count == 5
     @test cache.common.next_time == initial_timestamp
     for it in initial_times[1:(cache.in_memory_count)]
-        ta = IS.get_next_time_series_array(cache)
+        ta = IS.get_next_time_series_array!(cache)
         @test cache.common.last_cached_time == initial_times[5]
         @test TimeSeries.timestamp(ta) ==
               IS.get_time_series_timestamps(component, forecast, it)
@@ -78,7 +80,7 @@
     end
 
     # The next access should trigger a read.
-    ta = IS.get_next_time_series_array(cache)
+    ta = IS.get_next_time_series_array!(cache)
     @test cache.common.last_cached_time == initial_times[10]
     @test TimeSeries.timestamp(ta) ==
           IS.get_time_series_timestamps(component, forecast, initial_times[6])
@@ -107,6 +109,7 @@ end
     @test cache.in_memory_rows == 365
     @test cache.common.next_time == initial_timestamp
     @test cache.common.ts === nothing
+    @test length(cache) == cache.common.num_iterations == 1
 
     # Iterate over all initial times with default cache size.
     cache = IS.StaticTimeSeriesCache(IS.SingleTimeSeries, component, "test")
@@ -116,7 +119,7 @@ end
         @test TimeSeries.values(ta) == IS.get_time_series_values(component, ts, it)
     end
 
-    ta = IS.get_next_time_series_array(cache)
+    ta = IS.get_next_time_series_array!(cache)
     @test first(TimeSeries.timestamp(ta)) == initial_timestamp
     @test TimeSeries.timestamp(ta) ==
           IS.get_time_series_timestamps(component, ts, initial_timestamp)
@@ -131,8 +134,8 @@ end
         cache_size_bytes = 1024,
     )
     @test cache.in_memory_rows == 128
-    @test cache.common.num_iterations == 3
-    ta = IS.get_next_time_series_array(cache)
+    @test length(cache) == cache.common.num_iterations == 3
+    ta = IS.get_next_time_series_array!(cache)
     @test first(TimeSeries.timestamp(ta)) == initial_timestamp
     @test length(ta) == 128
     @test TimeSeries.values(ta) == TimeSeries.values(data)[1:128]
@@ -148,7 +151,7 @@ end
 
     IS.reset!(cache)
     for i in 1:3
-        ta = IS.get_next_time_series_array(cache)
+        ta = IS.get_next_time_series_array!(cache)
         it = initial_timestamp + (i - 1) * cache.in_memory_rows * resolution
         @test TimeSeries.timestamp(ta) ==
               IS.get_time_series_timestamps(component, ts, it; len = length(ta))
@@ -167,7 +170,7 @@ end
     @test cache.common.num_iterations == 2
     @test cache.common.length_remaining == 365 - 128
     for i in 1:2
-        ta = IS.get_next_time_series_array(cache)
+        ta = IS.get_next_time_series_array!(cache)
         it = initial_timestamp + i * cache.in_memory_rows * resolution
         @test TimeSeries.timestamp(ta) ==
               IS.get_time_series_timestamps(component, ts, it; len = length(ta))
