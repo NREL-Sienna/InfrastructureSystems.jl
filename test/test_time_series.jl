@@ -427,11 +427,11 @@ end
         )
         # Ensure that deleting one doesn't delete the other.
         if in_memory
-            IS.remove_time_series!(IS.Deterministic, sys, component, name)
+            IS.remove_time_series!(sys, IS.Deterministic, component, name)
             @test IS.get_time_series(IS.SingleTimeSeries, component, name) isa
                   IS.SingleTimeSeries
         else
-            IS.remove_time_series!(IS.SingleTimeSeries, sys, component, name)
+            IS.remove_time_series!(sys, IS.SingleTimeSeries, component, name)
             @test IS.get_time_series(IS.Deterministic, component, name) isa
                   IS.DeterministicSingleTimeSeries
         end
@@ -749,7 +749,7 @@ end
     @test length(get_all_time_series(data)) == 1
 
     time_series = time_series[1]
-    IS.remove_time_series!(typeof(time_series), data, component, IS.get_name(time_series))
+    IS.remove_time_series!(data, typeof(time_series), component, IS.get_name(time_series))
 
     @test length(get_all_time_series(data)) == 0
     @test IS.get_num_time_series(data.time_series_storage) == 0

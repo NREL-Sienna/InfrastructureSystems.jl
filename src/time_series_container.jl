@@ -52,8 +52,8 @@ function add_time_series!(
 end
 
 function remove_time_series!(
-    ::Type{T},
     container::TimeSeriesContainer,
+    ::Type{T},
     name::AbstractString,
 ) where {T <: TimeSeriesMetadata}
     key = TimeSeriesKey(T, name)

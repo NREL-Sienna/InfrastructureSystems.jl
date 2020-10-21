@@ -7,14 +7,17 @@ function Base.iterate(cache::TimeSeriesCache, state = nothing)
         reset!(cache)
     end
 
-    ta = get_next_time_series_array(cache)
+    ta = get_next_time_series_array!(cache)
     if ta === nothing
         reset!(cache)
         return nothing
     end
 
+    # Unlike standard Julia iterators, state is maintained internally.
     return ta, 1
 end
+
+Base.length(c::TimeSeriesCache) = _get_num_iterations(c)
 
 """
 Return the next TimeSeries.TimeArray.
@@ -27,17 +30,17 @@ Call [`get_next_time`](@ref) to check the start time.
 
 Reads from storage if the data is not already in cache.
 """
-function get_next_time_series_array(cache::TimeSeriesCache)
+function get_next_time_series_array!(cache::TimeSeriesCache)
     if _get_iterations_remaining(cache) == 0
         return
     end
 
     next_time = get_next_time(cache)
     if _get_time_series(cache) === nothing || next_time > _get_last_cached_time(cache)
-        @debug "get_next_time_series_array update cache" next_time
+        @debug "get_next_time_series_array! update cache" next_time
         _update!(cache)
     else
-        @debug "get_next_time_series_array data is in cache" next_time
+        @debug "get_next_time_series_array! data is in cache" next_time
     end
 
     len = _get_length_available(cache)
@@ -54,7 +57,7 @@ function get_next_time_series_array(cache::TimeSeriesCache)
 end
 
 """
-Return the timestamp for the next read with [`get_next_time_series_array`](@ref).
+Return the timestamp for the next read with [`get_next_time_series_array!`](@ref).
 
 Return `nothing` if all data has been read.
 """
@@ -68,7 +71,7 @@ end
 
 """
 Reset parameters in order to start reading data from the beginning with
-[`get_next_time_series_array`](@ref)
+[`get_next_time_series_array!`](@ref)
 """
 reset!(cache::TimeSeriesCache) = _reset!(cache.common)
 
@@ -79,6 +82,7 @@ _set_length_available!(c::TimeSeriesCache, len) = c.common.length_available = le
 _get_length_remaining(c::TimeSeriesCache) = c.common.length_remaining
 _decrement_length_remaining!(c::TimeSeriesCache, num) = c.common.length_remaining -= num
 _get_name(c::TimeSeriesCache) = c.common.name
+_get_num_iterations(c::TimeSeriesCache) = c.common.num_iterations
 _get_ignore_scaling_factors(c::TimeSeriesCache) = c.common.ignore_scaling_factors
 _get_type(c::TimeSeriesCache) = c.common.time_series_type
 _get_time_series(c::TimeSeriesCache) = c.common.ts
@@ -151,7 +155,7 @@ end
 Construct ForecastCache to automatically control caching of forecast data.
 Maintains some count of forecast windows in memory based on `cache_size_bytes`.
 
-Call Base.iterate or [`get_next_time_series_array`](@ref) to retrieve data.
+Call Base.iterate or [`get_next_time_series_array!`](@ref) to retrieve data.
 
 # Arguments
 - `::Type{T}`: subtype of Forecast
