@@ -43,12 +43,14 @@ end
 
 function Scenarios(;
     name,
-    resolution,
-    scenario_count,
     data,
+    scenario_count,
+    resolution,
     scaling_factor_multiplier = nothing,
+    normalization_factor = 1.0,
     internal = InfrastructureSystemsInternal(),
 )
+    data = handle_normalization_factor(convert_data(data), normalization_factor)
     Scenarios(name, data, scenario_count, resolution, scaling_factor_multiplier, internal)
 end
 
@@ -73,15 +75,15 @@ function Scenarios(
     scaling_factor_multiplier::Union{Nothing, Function} = nothing,
 )
     scenario_count = size(first(values(input_data)))[2]
-    data = handle_normalization_factor(convert_data(input_data), normalization_factor)
 
     return Scenarios(
-        name,
-        data,
-        scenario_count,
-        resolution,
-        scaling_factor_multiplier,
-        InfrastructureSystemsInternal(),
+        name = name,
+        data = input_data,
+        scenario_count = scenario_count,
+        resolution = resolution,
+        scaling_factor_multiplier = scaling_factor_multiplier,
+        normalization_factor = normalization_factor,
+        internal = InfrastructureSystemsInternal(),
     )
 end
 

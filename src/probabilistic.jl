@@ -47,8 +47,15 @@ function Probabilistic(;
     percentiles,
     data,
     scaling_factor_multiplier = nothing,
+    normalization_factor = 1.0,
     internal = InfrastructureSystemsInternal(),
 )
+    data = handle_normalization_factor(convert_data(data), normalization_factor)
+    quantile_count = size(first(values(data)))[2]
+    if quantile_count != length(percentiles)
+        throw(ArgumentError("The amount of elements in the data doesn't match the length of the percentiles"))
+    end
+
     Probabilistic(name, data, percentiles, resolution, scaling_factor_multiplier, internal)
 end
 
@@ -74,19 +81,14 @@ function Probabilistic(
     normalization_factor::NormalizationFactor = 1.0,
     scaling_factor_multiplier::Union{Nothing, Function} = nothing,
 )
-    data = handle_normalization_factor(convert_data(input_data), normalization_factor)
-    quantile_count = size(first(values(data)))[2]
-    if quantile_count != length(percentiles)
-        throw(ArgumentError("The amount of elements in the data doesn't match the length of the percentiles"))
-    end
-
     return Probabilistic(
-        name,
-        data,
-        percentiles,
-        resolution,
-        scaling_factor_multiplier,
-        InfrastructureSystemsInternal(),
+        name = name,
+        data = input_data,
+        percentiles = percentiles,
+        resolution = resolution,
+        scaling_factor_multiplier = scaling_factor_multiplier,
+        normalization_factor = normalization_factor,
+        internal = InfrastructureSystemsInternal(),
     )
 end
 
@@ -121,10 +123,10 @@ function Probabilistic(
     end
 
     return Probabilistic(
-        name,
-        data,
-        percentiles,
-        resolution;
+        name = name,
+        data = data,
+        percentiles = percentiles,
+        resolution = resolution,
         normalization_factor = normalization_factor,
         scaling_factor_multiplier = scaling_factor_multiplier,
     )
@@ -142,10 +144,10 @@ function Probabilistic(
     scaling_factor_multiplier::Union{Nothing, Function} = nothing,
 )
     return Probabilistic(
-        name,
-        series_data.data,
-        percentiles,
-        resolution;
+        name = name,
+        data = series_data.data,
+        percentiles = percentiles,
+        resolution = resolution,
         normalization_factor = normalization_factor,
         scaling_factor_multiplier = scaling_factor_multiplier,
     )
@@ -164,10 +166,10 @@ end
 
 function Probabilistic(info::TimeSeriesParsedInfo)
     return Probabilistic(
-        info.name,
-        info.data,
-        info.percentiles,
-        info.resolution;
+        name = info.name,
+        data = info.data,
+        percentiles = info.percentiles,
+        resolution = info.resolution,
         normalization_factor = info.normalization_factor,
         scaling_factor_multiplier = info.scaling_factor_multiplier,
     )
@@ -193,6 +195,13 @@ convert_data(data::AbstractDict{Dates.DateTime, Matrix{T}}) where {T <: Tuple} =
     SortedDict{Dates.DateTime, Matrix{POLYNOMIAL}}(data...)
 convert_data(data::AbstractDict{Dates.DateTime, Matrix{Matrix{T}}}) where {T <: Tuple} =
     SortedDict{Dates.DateTime, Matrix{PWL}}(data...)
+convert_data(
+    data::Union{
+        SortedDict{Dates.DateTime, Matrix{CONSTANT}},
+        SortedDict{Dates.DateTime, Matrix{POLYNOMIAL}},
+        SortedDict{Dates.DateTime, Matrix{PWL}},
+    },
+) = data
 
 """Get [`Probabilistic`](@ref) `name`."""
 get_name(value::Probabilistic) = value.name

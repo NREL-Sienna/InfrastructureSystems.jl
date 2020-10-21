@@ -29,8 +29,10 @@ function SingleTimeSeries(;
     name,
     data,
     scaling_factor_multiplier = nothing,
+    normalization_factor = 1.0,
     internal = InfrastructureSystemsInternal(),
 )
+    data = handle_normalization_factor(data, normalization_factor)
     SingleTimeSeries(name, data, scaling_factor_multiplier, internal)
 end
 
@@ -63,12 +65,12 @@ function SingleTimeSeries(
         error("fatal: $(typeof(data))")
     end
 
-    ta = handle_normalization_factor(ta, normalization_factor)
     return SingleTimeSeries(
-        name,
-        ta,
-        scaling_factor_multiplier,
-        InfrastructureSystemsInternal(),
+        name = name,
+        data = ta,
+        scaling_factor_multiplier = scaling_factor_multiplier,
+        normalization_factor = normalization_factor,
+        internal = InfrastructureSystemsInternal(),
     )
 end
 
@@ -95,8 +97,12 @@ function SingleTimeSeries(
 )
     component_name = get_name(component)
     ta = read_time_series(SingleTimeSeries, filename, component_name)
-    ta = handle_normalization_factor(ta[Symbol(component_name)], normalization_factor)
-    return SingleTimeSeries(name, ta, scaling_factor_multiplier)
+    return SingleTimeSeries(
+        name = name,
+        data = ta,
+        normalization_factor = normalization_factor,
+        scaling_factor_multiplier = scaling_factor_multiplier,
+    )
 end
 
 """
@@ -154,10 +160,10 @@ end
 
 function SingleTimeSeries(info::TimeSeriesParsedInfo)
     data = make_time_array(info)
-    ts = handle_normalization_factor(data, info.normalization_factor)
     return SingleTimeSeries(
         name = info.name,
-        data = ts,
+        data = data,
+        normalization_factor = info.normalization_factor,
         scaling_factor_multiplier = info.scaling_factor_multiplier,
     )
 end

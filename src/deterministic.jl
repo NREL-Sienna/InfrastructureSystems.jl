@@ -42,25 +42,26 @@ function Deterministic(;
     data,
     resolution,
     scaling_factor_multiplier = nothing,
+    normalization_factor = 1.0,
     internal = InfrastructureSystemsInternal(),
 )
-    Deterministic(name, data, resolution, scaling_factor_multiplier, internal)
+    data = handle_normalization_factor(convert_data(data), normalization_factor)
+    return Deterministic(name, data, resolution, scaling_factor_multiplier, internal)
 end
 
 function Deterministic(
     name::AbstractString,
-    input_data::AbstractDict,
+    data::AbstractDict,
     resolution::Dates.Period;
     normalization_factor::NormalizationFactor = 1.0,
     scaling_factor_multiplier::Union{Nothing, Function} = nothing,
 )
-    data = handle_normalization_factor(convert_data(input_data), normalization_factor)
     return Deterministic(
-        name,
-        data,
-        resolution,
-        scaling_factor_multiplier,
-        InfrastructureSystemsInternal(),
+        name = name,
+        data = data,
+        resolution = resolution,
+        scaling_factor_multiplier = scaling_factor_multiplier,
+        internal = InfrastructureSystemsInternal(),
     )
 end
 
@@ -97,9 +98,9 @@ function Deterministic(
     end
 
     return Deterministic(
-        name,
-        data,
-        resolution;
+        name = name,
+        data = data,
+        resolution = resolution,
         normalization_factor = normalization_factor,
         scaling_factor_multiplier = scaling_factor_multiplier,
     )
@@ -149,9 +150,9 @@ function Deterministic(
     scaling_factor_multiplier::Union{Nothing, Function} = nothing,
 )
     return Deterministic(
-        name,
-        series_data.data,
-        resolution;
+        name = name,
+        data = series_data.data,
+        resolution = resolution,
         normalization_factor = normalization_factor,
         scaling_factor_multiplier = scaling_factor_multiplier,
     )
@@ -204,6 +205,13 @@ convert_data(data::AbstractDict{Dates.DateTime, Vector{T}}) where {T <: Tuple} =
     SortedDict{Dates.DateTime, Vector{POLYNOMIAL}}(data...)
 convert_data(data::AbstractDict{Dates.DateTime, Vector{Vector{T}}}) where {T <: Tuple} =
     SortedDict{Dates.DateTime, Vector{PWL}}(data...)
+convert_data(
+    data::Union{
+        SortedDict{Dates.DateTime, Vector{CONSTANT}},
+        SortedDict{Dates.DateTime, Vector{POLYNOMIAL}},
+        SortedDict{Dates.DateTime, Vector{PWL}},
+    },
+) = data
 
 # Workaround for a bug/limitation in SortedDict. If a user tries to construct
 # SortedDict(i => ones(2) for i in 1:2)
