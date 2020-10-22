@@ -9,19 +9,22 @@ end
 pages = OrderedDict(
         "Welcome Page" => "index.md",
         "User Guide" => Any[
-            "user_guide/installation.md",
-            "user_guide/guide.md",
-            "user_guide/logging.md",
-            "user_guide/tests.md",
+            "dev_tools/components_and_container.md",
+            "dev_tools/auto_generation.md",
+            "dev_tools/time_series.md",
+            "dev_tools/recorder.md",
+            "dev_tools/tests.md",
+            "dev_tools/logging.md",
         ],
-        "API" => "api/InfrastructureSystems.md"
+        "Style Guide" => "style.md",
+        "API" => "InfrastructureSystems.md"
 )
 
 # This code performs the automated addition of Literate - Generated Markdowns. The desired
 # section name should be the name of the file for instance network_matrices.jl -> Network Matrices
 julia_file_filter = x -> occursin(".jl", x)
 folders = Dict(
-    "User Guide" => filter(julia_file_filter, readdir("docs/src/user_guide")),
+    "Developer Tools" => filter(julia_file_filter, readdir("docs/src/dev_tools")),
 )
 
 for (section, folder) in folders
