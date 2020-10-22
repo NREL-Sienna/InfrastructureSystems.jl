@@ -279,11 +279,14 @@ function TimeSeriesParsedInfo(metadata::TimeSeriesFileMetadata, raw_data::RawTim
 end
 
 function make_time_array(info::TimeSeriesParsedInfo)
-    data_dict = info.data.data
-    series_length = info.data.length
-    ini_time = info.data.initial_time
-    timestamps = range(ini_time; length = series_length, step = info.resolution)
-    return TimeSeries.TimeArray(timestamps, data_dict[get_name(info.component)])
+    return make_time_array(info.data, get_name(info.component), info.resolution)
+end
+
+function make_time_array(raw::RawTimeSeries, component_name, resolution)
+    series_length = raw.length
+    ini_time = raw.initial_time
+    timestamps = range(ini_time; length = series_length, step = resolution)
+    return TimeSeries.TimeArray(timestamps, raw.data[component_name])
 end
 
 struct TimeSeriesParsingCache

@@ -82,6 +82,7 @@ component.
 - `name::AbstractString`: user-defined name
 - `filename::AbstractString`: name of CSV file containing data
 - `component::InfrastructureSystemsComponent`: component associated with the data
+- `resolution::Dates.Period`: resolution of the time series
 - `normalization_factor::NormalizationFactor = 1.0`: optional normalization factor to apply
   to each data entry
 - `scaling_factor_multiplier::Union{Nothing, Function} = nothing`: If the data are scaling
@@ -91,12 +92,14 @@ component.
 function SingleTimeSeries(
     name::AbstractString,
     filename::AbstractString,
-    component::InfrastructureSystemsComponent;
+    component::InfrastructureSystemsComponent,
+    resolution::Dates.Period;
     normalization_factor::NormalizationFactor = 1.0,
     scaling_factor_multiplier::Union{Nothing, Function} = nothing,
 )
     component_name = get_name(component)
-    ta = read_time_series(SingleTimeSeries, filename, component_name)
+    raw = read_time_series(SingleTimeSeries, filename, component_name)
+    ta = make_time_array(raw, component_name, resolution)
     return SingleTimeSeries(
         name = name,
         data = ta,
