@@ -17,11 +17,13 @@ making expensive copies.
 - Supports parsing raw data files of several formats as well as data stored in
   `TimeSeries.TimeArray` and `DataFrames.DataFrame` objects.
 
+> **Your package must reimplement a deepcopy method if you use HDF5 storage for TimeSeriesData**
+
 If you store an instance of [`InfrastructureSystems.SystemData`](@ref) within your
 system and then a user calls `deepcopy` on a system, the .h5 file will not be copied.
 The new and old instances will have references to the same file. You will need to
 reimplement `deepcopy` to handle this. One solution is to serialize and then
-deserialize the system. **You must reimplement deepcopy if you use HDF5**
+deserialize the system.
 
 *Notes*:
 

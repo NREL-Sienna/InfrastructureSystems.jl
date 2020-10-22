@@ -1,6 +1,4 @@
-# Components and SystemData
-
-## Component structs
+# Managing Components
 
 `InfrastructureSystems.jl` provides a common way of managing component structs in a
 system.
