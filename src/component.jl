@@ -314,7 +314,7 @@ function get_time_series_values(
     start_time::Dates.DateTime;
     len::Union{Nothing, Int} = nothing,
     ignore_scaling_factors = false,
-) where {T <: TimeSeriesData}
+)
     return TimeSeries.values(get_time_series_array(
         component,
         forecast,

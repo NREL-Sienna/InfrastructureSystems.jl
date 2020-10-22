@@ -223,7 +223,7 @@ function get_components(
     ::Type{T},
     components::Components,
     filter_func::Union{Nothing, Function} = nothing,
-)::FlattenIteratorWrapper{T} where {T <: InfrastructureSystemsComponent}
+) where {T <: InfrastructureSystemsComponent}
     if isconcretetype(T)
         _components = get(components.data, T, nothing)
         if !isnothing(filter_func) && !isnothing(_components)
