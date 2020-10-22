@@ -27,7 +27,7 @@ Add this struct to every component struct.
 
 1. Add the field to your struct. The constructor does not take any parameters.
 
-```julia
+```Julia
 struct MyComponent
     internal::InfrastructureSystemsInternal
 end

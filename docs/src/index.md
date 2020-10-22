@@ -8,13 +8,13 @@ CurrentModule = InfrastructureSystems
 
 The latest stable release of PowerSystems can be installed using the Julia package manager with
 
-```julia
+```Julia
 ] add InfrastructureSystems
 ```
 
 For the current development version, "checkout" this package with
 
-```julia
+```Julia
 ] add InfrastructureSystems#master
 ```
 

@@ -19,7 +19,7 @@ ensure that all events get flushed.
 - `set_global::Bool=true`: set the created logger as the global logger
 
 # Example
-```julia
+```Julia
 logger = configure_logging(filename="mylog.txt")
 ```
 """
@@ -108,7 +108,7 @@ Base.close(logger::FileLogger) = close(logger.logger.stream)
 Opens a file logger using Logging.SimpleLogger.
 
 # Example
-```julia
+```Julia
 open_file_logger("log.txt", Logging.Info) do logger
     global_logger(logger)
     @info "hello world"
@@ -162,7 +162,7 @@ end
 Tracks counts of all log events by level.
 
 # Examples
-```julia
+```Julia
 LogEventTracker()
 LogEventTracker((Logging.Info, Logging.Warn, Logging.Error))
 ```
@@ -223,7 +223,7 @@ Redirects log events to multiple loggers. The primary use case is to allow loggi
 both a file and the console. Secondarily, it can track the counts of all log messages.
 
 # Example
-```julia
+```Julia
 MultiLogger([ConsoleLogger(stderr), SimpleLogger(stream)], LogEventTracker())
 ```
 """
@@ -236,7 +236,7 @@ end
 Creates a MultiLogger with no event tracking.
 
 # Example
-```julia
+```Julia
 MultiLogger([ConsoleLogger(stderr), SimpleLogger(stream)])
 ```
 """

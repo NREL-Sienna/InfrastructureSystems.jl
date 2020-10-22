@@ -21,7 +21,7 @@ reasons to consider using this approach:
 2. Run the generation script, passing your descriptor file and an output
    directory.
 
-```julia
+```Julia
 InfrastructureSystems.generate_structs("./src/descriptors/power_system_structs.json", "./src/models/generated")
 ```
 
