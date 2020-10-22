@@ -25,7 +25,7 @@ pages = OrderedDict(
 # This code is generic to all SIIP documentation
 julia_file_filter = x -> occursin(".jl", x)
 folders = Dict(
-    "Developer Tools" => filter(julia_file_filter, readdir("docs/src/dev_tools")),
+    "Developer Tools" => filter(julia_file_filter, readdir("docs/src/dev_guide")),
 )
 
 for (section, folder) in folders

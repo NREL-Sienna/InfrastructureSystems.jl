@@ -34,23 +34,22 @@ For the current development version, "checkout" this package with
 ### Usage
 
 `InfrastructureSystems.jl` does not export any method or struct by design. Please refer to
-the [Style Guide](@ref style_guide).
+the [Style Guide](@ref style_guide). For detailed use of `InfrastructureSystems.jl` visit
+the [API](@ref API_ref) section of the documentation.
 
-For detailed use of `InfrastructureSystems.jl` visit the [API](@ref API_ref) section of the
-documentation
-
-`InfrastructureSystems.jl` provides several utilities for the development of packages:
+`InfrastructureSystems.jl` provides several utilities for the development of packages, the
+documentation includes several guides for developers
 
 ```@contents
 Pages = [
-        "dev_tools/components_and_container.md",
-        "dev_tools/auto_generation.md",
-        "dev_tools/time_series.md",
-        "dev_tools/recorder.md",
-        "dev_tools/tests.md",
-        "dev_tools/logging.md"
+        "dev_guide/components_and_container.md",
+        "dev_guide/auto_generation.md",
+        "dev_guide/time_series.md",
+        "dev_guide/recorder.md",
+        "dev_guide/tests.md",
+        "dev_guide/logging.md"
 ]
-Depth = 2
+Depth = 1
 ```
 
 ------------
