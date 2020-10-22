@@ -1,5 +1,15 @@
 # Logging
 
+InfrastructureSystems provides a `MultiLogger` object that allows customized
+logging to console and file. Refer to the [logging
+documentation](./logging.md).
+
+If you want to create a package-specific log file during a simulation, consider
+the workflow used by PowerSimulations.jl. It creates a custom logger in its
+`build!(Simulation)` function and then uses Julia's `Logging.with_logger`
+function to temporarily take over the global logger during `build()` and
+`execute()`.
+
 This document describes logging facilities available in the modules that use InfrastructureSystems. The examples assume the following imports:
 
 ```julia
