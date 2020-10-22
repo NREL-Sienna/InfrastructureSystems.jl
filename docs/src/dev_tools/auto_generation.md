@@ -1,6 +1,6 @@
-# Auto-Generation of component structs
+# Auto-Generation of Component Structs
 
-InfrastructureSystems provides a mechanism to auto-generate Julia files
+`InfrastructureSystems.jl` provides a mechanism to auto-generate Julia files
 containing structs and field accessor functions from JSON descriptors. Here are
 reasons to consider using this approach:
 

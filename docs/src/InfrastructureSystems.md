@@ -2,5 +2,5 @@
 
 ```@autodocs
 Modules = [InfrastructureSystems]
-Order = [:type, :function, :macro]
+Order = [:type, :function, :macro, :constant]
 ```

@@ -1,11 +1,12 @@
-# Recorder events
+# Recorder Events
 
-InfrastructureSystems provides a mechanism to store structured data in events
+`InfrastructureSystems.jl` provides a mechanism to store structured data in events
 that get recorded in one or more files. They can be filtered and displayed in
 tabular form.
 
-The primary use is to store information that can help debug problems.  For
-example, you may want to store all state transitions in a simulation or every
+The primary use is to store information that can help debug problems and it is largely used
+in [PowerSimulations.jl](https://github.com/NREL-SIIP/PowerSimulations.jl). For example,
+you may want to store all state transitions in a simulation or every
 update of a variable.  If a problem occurs you can then display filtered tables
 of that data to figure out what went wrong.
 

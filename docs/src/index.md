@@ -4,7 +4,8 @@
 CurrentModule = InfrastructureSystems
 ```
 
-**Installation**
+### Installation
+
 The latest stable release of PowerSystems can be installed using the Julia package manager with
 
 ```julia
@@ -17,17 +18,19 @@ For the current development version, "checkout" this package with
 ] add InfrastructureSystems#master
 ```
 
-**Overview**
+### Overview
+
 `InfrastructureSystems.jl` is a [`Julia`](http://www.julialang.org) package that utilities for
 the packages in NREL's [SIIP Initiative](https://github.com/NREL-SIIP). This package is meant
-for package development. It is used primarily by
+for module development. It is used primarily by
 [PowerSystems.jl](https://github.com/NREL-SIIP/PowerSystems.jl) and
 [PowerSimulations.jl](https://github.com/NREL-SIIP/PowerSimulations.jl) but is
-written to be extensible for other kinds of .
+written to be extensible for other kinds of infrastructure models.
 
 This document describes how to integrate it with other packages.
 
-**Usage**
+### Usage
+
 `InfrastructureSystems.jl` does not export any method or struct by design. Please refer to
 the [Style Guide](@ref style_guide).
 
