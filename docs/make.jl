@@ -8,7 +8,7 @@ end
 
 pages = OrderedDict(
         "Welcome Page" => "index.md",
-        "User Guide" => Any[
+        "Developer Tools" => Any[
             "dev_tools/components_and_container.md",
             "dev_tools/auto_generation.md",
             "dev_tools/time_series.md",
@@ -22,6 +22,7 @@ pages = OrderedDict(
 
 # This code performs the automated addition of Literate - Generated Markdowns. The desired
 # section name should be the name of the file for instance network_matrices.jl -> Network Matrices
+# This code is generic to all SIIP documentation
 julia_file_filter = x -> occursin(".jl", x)
 folders = Dict(
     "Developer Tools" => filter(julia_file_filter, readdir("docs/src/dev_tools")),
