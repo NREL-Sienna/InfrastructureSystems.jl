@@ -1,4 +1,4 @@
-# Component Time Series Data
+# Time Series Data
 
 `InfrastructureSystems.jl` implements containers and routines to efficiently manage time
 series data. This document contains content for developers of new time series data. For the
