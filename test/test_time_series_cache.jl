@@ -33,7 +33,7 @@
               IS.get_time_series_timestamps(component, forecast, it)
         @test TimeSeries.values(ta) == IS.get_time_series_values(component, forecast, it)
     end
-    @test IS.get_next_time(cache) == nothing
+    @test IS.get_next_time(cache) === nothing
 
     # Iterate over all initial times with custom cache size.
     cache = IS.ForecastCache(IS.Deterministic, component, "test"; cache_size_bytes = 1024)
