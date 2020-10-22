@@ -26,11 +26,10 @@ deserialize the system. **You must reimplement deepcopy if you use HDF5**
 *Notes*:
 
 - Time series data can optionally be stored fully in memory. Refer to the
-[SystemData](https://nrel-siip.github.io/InfrastructureSystems.jl/latest/api/InfrastructureSystems/#InfrastructureSystems.SystemData)
-documentation.
+[`InfrastructureSystems.SystemData`](@ref) documentation.
 - `InfrastructureSystems.jl` creates HDF5 files on the tmp filesystem by default.
   This can be changed if the time series data is larger than the amount of
-  tmp space available. Refer to the `SystemData` link above.
+  tmp space available. Refer to the [`InfrastructureSystems.SystemData`](@ref) link above.
 
 ## Instructions
 
