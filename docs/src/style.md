@@ -53,7 +53,7 @@ Use outer constructors to provide default values or to perform customization.
 * Document the reason why the outer constructor is different.
 * Note that the compiler will provide a default constructor with all struct
 members if no inner constructor is defined.
-* When creating a constructor use "function Foo()" instead of "Foo() = ..."
+* When creating a constructor use `function Foo()` instead of `Foo() = ...`
 One exception is the case where one file has all single-line functions.
 
 ## Exceptions
@@ -70,7 +70,7 @@ builds.
 ## Globals
 
 * Global constants should use UPPER_CASE and be declared const.
-* If global variables are needed, prefix them with "g_".
+* If global variables are needed, prefix them with `g_`.
 * Don't use magic numbers. Instead, define const globals or Enums (Julia @enum).
 
 ## One-line Conditionals

@@ -39,12 +39,12 @@ clear_ext!(c::MyComponent) = InfrastructureSystems.clear_ext(c.ext)
 
 *Notes*:
 
-- `InfrastructureSystems.get_uuid(obj::InfrastructureSystemsComponent)` returns the
-  component UUID.
+- [`InfrastructureSystems.get_uuid`](@ref) with arument `obj::InfrastructureSystemsComponent`
+returns the component UUID.
 - The extension dictionary is not created until the first time `get_ext` is
   called.
 
-## Component container
+## Component Container
 
 `InfrastructureSystems.jl` provides the `SystemData` struct to store a collection of
 components.
@@ -52,8 +52,8 @@ components.
 It is recommended but not required that you include this struct within your own
   system struct for these reasons:
 
-- Provides search and iteration with `get_component` and `get_components` for
-  abstract and concrete types.
+- Provides search and iteration with [`InfrastructureSystems.get_component`](@ref)
+  and [`InfrastructureSystems.get_components`](@ref) for abstract and concrete types.
 - Enforces name uniqueness within a concrete type.
 - Allows for component field validation.
 - Enables component JSON serialization and deserialization.
