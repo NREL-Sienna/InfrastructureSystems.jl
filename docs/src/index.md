@@ -6,7 +6,8 @@ CurrentModule = InfrastructureSystems
 
 ### Installation
 
-The latest stable release of PowerSystems can be installed using the Julia package manager with
+The latest stable release of `InfrastructureSystems.jl` can be installed using the Julia
+package manager with
 
 ```Julia
 ] add InfrastructureSystems
@@ -52,6 +53,6 @@ Depth = 2
 ```
 
 ------------
-PowerSystems has been developed as part of the Scalable Integrated Infrastructure Planning
+InfrastructureSystems has been developed as part of the Scalable Integrated Infrastructure Planning
 (SIIP) initiative at the U.S. Department of Energy's National Renewable Energy Laboratory
 ([NREL](https://www.nrel.gov/))

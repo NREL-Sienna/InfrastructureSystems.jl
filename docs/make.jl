@@ -8,13 +8,13 @@ end
 
 pages = OrderedDict(
         "Welcome Page" => "index.md",
-        "Developer Tools" => Any[
-            "dev_tools/components_and_container.md",
-            "dev_tools/auto_generation.md",
-            "dev_tools/time_series.md",
-            "dev_tools/recorder.md",
-            "dev_tools/tests.md",
-            "dev_tools/logging.md",
+        "Developer Guide" => Any[
+            "dev_guide/components_and_container.md",
+            "dev_guide/auto_generation.md",
+            "dev_guide/time_series.md",
+            "dev_guide/recorder.md",
+            "dev_guide/tests.md",
+            "dev_guide/logging.md",
         ],
         "Style Guide" => "style.md",
         "API" => "InfrastructureSystems.md"
