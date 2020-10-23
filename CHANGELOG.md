@@ -1,5 +1,14 @@
 # InfrastructureSystems
 
+## 1.0.0
+
+- Separate TimeSeriesData in Forecast and StaticTimeSeries
+- Add documentation
+- Remove PWL cost function 
+- Add Support for composed Arrays in forecasts 
+- Update API for Deterministic, Probabilistic, Scenarios
+- refactor forecast methods to time_series methods
+
 ## 0.15.5
 
 - Change implementation of file copy
