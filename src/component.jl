@@ -1,437 +1,475 @@
-function add_forecast!(
+function add_time_series!(
     component::T,
-    forecast::ForecastInternal;
+    time_series::TimeSeriesMetadata;
     skip_if_present = false,
 ) where {T <: InfrastructureSystemsComponent}
     component_name = get_name(component)
-    container = get_forecasts(component)
+    container = get_time_series_container(component)
     if isnothing(container)
-        throw(ArgumentError("type $T does not support storing forecasts"))
+        throw(ArgumentError("type $T does not support storing time series"))
     end
 
-    add_forecast!(container, forecast, skip_if_present = skip_if_present)
-    @debug "Added $forecast to $(typeof(component)) $(component_name) " *
-           "num_forecasts=$(length(get_forecasts(component).data))."
+    add_time_series!(container, time_series, skip_if_present = skip_if_present)
+    @debug "Added $time_series to $(typeof(component)) $(component_name) " *
+           "num_time_series=$(length(get_time_series_container(component).data))."
 end
 
 """
-Removes the metadata for a forecast.
-The caller must also remove the actual time series data.
+Removes the metadata for a time_series.
+If this returns true then the caller must also remove the actual time series data.
 """
-function remove_forecast_internal!(
+function remove_time_series_metadata!(
+    component::InfrastructureSystemsComponent,
     ::Type{T},
-    component::InfrastructureSystemsComponent,
-    initial_time::Dates.DateTime,
-    label::AbstractString,
-) where {T <: ForecastInternal}
-    remove_forecast!(T, get_forecasts(component), initial_time, label)
-    @debug "Removed forecast from $component:  $initial_time $label."
-end
-
-function clear_forecasts!(component::InfrastructureSystemsComponent)
-    container = get_forecasts(component)
-    if !isnothing(container)
-        clear_forecasts!(container)
-        @debug "Cleared forecasts in $component."
-    end
-end
-
-"""
-Return a forecast for the entire time series range stored for these parameters.
-"""
-function get_forecast(
-    ::Type{T},
-    component::InfrastructureSystemsComponent,
-    initial_time::Dates.DateTime,
-    label::AbstractString,
-) where {T <: Forecast}
-    forecast_type = forecast_external_to_internal(T)
-    forecast = get_forecast(forecast_type, component, initial_time, label)
-    storage = _get_time_series_storage(component)
-    ts = get_time_series(storage, get_time_series_uuid(forecast))
-    return make_public_forecast(forecast, ts)
-end
-
-"""
-Return a forecast for a subset of the time series range stored for these parameters.
-The range may span time series arrays as long as those timestamps are contiguous.
-"""
-function get_forecast(
-    ::Type{T},
-    component::InfrastructureSystemsComponent,
-    initial_time::Dates.DateTime,
-    label::AbstractString,
-    horizon::Int,
-) where {T <: Forecast}
-    if !has_forecasts(component)
-        throw(ArgumentError("no forecasts are stored in $component"))
-    end
-
-    first_forecast = iterate(iterate_forecasts(ForecastInternal, component))[1]
-    resolution = get_resolution(first_forecast)
-    sys_horizon = get_horizon(first_forecast)
-
-    forecast = get_forecast(
-        forecast_external_to_internal(T),
-        component,
-        initial_time,
-        resolution,
-        sys_horizon,
-        label,
-        horizon,
-    )
-
-    return forecast
-end
-
-function get_forecast(
-    ::Type{T},
-    component::InfrastructureSystemsComponent,
-    initial_time::Dates.DateTime,
-    label::AbstractString,
-) where {T <: ForecastInternal}
-    return get_forecast(T, get_forecasts(component), initial_time, label)
-end
-
-function get_forecast(
-    ::Type{T},
-    component::InfrastructureSystemsComponent,
-    initial_time::Dates.DateTime,
-    sys_resolution::Dates.Period,
-    sys_horizon::Int,
-    label::AbstractString,
-    horizon::Int,
-) where {T <: ForecastInternal}
-    forecast_type = forecast_internal_to_external(T)
-    @debug "Requested forecast" get_name(component) forecast_type label initial_time horizon
-    forecasts = Vector{forecast_type}()
-    end_time = initial_time + sys_resolution * horizon
-    initial_times = get_forecast_initial_times(T, get_forecasts(component), label)
-
-    times_remaining = horizon
-    found_start = false
-
-    # This code concatenates ranges of contiguous forecasts.
-    # Each initial_time represents one time series array that is stored.
-    # Each array has a length equal to the system horizon.
-    for it in initial_times
-        len = 0
-        if !found_start
-            end_chunk = it + sys_resolution * sys_horizon
-            if it <= initial_time && end_chunk > initial_time
-                start_index = Int((initial_time - it) / sys_resolution) + 1
-                found_start = true
-            else
-                # Keep looking for the start.
-                continue
-            end
-            if end_chunk >= end_time
-                end_index = sys_horizon - Int((end_chunk - end_time) / sys_resolution)
-                len = end_index - start_index + 1
-            else
-                len = sys_horizon - start_index + 1
-            end
-        else
-            start_index = 1
-            len = times_remaining > sys_horizon ? sys_horizon : times_remaining
-        end
-
-        push!(forecasts, _make_forecast(T, component, start_index, len, it, label))
-        times_remaining -= len
-        if times_remaining == 0
-            break
-        end
-    end
-
-    if isempty(forecasts)
-        throw(ArgumentError("did not find a forecast matching the requested parameters"))
-    end
-
-    @assert times_remaining == 0
-
-    # Run the type-specificc constructor that concatenates forecasts.
-    return forecast_type(forecasts)
-end
-
-function _make_forecast(
-    ::Type{T},
-    component::InfrastructureSystemsComponent,
-    start_index::Int,
-    len::Int,
-    initial_time::Dates.DateTime,
-    label::AbstractString,
-) where {T <: ForecastInternal}
-    forecast = get_forecast(T, get_forecasts(component), initial_time, label)
-    ts = get_time_series(
-        _get_time_series_storage(component),
-        get_time_series_uuid(forecast);
-        index = start_index,
-        len = len,
-    )
-    return make_public_forecast(forecast, ts)
-end
-
-"""
-Return a TimeSeries.TimeArray where the forecast data has been multiplied by the forecasted
-component field.
-"""
-function get_forecast_values(
-    ::Type{T},
-    mod::Module,
-    component::InfrastructureSystemsComponent,
-    initial_time::Dates.DateTime,
-    label::AbstractString,
-) where {T <: Forecast}
-    forecast = get_forecast(T, component, initial_time, label)
-    return get_forecast_values(mod, component, forecast)
-end
-
-function get_forecast_values(
-    mod::Module,
-    component::InfrastructureSystemsComponent,
-    forecast::Forecast,
-)
-    scaling_factors = get_data(forecast)
-    label = get_label(forecast)
-    accessor_func = getfield(mod, Symbol(label))
-    data = scaling_factors .* accessor_func(component)
-    return data
-end
-
-function has_forecasts(component::InfrastructureSystemsComponent)
-    container = get_forecasts(component)
-    return !isnothing(container) && !isempty(container)
-end
-
-function get_forecast_initial_times(
-    ::Type{T},
-    component::InfrastructureSystemsComponent,
-) where {T <: Forecast}
-    if !has_forecasts(component)
-        throw(ArgumentError("$(typeof(component)) does not have forecasts"))
-    end
-    return get_forecast_initial_times(
-        forecast_external_to_internal(T),
-        get_forecasts(component),
-    )
-end
-
-function get_forecast_initial_times(
-    ::Type{T},
-    component::InfrastructureSystemsComponent,
-    label::AbstractString,
-) where {T <: Forecast}
-    if !has_forecasts(component)
-        throw(ArgumentError("$(typeof(component)) does not have forecasts"))
-    end
-    return get_forecast_initial_times(
-        forecast_external_to_internal(T),
-        get_forecasts(component),
-        label,
-    )
-end
-
-function get_forecast_initial_times!(
-    initial_times::Set{Dates.DateTime},
-    component::InfrastructureSystemsComponent,
-)
-    if !has_forecasts(component)
-        throw(ArgumentError("$(typeof(component)) does not have forecasts"))
-    end
-
-    get_forecast_initial_times!(initial_times, get_forecasts(component))
-end
-
-function get_forecast_initial_times(component::InfrastructureSystemsComponent)
-    if !has_forecasts(component)
-        throw(ArgumentError("$(typeof(component)) does not have forecasts"))
-    end
-
-    initial_times = Set{Dates.DateTime}()
-    get_forecast_initial_times!(initial_times, component)
-
-    return sort!(collect(initial_times))
-end
-
-"""
-Generates all possible initial times for the stored forecasts. This should return the same
-result regardless of whether the forecasts have been stored as one contiguous array or
-chunks of contiguous arrays, such as one 365-day forecast vs 365 one-day forecasts.
-
-Throws ArgumentError if there are no forecasts stored, interval is not a multiple of the
-system's forecast resolution, or if the stored forecasts have overlapping timestamps.
-
-# Arguments
-- `component::InfrastructureSystemsComponent`: Component containing forecasts.
-- `interval::Dates.Period`: Amount of time in between each initial time.
-- `horizon::Int`: Length of each forecast array.
-- `initial_time::Union{Nothing, Dates.DateTime}=nothing`: Start with this time. If nothing,
-  use the first initial time.
-"""
-function generate_initial_times(
-    component::InfrastructureSystemsComponent,
-    interval::Dates.Period,
-    horizon::Int;
-    initial_time::Union{Nothing, Dates.DateTime} = nothing,
-)
-    # This throws if no forecasts.
-    existing_initial_times = get_forecast_initial_times(component)
-
-    first_forecast = iterate(iterate_forecasts(ForecastInternal, component))[1]
-    resolution = Dates.Second(get_resolution(first_forecast))
-    sys_horizon = get_horizon(first_forecast)
-
-    first_initial_time, total_horizon = check_contiguous_forecasts(
-        component,
-        existing_initial_times,
-        resolution,
-        sys_horizon,
-    )
-
-    if isnothing(initial_time)
-        initial_time = first_initial_time
-    end
-
-    interval = Dates.Second(interval)
-
-    if interval % resolution != Dates.Second(0)
-        throw(ConflictingInputsError("interval = $interval is not a multiple of resolution = $resolution"))
-    end
-
-    last_initial_time =
-        first_initial_time + total_horizon * resolution - horizon * resolution
-    initial_times = Vector{Dates.DateTime}()
-    for it in range(initial_time, step = interval, stop = last_initial_time)
-        push!(initial_times, it)
-    end
-
-    return initial_times
-end
-
-"""
-Return true if the forecasts are contiguous.
-"""
-function are_forecasts_contiguous(component::InfrastructureSystemsComponent)
-    existing_initial_times = get_forecast_initial_times(component)
-    first_initial_time = existing_initial_times[1]
-
-    first_forecast = iterate(iterate_forecasts(ForecastInternal, component))[1]
-    resolution = Dates.Second(get_resolution(first_forecast))
-    horizon = get_horizon(first_forecast)
-    total_horizon = horizon * length(existing_initial_times)
-
-    return _are_forecasts_contiguous(existing_initial_times, resolution, horizon)
-end
-
-function _are_forecasts_contiguous(initial_times, resolution, horizon)
-    if length(initial_times) == 1
-        return true
-    end
-
-    for i in range(2, stop = length(initial_times))
-        if initial_times[i] != initial_times[i - 1] + resolution * horizon
-            return false
-        end
+    name::AbstractString,
+) where {T <: TimeSeriesMetadata}
+    container = get_time_series_container(component)
+    remove_time_series!(container, T, name)
+    @debug "Removed time_series from $component:  $name."
+    if T <: DeterministicMetadata &&
+       has_time_series(container, SingleTimeSeriesMetadata, name)
+        return false
+    elseif T <: SingleTimeSeriesMetadata &&
+           has_time_series(container, DeterministicMetadata, name)
+        return false
     end
 
     return true
 end
 
-"""
-Throws ArgumentError if the forecasts are not in consecutive order.
-"""
-function check_contiguous_forecasts(
-    component::InfrastructureSystemsComponent,
-    existing_initial_times,
-    resolution::Dates.Period,
-    horizon::Int,
-)
-    if !_are_forecasts_contiguous(existing_initial_times, resolution, horizon)
-        throw(ArgumentError("generate_initial_times is not allowed with overlapping timestamps"))
+function clear_time_series!(component::InfrastructureSystemsComponent)
+    container = get_time_series_container(component)
+    if !isnothing(container)
+        clear_time_series!(container)
+        @debug "Cleared time_series in $component."
+    end
+end
+
+function _get_columns(start_time, count, ts_metadata::ForecastMetadata)
+    offset = start_time - get_initial_timestamp(ts_metadata)
+    interval = time_period_conversion(get_interval(ts_metadata))
+    window_count = get_count(ts_metadata)
+    if window_count > 1
+        index = Int(offset / interval) + 1
+    else
+        @assert interval == Dates.Millisecond(0)
+        index = 1
+    end
+    if count === nothing
+        count = window_count - index + 1
     end
 
-    first_initial_time = existing_initial_times[1]
-    total_horizon = horizon * length(existing_initial_times)
-    return first_initial_time, total_horizon
+    if index + count - 1 > get_count(ts_metadata)
+        throw(ArgumentError("The requested start_time $start_time and count $count are invalid"))
+    end
+    return UnitRange(index, index + count - 1)
+end
+
+_get_columns(start_time, count, ts_metadata::StaticTimeSeriesMetadata) = UnitRange(1, 1)
+
+function _get_rows(start_time, len, ts_metadata::StaticTimeSeriesMetadata)
+    index =
+        Int(
+            (start_time - get_initial_timestamp(ts_metadata)) / get_resolution(ts_metadata),
+        ) + 1
+    if len === nothing
+        len = length(ts_metadata) - index + 1
+    end
+    if index + len - 1 > length(ts_metadata)
+        throw(ArgumentError("The requested index=$index len=$len exceeds the range $(length(ts_metadata))"))
+    end
+
+    return UnitRange(index, index + len - 1)
+end
+
+function _get_rows(start_time, len, ts_metadata::ForecastMetadata)
+    if len === nothing
+        len = get_horizon(ts_metadata)
+    end
+
+    return UnitRange(1, len)
+end
+
+function _check_start_time(start_time, ts_metadata::TimeSeriesMetadata)
+    if start_time === nothing
+        return get_initial_timestamp(ts_metadata)
+    end
+
+    time_diff = start_time - get_initial_timestamp(ts_metadata)
+    if time_diff < Dates.Second(0)
+        throw(ArgumentError("start_time=$start_time is earlier than $(get_initial_timestamp(ts_metadata))"))
+    end
+
+    if typeof(ts_metadata) <: ForecastMetadata
+        window_count = get_count(ts_metadata)
+        interval = get_interval(ts_metadata)
+        if window_count > 1 &&
+           Dates.Millisecond(time_diff) % Dates.Millisecond(interval) != Dates.Second(0)
+            throw(ArgumentError("start_time=$start_time is not on a multiple of interval=$interval"))
+        end
+    end
+
+    return start_time
 end
 
 """
-Efficiently add all forecasts in one component to another by copying the underlying
+Return a time series corresponding to the given parameters.
+
+# Arguments
+- `::Type{T}`: Concrete subtype of TimeSeriesData to return
+- `component::InfrastructureSystemsComponent`: Component containing the time series
+- `name::AbstractString`: name of time series
+- `start_time::Union{Nothing, Dates.DateTime} = nothing`: If nothing, use the
+  `initial_timestamp` of the time series. If T is a subtype of Forecast then `start_time`
+  must be the first timstamp of a window.
+- `len::Union{Nothing, Int} = nothing`: Length in the time dimension. If nothing, use the
+  entire length.
+- `count::Union{Nothing, Int} = nothing`: Only applicable to subtypes of Forecast. Number
+  of forecast windows starting at `start_time` to return. Defaults to all available.
+"""
+function get_time_series(
+    ::Type{T},
+    component::InfrastructureSystemsComponent,
+    name::AbstractString;
+    start_time::Union{Nothing, Dates.DateTime} = nothing,
+    len::Union{Nothing, Int} = nothing,
+    count::Union{Nothing, Int} = nothing,
+) where {T <: TimeSeriesData}
+    if !has_time_series(component)
+        throw(ArgumentError("no forecasts are stored in $component"))
+    end
+
+    metadata_type = time_series_data_to_metadata(T)
+    ts_metadata = get_time_series(metadata_type, component, name)
+    start_time = _check_start_time(start_time, ts_metadata)
+    rows = _get_rows(start_time, len, ts_metadata)
+    columns = _get_columns(start_time, count, ts_metadata)
+    storage = _get_time_series_storage(component)
+    return deserialize_time_series(T, storage, ts_metadata, rows, columns)
+end
+
+function get_time_series(
+    ::Type{T},
+    component::InfrastructureSystemsComponent,
+    name::AbstractString,
+) where {T <: TimeSeriesMetadata}
+    return get_time_series(T, get_time_series_container(component), name)
+end
+
+"""
+Return a TimeSeries.TimeArray from storage for the given time series parameters.
+
+If the data are scaling factors then the stored scaling_factor_multiplier will be called on
+the component and applied to the data unless ignore_scaling_factors is true.
+"""
+function get_time_series_array(
+    ::Type{T},
+    component::InfrastructureSystemsComponent,
+    name::AbstractString;
+    start_time::Union{Nothing, Dates.DateTime} = nothing,
+    len::Union{Nothing, Int} = nothing,
+    ignore_scaling_factors = false,
+) where {T <: TimeSeriesData}
+    ts = get_time_series(T, component, name; start_time = start_time, len = len, count = 1)
+    if start_time === nothing
+        start_time = get_initial_timestamp(ts)
+    end
+
+    return get_time_series_array(
+        component,
+        ts,
+        start_time;
+        len = len,
+        ignore_scaling_factors = ignore_scaling_factors,
+    )
+end
+
+"""
+Return a TimeSeries.TimeArray for one forecast window from a cached Forecast instance.
+
+If the data are scaling factors then the stored scaling_factor_multiplier will be called on
+the component and applied to the data unless ignore_scaling_factors is true.
+
+See also [`ForecastCache`](@ref).
+"""
+function get_time_series_array(
+    component::InfrastructureSystemsComponent,
+    forecast::Forecast,
+    start_time::Dates.DateTime;
+    len = nothing,
+    ignore_scaling_factors = false,
+)
+    return _make_time_array(component, forecast, start_time, len, ignore_scaling_factors)
+end
+
+"""
+Return a TimeSeries.TimeArray from a cached StaticTimeSeries instance.
+
+If the data are scaling factors then the stored scaling_factor_multiplier will be called on
+the component and applied to the data unless ignore_scaling_factors is true.
+
+See also [`StaticTimeSeriesCache`](@ref).
+"""
+function get_time_series_array(
+    component::InfrastructureSystemsComponent,
+    time_series::StaticTimeSeries,
+    start_time::Union{Nothing, Dates.DateTime} = nothing;
+    len::Union{Nothing, Int} = nothing,
+    ignore_scaling_factors = false,
+)
+    if start_time === nothing
+        start_time = get_initial_timestamp(time_series)
+    end
+
+    if len === nothing
+        len = length(time_series)
+    end
+
+    return _make_time_array(component, time_series, start_time, len, ignore_scaling_factors)
+end
+
+"""
+Return a vector of timestamps from storage for the given time series parameters.
+"""
+function get_time_series_timestamps(
+    ::Type{T},
+    component::InfrastructureSystemsComponent,
+    name::AbstractString;
+    start_time::Union{Nothing, Dates.DateTime} = nothing,
+    len::Union{Nothing, Int} = nothing,
+) where {T <: TimeSeriesData}
+    return TimeSeries.timestamp(get_time_series_array(
+        T,
+        component,
+        name;
+        start_time = start_time,
+        len = len,
+    ))
+end
+
+"""
+Return a vector of timestamps from a cached Forecast instance.
+"""
+function get_time_series_timestamps(
+    component::InfrastructureSystemsComponent,
+    forecast::Forecast,
+    start_time::Union{Nothing, Dates.DateTime} = nothing;
+    len::Union{Nothing, Int} = nothing,
+)
+    return TimeSeries.timestamp(get_time_series_array(
+        component,
+        forecast,
+        start_time;
+        len = len,
+    ))
+end
+
+"""
+Return a vector of timestamps from a cached StaticTimeSeries instance.
+"""
+function get_time_series_timestamps(
+    component::InfrastructureSystemsComponent,
+    time_series::StaticTimeSeries,
+    start_time::Union{Nothing, Dates.DateTime} = nothing;
+    len::Union{Nothing, Int} = nothing,
+)
+    return TimeSeries.timestamp(get_time_series_array(
+        component,
+        time_series,
+        start_time;
+        len = len,
+    ))
+end
+
+"""
+Return an Array of values from storage for the requested time series parameters.
+
+If the data size is small and this will be called many times, consider using the version
+that accepts a cached TimeSeriesData instance.
+"""
+function get_time_series_values(
+    ::Type{T},
+    component::InfrastructureSystemsComponent,
+    name::AbstractString;
+    start_time::Union{Nothing, Dates.DateTime} = nothing,
+    len::Union{Nothing, Int} = nothing,
+    ignore_scaling_factors = false,
+) where {T <: TimeSeriesData}
+    return TimeSeries.values(get_time_series_array(
+        T,
+        component,
+        name;
+        start_time = start_time,
+        len = len,
+        ignore_scaling_factors = ignore_scaling_factors,
+    ))
+end
+
+"""
+Return an Array of values for one forecast window from a cached Forecast instance.
+"""
+function get_time_series_values(
+    component::InfrastructureSystemsComponent,
+    forecast::Forecast,
+    start_time::Dates.DateTime;
+    len::Union{Nothing, Int} = nothing,
+    ignore_scaling_factors = false,
+)
+    return TimeSeries.values(get_time_series_array(
+        component,
+        forecast,
+        start_time;
+        len = len,
+        ignore_scaling_factors = ignore_scaling_factors,
+    ))
+end
+
+"""
+Return an Array of values from a cached StaticTimeSeries instance for the requested time
+series parameters.
+"""
+function get_time_series_values(
+    component::InfrastructureSystemsComponent,
+    time_series::StaticTimeSeries,
+    start_time::Union{Nothing, Dates.DateTime} = nothing;
+    len::Union{Nothing, Int} = nothing,
+    ignore_scaling_factors = false,
+)
+    return TimeSeries.values(get_time_series_array(
+        component,
+        time_series,
+        start_time;
+        len = len,
+        ignore_scaling_factors = ignore_scaling_factors,
+    ))
+end
+
+function _make_time_array(component, time_series, start_time, len, ignore_scaling_factors)
+    ta = make_time_array(time_series, start_time; len = len)
+    if ignore_scaling_factors
+        return ta
+    end
+
+    multiplier = get_scaling_factor_multiplier(time_series)
+    if multiplier === nothing
+        return ta
+    end
+
+    return ta .* multiplier(component)
+end
+
+function has_time_series(component::InfrastructureSystemsComponent)
+    container = get_time_series_container(component)
+    return !isnothing(container) && !isempty(container)
+end
+
+"""
+Efficiently add all time_series in one component to another by copying the underlying
 references.
 
 # Arguments
 - `dst::InfrastructureSystemsComponent`: Destination component
 - `src::InfrastructureSystemsComponent`: Source component
-- `label_mapping::Dict = nothing`: Optionally map src labels to different dst labels.
-  If provided and src has a forecast with a label not present in label_mapping, that
-  forecast will not copied. If label_mapping is nothing then all forecasts will be copied
-  with src's labels.
+- `name_mapping::Dict = nothing`: Optionally map src names to different dst names.
+  If provided and src has a time_series with a name not present in name_mapping, that
+  time_series will not copied. If name_mapping is nothing then all time_series will be
+  copied with src's names.
+- `scaling_factor_multiplier_mapping::Dict = nothing`: Optionally map src multipliers to
+  different dst multipliers.  If provided and src has a time_series with a multiplier not
+  present in scaling_factor_multiplier_mapping, that time_series will not copied. If
+  scaling_factor_multiplier_mapping is nothing then all time_series will be copied with
+  src's multipliers.
 """
-function copy_forecasts!(
+function copy_time_series!(
     dst::InfrastructureSystemsComponent,
-    src::InfrastructureSystemsComponent,
-    label_mapping::Union{Nothing, Dict{String, String}} = nothing,
+    src::InfrastructureSystemsComponent;
+    name_mapping::Union{Nothing, Dict{String, String}} = nothing,
+    scaling_factor_multiplier_mapping::Union{Nothing, Dict{String, String}} = nothing,
 )
-    for forecast in iterate_forecasts(ForecastInternal, src)
-        label = get_label(forecast)
-        new_label = label
-        if !isnothing(label_mapping)
-            new_label = get(label_mapping, label, nothing)
-            if isnothing(new_label)
-                @debug "Skip copying forecast" label
+    for ts_metadata in get_time_series_multiple(TimeSeriesMetadata, src)
+        name = get_name(ts_metadata)
+        new_name = name
+        if !isnothing(name_mapping)
+            new_name = get(name_mapping, name, nothing)
+            if isnothing(new_name)
+                @debug "Skip copying ts_metadata" name
                 continue
             end
-            @debug "Copy forecast with" new_label
+            @debug "Copy ts_metadata with" new_name
         end
-        new_forecast = deepcopy(forecast)
-        assign_new_uuid!(new_forecast)
-        set_label!(new_forecast, new_label)
-        add_forecast!(dst, new_forecast)
+        multiplier = get_scaling_factor_multiplier(ts_metadata)
+        new_multiplier = multiplier
+        if !isnothing(scaling_factor_multiplier_mapping)
+            new_multiplier = get(scaling_factor_multiplier_mapping, multiplier, nothing)
+            if isnothing(new_multiplier)
+                @debug "Skip copying ts_metadata" multiplier
+                continue
+            end
+            @debug "Copy ts_metadata with" new_multiplier
+        end
+        new_time_series = deepcopy(ts_metadata)
+        assign_new_uuid!(new_time_series)
+        set_name!(new_time_series, new_name)
+        set_scaling_factor_multiplier!(new_time_series, new_multiplier)
+        add_time_series!(dst, new_time_series)
         storage = _get_time_series_storage(dst)
         if isnothing(storage)
             throw(ArgumentError("component does not have time series storage"))
         end
-        ts_uuid = get_time_series_uuid(forecast)
-        add_time_series_reference!(storage, get_uuid(dst), new_label, ts_uuid)
+        ts_uuid = get_time_series_uuid(ts_metadata)
+        add_time_series_reference!(storage, get_uuid(dst), new_name, ts_uuid)
     end
 end
 
-function get_forecast_keys(component::InfrastructureSystemsComponent)
-    return keys(get_forecasts(component).data)
+function get_time_series_keys(component::InfrastructureSystemsComponent)
+    return keys(get_time_series_container(component).data)
 end
 
-function get_forecast_labels(
+function get_time_series_names(
     ::Type{T},
     component::InfrastructureSystemsComponent,
-    initial_time::Dates.DateTime,
-) where {T <: Forecast}
-    return get_forecast_labels(
-        forecast_external_to_internal(T),
-        get_forecasts(component),
-        initial_time,
+) where {T <: TimeSeriesData}
+    return get_time_series_names(
+        time_series_data_to_metadata(T),
+        get_time_series_container(component),
     )
 end
 
-function get_num_forecasts(component::InfrastructureSystemsComponent)
-    container = get_forecasts(component)
+function get_num_time_series(component::InfrastructureSystemsComponent)
+    container = get_time_series_container(component)
     if isnothing(container)
-        return 0
+        return (0, 0)
     end
 
-    return length(container.data)
+    static_ts_count = 0
+    forecast_count = 0
+    for key in keys(container.data)
+        if key.time_series_type <: StaticTimeSeriesMetadata
+            static_ts_count += 1
+        elseif key.time_series_type <: ForecastMetadata
+            forecast_count += 1
+        else
+            error("panic")
+        end
+    end
+
+    return (static_ts_count, forecast_count)
 end
 
-function get_time_series(component::InfrastructureSystemsComponent, forecast::Forecast)
+function get_time_series(
+    component::InfrastructureSystemsComponent,
+    time_series::TimeSeriesData,
+)
     storage = _get_time_series_storage(component)
-    return get_time_series(storage, get_time_series_uuid(forecast))
+    return get_time_series(storage, get_time_series_uuid(time_series))
 end
 
 function get_time_series_uuids(component::InfrastructureSystemsComponent)
-    container = get_forecasts(component)
+    container = get_time_series_container(component)
 
     return [
-        (get_time_series_uuid(container.data[key]), key.label)
-        for key in get_forecast_keys(component)
+        (get_time_series_uuid(container.data[key]), key.name)
+        for key in get_time_series_keys(component)
     ]
 end
 
@@ -439,15 +477,16 @@ end
 This function must be called when a component is removed from a system.
 """
 function prepare_for_removal!(component::InfrastructureSystemsComponent)
-    # Forecasts can only be part of a component when that component is part of a system.
-    clear_time_series!(component)
+    # TimeSeriesContainer can only be part of a component when that component is part of a
+    # system.
+    clear_time_series_storage!(component)
     set_time_series_storage!(component, nothing)
-    clear_forecasts!(component)
-    @debug "cleared all forecast data from" component
+    clear_time_series!(component)
+    @debug "cleared all time series data from" component
 end
 
 """
-Returns an iterator of Forecast instances attached to the component.
+Returns an iterator of TimeSeriesData instances attached to the component.
 
 Note that passing a filter function can be much slower than the other filtering parameters
 because it reads time series data from media.
@@ -455,68 +494,149 @@ because it reads time series data from media.
 Call `collect` on the result to get an array.
 
 # Arguments
-- `component::InfrastructureSystemsComponent`: component from which to get forecasts
-- `filter_func = nothing`: Only return forecasts for which this returns true.
-- `type = nothing`: Only return forecasts with this type.
-- `initial_time = nothing`: Only return forecasts matching this value.
-- `label = nothing`: Only return forecasts matching this value.
+- `component::InfrastructureSystemsComponent`: component from which to get time_series
+- `filter_func = nothing`: Only return time_series for which this returns true.
+- `type = nothing`: Only return time_series with this type.
+- `name = nothing`: Only return time_series matching this value.
 """
-function iterate_forecasts(
+function get_time_series_multiple(
     component::InfrastructureSystemsComponent,
     filter_func = nothing;
     type = nothing,
-    initial_time = nothing,
-    label = nothing,
+    start_time = nothing,
+    name = nothing,
 )
-    container = get_forecasts(component)
-    forecast_keys = sort!(collect(keys(container.data)), by = x -> x.initial_time)
+    container = get_time_series_container(component)
+    storage = _get_time_series_storage(component)
 
     Channel() do channel
-        for key in forecast_keys
-            if !isnothing(type) &&
-               !(forecast_internal_to_external(key.forecast_type) <: type)
+        for key in keys(container.data)
+            if !isnothing(type)
+                if type == DeterministicSingleTimeSeries
+                    # time_series_metadata_to_data will return Deterministic here, so we
+                    # must change the type to match.
+                    type = Deterministic
+                end
+                !(time_series_metadata_to_data(key.time_series_type) <: type) && continue
+            end
+            if !isnothing(name) && key.name != name
                 continue
             end
-            if !isnothing(initial_time) && key.initial_time != initial_time
+            ts_metadata = container.data[key]
+            ts_type = time_series_metadata_to_data(typeof(ts_metadata))
+            ts = deserialize_time_series(
+                ts_type,
+                storage,
+                ts_metadata,
+                UnitRange(1, length(ts_metadata)),
+                UnitRange(1, get_count(ts_metadata)),
+            )
+            if !isnothing(filter_func) && !filter_func(ts)
                 continue
             end
-            if !isnothing(label) && key.label != label
-                continue
-            end
-            storage = _get_time_series_storage(component)
-            forecast_internal = container.data[key]
-            time_series = get_time_series(storage, get_time_series_uuid(forecast_internal))
-            forecast = make_public_forecast(forecast_internal, time_series)
-            if !isnothing(filter_func) && !filter_func(forecast)
-                continue
-            end
-            put!(channel, forecast)
+            put!(channel, ts)
         end
     end
 end
 
 """
-Returns an iterator of ForecastInternal instances attached to the component.
+Returns an iterator of TimeSeriesMetadata instances attached to the component.
 """
-function iterate_forecasts(
-    ::Type{ForecastInternal},
+function get_time_series_multiple(
+    ::Type{TimeSeriesMetadata},
     component::InfrastructureSystemsComponent,
 )
-    container = get_forecasts(component)
-    forecast_keys = sort!(collect(keys(container.data)), by = x -> x.initial_time)
-
+    container = get_time_series_container(component)
     Channel() do channel
-        for key in forecast_keys
+        for key in keys(container.data)
             put!(channel, container.data[key])
         end
     end
 end
 
-function clear_time_series!(component::InfrastructureSystemsComponent)
+"""
+Transform all instances of SingleTimeSeries to DeterministicSingleTimeSeries.
+"""
+function transform_single_time_series!(
+    component::InfrastructureSystemsComponent,
+    ::Type{T},
+    sys_params::TimeSeriesParameters,
+) where {T <: DeterministicSingleTimeSeries}
+    container = get_time_series_container(component)
+    for (key, ts_metadata) in container.data
+        if ts_metadata isa SingleTimeSeriesMetadata
+            resolution = get_resolution(ts_metadata)
+            params = _get_single_time_series_transformed_parameters(
+                ts_metadata,
+                T,
+                sys_params.forecast_params.horizon,
+                sys_params.forecast_params.interval,
+            )
+            check_add_time_series!(sys_params, params)
+            new_metadata = DeterministicMetadata(
+                name = get_name(ts_metadata),
+                resolution = params.resolution,
+                initial_timestamp = params.forecast_params.initial_timestamp,
+                interval = params.forecast_params.interval,
+                count = params.forecast_params.count,
+                time_series_uuid = get_time_series_uuid(ts_metadata),
+                horizon = params.forecast_params.horizon,
+                scaling_factor_multiplier = get_scaling_factor_multiplier(ts_metadata),
+                internal = get_internal(ts_metadata),
+            )
+            add_time_series!(container, new_metadata)
+            @debug "Added $new_metadata from $ts_metadata."
+        end
+    end
+end
+
+function get_single_time_series_transformed_parameters(
+    component::InfrastructureSystemsComponent,
+    ::Type{T},
+    horizon::Int,
+    interval::Dates.Period,
+) where {T <: Forecast}
+    container = get_time_series_container(component)
+    for (key, ts_metadata) in container.data
+        if ts_metadata isa SingleTimeSeriesMetadata
+            return _get_single_time_series_transformed_parameters(
+                ts_metadata,
+                T,
+                horizon,
+                interval,
+            )
+        end
+    end
+
+    throw(ArgumentError("component $(get_name(component)) does not have SingleTimeSeries"))
+end
+
+function _get_single_time_series_transformed_parameters(
+    ts_metadata::SingleTimeSeriesMetadata,
+    ::Type{T},
+    horizon::Int,
+    interval::Dates.Period,
+) where {T <: Forecast}
+    resolution = get_resolution(ts_metadata)
+    len = length(ts_metadata)
+    if len < horizon
+        throw(ConflictingInputsError("existing length=$len is shorter than horizon=$horizon"))
+    end
+    initial_timestamp = get_initial_timestamp(ts_metadata)
+    return TimeSeriesParameters(initial_timestamp, resolution, len, horizon, interval)
+end
+
+function clear_time_series_storage!(component::InfrastructureSystemsComponent)
     storage = _get_time_series_storage(component)
     if !isnothing(storage)
-        for (uuid, label) in get_time_series_uuids(component)
-            remove_time_series!(storage, uuid, get_uuid(component), label)
+        # In the case of Deterministic and DeterministicSingleTimeSeries the UUIDs
+        # can be shared.
+        uuids = Set{Base.UUID}()
+        for (uuid, name) in get_time_series_uuids(component)
+            if !(uuid in uuids)
+                remove_time_series!(storage, uuid, get_uuid(component), name)
+                push!(uuids, uuid)
+            end
         end
     end
 end
@@ -525,45 +645,34 @@ function set_time_series_storage!(
     component::InfrastructureSystemsComponent,
     storage::Union{Nothing, TimeSeriesStorage},
 )
-    container = get_forecasts(component)
+    container = get_time_series_container(component)
     if !isnothing(container)
         set_time_series_storage!(container, storage)
     end
 end
 
-function validate_forecast_consistency(component::InfrastructureSystemsComponent)
-    # Initial times for each label must be identical.
-    initial_times = Dict{String, Vector{Dates.DateTime}}()
-    for key in keys(get_forecasts(component).data)
-        if !haskey(initial_times, key.label)
-            initial_times[key.label] = Vector{Dates.DateTime}()
-        end
-        push!(initial_times[key.label], key.initial_time)
-    end
-
-    if isempty(initial_times)
-        return true
-    end
-
-    base_its = nothing
-    for (label, its) in initial_times
-        sort!(its)
-        if isnothing(base_its)
-            base_its = its
-        elseif its != base_its
-            @error "initial times don't match" base_its, its
-            return false
-        end
-    end
-
-    return true
-end
-
 function _get_time_series_storage(component::InfrastructureSystemsComponent)
-    container = get_forecasts(component)
+    container = get_time_series_container(component)
     if isnothing(container)
         return nothing
     end
 
     return container.time_series_storage
+end
+
+function get_time_series_by_key(
+    key::TimeSeriesKey,
+    component::InfrastructureSystemsComponent;
+    start_time::Union{Nothing, Dates.DateTime} = nothing,
+    len::Union{Nothing, Int} = nothing,
+    count::Union{Nothing, Int} = nothing,
+)
+    return get_time_series(
+        time_series_metadata_to_data(key.time_series_type),
+        component,
+        key.name,
+        start_time = start_time,
+        len = len,
+        count = count,
+    )
 end

@@ -6,8 +6,11 @@ import CSV
 import DataFrames
 import Dates
 import JSON3
+import Random
+import Pkg
 import PrettyTables
 import TimeSeries
+using DataStructures: SortedDict
 
 using DocStringExtensions
 
@@ -33,9 +36,9 @@ Required interface functions for subtypes:
 - get_internal()
 
 Optional interface functions:
-- get_forecasts()
+- get_time_series_container()
 
-Subtypes may contain forecasts.
+Subtypes may contain time series.
 """
 abstract type InfrastructureSystemsComponent <: InfrastructureSystemsType end
 
@@ -45,16 +48,16 @@ Base type for auxillary structs. These should not be stored in a system.
 abstract type DeviceParameter <: InfrastructureSystemsType end
 
 """
-Return the internal forecast storage container or nothing, if the type doesn't store
-forecasts.
+Return the internal time_series storage container or nothing, if the type doesn't store
+time series.
 
-Subtypes need to implement this method if they store forecasts.
+Subtypes need to implement this method if they store time series.
 """
-function get_forecasts(value::T) where {T <: InfrastructureSystemsComponent}
+function get_time_series_container(value::InfrastructureSystemsComponent)
     return nothing
 end
 
-set_forecasts!(value::T) where {T <: InfrastructureSystemsComponent} = nothing
+set_time_series_container!(value::InfrastructureSystemsComponent) = nothing
 
 get_name(value::InfrastructureSystemsComponent) = value.name
 set_name!(value::InfrastructureSystemsComponent, name) = value.name = name
@@ -69,19 +72,27 @@ include("utils/lazy_dict_from_iterator.jl")
 include("utils/logging.jl")
 include("utils/stdout_redirector.jl")
 include("utils/utils.jl")
-include("time_series_data.jl")
 include("time_series_storage.jl")
-include("hdf5_time_series_storage.jl")
-include("in_memory_time_series_storage.jl")
-
+include("abstract_time_series.jl")
 include("forecasts.jl")
-include("forecast_metadata.jl")
-include("component.jl")
+include("static_time_series.jl")
+include("time_series_container.jl")
+include("time_series_parser.jl")
 include("components.jl")
 include("generated/includes.jl")
-include("supplemental_constructors.jl")
-include("forecast_parser.jl")
-include("timeseries_formats.jl")
+include("single_time_series.jl")
+include("deterministic_single_time_series.jl")
+include("deterministic.jl")
+include("probabilistic.jl")
+include("scenarios.jl")
+include("deterministic_metadata.jl")
+include("hdf5_time_series_storage.jl")
+include("in_memory_time_series_storage.jl")
+include("time_series_formats.jl")
+include("time_series_cache.jl")
+include("time_series_parameters.jl")
+include("time_series_utils.jl")
+include("component.jl")
 include("results.jl")
 include("serialization.jl")
 include("system_data.jl")

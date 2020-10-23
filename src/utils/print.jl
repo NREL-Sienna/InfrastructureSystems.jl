@@ -40,67 +40,80 @@ function Base.show(io::IO, ::MIME"text/html", components::Components)
     end
 end
 
-function Base.summary(forecasts::Forecasts)
-    return "$(typeof(forecasts)): $(length(forecasts))"
+function Base.summary(container::TimeSeriesContainer)
+    return "$(typeof(container)): $(length(container))"
 end
 
-function Base.show(io::IO, ::MIME"text/plain", forecasts::Forecasts)
-    println(io, summary(forecasts))
-    for key in keys(forecasts.data)
-        println(
-            io,
-            "$(key.forecast_type): initial_time=$(key.initial_time) label=$(key.label)",
-        )
+function Base.show(io::IO, ::MIME"text/plain", container::TimeSeriesContainer)
+    println(io, summary(container))
+    for key in keys(container.data)
+        println(io, "$(key.time_series_type): name=$(key.name)")
     end
 end
 
-function Base.summary(forecast::Forecast)
-    return "$(typeof(forecast)) forecast ($length(forecast))"
+function Base.summary(time_series::TimeSeriesData)
+    return "$(typeof(time_series)) time_series ($length(time_series))"
 end
 
-function Base.summary(forecast::ForecastInternal)
-    return "$(typeof(forecast)) forecast"
+function Base.summary(time_series::TimeSeriesMetadata)
+    return "$(typeof(time_series)) time_series"
 end
 
 function Base.show(io::IO, data::SystemData)
     show(io, data.components)
     println(io, "\n")
-    show(io, data.forecast_metadata)
+    show(io, data.time_series_params)
 end
 
 function Base.show(io::IO, ::MIME"text/plain", data::SystemData)
+    component_count, ts_count, forecast_count = get_time_series_counts(data)
     show(io, MIME"text/plain"(), data.components)
     println(io, "\n")
 
-    println(io, "Forecasts")
-    println(io, "=========")
-    res = get_forecasts_resolution(data)
-    res = res <= Dates.Minute(1) ? Dates.Second(res) : Dates.Minute(res)
-    println(io, "Resolution: $(res)")
-    println(io, "Horizon: $(get_forecasts_horizon(data))")
-    initial_times = [string(x) for x in get_forecast_initial_times(data)]
-    println(io, "Initial Times: $(join(initial_times, ", "))")
-    println(io, "Interval: $(get_forecasts_interval(data))")
-    component_count, forecast_count = get_forecast_counts(data)
-    println(io, "Components with Forecasts: $component_count")
+    println(io, "TimeSeriesContainer")
+    println(io, "===================")
+    println(io, "Components with time series data: $component_count")
+    println(io, "Total StaticTimeSeries: $ts_count")
     println(io, "Total Forecasts: $forecast_count")
+    if component_count == 0
+        return
+    end
+
+    res = get_time_series_resolution(data)
+    res = res <= Dates.Minute(1) ? Dates.Second(res) : Dates.Minute(res)
+    println(io, "Resolution: $res")
+    if forecast_count > 0
+        initial_times = get_forecast_initial_times(data)
+        println(io, "First initial time: $(first(initial_times))")
+        println(io, "Last initial time: $(last(initial_times))")
+        println(io, "Horizon: $(get_forecast_horizon(data))")
+        println(io, "Interval: $(Dates.Minute(get_forecast_interval(data)))")
+        println(io, "Forecast window count: $(get_forecast_window_count(data))")
+    end
 end
 
 function Base.show(io::IO, ::MIME"text/html", data::SystemData)
     show(io, MIME"text/html"(), data.components)
     println(io, "\n")
 
-    res = get_forecasts_resolution(data)
-    res = res <= Dates.Minute(1) ? Dates.Second(res) : Dates.Minute(res)
-    println(io, "<h2>Forecasts</h2>")
-    println(io, "<p><b>Resolution</b>: $(res)</p>")
-    println(io, "<p><b>Horizon</b>: $(get_forecasts_horizon(data))</p>")
-    initial_times = [string(x) for x in get_forecast_initial_times(data)]
-    println(io, "<p><b>Initial Times</b>: $(join(initial_times, ", "))</p>")
-    println(io, "<p><b>Interval</b>: $(get_forecasts_interval(data))</p>")
-    component_count, forecast_count = get_forecast_counts(data)
-    println(io, "<p><b>Components with Forecasts</b>: $component_count</p>")
+    component_count, ts_count, forecast_count = get_time_series_counts(data)
+    println(io, "<h2>TimeSeriesContainer</h2>")
+    println(io, "<p><b>Components with time series data</b>: $component_count</p>")
+    println(io, "<p><b>Total StaticTimeSeries</b>: $ts_count</p>")
     println(io, "<p><b>Total Forecasts</b>: $forecast_count</p>")
+
+    res = get_time_series_resolution(data)
+    res = res <= Dates.Minute(1) ? Dates.Second(res) : Dates.Minute(res)
+    println(io, "<p><b>Resolution</b>: $(res)</p>")
+    if forecast_count > 0
+        initial_times = get_forecast_initial_times(data)
+        window_count = get_forecast_window_count(data)
+        println(io, "<p><b>First initial time</b>: $(first(initial_times))</p>")
+        println(io, "<p><b>Last initial time</b>: $(last(initial_times))</p>")
+        println(io, "<p><b>Horizon</b>: $(get_forecast_horizon(data))</p>")
+        println(io, "<p><b>Interval</b>: $(Dates.Minute(get_forecast_interval(data)))</p>")
+        println(io, "<p><b>Forecast window count</b>: $(window_count)</p>")
+    end
 end
 
 function Base.summary(ist::InfrastructureSystemsComponent)
@@ -114,7 +127,7 @@ function Base.show(io::IO, ::MIME"text/plain", ist::InfrastructureSystemsCompone
     for (name, field_type) in zip(fieldnames(typeof(ist)), fieldtypes(typeof(ist)))
         if field_type <: InfrastructureSystemsInternal
             continue
-        elseif field_type <: Forecasts || field_type <: InfrastructureSystemsType
+        elseif field_type <: TimeSeriesContainer || field_type <: InfrastructureSystemsType
             val = summary(getfield(ist, name))
         elseif field_type <: Vector{<:InfrastructureSystemsComponent}
             val = summary(getfield(ist, name))
@@ -129,19 +142,44 @@ function Base.show(io::IO, ::MIME"text/plain", ist::InfrastructureSystemsCompone
     end
 end
 
-function Base.show(
-    io::IO,
-    ::MIME"text/plain",
-    ists::Vector{<:InfrastructureSystemsComponent},
-)
-    println(io, summary(ists))
-    for i in 1:length(ists)
-        if isassigned(ists, i)
-            println(io, "$(summary(ists[i]))")
+function Base.show(io::IO, ist::InfrastructureSystemsComponent)
+    print(io, string(nameof(typeof(ist))), "(")
+    is_first = true
+    for (name, field_type) in zip(fieldnames(typeof(ist)), fieldtypes(typeof(ist)))
+        if field_type <: TimeSeriesContainer || field_type <: InfrastructureSystemsInternal
+            continue
         else
-            println(io, Base.undef_ref_str)
+            val = getfield(ist, name)
+        end
+        if is_first
+            is_first = false
+        else
+            print(io, ", ")
+        end
+        print(io, val)
+    end
+    print(io, ")")
+end
+
+function Base.show(io::IO, ::MIME"text/plain", it::FlattenIteratorWrapper)
+    println(io, "$(eltype(it)) Counts: ")
+    for (ctype, count) in _get_type_counts(it)
+        println(io, "$ctype: $count")
+    end
+end
+
+function _get_type_counts(it::FlattenIteratorWrapper)
+    data = SortedDict()
+    for component in it
+        ctype = string(typeof(component))
+        if !haskey(data, ctype)
+            data[ctype] = 1
+        else
+            data[ctype] += 1
         end
     end
+
+    return data
 end
 
 function create_components_df(components::Components)
@@ -163,24 +201,6 @@ function create_components_df(components::Components)
     sort!(rows, by = x -> x.ConcreteType)
 
     return DataFrames.DataFrame(rows)
-end
-
-function Base.show(
-    io::IO,
-    ::MIME"text/plain",
-    period::Union{Dates.TimePeriod, Dates.DatePeriod},
-)
-    total = convert_compound_period(period)
-    println(io, "$total")
-end
-
-function Base.show(
-    io::IO,
-    ::MIME"text/html",
-    period::Union{Dates.TimePeriod, Dates.DatePeriod},
-)
-    total = convert_compound_period(period)
-    println(io, "<p>$total</p>")
 end
 
 ## This function takes in a time period or date period and returns a compound period
@@ -208,40 +228,4 @@ function convert_compound_period(period::Union{Dates.TimePeriod, Dates.DatePerio
     remainder = period % Dates.Millisecond(1000) #finding the remainding milliseconds
     total = weeks + days + hours + minutes + seconds + remainder
     return total
-end
-
-function create_forecasts_df(forecasts::Forecasts)
-    initial_times = _get_forecast_initial_times(forecasts.data)
-    dfs = Vector{DataFrames.DataFrame}()
-
-    for (i, initial_time) in enumerate(initial_times)
-        if i > MAX_SHOW_FORECAST_INITIAL_TIMES
-            break
-        end
-        counts = Dict{String, Int}()
-        rows = []
-
-        for (key, values) in forecasts.data
-            if key.initial_time != initial_time
-                continue
-            end
-
-            type_str = strip_module_name(string(key.forecast_type))
-            counts[type_str] = length(values)
-            parents = [strip_module_name(string(x)) for x in supertypes(key.forecast_type)]
-            row = (
-                ConcreteType = type_str,
-                SuperTypes = join(parents, " <: "),
-                Count = length(values),
-            )
-            push!(rows, row)
-        end
-
-        sort!(rows, by = x -> x.ConcreteType)
-
-        df = DataFrames.DataFrame(rows)
-        push!(dfs, df)
-    end
-
-    return initial_times, dfs
 end

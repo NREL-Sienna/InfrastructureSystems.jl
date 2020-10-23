@@ -1,23 +1,26 @@
 
-function create_system_data(; with_forecasts = false, time_series_in_memory = false)
+function create_system_data(; with_time_series = false, time_series_in_memory = false)
     data = IS.SystemData(; time_series_in_memory = time_series_in_memory)
 
     name = "Component1"
     component = IS.TestComponent(name, 5)
     IS.add_component!(data, component)
 
-    if with_forecasts
+    if with_time_series
         file = joinpath(FORECASTS_DIR, "ComponentsAsColumnsNoTime.json")
-        IS.add_forecasts!(IS.InfrastructureSystemsComponent, data, file)
-
-        forecasts = get_all_forecasts(data)
-        @assert length(forecasts) > 0
+        IS.add_time_series_from_file_metadata!(
+            data,
+            IS.InfrastructureSystemsComponent,
+            file,
+        )
+        time_series = get_all_time_series(data)
+        @assert length(time_series) > 0
     end
 
     return data
 end
 
-function create_system_data_shared_forecasts(; time_series_in_memory = false)
+function create_system_data_shared_time_series(; time_series_in_memory = false)
     data = IS.SystemData(; time_series_in_memory = time_series_in_memory)
 
     name1 = "Component1"
@@ -27,19 +30,18 @@ function create_system_data_shared_forecasts(; time_series_in_memory = false)
     IS.add_component!(data, component1)
     IS.add_component!(data, component2)
 
-    ts_data = create_time_series_data()
-    forecast = IS.DeterministicInternal("get_val", ts_data)
-    IS.add_forecast!(data, component1, forecast, ts_data)
-    IS.add_forecast!(data, component2, forecast, ts_data)
+    ts = IS.SingleTimeSeries(name = "val", data = create_time_array())
+    IS.add_time_series!(data, component1, ts)
+    IS.add_time_series!(data, component2, ts)
 
     return data
 end
 
-function get_all_forecasts(data)
-    return collect(IS.iterate_forecasts(data))
+function get_all_time_series(data)
+    return collect(IS.get_time_series_multiple(data))
 end
 
-function create_time_series_data()
+function create_time_array()
     dates = collect(
         Dates.DateTime("1/1/2020 00:00:00", "d/m/y H:M:S"):Dates.Hour(1):Dates.DateTime(
             "1/1/2020 23:00:00",
@@ -48,6 +50,13 @@ function create_time_series_data()
     )
     data = collect(1:24)
     component_name = "gen"
-    ta = TimeSeries.TimeArray(dates, data, [component_name])
-    return IS.TimeSeriesData(ta)
+    return TimeSeries.TimeArray(dates, data, [component_name])
+end
+
+function create_dates(start_time::Dates.DateTime, resolution, end_time::Dates.DateTime)
+    return collect(start_time:resolution:end_time)
+end
+
+function create_dates(start_time::String, resolution, end_time::String)
+    return create_dates(Dates.DateTime(start_time), resolution, Dates.DateTime(end_time))
 end

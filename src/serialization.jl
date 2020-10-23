@@ -1,4 +1,10 @@
-const TYPE_KEY = "__type"
+# These will get encoded into each dictionary when a struct is serialized.
+const METADATA_KEY = "__metadata__"
+const TYPE_KEY = "type"
+const MODULE_KEY = "module"
+const PARAMETERS_KEY = "parameters"
+const CONSTRUCT_WITH_PARAMETERS_KEY = "construct_with_parameters"
+const FUNCTION_KEY = "function"
 
 """
 Serializes a InfrastructureSystemsType to a JSON file.
@@ -57,8 +63,59 @@ function serialize(vals::Vector{T}) where {T <: InfrastructureSystemsType}
     return serialize_struct.(vals)
 end
 
+function serialize(func::Function)
+    return Dict{String, Any}(
+        METADATA_KEY => Dict{String, Any}(
+            FUNCTION_KEY => string(nameof(func)),
+            MODULE_KEY => string(parentmodule(func)),
+        ),
+    )
+end
+
 function serialize_struct(val::T) where {T}
-    return Dict(string(name) => serialize(getfield(val, name)) for name in fieldnames(T))
+    @debug "serialize_struct" val T
+    data = Dict(string(name) => serialize(getfield(val, name)) for name in fieldnames(T))
+    add_serialization_metadata!(data, T)
+    return data
+end
+
+"""
+Add type information to the dictionary that can be used to deserialize the value.
+"""
+function add_serialization_metadata!(data::Dict, ::Type{T}) where {T}
+    data[METADATA_KEY] = Dict{String, Any}(
+        TYPE_KEY => string(nameof(T)),
+        MODULE_KEY => string(parentmodule(T)),
+    )
+    if !isempty(T.parameters)
+        data[METADATA_KEY][PARAMETERS_KEY] = string.(T.parameters)
+    end
+
+    return
+end
+
+"""
+Return the type information for the serialized struct.
+"""
+get_serialization_metadata(data::Dict) = data[METADATA_KEY]
+
+function get_type_from_serialization_data(data::Dict)
+    return get_type_from_serialization_metadata(get_serialization_metadata(data))
+end
+
+function get_type_from_serialization_metadata(metadata::Dict)
+    _module = Base.root_module(Base.__toplevel__, Symbol(metadata[MODULE_KEY]))
+    base_type = getfield(_module, Symbol(metadata[TYPE_KEY]))
+    if !get(metadata, CONSTRUCT_WITH_PARAMETERS_KEY, false)
+        return base_type
+    end
+
+    # This has several limitations and is only a workaround for PSY.Reserve subtypes.
+    # - each parameter must be in _module
+    # - does not support nested parametrics.
+    # Reserves should be fixed and then we can remove this hack.
+    parameters = [getfield(_module, Symbol(x)) for x in metadata[PARAMETERS_KEY]]
+    return base_type{parameters...}
 end
 
 # The default implementation allows any scalar type (or collection of scalar types) to
@@ -75,17 +132,42 @@ function deserialize(::Type{T}, data::Dict) where {T <: InfrastructureSystemsTyp
     return deserialize_struct(T, data)
 end
 
+function deserialize_struct(::Type{TimeSeriesKey}, data::Dict)
+    vals = Dict{Symbol, Any}()
+    for (field_name, field_type) in
+        zip(fieldnames(TimeSeriesKey), fieldtypes(TimeSeriesKey))
+        val = data[string(field_name)]
+        if field_name == :time_series_type
+            val = getfield(InfrastructureSystems, Symbol(strip_module_name(val)))
+        end
+        vals[field_name] = val
+    end
+    return TimeSeriesKey(; vals...)
+end
+
 function deserialize_struct(::Type{T}, data::Dict) where {T}
     vals = Dict{Symbol, Any}()
     for (field_name, field_type) in zip(fieldnames(T), fieldtypes(T))
-        vals[field_name] = deserialize(field_type, data[string(field_name)])
-    end
-
-    if !isempty(T.parameters)
-        return deserialize_parametric_type(T, InfrastructureSystems, vals)
+        val = data[string(field_name)]
+        if val isa Dict && haskey(val, METADATA_KEY)
+            metadata = get_serialization_metadata(val)
+            if haskey(metadata, FUNCTION_KEY)
+                vals[field_name] = deserialize(Function, val)
+            else
+                vals[field_name] =
+                    deserialize(get_type_from_serialization_metadata(metadata), val)
+            end
+        else
+            vals[field_name] = deserialize(field_type, val)
+        end
     end
 
     return T(; vals...)
+end
+
+function deserialize(::Type{Function}, data::Dict)
+    metadata = data[METADATA_KEY]
+    return get_type_from_strings(metadata[MODULE_KEY], metadata[FUNCTION_KEY])
 end
 
 function deserialize(::Type{T}, data::Any) where {T}
@@ -142,14 +224,10 @@ deserialize(::Type{Complex{T}}, data::Dict) where {T} =
 
 deserialize(::Type{Vector{Symbol}}, data::Vector) = Symbol.(data)
 
-"""
-Deserialize a parametric type. The default implementation strips the parametric types and
-calls the constructor with only the base type.
-"""
-function deserialize_parametric_type(
-    ::Type{T},
-    mod::Module,
-    data::Dict,
-) where {T <: InfrastructureSystemsType}
-    return getfield(mod, Symbol(T.name))(; data...)
+function serialize_julia_info()
+    data = Dict{String, Any}("julia_version" => string(VERSION))
+    io = IOBuffer()
+    Pkg.status(io = io, mode = Pkg.PKGMODE_MANIFEST)
+    data["package_info"] = String(take!(io))
+    return data
 end

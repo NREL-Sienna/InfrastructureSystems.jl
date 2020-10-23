@@ -111,8 +111,9 @@ function generate_structs(directory, data::Vector; print_results = true)
             param["struct_name"] = item["struct_name"]
             if haskey(param, "valid_range")
                 if typeof(param["valid_range"]) == Dict{String, Any}
-                    param["valid_range"] =
-                        param["valid_range"]["min"], param["valid_range"]["max"]
+                    min = param["valid_range"]["min"]
+                    max = param["valid_range"]["max"]
+                    param["valid_range"] = "($min, $max)"
                 elseif typeof(param["valid_range"]) == String
                     param["valid_range"] = param["valid_range"]
                 end
@@ -153,7 +154,7 @@ function generate_structs(directory, data::Vector; print_results = true)
                     ),
                 )
             end
-            if accessor_name != "internal" && accessor_module == ""
+            if field["name"] != "internal" && accessor_module == ""
                 push!(unique_accessor_functions, accessor_name)
                 push!(unique_setter_functions, setter_name)
             end

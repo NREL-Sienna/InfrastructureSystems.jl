@@ -2,31 +2,36 @@
 struct TestComponent <: InfrastructureSystemsComponent
     name::String
     val::Int
-    forecasts::Forecasts
+    time_series_container::TimeSeriesContainer
     internal::InfrastructureSystemsInternal
 end
 
 struct AdditionalTestComponent <: InfrastructureSystemsComponent
     name::String
     val::Int
-    forecasts::Forecasts
+    time_series_container::TimeSeriesContainer
     internal::InfrastructureSystemsInternal
 end
 
 function TestComponent(name, val)
-    return TestComponent(name, val, Forecasts(), InfrastructureSystemsInternal())
+    return TestComponent(name, val, TimeSeriesContainer(), InfrastructureSystemsInternal())
 end
 
 function AdditionalTestComponent(name, val)
-    return AdditionalTestComponent(name, val, Forecasts(), InfrastructureSystemsInternal())
+    return AdditionalTestComponent(
+        name,
+        val,
+        TimeSeriesContainer(),
+        InfrastructureSystemsInternal(),
+    )
 end
 
 get_internal(component::TestComponent) = component.internal
 get_internal(component::AdditionalTestComponent) = component.internal
 get_val(component::TestComponent) = component.val
 
-function get_forecasts(component::TestComponent)
-    return component.forecasts
+function get_time_series_container(component::TestComponent)
+    return component.time_series_container
 end
 
 function from_json(io::IO, ::Type{TestComponent})
@@ -38,7 +43,7 @@ function deserialize(::Type{TestComponent}, data::Dict)
     return TestComponent(
         data["name"],
         data["val"],
-        deserialize(Forecasts, data["forecasts"]),
+        deserialize(TimeSeriesContainer, data["time_series"]),
         deserialize(InfrastructureSystemsInternal, data["internal"]),
     )
 end

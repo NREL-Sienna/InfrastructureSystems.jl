@@ -1,25 +1,36 @@
 # Logging
 
-This document describes logging facilities available in the modules that use InfrastructureSystems. The examples assume the following imports:
+`InfrastructureSystems.jl` provides a `MultiLogger` object that allows customized
+logging to console and file. Refer to the [logging
+documentation](./logging.md).
 
-```julia
+If you want to create a package-specific log file during a simulation, consider
+the workflow used by [PowerSimulations.jl](https://github.com/NREL-SIIP/PowerSimulations.jl). It creates a custom logger in its `build!(Simulation)` function and then uses
+Julia's `Logging.with_logger` function to temporarily take over the global logger
+during `build()` and `execute()`.
+
+This document describes logging facilities available in the modules that use `InfrastructureSystems.jl`. The examples assume the following imports:
+
+```Julia
 import Logging
 import InfrastructureSystems: configure_logging, open_file_logger, MultiLogger, LogEventTracker
 ```
+
+**Note**: Packages that depend on `InfrastructureSystems.jl` already re-export `configure_logging`, `open_file_logger`, `MultiLogger`, `LogEventTracker`
 
 ## Use Cases
 
 ### Enable logging in REPL or Jupyter Notebook
 
-Use `configure_logging` to create a logger with your preferences (console
-and/or file, levels, etc.).
+Use [`InfrastructureSystems.configure_logging`](@ref) to create a logger with your
+preferences (console and/or file, levels, etc.).
 
 **Note:** log messages are not automatically flushed to files. Call
 `flush(logger)` to make this happen.
 
 **Example**: Global logger configuration
 
-```julia
+```Julia
 logger = configure_logging(; filename="log.txt")
 @info "hello world"
 flush(logger)
@@ -36,7 +47,7 @@ Use `open_file_logger` to guarantee that all messages get flushed to the file.
 
 **Example** Multilogger configuration
 
-```julia
+```Julia
 console_logger = ConsoleLogger(stderr, Logging.Error)
 
 open_file_logger("log.txt", Logging.Info) do file_logger
@@ -50,7 +61,7 @@ end
 **Note:** If someone may execute the code in the REPL then wrap that code in a
 try/finally block and reset the global logger upon exit.
 
-```julia
+```Julia
 function run_tests()
     console_logger = ConsoleLogger(stderr, Logging.Error)
 
@@ -78,7 +89,7 @@ end
 The standard Logging module in Julia provides a method to suppress messages.
 Tag the log message with maxlog=X.
 
-```julia
+```Julia
 for i in range(1, length=100)
     @error "something happened" i maxlog=2
 end
@@ -91,7 +102,7 @@ Only 2 messages will get logged.
 By default a `MultiLogger` creates a `LogEventTracker` that keeps counts of all
 messages. Call `report_log_summary` after execution.
 
-```julia
+```Julia
 logger = configure_logging(; filename="log.txt")
 @info "hello world"
 
@@ -100,7 +111,9 @@ logger = configure_logging(; filename="log.txt")
 close(logger)
 ```
 
-```
+The output of the logger can ve explored in the REPL
+
+```Julia
 julia> for i in range(1, length=100)
            @info "hello" maxlog=2
            @warn "beware" maxlog=2

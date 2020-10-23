@@ -1,32 +1,48 @@
 {
   "auto_generated_structs": [
     {
-      "struct_name": "DeterministicInternal",
+      "struct_name": "DeterministicMetadata",
       "docstring": "A deterministic forecast for a particular data field in a Component.",
       "fields": [
         {
-          "name": "label",
+          "name": "name",
           "data_type": "String",
-          "comment": "label of component parameter forecasted"
+          "comment": "user-defined name"
         },
         {
           "name": "resolution",
           "data_type": "Dates.Period"
         },
         {
-          "name": "initial_time",
+          "name": "initial_timestamp",
           "data_type": "Dates.DateTime",
-          "comment": "forecast availability time"
+          "comment": "time series availability time"
+        },
+        {
+          "name": "interval",
+          "data_type": "Dates.Period",
+          "comment": "time step between forecast windows"
+        },
+        {
+          "name": "count",
+          "data_type": "Int",
+          "comment": "number of forecast windows"
         },
         {
           "name": "time_series_uuid",
           "data_type": "UUIDs.UUID",
-          "comment": "reference to time series data; timestamp - scalingfactor"
+          "comment": "reference to time series data"
         },
         {
           "name": "horizon",
           "data_type": "Int",
-          "comment": "length of this forecast"
+          "comment": "length of this time series"
+        },
+        {
+          "name": "scaling_factor_multiplier",
+          "data_type": "Union{Nothing, Function}",
+          "default": "nothing",
+          "comment": "Applicable when the time series data are scaling factors. Called on the associated component to convert the values."
         },
         {
           "name": "internal",
@@ -34,42 +50,35 @@
           "internal_default": "InfrastructureSystemsInternal()"
         }
       ],
-      "supertype": "ForecastInternal"
+      "supertype": "ForecastMetadata"
     },
     {
-      "struct_name": "Deterministic",
-      "docstring": "A deterministic forecast for a particular data field in a Component.",
-      "fields": [
-        {
-          "name": "label",
-          "data_type": "String",
-          "comment": "label of component parameter forecasted"
-        },
-        {
-          "name": "data",
-          "data_type": "TimeSeries.TimeArray",
-          "comment": "timestamp - scalingfactor"
-        }
-      ],
-      "supertype": "Forecast"
-    },
-    {
-      "struct_name": "ProbabilisticInternal",
+      "struct_name": "ProbabilisticMetadata",
       "docstring": "A Probabilistic forecast for a particular data field in a Component.",
       "fields": [
         {
-          "name": "label",
+          "name": "name",
           "data_type": "String",
-          "comment": "label of component parameter forecasted"
+          "comment": "user-defined name"
+        },
+        {
+          "name": "initial_timestamp",
+          "data_type": "Dates.DateTime",
+          "comment": "time series availability time"
         },
         {
           "name": "resolution",
           "data_type": "Dates.Period"
         },
         {
-          "name": "initial_time",
-          "data_type": "Dates.DateTime",
-          "comment": "forecast availability time"
+          "name": "interval",
+          "data_type": "Dates.Period",
+          "comment": "time step between forecast windows"
+        },
+        {
+          "name": "count",
+          "data_type": "Int",
+          "comment": "number of forecast windows"
         },
         {
           "name": "percentiles",
@@ -79,12 +88,18 @@
         {
           "name": "time_series_uuid",
           "data_type": "UUIDs.UUID",
-          "comment": "reference to time series data; timestamp - scalingfactor"
+          "comment": "reference to time series data"
         },
         {
           "name": "horizon",
           "data_type": "Int",
-          "comment": "length of this forecast"
+          "comment": "length of this time series"
+        },
+        {
+          "name": "scaling_factor_multiplier",
+          "data_type": "Union{Nothing, Function}",
+          "default": "nothing",
+          "comment": "Applicable when the time series data are scaling factors. Called on the associated component to convert the values."
         },
         {
           "name": "internal",
@@ -92,47 +107,30 @@
           "internal_default": "InfrastructureSystemsInternal()"
         }
       ],
-      "supertype": "ForecastInternal"
+      "supertype": "ForecastMetadata"
     },
     {
-      "struct_name": "Probabilistic",
-      "docstring": "A Probabilistic forecast for a particular data field in a Component.",
+      "struct_name": "ScenariosMetadata",
+      "docstring": "A Discrete Scenario Based time series for a particular data field in a Component.",
       "fields": [
         {
-          "name": "label",
+          "name": "name",
           "data_type": "String",
-          "comment": "label of component parameter forecasted"
-        },
-        {
-          "name": "percentiles",
-          "data_type": "Vector{Float64}",
-          "comment": "Percentiles for the probabilistic forecast"
-        },
-        {
-          "name": "data",
-          "data_type": "TimeSeries.TimeArray",
-          "comment": "timestamp - scalingfactor"
-        }
-      ],
-      "supertype": "Forecast"
-    },
-    {
-      "struct_name": "ScenarioBasedInternal",
-      "docstring": "A Discrete Scenario Based forecast for a particular data field in a Component.",
-      "fields": [
-        {
-          "name": "label",
-          "data_type": "String",
-          "comment": "label of component parameter forecasted"
+          "comment": "user-defined name"
         },
         {
           "name": "resolution",
           "data_type": "Dates.Period"
         },
         {
-          "name": "initial_time",
+          "name": "initial_timestamp",
           "data_type": "Dates.DateTime",
-          "comment": "forecast availability time"
+          "comment": "time series availability time"
+        },
+        {
+          "name": "interval",
+          "data_type": "Dates.Period",
+          "comment": "time step between forecast windows"
         },
         {
           "name": "scenario_count",
@@ -140,14 +138,25 @@
           "comment": "Number of scenarios"
         },
         {
+          "name": "count",
+          "data_type": "Int",
+          "comment": "number of forecast windows"
+        },
+        {
           "name": "time_series_uuid",
           "data_type": "UUIDs.UUID",
-          "comment": "reference to time series data; timestamp - scalingfactor"
+          "comment": "reference to time series data"
         },
         {
           "name": "horizon",
           "data_type": "Int",
-          "comment": "length of this forecast"
+          "comment": "length of this time series"
+        },
+        {
+          "name": "scaling_factor_multiplier",
+          "data_type": "Union{Nothing, Function}",
+          "default": "nothing",
+          "comment": "Applicable when the time series data are scaling factors. Called on the associated component to convert the values."
         },
         {
           "name": "internal",
@@ -155,84 +164,41 @@
           "internal_default": "InfrastructureSystemsInternal()"
         }
       ],
-      "supertype": "ForecastInternal"
+      "supertype": "ForecastMetadata"
     },
     {
-      "struct_name": "ScenarioBased",
-      "docstring": "A Discrete Scenario Based forecast for a particular data field in a Component.",
+      "struct_name": "SingleTimeSeriesMetadata",
+      "docstring": "A TimeSeries Data object in contigous form.",
       "fields": [
         {
-          "name": "label",
+          "name": "name",
           "data_type": "String",
-          "comment": "label of component parameter forecasted"
-        },
-        {
-          "name": "scenario_count",
-          "data_type": "Int64",
-          "comment": "Number of scenarios"
-        },
-        {
-          "name": "data",
-          "data_type": "TimeSeries.TimeArray",
-          "comment": "timestamp - scalingfactor"
-        }
-      ],
-      "supertype": "Forecast"
-    },
-    {
-      "struct_name": "PiecewiseFunction",
-      "docstring": "A forecast for  piecewise function data field in a Component.",
-      "fields": [
-        {
-          "name": "label",
-          "data_type": "String",
-          "comment": "label of component parameter forecasted"
-        },
-        {
-          "name": "break_points",
-          "data_type": "Int",
-          "comment": "Number of break points"
-        },
-        {
-          "name": "data",
-          "data_type": "TimeSeries.TimeArray",
-          "comment": "timestamp - scalingfactor"
-        }
-      ],
-      "supertype": "Forecast"
-    },
-    {
-      "struct_name": "PiecewiseFunctionInternal",
-      "docstring": "A forecast for piecewise function data field in a Component.",
-      "fields": [
-        {
-          "name": "label",
-          "data_type": "String",
-          "comment": "label of component parameter forecasted"
+          "comment": "user-defined name"
         },
         {
           "name": "resolution",
           "data_type": "Dates.Period"
         },
         {
-          "name": "initial_time",
+          "name": "initial_timestamp",
           "data_type": "Dates.DateTime",
-          "comment": "forecast availability time"
-        },
-        {
-          "name": "break_points",
-          "data_type": "Int",
-          "comment": "Number of break points"
+          "comment": "time series availability time"
         },
         {
           "name": "time_series_uuid",
           "data_type": "UUIDs.UUID",
-          "comment": "reference to time series data; timestamp - scalingfactor"
+          "comment": "reference to time series data"
         },
         {
-          "name": "horizon",
+          "name": "length",
           "data_type": "Int",
-          "comment": "length of this forecast"
+          "comment": "length of this time series"
+        },
+        {
+          "name": "scaling_factor_multiplier",
+          "data_type": "Union{Nothing, Function}",
+          "default": "nothing",
+          "comment": "Applicable when the time series data are scaling factors. Called on the associated component to convert the values."
         },
         {
           "name": "internal",
@@ -240,7 +206,8 @@
           "internal_default": "InfrastructureSystemsInternal()"
         }
       ],
-      "supertype": "ForecastInternal"
+      "supertype": "StaticTimeSeriesMetadata",
+      "custom_code": "get_horizon(val::SingleTimeSeriesMetadata) = get_length(val)"
     }
   ],
   "struct_validation_descriptors": []

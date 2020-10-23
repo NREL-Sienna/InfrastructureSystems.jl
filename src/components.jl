@@ -20,9 +20,7 @@ end
 
 function serialize(components::Components)
     # time_series_storage and validation_descriptors are serialized elsewhere.
-    return Dict(
-        string(k) => [serialize(x) for x in values(v)] for (k, v) in components.data
-    )
+    return [serialize(x) for y in values(components.data) for x in values(y)]
 end
 
 """
@@ -60,8 +58,8 @@ function add_component!(
         throw(InvalidValue("Invalid value for $(component)"))
     end
 
-    if !deserialization_in_progress && has_forecasts(component)
-        throw(ArgumentError("cannot add a component with forecasts: $component"))
+    if !deserialization_in_progress && has_time_series(component)
+        throw(ArgumentError("cannot add a component with time_series: $component"))
     end
 
     set_time_series_storage!(component, components.time_series_storage)
@@ -91,13 +89,13 @@ function remove_components!(
         throw(ArgumentError("component $T is not stored"))
     end
 
-    components_ = pop!(components.data, T)
-    for component in values(components_)
+    _components = pop!(components.data, T)
+    for component in values(_components)
         prepare_for_removal!(component)
     end
 
     @debug "Removed all components of type" T
-    return values(components_)
+    return values(_components)
 end
 
 """
@@ -195,17 +193,17 @@ function get_components_by_name(
         throw(ArgumentError("get_components_by_name does not support concrete types: $T"))
     end
 
-    components_ = Vector{T}()
+    _components = Vector{T}()
     for key in keys(components.data)
         if key <: T
             component = get_component(key, components, name)
             if !isnothing(component)
-                push!(components_, component)
+                push!(_components, component)
             end
         end
     end
 
-    return components_
+    return _components
 end
 
 """
@@ -225,28 +223,28 @@ function get_components(
     ::Type{T},
     components::Components,
     filter_func::Union{Nothing, Function} = nothing,
-)::FlattenIteratorWrapper{T} where {T <: InfrastructureSystemsComponent}
+) where {T <: InfrastructureSystemsComponent}
     if isconcretetype(T)
-        components_ = get(components.data, T, nothing)
-        if !isnothing(filter_func) && !isnothing(components_)
+        _components = get(components.data, T, nothing)
+        if !isnothing(filter_func) && !isnothing(_components)
             _filter_func = x -> filter_func(x.second)
-            components_ = values(filter(_filter_func, components_))
+            _components = values(filter(_filter_func, _components))
         end
-        if isnothing(components_)
+        if isnothing(_components)
             iter = FlattenIteratorWrapper(T, Vector{Base.ValueIterator}([]))
         else
             iter =
-                FlattenIteratorWrapper(T, Vector{Base.ValueIterator}([values(components_)]))
+                FlattenIteratorWrapper(T, Vector{Base.ValueIterator}([values(_components)]))
         end
     else
         types = [x for x in keys(components.data) if x <: T]
         if isnothing(filter_func)
-            components_ = [values(components.data[x]) for x in types]
+            _components = [values(components.data[x]) for x in types]
         else
             _filter_func = x -> filter_func(x.second)
-            components_ = [values(filter(_filter_func, components.data[x])) for x in types]
+            _components = [values(filter(_filter_func, components.data[x])) for x in types]
         end
-        iter = FlattenIteratorWrapper(T, components_)
+        iter = FlattenIteratorWrapper(T, _components)
     end
 
     @assert eltype(iter) == T
@@ -257,7 +255,7 @@ end
 Iterates over all components.
 
 # Examples
-```julia
+```Julia
 for component in iterate_components(obj)
     @show component
 end
@@ -275,11 +273,11 @@ function iterate_components(components::Components)
     end
 end
 
-function iterate_components_with_forecasts(components::Components)
+function iterate_components_with_time_series(components::Components)
     Channel() do channel
         for comp_dict in values(components.data)
             for component in values(comp_dict)
-                if has_forecasts(component)
+                if has_time_series(component)
                     put!(channel, component)
                 end
             end
@@ -295,65 +293,8 @@ function get_num_components(components::Components)
     return count
 end
 
-function clear_forecasts!(components::Components)
-    for component in iterate_components_with_forecasts(components)
-        clear_forecasts!(component)
+function clear_time_series!(components::Components)
+    for component in iterate_components_with_time_series(components)
+        clear_time_series!(component)
     end
-end
-
-function get_forecast_initial_times(components::Components)::Vector{Dates.DateTime}
-    initial_times = Set{Dates.DateTime}()
-    for component in iterate_components_with_forecasts(components)
-        get_forecast_initial_times!(initial_times, component)
-    end
-
-    return sort!(Vector{Dates.DateTime}(collect(initial_times)))
-end
-
-function get_forecasts_initial_time(components::Components)
-    initial_times = get_forecast_initial_times(components)
-    if isempty(initial_times)
-        throw(ArgumentError("no forecasts are stored"))
-    end
-
-    return initial_times[1]
-end
-
-function get_forecasts_last_initial_time(components::Components)
-    initial_times = get_forecast_initial_times(components)
-    if isempty(initial_times)
-        throw(ArgumentError("no forecasts are stored"))
-    end
-
-    return initial_times[end]
-end
-
-"""
-Throws DataFormatError if forecasts have inconsistent parameters.
-"""
-function check_forecast_consistency(components::Components)
-    if !validate_forecast_consistency(components)
-        throw(DataFormatError("forecasts have inconsistent parameters"))
-    end
-end
-
-function validate_forecast_consistency(components::Components)
-    # All component initial times must be identical.
-    # We verify resolution and horizon at forecast addition.
-    initial_times = nothing
-    for component in iterate_components_with_forecasts(components)
-        if !validate_forecast_consistency(component)
-            return false
-        end
-        component_initial_times = Set{Dates.DateTime}()
-        get_forecast_initial_times!(component_initial_times, component)
-        if isnothing(initial_times)
-            initial_times = component_initial_times
-        elseif initial_times != component_initial_times
-            @error "initial times don't match" initial_times, component_initial_times
-            return false
-        end
-    end
-
-    return true
 end

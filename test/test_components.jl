@@ -103,7 +103,6 @@ end
     # by concrete type
     components = IS.get_components(IS.TestComponent, container, x -> (IS.get_val(x) < 5))
     @test length(components) == 0
-
 end
 
 @testset "Test get_component" begin
@@ -158,7 +157,10 @@ end
     container = IS.Components(IS.InMemoryTimeSeriesStorage())
     component = IS.TestComponent("component1", 5)
     IS.add_component!(container, component)
-    @test IS.serialize(container) isa Dict
+    data = IS.serialize(container)
+    @test data isa Vector
+    @test !isempty(data)
+    @test data[1] isa Dict
 end
 
 @testset "Summarize components" begin

@@ -1,316 +1,139 @@
+abstract type Forecast <: TimeSeriesData end
 
-"""
-Abstract type for forecasts that are stored in a system.
-Users never create them or get access to them.
-Stores references to time series data, so a disk read may be required for access.
-"""
-abstract type ForecastInternal <: InfrastructureSystemsType end
+# Subtypes of Forecast must implement
+# - get_count
+# - get_horizon
+# - get_initial_times
+# - get_initial_timestamp
+# - get_name
+# - get_scaling_factor_multiplier
+# - get_window
+# - iterate_windows
 
-"""
-Abstract type for forecasts supplied to users. They are not stored in a system. Instead,
-they are generated on demand for the user.
-Users can create them. The system will convert them to a subtype of ForecastInternal for
-storage.
-Time series data is stored as a field, so reads will always be from memory.
-"""
-abstract type Forecast <: Any end
+Base.length(ts::Forecast) = get_count(ts)
 
-get_horizon(forecast::Forecast) = length(get_data(forecast))
-get_initial_time(forecast::Forecast) = TimeSeries.timestamp(get_data(forecast))[1]
-get_scaling_factors(forecast::Forecast) = get_data(forecast)
+abstract type AbstractDeterministic <: Forecast end
 
-function get_resolution(forecast::Forecast)
-    data = get_data(forecast)
-    return TimeSeries.timestamp(data)[2] - TimeSeries.timestamp(data)[1]
+# This method requires that the forecast type implement a `get_data` method like
+# Deterministic.
+function eltype_data_common(forecast::Forecast)
+    return eltype(first(values(get_data(forecast))))
 end
 
-struct ForecastKey
-    forecast_type::Type{<:ForecastInternal}
-    initial_time::Dates.DateTime
-    label::String
+# This method requires that the forecast type implement a `get_data` method like
+# Deterministic.
+function get_count_common(forecast)
+    return length(get_data(forecast))
 end
 
-const ForecastsByType = Dict{ForecastKey, ForecastInternal}
+# This method requires that the forecast type implement a `get_data` method like
+# Deterministic. Allows for optimized execution.
+function get_horizon_common(forecast)
+    return length(first(values(get_data(forecast))))
+end
 
 """
-Forecast container for a component.
+Return the initial times in the forecast.
 """
-mutable struct Forecasts
-    data::ForecastsByType
-    time_series_storage::Union{Nothing, TimeSeriesStorage}
+function get_initial_times(f::Forecast)
+    return get_initial_times(get_initial_timestamp(f), get_count(f), get_interval(f))
 end
 
-function Forecasts()
-    return Forecasts(ForecastsByType(), nothing)
+# This method requires that the forecast type implement a `get_data` method like
+# Deterministic. Allows for optimized execution.
+function get_initial_times_common(forecast::Forecast)
+    return keys(get_data(forecast))
 end
 
-Base.length(forecasts::Forecasts) = length(forecasts.data)
-Base.isempty(forecasts::Forecasts) = isempty(forecasts.data)
+"""
+Return the total period covered by the forecast.
+"""
+function get_total_period(f::Forecast)
+    return get_total_period(
+        get_initial_timestamp(f),
+        get_count(f),
+        get_interval(f),
+        get_horizon(f),
+        get_resolution(f),
+    )
+end
 
-function set_time_series_storage!(
-    forecasts::Forecasts,
-    storage::Union{Nothing, TimeSeriesStorage},
+"""
+Return the forecast window corresponsing to interval index.
+"""
+function get_window(forecast::Forecast, index::Int; len = nothing)
+    return get_window(forecast, index_to_initial_time(forecast, index); len = len)
+end
+
+function iterate_windows_common(forecast)
+    return (get_window(forecast, it) for it in keys(get_data(forecast)))
+end
+
+"""
+Return the Dates.DateTime corresponding to an interval index.
+"""
+function index_to_initial_time(forecast::Forecast, index::Int)
+    return get_initial_timestamp(forecast) + get_interval(forecast) * index
+end
+
+"""
+Return a TimeSeries.TimeArray for one forecast window.
+"""
+function make_time_array(
+    forecast::Forecast,
+    start_time::Dates.DateTime;
+    len::Union{Nothing, Int} = nothing,
 )
-    if !isnothing(forecasts.time_series_storage) && !isnothing(storage)
-        throw(ArgumentError(
-            "The time_series_storage reference is already set. Is this component being " *
-            "added to multiple systems?",
-        ))
+    return get_window(forecast, start_time; len = len)
+end
+
+function make_timestamps(forecast::Forecast, initial_time::Dates.DateTime, len = nothing)
+    if len === nothing
+        len = get_horizon(forecast)
     end
 
-    forecasts.time_series_storage = storage
+    return range(initial_time; length = len, step = get_resolution(forecast))
 end
 
-function add_forecast!(
-    forecasts::Forecasts,
-    forecast::T;
-    skip_if_present = false,
-) where {T <: ForecastInternal}
-    key = ForecastKey(T, get_initial_time(forecast), get_label(forecast))
-    if haskey(forecasts.data, key)
-        if skip_if_present
-            @warn "forecast $key is already present, skipping overwrite"
-        else
-            throw(ArgumentError("forecast $key is already stored"))
-        end
+# This method requires that the forecast type implement a `get_data` method like
+# Deterministic. Allows for optimized execution.
+function get_initial_timestamp_common(forecast)
+    return first(keys(get_data(forecast)))
+end
+
+# This method requires that the forecast type implement a `get_data` method like
+# Deterministic. Allows for optimized execution.
+function get_interval_common(forecast)
+    its = get_initial_times(forecast)
+    if length(its) == 1
+        return Dates.Second(0)
+    end
+    first_it, state = iterate(its)
+    second_it, state = iterate(its, state)
+    return second_it - first_it
+end
+
+# This method requires that the forecast type implement a `get_data` method like
+# Deterministic.
+function get_window_common(
+    forecast,
+    initial_time::Dates.DateTime;
+    len::Union{Nothing, Int} = nothing,
+)
+    horizon = get_horizon(forecast)
+    if len === nothing
+        len = horizon
+    end
+
+    data = get_data(forecast)[initial_time]
+    if ndims(data) == 2
+        # This is necessary because the Deterministic and Probabilistic are 3D Arrays
+        # We need to do this to make the data a 2D TimeArray. In a get_window the data is always count = 1
+        @assert size(data)[1] <= len
+        data = @view data[1:len, :]
     else
-        forecasts.data[key] = forecast
-    end
-end
-
-function remove_forecast!(
-    ::Type{T},
-    forecasts::Forecasts,
-    initial_time::Dates.DateTime,
-    label::AbstractString,
-) where {T <: ForecastInternal}
-    key = ForecastKey(T, initial_time, label)
-    if !haskey(forecasts.data, key)
-        throw(ArgumentError("forecast $key is not stored"))
+        data = @view data[1:len]
     end
 
-    pop!(forecasts.data, key)
+    return TimeSeries.TimeArray(make_timestamps(forecast, initial_time, len), data)
 end
-
-function clear_forecasts!(forecasts::Forecasts)
-    empty!(forecasts.data)
-end
-
-function get_forecast(
-    ::Type{T},
-    forecasts::Forecasts,
-    initial_time::Dates.DateTime,
-    label::AbstractString,
-) where {T <: ForecastInternal}
-    key = ForecastKey(T, initial_time, label)
-    if !haskey(forecasts.data, key)
-        throw(ArgumentError("forecast $key is not stored"))
-    end
-
-    return forecasts.data[key]
-end
-
-function get_forecast_initial_times(forecasts::Forecasts)::Vector{Dates.DateTime}
-    initial_times = Set{Dates.DateTime}()
-    for key in keys(forecasts.data)
-        push!(initial_times, key.initial_time)
-    end
-
-    return sort!(Vector{Dates.DateTime}(collect(initial_times)))
-end
-
-function get_forecast_initial_times(
-    ::Type{T},
-    forecasts::Forecasts,
-) where {T <: ForecastInternal}
-    initial_times = Set{Dates.DateTime}()
-    for key in keys(forecasts.data)
-        if key.forecast_type <: T
-            push!(initial_times, key.initial_time)
-        end
-    end
-
-    return sort!(Vector{Dates.DateTime}(collect(initial_times)))
-end
-
-function get_forecast_initial_times(
-    ::Type{T},
-    forecasts::Forecasts,
-    label::AbstractString,
-) where {T <: ForecastInternal}
-    initial_times = Set{Dates.DateTime}()
-    for key in keys(forecasts.data)
-        if key.forecast_type <: T && key.label == label
-            push!(initial_times, key.initial_time)
-        end
-    end
-
-    return sort!(Vector{Dates.DateTime}(collect(initial_times)))
-end
-
-function get_forecast_initial_times!(
-    initial_times::Set{Dates.DateTime},
-    forecasts::Forecasts,
-)
-    for key in keys(forecasts.data)
-        push!(initial_times, key.initial_time)
-    end
-end
-
-function get_forecast_labels(
-    ::Type{T},
-    forecasts::Forecasts,
-    initial_time::Dates.DateTime,
-) where {T <: ForecastInternal}
-    labels = Set{String}()
-    for key in keys(forecasts.data)
-        if key.forecast_type <: T && key.initial_time == initial_time
-            push!(labels, key.label)
-        end
-    end
-
-    return Vector{String}(collect(labels))
-end
-
-struct ForecastSerializationWrapper <: InfrastructureSystemsType
-    forecast::ForecastInternal
-    type::DataType
-end
-
-function serialize(forecasts::Forecasts)
-    # Store a flat array of forecasts. Deserialization can unwind it.
-    return [
-        serialize(ForecastSerializationWrapper(v, k.forecast_type))
-        for (k, v) in forecasts.data
-    ]
-end
-
-function deserialize(::Type{Forecasts}, data::Vector)
-    forecasts = Forecasts()
-    for raw_forecast in data
-        forecast_type =
-            getfield(InfrastructureSystems, Symbol(strip_module_name(raw_forecast["type"])))
-        forecast = deserialize(forecast_type, raw_forecast["forecast"])
-        add_forecast!(forecasts, forecast)
-    end
-
-    return forecasts
-end
-
-function Base.length(forecast::Forecast)
-    return get_horizon(forecast)
-end
-
-function Base.getindex(forecast::Forecast, args...)
-    return _split_forecast(forecast, getindex(get_data(forecast), args...))
-end
-
-Base.first(forecast::Forecast) = head(forecast, 1)
-
-Base.last(forecast::Forecast) = tail(forecast, 1)
-
-Base.firstindex(forecast::Forecast) = firstindex(get_data(forecast))
-
-Base.lastindex(forecast::Forecast) = lastindex(get_data(forecast))
-
-Base.lastindex(forecast::Forecast, d) = lastindex(get_data(forecast), d)
-
-Base.eachindex(forecast::Forecast) = eachindex(get_data(forecast))
-
-Base.iterate(forecast::Forecast, n = 1) = iterate(get_data(forecast), n)
-
-"""
-Refer to TimeSeries.when(). Underlying data is copied.
-"""
-function when(forecast::Forecast, period::Function, t::Integer)
-    new = _split_forecast(forecast, TimeSeries.when(get_data(forecast), period, t))
-
-end
-
-"""
-Return a forecast truncated starting with timestamp.
-"""
-function from(forecast::T, timestamp) where {T <: Forecast}
-    return T(get_label(forecast), TimeSeries.from(get_data(forecast), timestamp))
-end
-
-"""
-Return a forecast truncated after timestamp.
-"""
-function to(forecast::T, timestamp) where {T <: Forecast}
-    return T(get_label(forecast), TimeSeries.to(get_data(forecast), timestamp))
-end
-
-"""
-Return a forecast with only the first num values.
-"""
-function head(forecast::Forecast)
-    return _split_forecast(forecast, TimeSeries.head(get_data(forecast)))
-end
-
-function head(forecast::Forecast, num)
-    return _split_forecast(forecast, TimeSeries.head(get_data(forecast), num))
-end
-
-"""
-Return a forecast with only the ending num values.
-"""
-function tail(forecast::Forecast)
-    return _split_forecast(forecast, TimeSeries.tail(get_data(forecast)))
-end
-
-function tail(forecast::Forecast, num)
-    return _split_forecast(forecast, TimeSeries.tail(get_data(forecast), num))
-end
-
-"""
-Creates a new forecast from an existing forecast with a split TimeArray.
-"""
-function
-
-_split_forecast(forecast::T, data::TimeSeries.TimeArray;) where {T <: Forecast}
-    vals = []
-    for (fname, ftype) in zip(fieldnames(T), fieldtypes(T))
-        if ftype <: TimeSeries.TimeArray
-            val = data
-        elseif ftype <: InfrastructureSystemsInternal
-            # Need to create a new UUID.
-            continue
-        else
-            val = getfield(forecast, fname)
-        end
-
-        push!(vals, val)
-    end
-
-    return T(vals...)
-end
-
-function get_resolution(ts::TimeSeries.TimeArray)
-    tstamps = TimeSeries.timestamp(ts)
-    timediffs = unique([tstamps[ix] - tstamps[ix - 1] for ix in 2:length(tstamps)])
-
-    res = []
-
-    for timediff in timediffs
-        if mod(timediff, Dates.Millisecond(Dates.Day(1))) == Dates.Millisecond(0)
-            push!(res, Dates.Day(timediff / Dates.Millisecond(Dates.Day(1))))
-        elseif mod(timediff, Dates.Millisecond(Dates.Hour(1))) == Dates.Millisecond(0)
-            push!(res, Dates.Hour(timediff / Dates.Millisecond(Dates.Hour(1))))
-        elseif mod(timediff, Dates.Millisecond(Dates.Minute(1))) == Dates.Millisecond(0)
-            push!(res, Dates.Minute(timediff / Dates.Millisecond(Dates.Minute(1))))
-        elseif mod(timediff, Dates.Millisecond(Dates.Second(1))) == Dates.Millisecond(0)
-            push!(res, Dates.Second(timediff / Dates.Millisecond(Dates.Second(1))))
-        else
-            throw(DataFormatError("cannot understand the resolution of the timeseries"))
-        end
-    end
-
-    if length(res) > 1
-        throw(DataFormatError("timeseries has non-uniform resolution: this is currently not supported"))
-    end
-
-    return res[1]
-end
-
-get_columns(::Type{<:ForecastInternal}, ta::TimeSeries.TimeArray) = nothing

@@ -4,13 +4,16 @@ import Dates
 import TimeSeries
 import UUIDs
 import JSON3
+using DataStructures: SortedDict
+using DataFrames
+using Random
 
 import InfrastructureSystems
 const IS = InfrastructureSystems
 const BASE_DIR =
     abspath(joinpath(dirname(Base.find_package("InfrastructureSystems")), ".."))
 const DATA_DIR = joinpath(BASE_DIR, "test", "data")
-const FORECASTS_DIR = joinpath(DATA_DIR, "forecasts")
+const FORECASTS_DIR = joinpath(DATA_DIR, "time_series")
 
 const LOG_FILE = "infrastructure-systems.log"
 
@@ -68,7 +71,7 @@ end
 function get_logging_level(env_name::String, default)
     level = get(ENV, env_name, default)
     log_level = get(LOG_LEVELS, level, nothing)
-    if log_level == nothing
+    if log_level === nothing
         error("Invalid log level $level: Supported levels: $(values(LOG_LEVELS))")
     end
 

@@ -1,83 +1,135 @@
 
+function make_metadata(ts::IS.TimeSeriesData)
+    return IS.time_series_data_to_metadata(typeof(ts))(ts)
+end
+
+"""
+Helper function that gets all values and then deserializes a full object.
+"""
+function _deserialize_full(storage, ts)
+    ts_metadata = make_metadata(ts)
+    return IS.deserialize_time_series(
+        IS.SingleTimeSeries,
+        storage,
+        ts_metadata,
+        UnitRange(1, length(ts)),
+        UnitRange(1, 1),
+    )
+end
+
 function test_add_remove(storage::IS.TimeSeriesStorage)
     name = "component1"
-    label = "val"
+    name = "val"
     component = IS.TestComponent(name, 5)
-    ts = create_time_series_data()
-    IS.add_time_series!(storage, IS.get_uuid(component), label, ts)
+    ts = IS.SingleTimeSeries(data = create_time_array(), name = "test")
+    IS.serialize_time_series!(storage, IS.get_uuid(component), name, ts)
 
-    ts_data = IS.get_time_series(storage, IS.get_uuid(ts))
-
-    @test TimeSeries.timestamp(ts_data) == TimeSeries.timestamp(ts.data)
-    @test TimeSeries.values(ts_data) == TimeSeries.values(ts.data)
+    ts2 = _deserialize_full(storage, ts)
+    @test TimeSeries.timestamp(IS.get_data(ts2)) == TimeSeries.timestamp(IS.get_data(ts))
+    @test TimeSeries.values(IS.get_data(ts2)) == TimeSeries.values(IS.get_data(ts))
 
     component2 = IS.TestComponent("component2", 6)
-    IS.add_time_series!(storage, IS.get_uuid(component2), label, ts)
+    IS.serialize_time_series!(storage, IS.get_uuid(component2), name, ts)
 
     @test IS.get_num_time_series(storage) == 1
 
-    IS.remove_time_series!(storage, IS.get_uuid(ts), IS.get_uuid(component2), label)
+    IS.remove_time_series!(storage, IS.get_uuid(ts), IS.get_uuid(component2), name)
 
-    # There should still be one reference to the data.
-    ts_data2 = IS.get_time_series(storage, IS.get_uuid(ts))
-    @test ts_data2 isa TimeSeries.TimeArray
+    ## There should still be one reference to the data.
+    ts2 = _deserialize_full(storage, ts)
+    @test IS.get_data(ts2) isa TimeSeries.TimeArray
 
-    IS.remove_time_series!(storage, IS.get_uuid(ts), IS.get_uuid(component), label)
-    @test_throws ArgumentError IS.get_time_series(storage, IS.get_uuid(ts))
+    IS.remove_time_series!(storage, IS.get_uuid(ts), IS.get_uuid(component), name)
+    @test_throws ArgumentError _deserialize_full(storage, ts)
     IS.get_num_time_series(storage) == 0
 end
 
 function test_add_references(storage::IS.TimeSeriesStorage)
-    label = "val"
+    name = "val"
     component1 = IS.TestComponent("component1", 5)
     component2 = IS.TestComponent("component2", 6)
-    ts = create_time_series_data()
+    ts = IS.SingleTimeSeries(data = create_time_array(), name = "test")
     ts_uuid = IS.get_uuid(ts)
-    IS.add_time_series!(storage, IS.get_uuid(component1), label, ts)
-    IS.add_time_series_reference!(storage, IS.get_uuid(component2), label, ts_uuid)
+    IS.serialize_time_series!(storage, IS.get_uuid(component1), name, ts)
+    IS.add_time_series_reference!(storage, IS.get_uuid(component2), name, ts_uuid)
 
     @test IS.get_num_time_series(storage) == 1
 
-    IS.remove_time_series!(storage, ts_uuid, IS.get_uuid(component1), label)
+    IS.remove_time_series!(storage, ts_uuid, IS.get_uuid(component1), name)
 
     # There should still be one reference to the data.
-    @test IS.get_time_series(storage, ts_uuid) isa TimeSeries.TimeArray
+    @test _deserialize_full(storage, ts) isa IS.TimeSeriesData
 
-    IS.remove_time_series!(storage, ts_uuid, IS.get_uuid(component2), label)
-    @test_throws ArgumentError IS.get_time_series(storage, IS.get_uuid(ts))
+    IS.remove_time_series!(storage, ts_uuid, IS.get_uuid(component2), name)
+    @test_throws ArgumentError _deserialize_full(storage, ts)
     IS.get_num_time_series(storage) == 0
 end
 
 function test_get_subset(storage::IS.TimeSeriesStorage)
     name = "component1"
-    label = "val"
+    name = "val"
     component = IS.TestComponent(name, 1)
-    ts = create_time_series_data()
-    IS.add_time_series!(storage, IS.get_uuid(component), label, ts)
-    ts_data = IS.get_time_series(storage, IS.get_uuid(ts))
+    ts = IS.SingleTimeSeries(data = create_time_array(), name = "test")
+    IS.serialize_time_series!(storage, IS.get_uuid(component), name, ts)
+    ts2 = _deserialize_full(storage, ts)
 
-    @test TimeSeries.timestamp(ts_data) == TimeSeries.timestamp(ts.data)
-    index = 3
-    len = 5
-    ts_subset = IS.get_time_series(storage, IS.get_uuid(ts); index = index, len = len)
-    @test ts_subset[1] == ts_data[index]
-    @test length(ts_subset) == len
+    @test TimeSeries.timestamp(IS.get_data(ts2)) == TimeSeries.timestamp(IS.get_data(ts))
+    rows = UnitRange(3, 8)
+    columns = UnitRange(1, 1)
+    ts_metadata = make_metadata(ts)
+    ts_subset =
+        IS.deserialize_time_series(IS.SingleTimeSeries, storage, ts_metadata, rows, columns)
+    @test IS.get_data(ts_subset)[1] == IS.get_data(ts2)[rows.start]
+    @test length(ts_subset) == length(rows)
+
+    initial_time1 = Dates.DateTime("2020-09-01")
+    resolution = Dates.Hour(1)
+    initial_time2 = initial_time1 + resolution
+    name = "test"
+    horizon = 24
+    data = SortedDict(initial_time1 => ones(horizon), initial_time2 => ones(horizon))
+
+    ts = IS.Deterministic(data = data, name = name, resolution = resolution)
+    IS.serialize_time_series!(storage, IS.get_uuid(component), name, ts)
+    ts_metadata = make_metadata(ts)
+    rows = UnitRange(1, horizon)
+    columns = UnitRange(1, 2)
+    ts2 = IS.deserialize_time_series(IS.Deterministic, storage, ts_metadata, rows, columns)
+    @test collect(IS.get_initial_times(ts2)) == collect(IS.get_initial_times(ts))
+    @test collect(IS.iterate_windows(ts2)) == collect(IS.iterate_windows(ts))
+
+    rows = UnitRange(3, 8)
+    columns = UnitRange(1, 2)
+    ts_subset =
+        IS.deserialize_time_series(IS.Deterministic, storage, ts_metadata, rows, columns)
+    @test IS.get_horizon(ts_subset) == length(rows)
+    @test IS.get_count(ts_subset) == columns.stop
+    @test IS.get_initial_timestamp(ts_subset) ==
+          initial_time1 + resolution * (rows.start - 1)
+
+    rows = UnitRange(2, 7)
+    columns = UnitRange(1, 1)
+    ts_subset =
+        IS.deserialize_time_series(IS.Deterministic, storage, ts_metadata, rows, columns)
+    @test IS.get_horizon(ts_subset) == length(rows)
+    @test IS.get_count(ts_subset) == columns.stop
+    @test IS.get_initial_timestamp(ts_subset) ==
+          initial_time1 + resolution * (rows.start - 1)
 end
 
 function test_clear(storage::IS.TimeSeriesStorage)
     name = "component1"
-    label = "val"
+    name = "val"
     component = IS.TestComponent(name, 5)
-    ts = create_time_series_data()
-    IS.add_time_series!(storage, IS.get_uuid(component), label, ts)
+    ts = IS.SingleTimeSeries(data = create_time_array(), name = "test")
+    IS.serialize_time_series!(storage, IS.get_uuid(component), name, ts)
 
-    ts_data = IS.get_time_series(storage, IS.get_uuid(ts))
-
-    @test TimeSeries.timestamp(ts_data) == TimeSeries.timestamp(ts.data)
-    @test TimeSeries.values(ts_data) == TimeSeries.values(ts.data)
+    ts2 = _deserialize_full(storage, ts)
+    @test TimeSeries.timestamp(IS.get_data(ts2)) == TimeSeries.timestamp(IS.get_data(ts))
+    @test TimeSeries.values(IS.get_data(ts2)) == TimeSeries.values(IS.get_data(ts))
 
     IS.clear_time_series!(storage)
-    @test_throws ArgumentError IS.get_time_series(storage, IS.get_uuid(ts))
+    @test_throws ArgumentError _deserialize_full(storage, ts)
 end
 
 @testset "Test time series storage implementations" begin

@@ -87,75 +87,6 @@ function strip_parametric_type(name::AbstractString)
 end
 
 """
-Return a symbol parsed from a serialized string. Sanitizes the input first and attempts to
-ensure that the string does not contain code. The caller can call `eval` on the returned
-symbol.
-
-Throws ErrorException if the string contains invalid characters or code.
-
-"""
-function parse_serialized_type(serialized_type::Union{Symbol, String})
-    if serialized_type isa Symbol
-        serialized_type = string(serialized_type)
-    end
-
-    _check_expression_characters(serialized_type)
-    val = Meta.parse(serialized_type)
-    if val isa Symbol
-        return val
-    elseif val isa Expr
-        _check_parametric_expression(val)
-    else
-        error("invalid type: $val")
-    end
-
-    return val
-end
-
-const _DISALLOWED_CODE_POINTS = Set([
-    # Refer to ASCII table.
-    collect(0:31)...,
-    collect(33:43)...,
-    45,
-    47,
-    collect(58:64)...,
-    collect(91:94)...,
-    124,
-    126,
-    127,
-])
-
-function _check_expression_characters(serialized_type::String)
-    # This will return false if the char is any symbol or operator other than
-    # '{', '}', '.' and ',', which should be the only non-alphanumeric characters allowed
-    # in a type that we are handling during serialization (as of now).
-    for char in serialized_type
-        value = codepoint(char)
-        is_valid = !(value in _DISALLOWED_CODE_POINTS)
-        if !is_valid
-            error("$char is not allowed in $serialized_type")
-        end
-    end
-end
-
-function _check_parametric_expression(expr::Expr)
-    # Recursively check the expression to make sure it only contains :curly and Symbols.
-    if expr.head != :curly
-        error("invalid expr: $expr")
-    end
-
-    for arg in expr.args
-        if arg isa Symbol
-            continue
-        elseif arg isa Expr
-            _check_parametric_expression(arg)
-        else
-            error("invalid expr: $arg")
-        end
-    end
-end
-
-"""
 Return true if all publicly exported names in mod are defined.
 """
 function validate_exported_names(mod::Module)
@@ -192,7 +123,7 @@ function compare_values(x::T, y::T)::Bool where {T}
         match = x == y
     else
         for field_name in fields
-            if T <: Forecasts && field_name == :time_series_storage
+            if T <: TimeSeriesContainer && field_name == :time_series_storage
                 # This gets validated at SystemData. Don't repeat for each component.
                 continue
             end
@@ -266,7 +197,7 @@ Macro to wrap Enum in a baremodule to keep the top level scope clean.
 The macro name should be singular. The macro will create a module for access that is plural.
 
 # Examples
-```julia
+```Julia
 @scoped_enum Fruit begin
     APPLE
     ORANGE
@@ -375,6 +306,44 @@ macro forward(sender, receiver, exclusions = Symbol[])
     return esc(out)
 end
 
+"""
+Return the resolution from a TimeArray.
+"""
+function get_resolution(ts::TimeSeries.TimeArray)
+    tstamps = TimeSeries.timestamp(ts)
+    timediffs = unique([tstamps[ix] - tstamps[ix - 1] for ix in 2:length(tstamps)])
+
+    res = []
+
+    for timediff in timediffs
+        if mod(timediff, Dates.Millisecond(Dates.Day(1))) == Dates.Millisecond(0)
+            push!(res, Dates.Day(timediff / Dates.Millisecond(Dates.Day(1))))
+        elseif mod(timediff, Dates.Millisecond(Dates.Hour(1))) == Dates.Millisecond(0)
+            push!(res, Dates.Hour(timediff / Dates.Millisecond(Dates.Hour(1))))
+        elseif mod(timediff, Dates.Millisecond(Dates.Minute(1))) == Dates.Millisecond(0)
+            push!(res, Dates.Minute(timediff / Dates.Millisecond(Dates.Minute(1))))
+        elseif mod(timediff, Dates.Millisecond(Dates.Second(1))) == Dates.Millisecond(0)
+            push!(res, Dates.Second(timediff / Dates.Millisecond(Dates.Second(1))))
+        else
+            throw(DataFormatError("cannot understand the resolution of the time series"))
+        end
+    end
+
+    if length(res) > 1
+        throw(DataFormatError("time series has non-uniform resolution: this is currently not supported"))
+    end
+
+    return res[1]
+end
+
+function get_initial_timestamp(data::TimeSeries.TimeArray)
+    return TimeSeries.timestamp(data)[1]
+end
+
+function get_type_from_strings(module_name, type)
+    return getfield(Base.root_module(Base.__toplevel__, Symbol(module_name)), Symbol(type))
+end
+
 # This function is used instead of cp given
 # https://github.com/JuliaLang/julia/issues/30723
 function copy_file(src::AbstractString, dst::AbstractString)
@@ -388,4 +357,99 @@ function copy_file(src::AbstractString, dst::AbstractString)
         end
     end
     return
+end
+
+function get_initial_times(
+    initial_timestamp::Dates.DateTime,
+    count::Int,
+    interval::Dates.Period,
+)
+    if count == 0
+        return []
+    elseif count == 1
+        @assert interval == Dates.Second(0)
+        return range(initial_timestamp; stop = initial_timestamp, step = Dates.Second(1))
+    end
+    @assert interval != Dates.Second(0) "initial_timestamp=$initial_timestamp interval=$interval count=$count"
+    return range(initial_timestamp; length = count, step = interval)
+end
+
+function get_total_period(
+    initial_timestamp::Dates.DateTime,
+    count::Int,
+    interval::Dates.Period,
+    horizon::Int,
+    resolution::Dates.Period,
+)
+    last_it = initial_timestamp + interval * count
+    last_timestamp = last_it + resolution * (horizon - 1)
+    return last_timestamp - initial_timestamp
+end
+
+function transform_array_for_hdf(data::SortedDict{Dates.DateTime, Vector{CONSTANT}})
+    return hcat(values(data)...)
+end
+
+function transform_array_for_hdf(data::Vector{<:Real})
+    return data
+end
+
+function transform_array_for_hdf(data::SortedDict{Dates.DateTime, Vector{POLYNOMIAL}})
+    lin_cost = hcat(values(data)...)
+    rows, cols = size(lin_cost)
+    @assert length(first(lin_cost)) == 2
+    t_lin_cost = Array{Float64}(undef, rows, cols, 2)
+    for r in 1:rows, c in 1:cols
+        tuple = lin_cost[r, c]
+        for (i, value) in enumerate(tuple)
+            t_lin_cost[r, c, i] = value
+        end
+    end
+    return t_lin_cost
+end
+
+function transform_array_for_hdf(data::Vector{POLYNOMIAL})
+    rows = length(data)
+    @assert length(first(data)) == 2
+    t_lin_cost = Array{Float64}(undef, rows, 1, 2)
+    for r in 1:rows
+        tuple = data[r]
+        for (i, value) in enumerate(tuple)
+            t_lin_cost[r, 1, i] = value
+        end
+    end
+    return t_lin_cost
+end
+
+function transform_array_for_hdf(data::SortedDict{Dates.DateTime, Vector{PWL}})
+    quad_cost = hcat(values(data)...)
+    rows, cols = size(quad_cost)
+    tuple_length = length(first(quad_cost))
+    @assert length(first(first(quad_cost))) == 2
+    t_quad_cost = Array{Float64}(undef, rows, cols, 2, tuple_length)
+    for r in 1:rows, c in 1:cols
+        tuple_array = quad_cost[r, c]
+        for (j, tuple) in enumerate(tuple_array)
+            for (i, value) in enumerate(tuple)
+                t_quad_cost[r, c, i, j] = value
+            end
+        end
+    end
+    return t_quad_cost
+end
+
+function transform_array_for_hdf(data::Vector{PWL})
+    rows = length(data)
+    tuple_length = length(first(data))
+    @assert length(first(first(data))) == 2
+    t_quad_cost = Array{Float64}(undef, rows, 1, 2, tuple_length)
+    for r in 1:rows
+        tuple_array = data[r, 1]
+        for (j, tuple) in enumerate(tuple_array)
+            for (i, value) in enumerate(tuple)
+                t_quad_cost[r, 1, i, j] = value
+            end
+        end
+    end
+    return t_quad_cost
 end

@@ -3,10 +3,10 @@
 Abstract type for time series storage implementations.
 
 All subtypes must implement:
-- add_time_series!
+- serialize_time_series!
 - add_time_series_reference!
 - remove_time_series!
-- get_time_series
+- deserialize_time_series
 - clear_time_series!
 - get_num_time_series
 - check_read_only
@@ -29,17 +29,17 @@ function make_time_series_storage(;
     return storage
 end
 
-const COMPONENT_LABEL_DELIMITER = "__"
+const COMPONENT_name_DELIMITER = "__"
 
-function make_component_label(component_uuid::UUIDs.UUID, label::AbstractString)
-    return string(component_uuid) * COMPONENT_LABEL_DELIMITER * label
+function make_component_name(component_uuid::UUIDs.UUID, name::AbstractString)
+    return string(component_uuid) * COMPONENT_name_DELIMITER * name
 end
 
-function deserialize_component_label(component_label::AbstractString)
-    data = split(component_label, COMPONENT_LABEL_DELIMITER)
+function deserialize_component_name(component_name::AbstractString)
+    data = split(component_name, COMPONENT_name_DELIMITER)
     component = UUIDs.UUID(data[1])
-    label = data[2]
-    return component, label
+    name = data[2]
+    return component, name
 end
 
 function serialize(storage::TimeSeriesStorage, file_path::AbstractString)
