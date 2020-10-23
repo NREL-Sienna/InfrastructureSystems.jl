@@ -1,4 +1,4 @@
-# InfrastructureSystems
+# InfrastructureSystems.jl
 
 [![Build Status](https://travis-ci.com/NREL-SIIP/InfrastructureSystems.jl.svg?branch=master)](https://travis-ci.com/NREL-SIIP/InfrastructureSystems.jl)
 [![codecov](https://codecov.io/gh/NREL-SIIP/InfrastructureSystems.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/NREL-SIIP/InfrastructureSystems.jl)
