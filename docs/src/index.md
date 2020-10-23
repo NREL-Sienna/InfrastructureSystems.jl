@@ -6,7 +6,7 @@ CurrentModule = InfrastructureSystems
 
 ### Overview
 
-`InfrastructureSystems.jl` is a [`Julia`](http://www.julialang.org) ppackage that provides
+`InfrastructureSystems.jl` is a [`Julia`](http://www.julialang.org) package that provides
 data management services and common utility software for the packages in
 NREL's [SIIP Initiative](https://github.com/NREL-SIIP). This package is meant
 for module development. It is used primarily by
