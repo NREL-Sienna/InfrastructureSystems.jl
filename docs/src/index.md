@@ -33,9 +33,8 @@ For the current development version, "checkout" this package with
 
 ### Usage
 
-`InfrastructureSystems.jl` does not export any method or struct by design. Please refer to
-the [Style Guide](@ref style_guide). For detailed use of `InfrastructureSystems.jl` visit
-the [API](@ref API_ref) section of the documentation.
+`InfrastructureSystems.jl` does not export any method or struct by design. For detailed
+use of `InfrastructureSystems.jl` visit the [API](@ref API_ref) section of the documentation.
 
 `InfrastructureSystems.jl` provides several utilities for the development of packages, the
 documentation includes several guides for developers
