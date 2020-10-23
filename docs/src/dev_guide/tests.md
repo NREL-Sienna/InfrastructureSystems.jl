@@ -2,30 +2,30 @@
 
 Unit tests can be executed in the REPL by executing the following:
 
-```julia
-julia> include("test/runtests.jl")
+```Julia
+julia> ] test
 ```
 
 The unit test module supports several customizations to aid development and
-debug.
+debug. For instance, runnning a specific test file
 
 - Run a subset of tests in the REPL:
 
-```julia
+```Julia
 julia> push!(ARGS, "<test_filename_without_.jl>")
 julia> include("test/runtests.jl")
 ```
 
 - Change console logging level (defaults to Error):
 
-```julia
+```Julia
 julia> ENV["PS_CONSOLE_LOG_LEVEL"] = Info
 julia> include("test/runtests.jl")
 ```
 
 - Change log file (./power-systems.log) logging level (defaults to Info):
 
-```julia
+```Julia
 julia> ENV["PS_LOG_LEVEL"] = Debug
 julia> include("test/runtests.jl")
 ```

@@ -133,7 +133,7 @@ Record an event if the recorder with name is enabled.
 - `event::AbstractRecorderEvent`: event to record
 
 # Examples
-```julia
+```Julia
 @record simulation TestEvent("start", 1, 2.0)
 ```
 """
@@ -196,7 +196,7 @@ for accepted kwargs.
 - `kwargs`: Passed to PrettyTables
 
 # Examples
-```julia
+```Julia
 show_recorder_events(TestEvent, test_recorder.log)
 show_recorder_events(TestEvent, test_recorder.log; x -> x.val2 > 2)
 ```

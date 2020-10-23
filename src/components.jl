@@ -255,7 +255,7 @@ end
 Iterates over all components.
 
 # Examples
-```julia
+```Julia
 for component in iterate_components(obj)
     @show component
 end
