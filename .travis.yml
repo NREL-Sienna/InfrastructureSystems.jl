@@ -28,7 +28,7 @@ jobs:
     - os: osx
   include:
     - stage: "Cross Package Testing"
-      julia: 1.4
+      julia: 1.5
       env:
         PACKAGE=PowerSystems
       script:
