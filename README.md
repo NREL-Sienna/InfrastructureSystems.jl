@@ -3,6 +3,7 @@
 [![Build Status](https://travis-ci.com/NREL-SIIP/InfrastructureSystems.jl.svg?branch=master)](https://travis-ci.com/NREL-SIIP/InfrastructureSystems.jl)
 [![codecov](https://codecov.io/gh/NREL-SIIP/InfrastructureSystems.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/NREL-SIIP/InfrastructureSystems.jl)
 [![Documentation](https://github.com/NREL-SIIP/InfrastructureSystems.jl/workflows/Documentation/badge.svg)](https://nrel-siip.github.io/InfrastructureSystems.jl/stable/)
+[![DOI](https://zenodo.org/badge/202787784.svg)](https://zenodo.org/badge/latestdoi/202787784)
 
 The `InfrastructureSystems.jl` package provides utilities to support data models for infrastructure modeling in [NREL-SIIP](https://github.com/NREL-SIIP). The `InfrastructureSystems.jl` package is used to support functionalities in [PowerSystems.jl](https://github.com/NREL-SIIP/PowerSystems.jl) and [PowerSimulations.jl](https://github.com/NREL-SIIP/PowerSystems.jl). This package is only compatible with Julia 1.2 or higher.
 
