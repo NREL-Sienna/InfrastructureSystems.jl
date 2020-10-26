@@ -29,6 +29,7 @@ jobs:
   include:
     - stage: "Cross Package Testing"
       julia: 1.5
+      allow_failures: true
       env:
         PACKAGE=PowerSystems
       script:
