@@ -40,7 +40,7 @@ close(logger)
 
 The function provides lots of customization. Refer to the docstring for complete details.
 
-### Log to console and file in an application or unit test environment.
+### Log to console and file in an application or unit test environment
 
 Create a `MultiLogger` from `Logging.ConsoleLogger` and `Logging.SimpleLogger`.
 Use `open_file_logger` to guarantee that all messages get flushed to the file.
