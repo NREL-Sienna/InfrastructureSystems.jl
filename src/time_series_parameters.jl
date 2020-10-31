@@ -71,7 +71,11 @@ function TimeSeriesParameters(
 )
     last_timestamp = initial_timestamp + resolution * len
     last_initial_time = last_timestamp - resolution * horizon
-    count = length(range(initial_timestamp, step = interval, stop = last_initial_time))
+    if interval == Dates.Second(0)
+        count = 1
+    else
+        count = length(range(initial_timestamp, step = interval, stop = last_initial_time))
+    end
     fparams = ForecastParameters(
         horizon = horizon,
         initial_timestamp = initial_timestamp,

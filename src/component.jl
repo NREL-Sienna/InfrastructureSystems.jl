@@ -622,6 +622,15 @@ function _get_single_time_series_transformed_parameters(
     if len < horizon
         throw(ConflictingInputsError("existing length=$len is shorter than horizon=$horizon"))
     end
+
+    max_interval = horizon * resolution
+    if len == horizon && interval == max_interval
+        interval = Dates.Second(0)
+        @warn "There is only one forecast window. Setting interval = $interval"
+    elseif interval > max_interval
+        throw(ConflictingInputsError("interval = $interval is bigger than the max of $max_interval"))
+    end
+
     initial_timestamp = get_initial_timestamp(ts_metadata)
     return TimeSeriesParameters(initial_timestamp, resolution, len, horizon, interval)
 end
