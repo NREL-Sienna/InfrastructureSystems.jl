@@ -331,14 +331,22 @@ end
         IS.add_component!(sys, component)
 
         resolution = Dates.Minute(5)
-        dates = create_dates("2020-01-01T00:00:00", resolution, "2020-01-01T23:00:00")
+        dates = create_dates("2020-01-01T00:00:00", resolution, "2020-01-01T23:05:00")
         data = collect(1:length(dates))
         ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
         name = "val"
         ts = IS.SingleTimeSeries(name, ta)
         IS.add_time_series!(sys, component, ts)
         horizon = 6
-        interval = Dates.Hour(1)
+
+        # This interval is greater than the max possible.
+        @test_throws IS.ConflictingInputsError IS.transform_single_time_series!(
+            sys,
+            IS.DeterministicSingleTimeSeries,
+            horizon,
+            Dates.Hour(1),
+        )
+        interval = Dates.Minute(30)
         IS.transform_single_time_series!(
             sys,
             IS.DeterministicSingleTimeSeries,
@@ -352,16 +360,18 @@ end
 
         # Get the transformed forecast.
         forecast = IS.get_time_series(IS.DeterministicSingleTimeSeries, component, name)
+        @test IS.get_interval(forecast) == interval
         window = IS.get_window(forecast, dates[1])
         @test window isa TimeSeries.TimeArray
         @test TimeSeries.timestamp(window) == TimeSeries.timestamp(ta[1:horizon])
         @test TimeSeries.values(window) == TimeSeries.values(ta[1:horizon])
 
         windows = collect(IS.iterate_windows(forecast))
-        exp_length = Dates.Hour(last(dates) - first(dates)).value
+        # Note that there is an extra 5 minutes being truncated.
+        exp_length = Dates.Hour(dates[end - 1] - first(dates)).value * 2
         @test length(windows) == exp_length
-        last_initial_time = last(dates) - interval
-        last_it_index = length(dates) - Int(Dates.Minute(interval) / resolution)
+        last_initial_time = dates[end - 1] - interval
+        last_it_index = length(dates) - 1 - Int(Dates.Minute(interval) / resolution)
         @test last_initial_time == dates[last_it_index]
         last_val_index = last_it_index + horizon - 1
         @test TimeSeries.values(windows[exp_length]) == data[last_it_index:last_val_index]
@@ -438,6 +448,36 @@ end
     end
 end
 
+@testset "Test DeterministicSingleTimeSeries with single window" begin
+    sys = IS.SystemData(time_series_in_memory = true)
+    component = IS.TestComponent("Component1", 5)
+    IS.add_component!(sys, component)
+
+    resolution = Dates.Hour(1)
+    horizon = 24
+    dates = collect(range(
+        Dates.DateTime("2020-01-01T00:00:00");
+        length = horizon,
+        step = resolution,
+    ))
+    data = collect(1:horizon)
+    ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
+    name = "val"
+    ts = IS.SingleTimeSeries(name, ta)
+    IS.add_time_series!(sys, component, ts)
+
+    interval = Dates.Hour(horizon)
+    IS.transform_single_time_series!(
+        sys,
+        IS.DeterministicSingleTimeSeries,
+        horizon,
+        interval,
+    )
+
+    forecast = IS.get_time_series(IS.DeterministicSingleTimeSeries, component, name)
+    @test IS.get_interval(forecast) == Dates.Second(0)
+end
+
 @testset "Test component removal with DeterministicSingleTimeSeries" begin
     sys = IS.SystemData()
     component = IS.TestComponent("Component1", 5)
@@ -451,7 +491,7 @@ end
     ts = IS.SingleTimeSeries(name, ta)
     IS.add_time_series!(sys, component, ts)
     horizon = 6
-    interval = Dates.Hour(1)
+    interval = Dates.Minute(10)
     IS.transform_single_time_series!(
         sys,
         IS.DeterministicSingleTimeSeries,

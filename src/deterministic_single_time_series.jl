@@ -85,7 +85,8 @@ function get_window(
     len::Union{Nothing, Int} = nothing,
 )
     tdiff = Dates.Millisecond(initial_time - forecast.initial_timestamp)
-    if tdiff % Dates.Millisecond(forecast.interval) != Dates.Millisecond(0)
+    interval_ms = Dates.Millisecond(forecast.interval)
+    if interval_ms != Dates.Millisecond(0) && tdiff % interval_ms != Dates.Millisecond(0)
         throw(ArgumentError("initial_time=$initial_time is not on a window boundary"))
     end
 
@@ -106,6 +107,10 @@ function get_window(
 end
 
 function iterate_windows(forecast::DeterministicSingleTimeSeries)
+    if get_count(forecast) == 1
+        return (get_window(forecast, get_initial_timestamp(forecast)),)
+    end
+
     initial_times =
         range(forecast.initial_timestamp; step = forecast.interval, length = forecast.count)
     return (get_window(forecast, it) for it in initial_times)
@@ -158,7 +163,7 @@ function _translate_deterministic_offsets(
     s_index = (columns.start - 1) * interval_offset + 1
     e_index = (columns.stop - 1) * interval_offset + horizon
     @debug "translated offsets" horizon columns s_index e_index last_index
-    @assert s_index <= last_index
-    @assert e_index <= last_index
+    @assert s_index <= last_index "s_index = $s_index last_index = $last_index"
+    @assert e_index <= last_index "e_index = $e_index last_index = $last_index"
     return UnitRange(s_index, e_index)
 end

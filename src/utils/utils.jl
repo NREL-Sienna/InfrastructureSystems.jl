@@ -367,7 +367,7 @@ function get_initial_times(
     if count == 0
         return []
     elseif count == 1
-        @assert interval == Dates.Second(0)
+        @assert interval == Dates.Second(0) "interval=$interval"
         return range(initial_timestamp; stop = initial_timestamp, step = Dates.Second(1))
     end
     @assert interval != Dates.Second(0) "initial_timestamp=$initial_timestamp interval=$interval count=$count"
