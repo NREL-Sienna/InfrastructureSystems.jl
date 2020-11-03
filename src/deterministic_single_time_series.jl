@@ -163,7 +163,7 @@ function _translate_deterministic_offsets(
     s_index = (columns.start - 1) * interval_offset + 1
     e_index = (columns.stop - 1) * interval_offset + horizon
     @debug "translated offsets" horizon columns s_index e_index last_index
-    @assert s_index <= last_index
-    @assert e_index <= last_index
+    @assert s_index <= last_index "s_index = $s_index last_index = $last_index"
+    @assert e_index <= last_index "e_index = $e_index last_index = $last_index"
     return UnitRange(s_index, e_index)
 end

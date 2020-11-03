@@ -69,12 +69,22 @@ function TimeSeriesParameters(
     horizon::Int,
     interval::Dates.Period,
 )
-    last_timestamp = initial_timestamp + resolution * len
-    last_initial_time = last_timestamp - resolution * horizon
     if interval == Dates.Second(0)
         count = 1
     else
-        count = length(range(initial_timestamp, step = interval, stop = last_initial_time))
+        last_timestamp = initial_timestamp + resolution * (len - 1)
+        last_initial_time = last_timestamp - resolution * horizon
+
+        # Reduce last_initial_time to the nearest interval if necessary.
+        diff =
+            Dates.Millisecond(last_initial_time - initial_timestamp) %
+            Dates.Millisecond(interval)
+        if diff != Dates.Millisecond(0)
+            last_initial_time -= diff
+        end
+        count =
+            Dates.Millisecond(last_initial_time - initial_timestamp) /
+            Dates.Millisecond(interval) + 1
     end
     fparams = ForecastParameters(
         horizon = horizon,

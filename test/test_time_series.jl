@@ -331,7 +331,7 @@ end
         IS.add_component!(sys, component)
 
         resolution = Dates.Minute(5)
-        dates = create_dates("2020-01-01T00:00:00", resolution, "2020-01-01T23:00:00")
+        dates = create_dates("2020-01-01T00:00:00", resolution, "2020-01-01T23:05:00")
         data = collect(1:length(dates))
         ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
         name = "val"
@@ -367,10 +367,11 @@ end
         @test TimeSeries.values(window) == TimeSeries.values(ta[1:horizon])
 
         windows = collect(IS.iterate_windows(forecast))
-        exp_length = Dates.Hour(last(dates) - first(dates)).value * 2
+        # Note that there is an extra 5 minutes being truncated.
+        exp_length = Dates.Hour(dates[end - 1] - first(dates)).value * 2
         @test length(windows) == exp_length
-        last_initial_time = last(dates) - interval
-        last_it_index = length(dates) - Int(Dates.Minute(interval) / resolution)
+        last_initial_time = dates[end - 1] - interval
+        last_it_index = length(dates) - 1 - Int(Dates.Minute(interval) / resolution)
         @test last_initial_time == dates[last_it_index]
         last_val_index = last_it_index + horizon - 1
         @test TimeSeries.values(windows[exp_length]) == data[last_it_index:last_val_index]
