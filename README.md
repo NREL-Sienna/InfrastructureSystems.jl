@@ -1,6 +1,6 @@
 # InfrastructureSystems.jl
 
-![Master - CI](https://github.com/NREL-SIIP/InfrastructureSystems.jl/workflows/Master%20-%20CI/badge.svg))
+![Master - CI](https://github.com/NREL-SIIP/InfrastructureSystems.jl/workflows/Master%20-%20CI/badge.svg)
 [![codecov](https://codecov.io/gh/NREL-SIIP/InfrastructureSystems.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/NREL-SIIP/InfrastructureSystems.jl)
 [![Documentation](https://github.com/NREL-SIIP/InfrastructureSystems.jl/workflows/Documentation/badge.svg)](https://nrel-siip.github.io/InfrastructureSystems.jl/stable/)
 [![DOI](https://zenodo.org/badge/202787784.svg)](https://zenodo.org/badge/latestdoi/202787784)
