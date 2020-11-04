@@ -1,4 +1,4 @@
-name: Run CI on Pull Requests
+name: Test-CI
 
 on:
   pull_request:
