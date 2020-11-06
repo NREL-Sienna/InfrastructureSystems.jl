@@ -65,6 +65,7 @@ get_internal(value::InfrastructureSystemsComponent) = value.internal
 
 include("common.jl")
 include("internal.jl")
+include("utils/assert_op.jl")
 include("utils/recorder_events.jl")
 include("utils/flatten_iterator_wrapper.jl")
 include("utils/generate_structs.jl")
