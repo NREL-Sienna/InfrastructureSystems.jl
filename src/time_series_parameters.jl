@@ -73,7 +73,7 @@ function TimeSeriesParameters(
         count = 1
     else
         last_timestamp = initial_timestamp + resolution * (len - 1)
-        last_initial_time = last_timestamp - resolution * horizon
+        last_initial_time = last_timestamp - resolution * (horizon - 1)
 
         # Reduce last_initial_time to the nearest interval if necessary.
         diff =
