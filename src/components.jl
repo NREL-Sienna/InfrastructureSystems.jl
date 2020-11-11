@@ -247,7 +247,7 @@ function get_components(
         iter = FlattenIteratorWrapper(T, _components)
     end
 
-    @assert eltype(iter) == T
+    @assert_op eltype(iter) == T
     return iter
 end
 

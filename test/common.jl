@@ -14,7 +14,7 @@ function create_system_data(; with_time_series = false, time_series_in_memory = 
             file,
         )
         time_series = get_all_time_series(data)
-        @assert length(time_series) > 0
+        IS.@assert_op length(time_series) > 0
     end
 
     return data

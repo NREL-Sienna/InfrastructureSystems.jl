@@ -181,7 +181,7 @@ function check_limits(
     field_value,
 ) where {T <: Union{Nothing, NamedTuple}}
     # Validates up/down, min/max, from/to named tuples.
-    @assert length(field_value) == 2
+    @assert_op length(field_value) == 2
     result1 = check_limits_impl(valid_info, field_value[1])
     result2 = check_limits_impl(valid_info, field_value[2])
     return result1 && result2
