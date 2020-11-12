@@ -35,14 +35,3 @@ function assert_op(op, exp1, exp2)
         end
     )
 end
-
-function assert_op(exp1, op, exp2)
-    return :(
-        if !$op($(esc(exp1)), $(esc(exp2)))
-            val1 = $(esc(exp1))
-            val2 = $(esc(exp2))
-            op_str = $(esc(op))
-            throw(AssertionError("$val1 is not $op_str $val2"))
-        end
-    )
-end
