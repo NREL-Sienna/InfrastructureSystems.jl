@@ -25,7 +25,7 @@ function remove_time_series_metadata!(
 ) where {T <: TimeSeriesMetadata}
     container = get_time_series_container(component)
     remove_time_series!(container, T, name)
-    @debug "Removed time_series from $component:  $name."
+    @debug "Removed time_series from $(get_name(component)):  $name."
     if T <: DeterministicMetadata &&
        has_time_series(container, SingleTimeSeriesMetadata, name)
         return false
@@ -41,7 +41,7 @@ function clear_time_series!(component::InfrastructureSystemsComponent)
     container = get_time_series_container(component)
     if !isnothing(container)
         clear_time_series!(container)
-        @debug "Cleared time_series in $component."
+        @debug "Cleared time_series in $(get_name(component))."
     end
 end
 
@@ -482,7 +482,7 @@ function prepare_for_removal!(component::InfrastructureSystemsComponent)
     clear_time_series_storage!(component)
     set_time_series_storage!(component, nothing)
     clear_time_series!(component)
-    @debug "cleared all time series data from" component
+    @debug "cleared all time series data from" get_name(component)
 end
 
 """
