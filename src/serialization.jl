@@ -179,7 +179,7 @@ function deserialize(::Type{T}, data::Any) where {T}
     return data
 end
 
-function deserialize(::Type{T}, data::Array) where {T<: Tuple}
+function deserialize(::Type{T}, data::Array) where {T <: Tuple}
     return tuple(data...)
 end
 
