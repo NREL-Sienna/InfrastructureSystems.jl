@@ -179,6 +179,10 @@ function deserialize(::Type{T}, data::Any) where {T}
     return data
 end
 
+function deserialize(::Type{T}, data::Array) where {T<: Tuple}
+    return tuple(data...)
+end
+
 function deserialize(::Type{T}, data::Any) where {T <: AbstractFloat}
     return T(data)
 end
