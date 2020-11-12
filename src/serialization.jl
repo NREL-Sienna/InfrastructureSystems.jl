@@ -145,7 +145,7 @@ function deserialize_struct(::Type{TimeSeriesKey}, data::Dict)
     return TimeSeriesKey(; vals...)
 end
 
-function deserialize_struct(::Type{T}, data::Dict) where {T}
+function deserialize_to_dict(::Type{T}, data::Dict) where {T}
     vals = Dict{Symbol, Any}()
     for (field_name, field_type) in zip(fieldnames(T), fieldtypes(T))
         val = data[string(field_name)]
@@ -161,7 +161,11 @@ function deserialize_struct(::Type{T}, data::Dict) where {T}
             vals[field_name] = deserialize(field_type, val)
         end
     end
+    return vals
+end
 
+function deserialize_struct(::Type{T}, data::Dict) where {T}
+    vals = deserialize_to_dict(T, data)
     return T(; vals...)
 end
 
