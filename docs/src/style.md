@@ -63,9 +63,22 @@ One exception is the case where one file has all single-line functions.
 an exception and terminate the application.
 * Do not use try/catch to handle retrieving a potentially-missing key from a
 dictionary.
-* Use @assert statements to guard against programming errors. Do not use them
-after detecting bad user input. Note that they may be compiled out in release
-builds.
+
+## Asserts
+* Use `@assert` statements to guard against programming errors. Do not use them
+after detecting bad user input. An assert tripping should indicate that there
+is a bug in the code. Note that they may be compiled out in optimized builds in
+the future.
+* Consider using `InfrastructureSystems.@assert_op` instead of the standard
+`@assert` because it will automatically print the value of the expression.
+Unlike the standard `@assert` the Julia compiler will never exclude
+`@assert_op` in optimized builds.
+
+```julia
+julia> a = 3; b = 4;
+julia> @assert_op a == b
+ERROR: AssertionError: 3 == 4
+```
 
 ## Globals
 
