@@ -129,9 +129,9 @@ function get_unique_timestamps(::Type{T}, file::CSV.File) where {T <: TimeSeries
         end
     end
 
-    @assert length(timestamps) > 0
+    @assert_op length(timestamps) > 0
     for timestamp in timestamps[2:end]
-        @assert timestamp["count"] == timestamps[1]["count"]
+        @assert_op timestamp["count"] == timestamps[1]["count"]
     end
 
     return timestamps

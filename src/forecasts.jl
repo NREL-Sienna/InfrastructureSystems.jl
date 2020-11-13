@@ -129,7 +129,7 @@ function get_window_common(
     if ndims(data) == 2
         # This is necessary because the Deterministic and Probabilistic are 3D Arrays
         # We need to do this to make the data a 2D TimeArray. In a get_window the data is always count = 1
-        @assert size(data)[1] <= len
+        @assert_op size(data)[1] <= len
         data = @view data[1:len, :]
     else
         data = @view data[1:len]

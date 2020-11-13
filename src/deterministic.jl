@@ -260,7 +260,7 @@ get_window(f::Deterministic, initial_time; len = nothing) =
 
 function make_time_array(forecast::Deterministic)
     # Artificial limitation to reduce scope.
-    @assert get_count(forecast) == 1
+    @assert_op get_count(forecast) == 1
     timestamps = range(
         get_initial_timestamp(forecast);
         step = get_resolution(forecast),

@@ -367,7 +367,7 @@ function get_initial_times(
     if count == 0
         return []
     elseif count == 1
-        @assert interval == Dates.Second(0) "interval=$interval"
+        @assert_op interval == Dates.Second(0)
         return range(initial_timestamp; stop = initial_timestamp, step = Dates.Second(1))
     end
     @assert interval != Dates.Second(0) "initial_timestamp=$initial_timestamp interval=$interval count=$count"
@@ -397,7 +397,7 @@ end
 function transform_array_for_hdf(data::SortedDict{Dates.DateTime, Vector{POLYNOMIAL}})
     lin_cost = hcat(values(data)...)
     rows, cols = size(lin_cost)
-    @assert length(first(lin_cost)) == 2
+    @assert_op length(first(lin_cost)) == 2
     t_lin_cost = Array{Float64}(undef, rows, cols, 2)
     for r in 1:rows, c in 1:cols
         tuple = lin_cost[r, c]
@@ -410,7 +410,7 @@ end
 
 function transform_array_for_hdf(data::Vector{POLYNOMIAL})
     rows = length(data)
-    @assert length(first(data)) == 2
+    @assert_op length(first(data)) == 2
     t_lin_cost = Array{Float64}(undef, rows, 1, 2)
     for r in 1:rows
         tuple = data[r]
@@ -425,7 +425,7 @@ function transform_array_for_hdf(data::SortedDict{Dates.DateTime, Vector{PWL}})
     quad_cost = hcat(values(data)...)
     rows, cols = size(quad_cost)
     tuple_length = length(first(quad_cost))
-    @assert length(first(first(quad_cost))) == 2
+    @assert_op length(first(first(quad_cost))) == 2
     t_quad_cost = Array{Float64}(undef, rows, cols, 2, tuple_length)
     for r in 1:rows, c in 1:cols
         tuple_array = quad_cost[r, c]
@@ -441,7 +441,7 @@ end
 function transform_array_for_hdf(data::Vector{PWL})
     rows = length(data)
     tuple_length = length(first(data))
-    @assert length(first(first(data))) == 2
+    @assert_op length(first(first(data))) == 2
     t_quad_cost = Array{Float64}(undef, rows, 1, 2, tuple_length)
     for r in 1:rows
         tuple_array = data[r, 1]

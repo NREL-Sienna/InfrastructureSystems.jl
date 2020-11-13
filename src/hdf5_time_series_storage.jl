@@ -294,7 +294,7 @@ function deserialize_time_series(
         uuid = get_time_series_uuid(ts_metadata)
         path = _get_time_series_path(root, uuid)
         attributes = _read_time_series_attributes(storage, path, rows, T)
-        @assert attributes["type"] == T
+        @assert_op attributes["type"] == T
         @debug "deserializing a StaticTimeSeries" T
         data_type = attributes["data_type"]
         data = get_hdf_array(path["data"], data_type, rows)
@@ -337,7 +337,7 @@ function deserialize_time_series(
         end
 
         attributes = _read_time_series_attributes(storage, path, rows, T)
-        @assert attributes["type"] == T
+        @assert_op attributes["type"] == T
         @debug "deserializing a Forecast" T
         data_type = attributes["data_type"]
         data = get_hdf_array(path["data"], data_type, attributes, rows, columns)
@@ -510,8 +510,8 @@ function deserialize_time_series(
         uuid = get_time_series_uuid(ts_metadata)
         path = _get_time_series_path(root, uuid)
         attributes = _read_time_series_attributes(storage, path, rows, T)
-        @assert attributes["type"] == T
-        @assert length(attributes["dataset_size"]) == 3
+        @assert_op attributes["type"] == T
+        @assert_op length(attributes["dataset_size"]) == 3
         @debug "deserializing a Forecast" T
         data = SortedDict{Dates.DateTime, Matrix{attributes["data_type"]}}()
         initial_timestamp = attributes["start_time"]
@@ -553,8 +553,8 @@ function deserialize_time_series(
         uuid = get_time_series_uuid(ts_metadata)
         path = _get_time_series_path(root, uuid)
         attributes = _read_time_series_attributes(storage, path, rows, T)
-        @assert attributes["type"] == T
-        @assert length(attributes["dataset_size"]) == 3
+        @assert_op attributes["type"] == T
+        @assert_op length(attributes["dataset_size"]) == 3
         @debug "deserializing a Forecast" T
         data = SortedDict{Dates.DateTime, Matrix{attributes["data_type"]}}()
         initial_timestamp = attributes["start_time"]
@@ -624,7 +624,7 @@ function _append_item!(path::HDF5.HDF5Group, name::AbstractString, value::Abstra
     push!(values, value)
 
     ret = HDF5.o_delete(path, name)
-    @assert ret == 0
+    @assert_op ret == 0
 
     path[name] = values
     @debug "Appended $value to $name" values
@@ -646,7 +646,7 @@ function _remove_item!(path::HDF5.HDF5Group, name::AbstractString, value::Abstra
     end
 
     ret = HDF5.o_delete(path, name)
-    @assert ret == 0
+    @assert_op ret == 0
 
     if isempty(values)
         is_empty = true
