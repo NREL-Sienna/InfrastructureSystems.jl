@@ -1,5 +1,9 @@
 # InfrastructureSystems
 
+## 1.0.1 Announcement
+
+After 1.0.0 release, the manual Changelog will no longer be maintained. Please refer to the [releases page](https://github.com/NREL-SIIP/InfrastructureSystems.jl/releases) to follow up with the changes. 
+
 ## 1.0.0
 
 - Separate TimeSeriesData in Forecast and StaticTimeSeries
