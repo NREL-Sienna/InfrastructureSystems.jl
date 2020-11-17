@@ -1,7 +1,7 @@
 name = "InfrastructureSystems"
 uuid = "2cd47ed4-ca9b-11e9-27f2-ab636a7671f1"
 authors = ["Daniel Thom", "Jose Daniel Lara", "Clayton Barrows"]
-version = "1.0.3"
+version = "1.0.4"
 
 [deps]
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
@@ -24,7 +24,7 @@ YAML = "ddb6d928-2868-570f-bddf-ab3f9cf99eb6"
 
 [compat]
 CSV = "~0.8"
-DataFrames = "~0.21"
+DataFrames = "~0.22"
 DataStructures = "~0.18"
 DocStringExtensions = "~0.8"
 HDF5 = "~0.13"
