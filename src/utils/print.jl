@@ -125,11 +125,12 @@ end
 function Base.show(io::IO, ::MIME"text/plain", ist::InfrastructureSystemsComponent)
     print(io, summary(ist), ":")
     for (name, field_type) in zip(fieldnames(typeof(ist)), fieldtypes(typeof(ist)))
-        if field_type <: InfrastructureSystemsInternal
+        obj = getfield(ist, name)
+        if obj isa InfrastructureSystemsInternal
             continue
-        elseif field_type <: TimeSeriesContainer || field_type <: InfrastructureSystemsType
+        elseif obj isa TimeSeriesContainer || obj isa InfrastructureSystemsType
             val = summary(getfield(ist, name))
-        elseif field_type <: Vector{<:InfrastructureSystemsComponent}
+        elseif obj isa Vector{<:InfrastructureSystemsComponent}
             val = summary(getfield(ist, name))
         else
             val = getfield(ist, name)
