@@ -311,6 +311,21 @@ function clear_time_series!(data::SystemData)
     reset_info!(data.time_series_params)
 end
 
+function clear_time_series_transformation!(data::SystemData)
+    for component in iterate_components_with_time_series(data.components)
+        container = get_time_series_container(component)
+        for key in keys(container.data)
+            if key.time_series_type <: ForecastMetadata
+                if remove_time_series_metadata!(component, key.time_series_type, key.name)
+                    error("This should have returned false")
+                end
+            end
+        end
+    end
+    reset_info!(data.time_series_params.forecast_params)
+    return
+end
+
 """
 Returns an iterator of TimeSeriesData instances attached to the system.
 
@@ -367,7 +382,6 @@ function transform_single_time_series!(
     horizon::Int,
     interval::Dates.Period,
 ) where {T <: DeterministicSingleTimeSeries}
-    is_first = true
     params = nothing
     for component in iterate_components_with_time_series(data.components)
         if params === nothing
@@ -378,6 +392,8 @@ function transform_single_time_series!(
                 interval,
             )
             check_add_time_series!(data.time_series_params, params)
+            !_is_uninitialized(data.time_series_params.forecast_params) &&
+                clear_time_series_transformation!(data)
         end
 
         transform_single_time_series!(component, T, params)
