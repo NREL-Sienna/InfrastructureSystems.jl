@@ -25,18 +25,25 @@ end
 
 function Base.show(io::IO, ::MIME"text/plain", components::Components)
     df = create_components_df(components)
+    num_components = get_num_components(components)
     println(io, "Components")
     println(io, "==========")
-    println(io, "Num components: $(get_num_components(components))\n")
-    show(io, df)
+    println(io, "Num components: $num_components")
+    if num_components > 0
+        println()
+        show(io, df)
+    end
 end
 
 function Base.show(io::IO, ::MIME"text/html", components::Components)
     df = create_components_df(components)
+    num_components = get_num_components(components)
     println(io, "<h2>Components</h2>")
-    println(io, "<p><b>Num components</b>: $(get_num_components(components))</p>")
-    withenv("LINES" => 100, "COLUMNS" => 200) do
-        show(io, MIME"text/html"(), df)
+    println(io, "<p><b>Num components</b>: $num_components</p>")
+    if num_components > 0
+        withenv("LINES" => 100, "COLUMNS" => 200) do
+            show(io, MIME"text/html"(), df)
+        end
     end
 end
 
@@ -198,6 +205,8 @@ function create_components_df(components::Components)
         )
         push!(rows, row)
     end
+
+    isempty(rows) && return DataFrames.DataFrame()
 
     sort!(rows, by = x -> x.ConcreteType)
 

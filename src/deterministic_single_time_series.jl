@@ -45,6 +45,7 @@ function DeterministicSingleTimeSeries(;
     )
 end
 
+get_name(value::DeterministicSingleTimeSeries) = get_name(value.single_time_series)
 """Get [`DeterministicSingleTimeSeries`](@ref) `single_time_series`."""
 get_single_time_series(value::DeterministicSingleTimeSeries) = value.single_time_series
 """Get [`DeterministicSingleTimeSeries`](@ref) `initial_timestamp`."""
