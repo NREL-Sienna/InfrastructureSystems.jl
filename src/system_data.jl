@@ -318,7 +318,7 @@ Removes all time series of a particular type from a System.
 - `data::SystemData`: system
 - `type::Type{<:TimeSeriesData}`: Type of time series objects to remove.
 """
-function remove_time_series!(data::SystemData, ::Type{T}) where T <: TimeSeriesData
+function remove_time_series!(data::SystemData, ::Type{T}) where {T <: TimeSeriesData}
     for component in iterate_components_with_time_series(data.components)
         for ts in get_time_series_multiple(component, type = T)
             remove_time_series!(data, typeof(ts), component, get_name(ts))
@@ -327,11 +327,10 @@ function remove_time_series!(data::SystemData, ::Type{T}) where T <: TimeSeriesD
     counts = get_time_series_counts(data)
     if counts[2] != 0
         reset_info!(data.time_series_params)
-    elseif counts[3] !=0
+    elseif counts[3] != 0
         reset_info!(data.time_series_params.forecast_params)
     end
 end
-
 
 """
 Returns an iterator of TimeSeriesData instances attached to the system.
