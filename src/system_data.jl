@@ -325,10 +325,12 @@ function remove_time_series!(data::SystemData, ::Type{T}) where {T <: TimeSeries
         end
     end
     counts = get_time_series_counts(data)
-    if counts[2] == 0 # no more time series objects
-        reset_info!(data.time_series_params)
-    elseif counts[3] == 0 # no more forecast objects
-        reset_info!(data.time_series_params.forecast_params)
+    if counts[3] == 0 # no more forecast objects
+        if counts[2] == 0 # no more static time series objects
+            reset_info!(data.time_series_params)
+        else
+            reset_info!(data.time_series_params.forecast_params)
+        end
     end
 end
 
