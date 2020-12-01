@@ -449,6 +449,7 @@ end
             horizon,
             resolution * (horizon + 1),
         )
+
         # Ensure that deleting one doesn't delete the other.
         if in_memory
             IS.remove_time_series!(sys, IS.Deterministic, component, name)
@@ -459,6 +460,11 @@ end
             @test IS.get_time_series(IS.Deterministic, component, name) isa
                   IS.DeterministicSingleTimeSeries
         end
+
+        # Ensure that attempted removal of nonexistant types works fine
+        counts = IS.get_time_series_counts(sys)
+        IS.remove_time_series!(sys, IS.Probabilistic)
+        @test counts === IS.get_time_series_counts(sys)
     end
 end
 
