@@ -311,29 +311,27 @@ function clear_time_series!(data::SystemData)
     reset_info!(data.time_series_params)
 end
 
+"""
+Removes all time series of a particular type from a System.
+
+# Arguments
+- `data::SystemData`: system
+- `type::Type{<:TimeSeriesData}`: Type of time series objects to remove.
+"""
 function remove_time_series!(data::SystemData, ::Type{T}) where T <: TimeSeriesData
     for component in iterate_components_with_time_series(data.components)
         for ts in get_time_series_multiple(component, type = T)
             remove_time_series!(data, typeof(ts), component, get_name(ts))
         end
     end
-end
-#=
-function clear_time_series_transformation!(data::SystemData)
-    for component in iterate_components_with_time_series(data.components)
-        container = get_time_series_container(component)
-        for key in keys(container.data)
-            if key.time_series_type <: ForecastMetadata
-                if remove_time_series_metadata!(component, key.time_series_type, key.name)
-                    error("This should have returned false")
-                end
-            end
-        end
+    counts = get_time_series_counts(data)
+    if counts[2] != 0
+        reset_info!(data.time_series_params)
+    elseif counts[3] !=0
+        reset_info!(data.time_series_params.forecast_params)
     end
-    reset_info!(data.time_series_params.forecast_params)
-    return
 end
-=#
+
 
 """
 Returns an iterator of TimeSeriesData instances attached to the system.
