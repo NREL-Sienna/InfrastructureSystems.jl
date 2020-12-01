@@ -311,6 +311,14 @@ function clear_time_series!(data::SystemData)
     reset_info!(data.time_series_params)
 end
 
+function remove_time_series!(data::SystemData, ::Type{T}) where T <: TimeSeriesData
+    for component in iterate_components_with_time_series(data.components)
+        for ts in get_time_series_multiple(component, type = T)
+            remove_time_series!(data, typeof(ts), component, get_name(ts))
+        end
+    end
+end
+#=
 function clear_time_series_transformation!(data::SystemData)
     for component in iterate_components_with_time_series(data.components)
         container = get_time_series_container(component)
@@ -325,6 +333,7 @@ function clear_time_series_transformation!(data::SystemData)
     reset_info!(data.time_series_params.forecast_params)
     return
 end
+=#
 
 """
 Returns an iterator of TimeSeriesData instances attached to the system.
@@ -393,7 +402,7 @@ function transform_single_time_series!(
             )
             check_add_time_series!(data.time_series_params, params)
             !_is_uninitialized(data.time_series_params.forecast_params) &&
-                clear_time_series_transformation!(data)
+                remove_time_series!(data, DeterministicSingleTimeSeries)
         end
 
         transform_single_time_series!(component, T, params)
