@@ -312,6 +312,29 @@ function clear_time_series!(data::SystemData)
 end
 
 """
+Removes all time series of a particular type from a System.
+
+# Arguments
+- `data::SystemData`: system
+- `type::Type{<:TimeSeriesData}`: Type of time series objects to remove.
+"""
+function remove_time_series!(data::SystemData, ::Type{T}) where {T <: TimeSeriesData}
+    for component in iterate_components_with_time_series(data.components)
+        for ts in get_time_series_multiple(component, type = T)
+            remove_time_series!(data, typeof(ts), component, get_name(ts))
+        end
+    end
+    counts = get_time_series_counts(data)
+    if counts[3] == 0 # no more forecast objects
+        if counts[2] == 0 # no more static time series objects
+            reset_info!(data.time_series_params)
+        else
+            reset_info!(data.time_series_params.forecast_params)
+        end
+    end
+end
+
+"""
 Returns an iterator of TimeSeriesData instances attached to the system.
 
 Note that passing a filter function can be much slower than the other filtering parameters
@@ -367,7 +390,6 @@ function transform_single_time_series!(
     horizon::Int,
     interval::Dates.Period,
 ) where {T <: DeterministicSingleTimeSeries}
-    is_first = true
     params = nothing
     for component in iterate_components_with_time_series(data.components)
         if params === nothing
@@ -378,6 +400,8 @@ function transform_single_time_series!(
                 interval,
             )
             check_add_time_series!(data.time_series_params, params)
+            !_is_uninitialized(data.time_series_params.forecast_params) &&
+                remove_time_series!(data, DeterministicSingleTimeSeries)
         end
 
         transform_single_time_series!(component, T, params)

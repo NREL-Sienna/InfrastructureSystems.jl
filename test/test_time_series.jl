@@ -344,7 +344,7 @@ end
             sys,
             IS.DeterministicSingleTimeSeries,
             horizon,
-            Dates.Hour(1),
+            Dates.Hour(100),
         )
         interval = Dates.Minute(30)
         IS.transform_single_time_series!(
@@ -415,26 +415,41 @@ end
             len = horizon - 1,
         )
         # Already stored.
-        @test_throws ArgumentError IS.transform_single_time_series!(
+        @test IS.transform_single_time_series!(
             sys,
             IS.DeterministicSingleTimeSeries,
             horizon,
             interval,
-        )
-        # Mismatched horizon
+        ) == nothing
+        # Bad horizon
         @test_throws IS.ConflictingInputsError IS.transform_single_time_series!(
             sys,
             IS.DeterministicSingleTimeSeries,
-            7,
+            1000, # horizon is longer than single time series
             interval,
         )
-        # Mismatched interval
+        # Good but different horizon
+        @test IS.transform_single_time_series!(
+            sys,
+            IS.DeterministicSingleTimeSeries,
+            12,
+            interval,
+        ) == nothing
+        # Good but different interval
+        @test IS.transform_single_time_series!(
+            sys,
+            IS.DeterministicSingleTimeSeries,
+            2,
+            Dates.Minute(10),
+        ) == nothing
+        # Bad interval
         @test_throws IS.ConflictingInputsError IS.transform_single_time_series!(
             sys,
             IS.DeterministicSingleTimeSeries,
             horizon,
-            Dates.Hour(2),
+            resolution * (horizon + 1),
         )
+
         # Ensure that deleting one doesn't delete the other.
         if in_memory
             IS.remove_time_series!(sys, IS.Deterministic, component, name)
@@ -445,6 +460,11 @@ end
             @test IS.get_time_series(IS.Deterministic, component, name) isa
                   IS.DeterministicSingleTimeSeries
         end
+
+        # Ensure that attempted removal of nonexistant types works fine
+        counts = IS.get_time_series_counts(sys)
+        IS.remove_time_series!(sys, IS.Probabilistic)
+        @test counts === IS.get_time_series_counts(sys)
     end
 end
 
