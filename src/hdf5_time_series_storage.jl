@@ -98,7 +98,7 @@ function serialize_time_series!(
     HDF5.h5open(storage.file_path, "r+") do file
         root = _get_root(storage, file)
         if !HDF5.exists(root, uuid)
-            HDF5.g_create(root, uuid)
+            HDF5.create_group(root, uuid)
             path = root[uuid]
             data = get_array_for_hdf(ts)
             path["data"] = data
@@ -276,7 +276,7 @@ function remove_time_series!(
         path = _get_time_series_path(root, uuid)
         if _remove_item!(path, "components", make_component_name(component_uuid, name))
             @debug "$path has no more references; delete it."
-            HDF5.o_delete(path)
+            HDF5.delete_object(path)
         end
     end
 end
@@ -602,7 +602,7 @@ end
 
 function _make_file(storage::Hdf5TimeSeriesStorage)
     HDF5.h5open(storage.file_path, "w") do file
-        HDF5.g_create(file, HDF5_TS_ROOT_PATH)
+        HDF5.create_group(file, HDF5_TS_ROOT_PATH)
     end
 end
 
@@ -618,13 +618,13 @@ function _get_time_series_path(root::HDF5.Group, uuid::UUIDs.UUID)
 end
 
 function _append_item!(path::HDF5.Group, name::AbstractString, value::AbstractString)
-    handle = HDF5.o_open(path, name)
+    handle = HDF5.open_object(path, name)
     values = HDF5.read(handle)
     HDF5.close(handle)
     push!(values, value)
 
-    ret = HDF5.o_delete(path, name)
-    @assert_op ret == 0
+    ret = HDF5.delete_object(path, name)
+    @assert_op ret === nothing
 
     path[name] = values
     @debug "Appended $value to $name" values
@@ -635,7 +635,7 @@ Removes value from the dataset called name.
 Returns true if the array is empty afterwards.
 """
 function _remove_item!(path::HDF5.Group, name::AbstractString, value::AbstractString)
-    handle = HDF5.o_open(path, name)
+    handle = HDF5.open_object(path, name)
     values = HDF5.read(handle)
     HDF5.close(handle)
 
@@ -645,8 +645,8 @@ function _remove_item!(path::HDF5.Group, name::AbstractString, value::AbstractSt
         throw(ArgumentError("$value wasn't stored in $name"))
     end
 
-    ret = HDF5.o_delete(path, name)
-    @assert_op ret == 0
+    ret = HDF5.delete_object(path, name)
+    @assert_op ret === nothing
 
     if isempty(values)
         is_empty = true
