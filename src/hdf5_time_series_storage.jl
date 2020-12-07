@@ -97,7 +97,7 @@ function serialize_time_series!(
 
     HDF5.h5open(storage.file_path, "r+") do file
         root = _get_root(storage, file)
-        if !HDF5.exists(root, uuid)
+        if !haskey(root, uuid)
             HDF5.create_group(root, uuid)
             path = root[uuid]
             data = get_array_for_hdf(ts)
@@ -610,7 +610,7 @@ _get_root(storage::Hdf5TimeSeriesStorage, file) = file[HDF5_TS_ROOT_PATH]
 
 function _get_time_series_path(root::HDF5.Group, uuid::UUIDs.UUID)
     uuid_str = string(uuid)
-    if !HDF5.exists(root, uuid_str)
+    if !haskey(root, uuid_str)
         throw(ArgumentError("UUID $uuid_str does not exist"))
     end
 
