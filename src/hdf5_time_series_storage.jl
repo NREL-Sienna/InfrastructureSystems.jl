@@ -608,7 +608,7 @@ end
 
 _get_root(storage::Hdf5TimeSeriesStorage, file) = file[HDF5_TS_ROOT_PATH]
 
-function _get_time_series_path(root::HDF5.HDF5Group, uuid::UUIDs.UUID)
+function _get_time_series_path(root::HDF5.Group, uuid::UUIDs.UUID)
     uuid_str = string(uuid)
     if !HDF5.exists(root, uuid_str)
         throw(ArgumentError("UUID $uuid_str does not exist"))
@@ -617,7 +617,7 @@ function _get_time_series_path(root::HDF5.HDF5Group, uuid::UUIDs.UUID)
     return root[uuid_str]
 end
 
-function _append_item!(path::HDF5.HDF5Group, name::AbstractString, value::AbstractString)
+function _append_item!(path::HDF5.Group, name::AbstractString, value::AbstractString)
     handle = HDF5.o_open(path, name)
     values = HDF5.read(handle)
     HDF5.close(handle)
@@ -634,7 +634,7 @@ end
 Removes value from the dataset called name.
 Returns true if the array is empty afterwards.
 """
-function _remove_item!(path::HDF5.HDF5Group, name::AbstractString, value::AbstractString)
+function _remove_item!(path::HDF5.Group, name::AbstractString, value::AbstractString)
     handle = HDF5.o_open(path, name)
     values = HDF5.read(handle)
     HDF5.close(handle)
