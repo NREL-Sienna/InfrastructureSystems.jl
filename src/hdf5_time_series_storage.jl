@@ -150,18 +150,18 @@ function _write_time_series_attributes!(
 ) where {T <: Forecast}
     _write_time_series_attributes_common!(storage, ts, path)
     interval = get_interval(ts)
-    HDF5.attrs(path)["interval"] = time_period_conversion(interval).value
+    HDF5.attributes(path)["interval"] = time_period_conversion(interval).value
 end
 
 function _write_time_series_attributes_common!(storage::Hdf5TimeSeriesStorage, ts, path)
     initial_timestamp = Dates.datetime2epochms(get_initial_timestamp(ts))
     resolution = get_resolution(ts)
     data_type = get_data_type(ts)
-    HDF5.attrs(path)["module"] = string(parentmodule(typeof(ts)))
-    HDF5.attrs(path)["type"] = string(nameof(typeof(ts)))
-    HDF5.attrs(path)["initial_timestamp"] = initial_timestamp
-    HDF5.attrs(path)["resolution"] = time_period_conversion(resolution).value
-    HDF5.attrs(path)["data_type"] = data_type
+    HDF5.attributes(path)["module"] = string(parentmodule(typeof(ts)))
+    HDF5.attributes(path)["type"] = string(nameof(typeof(ts)))
+    HDF5.attributes(path)["initial_timestamp"] = initial_timestamp
+    HDF5.attributes(path)["resolution"] = time_period_conversion(resolution).value
+    HDF5.attributes(path)["data_type"] = data_type
 end
 
 function _read_time_series_attributes(
@@ -180,7 +180,7 @@ function _read_time_series_attributes(
     ::Type{T},
 ) where {T <: Forecast}
     data = _read_time_series_attributes_common(storage, path, rows)
-    data["interval"] = Dates.Millisecond(HDF5.read(HDF5.attrs(path)["interval"]))
+    data["interval"] = Dates.Millisecond(HDF5.read(HDF5.attributes(path)["interval"]))
     return data
 end
 
@@ -188,9 +188,9 @@ const _TYPE_DICT = Dict("CONSTANT" => CONSTANT, "POLYNOMIAL" => POLYNOMIAL, "PWL
 
 function _read_time_series_attributes_common(storage::Hdf5TimeSeriesStorage, path, rows)
     initial_timestamp =
-        Dates.epochms2datetime(HDF5.read(HDF5.attrs(path)["initial_timestamp"]),)
-    resolution = Dates.Millisecond(HDF5.read(HDF5.attrs(path)["resolution"]))
-    data_type = _TYPE_DICT[HDF5.read(HDF5.attrs(path)["data_type"])]
+        Dates.epochms2datetime(HDF5.read(HDF5.attributes(path)["initial_timestamp"]),)
+    resolution = Dates.Millisecond(HDF5.read(HDF5.attributes(path)["resolution"]))
+    data_type = _TYPE_DICT[HDF5.read(HDF5.attributes(path)["data_type"])]
     return Dict(
         "type" => _read_time_series_type(path),
         "initial_timestamp" => initial_timestamp,
@@ -202,8 +202,8 @@ function _read_time_series_attributes_common(storage::Hdf5TimeSeriesStorage, pat
 end
 
 function _read_time_series_type(path)
-    module_str = HDF5.read(HDF5.attrs(path)["module"])
-    type_str = HDF5.read(HDF5.attrs(path)["type"])
+    module_str = HDF5.read(HDF5.attributes(path)["module"])
+    type_str = HDF5.read(HDF5.attributes(path)["type"])
     return get_type_from_strings(module_str, type_str)
 end
 
@@ -237,8 +237,8 @@ function iterate_time_series(storage::Hdf5TimeSeriesStorage)
 
                 data = uuid_group["data"][:]
                 attributes = Dict()
-                for name in names(HDF5.attrs(uuid_group))
-                    attributes[name] = HDF5.read(HDF5.attrs(uuid_group)[name])
+                for name in names(HDF5.attributes(uuid_group))
+                    attributes[name] = HDF5.read(HDF5.attributes(uuid_group)[name])
                 end
                 for item in HDF5.read(uuid_group["components"])
                     component, name = deserialize_component_name(item)
