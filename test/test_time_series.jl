@@ -420,7 +420,7 @@ end
             IS.DeterministicSingleTimeSeries,
             horizon,
             interval,
-        ) == nothing
+        ) === nothing
         # Bad horizon
         @test_throws IS.ConflictingInputsError IS.transform_single_time_series!(
             sys,
@@ -434,14 +434,14 @@ end
             IS.DeterministicSingleTimeSeries,
             12,
             interval,
-        ) == nothing
+        ) === nothing
         # Good but different interval
         @test IS.transform_single_time_series!(
             sys,
             IS.DeterministicSingleTimeSeries,
             2,
             Dates.Minute(10),
-        ) == nothing
+        ) === nothing
         # Bad interval
         @test_throws IS.ConflictingInputsError IS.transform_single_time_series!(
             sys,
@@ -451,6 +451,28 @@ end
         )
 
         # Ensure that deleting one doesn't delete the other.
+        # The System needs to be recreated since previous transformations remove inadequate
+        # data
+        sys = IS.SystemData(time_series_in_memory = in_memory)
+        component = IS.TestComponent("Component1", 5)
+        IS.add_component!(sys, component)
+
+        resolution = Dates.Minute(5)
+        dates = create_dates("2020-01-01T00:00:00", resolution, "2020-01-01T23:05:00")
+        data = collect(1:length(dates))
+        ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
+        name = "val"
+        ts = IS.SingleTimeSeries(name, ta)
+        IS.add_time_series!(sys, component, ts)
+        horizon = 6
+        interval = Dates.Minute(30)
+        IS.transform_single_time_series!(
+            sys,
+            IS.DeterministicSingleTimeSeries,
+            horizon,
+            interval,
+        )
+
         if in_memory
             IS.remove_time_series!(sys, IS.Deterministic, component, name)
             @test IS.get_time_series(IS.SingleTimeSeries, component, name) isa
