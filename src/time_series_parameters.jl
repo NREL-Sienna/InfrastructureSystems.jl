@@ -18,7 +18,7 @@ function ForecastParameters(;
     return ForecastParameters(horizon, initial_timestamp, interval, count)
 end
 
-function _is_uninitialized(params::ForecastParameters)
+function is_uninitialized(params::ForecastParameters)
     return params.horizon == UNINITIALIZED_LENGTH &&
            params.initial_timestamp == UNINITIALIZED_DATETIME &&
            params.interval == UNINITIALIZED_PERIOD &&
@@ -101,7 +101,7 @@ function reset_info!(params::TimeSeriesParameters)
     @info "Reset system time series parameters."
 end
 
-function _is_uninitialized(params::TimeSeriesParameters)
+function is_uninitialized(params::TimeSeriesParameters)
     return params.resolution == UNINITIALIZED_PERIOD
 end
 
@@ -121,7 +121,7 @@ function _check_forecast_params(
 )
     params = ts_params.forecast_params
     other = ts_other.forecast_params
-    if _is_uninitialized(params) != _is_uninitialized(other)
+    if is_uninitialized(params) != is_uninitialized(other)
         throw(ConflictingInputsError("forecast parameter mismatch"))
     end
 
@@ -149,13 +149,13 @@ function check_add_time_series!(params::TimeSeriesParameters, ts::TimeSeriesData
 end
 
 function check_add_time_series!(params::TimeSeriesParameters, other::TimeSeriesParameters)
-    if _is_uninitialized(params)
+    if is_uninitialized(params)
         # This is the first time series added.
         params.resolution = other.resolution
     end
 
-    if !_is_uninitialized(other.forecast_params) &&
-       _is_uninitialized(params.forecast_params)
+    if !is_uninitialized(other.forecast_params) &&
+       is_uninitialized(params.forecast_params)
         params.forecast_params.horizon = other.forecast_params.horizon
         params.forecast_params.initial_timestamp = other.forecast_params.initial_timestamp
         params.forecast_params.interval = other.forecast_params.interval
@@ -206,7 +206,7 @@ get_time_series_resolution(params::TimeSeriesParameters) = params.resolution
 
 function get_forecast_total_period(p::TimeSeriesParameters)
     f = p.forecast_params
-    _is_uninitialized(f) && return Dates.Second(0)
+    is_uninitialized(f) && return Dates.Second(0)
     return get_total_period(
         f.initial_timestamp,
         f.count,

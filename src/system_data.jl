@@ -390,6 +390,10 @@ function transform_single_time_series!(
     horizon::Int,
     interval::Dates.Period,
 ) where {T <: DeterministicSingleTimeSeries}
+    @debug data.time_series_params.forecast_params
+    if !is_uninitialized(data.time_series_params.forecast_params)
+        remove_time_series!(data, DeterministicSingleTimeSeries)
+    end
     params = nothing
     for component in iterate_components_with_time_series(data.components)
         if params === nothing
@@ -400,8 +404,6 @@ function transform_single_time_series!(
                 interval,
             )
             check_add_time_series!(data.time_series_params, params)
-            !_is_uninitialized(data.time_series_params.forecast_params) &&
-                remove_time_series!(data, DeterministicSingleTimeSeries)
         end
 
         transform_single_time_series!(component, T, params)
