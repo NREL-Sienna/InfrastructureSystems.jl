@@ -154,8 +154,7 @@ function check_add_time_series!(params::TimeSeriesParameters, other::TimeSeriesP
         params.resolution = other.resolution
     end
 
-    if !is_uninitialized(other.forecast_params) &&
-       is_uninitialized(params.forecast_params)
+    if !is_uninitialized(other.forecast_params) && is_uninitialized(params.forecast_params)
         params.forecast_params.horizon = other.forecast_params.horizon
         params.forecast_params.initial_timestamp = other.forecast_params.initial_timestamp
         params.forecast_params.interval = other.forecast_params.interval
