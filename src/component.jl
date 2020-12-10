@@ -363,6 +363,16 @@ function has_time_series(component::InfrastructureSystemsComponent)
     return !isnothing(container) && !isempty(container)
 end
 
+function has_time_series(
+    component::InfrastructureSystemsComponent,
+    type::Type{<:TimeSeriesMetadata},
+    name::AbstractString,
+)
+    container = get_time_series_container(component)
+    container === nothing && return false
+    return has_time_series(container, type, name)
+end
+
 """
 Efficiently add all time_series in one component to another by copying the underlying
 references.
@@ -555,24 +565,23 @@ function get_time_series_multiple(
 end
 
 """
-Transform all instances of SingleTimeSeries to DeterministicSingleTimeSeries.
+Transform all instances of SingleTimeSeries to DeterministicSingleTimeSeries. Do nothing
+if the component does not contain any instances.
+
+All required checks must have been completed by the caller.
+
+Return true if a transformation occurs.
 """
-function transform_single_time_series!(
+function transform_single_time_series_internal!(
     component::InfrastructureSystemsComponent,
     ::Type{T},
-    sys_params::TimeSeriesParameters,
+    params::TimeSeriesParameters,
 ) where {T <: DeterministicSingleTimeSeries}
+    transformed = false
     container = get_time_series_container(component)
     for (key, ts_metadata) in container.data
         if ts_metadata isa SingleTimeSeriesMetadata
             resolution = get_resolution(ts_metadata)
-            params = _get_single_time_series_transformed_parameters(
-                ts_metadata,
-                T,
-                sys_params.forecast_params.horizon,
-                sys_params.forecast_params.interval,
-            )
-            check_add_time_series!(sys_params, params)
             new_metadata = DeterministicMetadata(
                 name = get_name(ts_metadata),
                 resolution = params.resolution,
@@ -586,8 +595,13 @@ function transform_single_time_series!(
             )
             add_time_series!(container, new_metadata)
             @debug "Added $new_metadata from $ts_metadata."
+            if !transformed
+                transformed = true
+            end
         end
     end
+
+    return transformed
 end
 
 function get_single_time_series_transformed_parameters(

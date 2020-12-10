@@ -338,6 +338,7 @@ end
         ts = IS.SingleTimeSeries(name, ta)
         IS.add_time_series!(sys, component, ts)
         horizon = 6
+        verify_show(sys)
 
         # This interval is greater than the max possible.
         @test_throws IS.ConflictingInputsError IS.transform_single_time_series!(
@@ -353,6 +354,7 @@ end
             horizon,
             interval,
         )
+        verify_show(sys)
 
         # The original should still be readable.
         single_vals = IS.get_time_series_values(IS.SingleTimeSeries, component, name)
@@ -450,6 +452,36 @@ end
             resolution * (horizon + 1),
         )
 
+        # Ensure that attempted removal of nonexistant types works fine
+        counts = IS.get_time_series_counts(sys)
+        IS.remove_time_series!(sys, IS.Probabilistic)
+        @test counts === IS.get_time_series_counts(sys)
+    end
+end
+
+@testset "Test SingleTimeSeries transform deletions" begin
+    for in_memory in (true, false)
+        sys = IS.SystemData(time_series_in_memory = in_memory)
+        component = IS.TestComponent("Component1", 5)
+        IS.add_component!(sys, component)
+
+        resolution = Dates.Minute(5)
+        dates = create_dates("2020-01-01T00:00:00", resolution, "2020-01-01T23:05:00")
+        data = collect(1:length(dates))
+        ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
+        name = "val"
+        ts = IS.SingleTimeSeries(name, ta)
+        IS.add_time_series!(sys, component, ts)
+        horizon = 6
+
+        interval = Dates.Minute(30)
+        IS.transform_single_time_series!(
+            sys,
+            IS.DeterministicSingleTimeSeries,
+            horizon,
+            interval,
+        )
+
         # Ensure that deleting one doesn't delete the other.
         if in_memory
             IS.remove_time_series!(sys, IS.Deterministic, component, name)
@@ -460,11 +492,6 @@ end
             @test IS.get_time_series(IS.Deterministic, component, name) isa
                   IS.DeterministicSingleTimeSeries
         end
-
-        # Ensure that attempted removal of nonexistant types works fine
-        counts = IS.get_time_series_counts(sys)
-        IS.remove_time_series!(sys, IS.Probabilistic)
-        @test counts === IS.get_time_series_counts(sys)
     end
 end
 
@@ -1756,7 +1783,7 @@ end
     # Set baseline parameters for the rest of the tests.
     data = SortedDict(initial_time => ones(horizon), second_time => ones(horizon))
     forecast = IS.Deterministic(data = data, name = name, resolution = resolution)
-    @test_throws IS.ConflictingInputsError IS.add_time_series!(sys, component, forecast)
+    IS.add_time_series!(sys, component, forecast)
 
     # Conflicting initial time
     initial_time2 = Dates.DateTime("2020-09-02")
