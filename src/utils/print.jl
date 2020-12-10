@@ -30,7 +30,7 @@ function Base.show(io::IO, ::MIME"text/plain", components::Components)
     println(io, "==========")
     println(io, "Num components: $num_components")
     if num_components > 0
-        println()
+        println(io)
         show(io, df)
     end
 end

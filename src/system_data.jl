@@ -175,15 +175,21 @@ function _attach_time_series_and_serialize!(
     skip_if_present = false,
 ) where {T <: TimeSeriesMetadata}
     _validate_component(data, component)
-    check_add_time_series!(data.time_series_params, ts)
+    check_add_time_series(data.time_series_params, ts)
     check_read_only(data.time_series_storage)
-    add_time_series!(component, ts_metadata, skip_if_present = skip_if_present)
+    if has_time_series(component, T, get_name(ts))
+        throw(ArgumentError("time_series $(typeof(ts)) $(get_name(ts)) is already stored"))
+    end
+
     serialize_time_series!(
         data.time_series_storage,
         get_uuid(component),
         get_name(ts_metadata),
         ts,
     )
+    add_time_series!(component, ts_metadata, skip_if_present = skip_if_present)
+    # Order is important. Set this last in case exceptions are thrown at previous steps.
+    set_parameters!(data.time_series_params, ts)
     return
 end
 
@@ -383,6 +389,9 @@ end
 
 """
 Transform all instances of SingleTimeSeries to DeterministicSingleTimeSeries.
+
+Any existing DeterministicSingleTimeSeries forecasts will be deleted even if the inputs are
+invalid.
 """
 function transform_single_time_series!(
     data::SystemData,
@@ -390,7 +399,9 @@ function transform_single_time_series!(
     horizon::Int,
     interval::Dates.Period,
 ) where {T <: DeterministicSingleTimeSeries}
+    remove_time_series!(data, DeterministicSingleTimeSeries)
     params = nothing
+    set_params = false
     for component in iterate_components_with_time_series(data.components)
         if params === nothing
             params = get_single_time_series_transformed_parameters(
@@ -399,12 +410,14 @@ function transform_single_time_series!(
                 horizon,
                 interval,
             )
-            check_add_time_series!(data.time_series_params, params)
-            !_is_uninitialized(data.time_series_params.forecast_params) &&
-                remove_time_series!(data, DeterministicSingleTimeSeries)
+            # This will throw if there is another forecast type with conflicting parameters.
+            check_params_compatibility(data.time_series_params, params)
         end
 
-        transform_single_time_series!(component, T, params)
+        if transform_single_time_series_internal!(component, T, params) && !set_params
+            set_parameters!(data.time_series_params, params)
+            set_params = true
+        end
     end
 end
 

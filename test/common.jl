@@ -60,3 +60,14 @@ end
 function create_dates(start_time::String, resolution, end_time::String)
     return create_dates(Dates.DateTime(start_time), resolution, Dates.DateTime(end_time))
 end
+
+"""
+Verifies that printing an object doesn't crash, which has happened several times.
+"""
+function verify_show(obj)
+    io = IOBuffer()
+    show(io, "text/plain", obj)
+    val = String(take!(io))
+    @test !isempty(val)
+    return
+end
