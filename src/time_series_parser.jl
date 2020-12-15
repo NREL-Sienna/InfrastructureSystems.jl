@@ -261,6 +261,8 @@ function TimeSeriesParsedInfo(metadata::TimeSeriesFileMetadata, raw_data::RawTim
             factor = metadata.normalization_factor
             throw(DataFormatError("unsupported normalization_factor {factor}"))
         end
+    elseif metadata.normalization_factor == 0.0
+        throw(DataFormatError("unsupported normalization_factor value of 0.0"))
     else
         normalization_factor = metadata.normalization_factor
     end
