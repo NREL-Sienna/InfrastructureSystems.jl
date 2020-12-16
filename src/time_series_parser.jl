@@ -73,7 +73,6 @@ function read_time_series_file_metadata(file_path::AbstractString)
             data = JSON3.read(io, Array)
             for item in data
                 parsed_resolution = Dates.Millisecond(Dates.Second(item["resolution"]))
-                category = _get_category(item["category"])
                 normalization_factor = item["normalization_factor"]
                 if !isa(normalization_factor, AbstractString)
                     normalization_factor = Float64(normalization_factor)
@@ -144,15 +143,6 @@ function read_time_series_file_metadata(file_path::AbstractString)
     end
 
     return metadata
-end
-
-function _get_category(category::String)
-    # Re-mapping for PowerSystems RTS data.
-    if category == "Area"
-        category = "bus"
-    end
-
-    return lowercase(category)
 end
 
 @scoped_enum NormalizationType begin
