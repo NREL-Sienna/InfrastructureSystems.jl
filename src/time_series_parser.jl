@@ -110,7 +110,7 @@ function read_time_series_file_metadata(file_path::AbstractString)
         csv = DataFrames.DataFrame(CSV.File(file_path))
         metadata = Vector{TimeSeriesFileMetadata}()
         for row in eachrow(csv)
-            category = _get_category(row.category)
+            category = row.category
             scaling_factor_multiplier = get(row, :scaling_factor_multiplier, nothing)
             scaling_factor_multiplier_module =
                 get(row, :scaling_factor_multiplier_module, nothing)
