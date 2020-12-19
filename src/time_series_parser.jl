@@ -73,7 +73,6 @@ function read_time_series_file_metadata(file_path::AbstractString)
             data = JSON3.read(io, Array)
             for item in data
                 parsed_resolution = Dates.Millisecond(Dates.Second(item["resolution"]))
-                category = _get_category(item["category"])
                 normalization_factor = item["normalization_factor"]
                 if !isa(normalization_factor, AbstractString)
                     normalization_factor = Float64(normalization_factor)
@@ -111,7 +110,7 @@ function read_time_series_file_metadata(file_path::AbstractString)
         csv = DataFrames.DataFrame(CSV.File(file_path))
         metadata = Vector{TimeSeriesFileMetadata}()
         for row in eachrow(csv)
-            category = _get_category(row.category)
+            category = row.category
             scaling_factor_multiplier = get(row, :scaling_factor_multiplier, nothing)
             scaling_factor_multiplier_module =
                 get(row, :scaling_factor_multiplier_module, nothing)
@@ -144,15 +143,6 @@ function read_time_series_file_metadata(file_path::AbstractString)
     end
 
     return metadata
-end
-
-function _get_category(category::String)
-    # Re-mapping for PowerSystems RTS data.
-    if category == "Area"
-        category = "bus"
-    end
-
-    return lowercase(category)
 end
 
 @scoped_enum NormalizationType begin
@@ -261,6 +251,8 @@ function TimeSeriesParsedInfo(metadata::TimeSeriesFileMetadata, raw_data::RawTim
             factor = metadata.normalization_factor
             throw(DataFormatError("unsupported normalization_factor {factor}"))
         end
+    elseif metadata.normalization_factor == 0.0
+        throw(DataFormatError("unsupported normalization_factor value of 0.0"))
     else
         normalization_factor = metadata.normalization_factor
     end
