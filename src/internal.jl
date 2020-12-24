@@ -34,11 +34,8 @@ end
 """
 Creates InfrastructureSystemsInternal with a new UUID.
 """
-InfrastructureSystemsInternal(;
-    uuid = make_uuid(),
-    units_info = nothing,
-    ext = nothing,
-) = InfrastructureSystemsInternal(uuid, units_info, ext)
+InfrastructureSystemsInternal(; uuid = make_uuid(), units_info = nothing, ext = nothing) =
+    InfrastructureSystemsInternal(uuid, units_info, ext)
 
 """
 Creates InfrastructureSystemsInternal with an existing UUID.
