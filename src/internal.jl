@@ -36,7 +36,7 @@ Creates InfrastructureSystemsInternal with a new UUID.
 """
 InfrastructureSystemsInternal(;
     uuid = make_uuid(),
-    units_info = SystemUnitsSettings(100.0, NATURAL_UNITS),
+    units_info = nothing,
     ext = nothing,
 ) = InfrastructureSystemsInternal(uuid, units_info, ext)
 
