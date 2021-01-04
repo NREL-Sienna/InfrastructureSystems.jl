@@ -60,7 +60,11 @@ function _get_columns(start_time, count, ts_metadata::ForecastMetadata)
     end
 
     if index + count - 1 > get_count(ts_metadata)
-        throw(ArgumentError("The requested start_time $start_time and count $count are invalid"))
+        throw(
+            ArgumentError(
+                "The requested start_time $start_time and count $count are invalid",
+            ),
+        )
     end
     return UnitRange(index, index + count - 1)
 end
@@ -76,7 +80,11 @@ function _get_rows(start_time, len, ts_metadata::StaticTimeSeriesMetadata)
         len = length(ts_metadata) - index + 1
     end
     if index + len - 1 > length(ts_metadata)
-        throw(ArgumentError("The requested index=$index len=$len exceeds the range $(length(ts_metadata))"))
+        throw(
+            ArgumentError(
+                "The requested index=$index len=$len exceeds the range $(length(ts_metadata))",
+            ),
+        )
     end
 
     return UnitRange(index, index + len - 1)
@@ -97,7 +105,11 @@ function _check_start_time(start_time, ts_metadata::TimeSeriesMetadata)
 
     time_diff = start_time - get_initial_timestamp(ts_metadata)
     if time_diff < Dates.Second(0)
-        throw(ArgumentError("start_time=$start_time is earlier than $(get_initial_timestamp(ts_metadata))"))
+        throw(
+            ArgumentError(
+                "start_time=$start_time is earlier than $(get_initial_timestamp(ts_metadata))",
+            ),
+        )
     end
 
     if typeof(ts_metadata) <: ForecastMetadata
@@ -105,7 +117,11 @@ function _check_start_time(start_time, ts_metadata::TimeSeriesMetadata)
         interval = get_interval(ts_metadata)
         if window_count > 1 &&
            Dates.Millisecond(time_diff) % Dates.Millisecond(interval) != Dates.Second(0)
-            throw(ArgumentError("start_time=$start_time is not on a multiple of interval=$interval"))
+            throw(
+                ArgumentError(
+                    "start_time=$start_time is not on a multiple of interval=$interval",
+                ),
+            )
         end
     end
 
@@ -238,13 +254,9 @@ function get_time_series_timestamps(
     start_time::Union{Nothing, Dates.DateTime} = nothing,
     len::Union{Nothing, Int} = nothing,
 ) where {T <: TimeSeriesData}
-    return TimeSeries.timestamp(get_time_series_array(
-        T,
-        component,
-        name;
-        start_time = start_time,
-        len = len,
-    ))
+    return TimeSeries.timestamp(
+        get_time_series_array(T, component, name; start_time = start_time, len = len),
+    )
 end
 
 """
@@ -256,12 +268,9 @@ function get_time_series_timestamps(
     start_time::Union{Nothing, Dates.DateTime} = nothing;
     len::Union{Nothing, Int} = nothing,
 )
-    return TimeSeries.timestamp(get_time_series_array(
-        component,
-        forecast,
-        start_time;
-        len = len,
-    ))
+    return TimeSeries.timestamp(
+        get_time_series_array(component, forecast, start_time; len = len),
+    )
 end
 
 """
@@ -273,12 +282,9 @@ function get_time_series_timestamps(
     start_time::Union{Nothing, Dates.DateTime} = nothing;
     len::Union{Nothing, Int} = nothing,
 )
-    return TimeSeries.timestamp(get_time_series_array(
-        component,
-        time_series,
-        start_time;
-        len = len,
-    ))
+    return TimeSeries.timestamp(
+        get_time_series_array(component, time_series, start_time; len = len),
+    )
 end
 
 """
@@ -295,14 +301,16 @@ function get_time_series_values(
     len::Union{Nothing, Int} = nothing,
     ignore_scaling_factors = false,
 ) where {T <: TimeSeriesData}
-    return TimeSeries.values(get_time_series_array(
-        T,
-        component,
-        name;
-        start_time = start_time,
-        len = len,
-        ignore_scaling_factors = ignore_scaling_factors,
-    ))
+    return TimeSeries.values(
+        get_time_series_array(
+            T,
+            component,
+            name;
+            start_time = start_time,
+            len = len,
+            ignore_scaling_factors = ignore_scaling_factors,
+        ),
+    )
 end
 
 """
@@ -315,13 +323,15 @@ function get_time_series_values(
     len::Union{Nothing, Int} = nothing,
     ignore_scaling_factors = false,
 )
-    return TimeSeries.values(get_time_series_array(
-        component,
-        forecast,
-        start_time;
-        len = len,
-        ignore_scaling_factors = ignore_scaling_factors,
-    ))
+    return TimeSeries.values(
+        get_time_series_array(
+            component,
+            forecast,
+            start_time;
+            len = len,
+            ignore_scaling_factors = ignore_scaling_factors,
+        ),
+    )
 end
 
 """
@@ -335,13 +345,15 @@ function get_time_series_values(
     len::Union{Nothing, Int} = nothing,
     ignore_scaling_factors = false,
 )
-    return TimeSeries.values(get_time_series_array(
-        component,
-        time_series,
-        start_time;
-        len = len,
-        ignore_scaling_factors = ignore_scaling_factors,
-    ))
+    return TimeSeries.values(
+        get_time_series_array(
+            component,
+            time_series,
+            start_time;
+            len = len,
+            ignore_scaling_factors = ignore_scaling_factors,
+        ),
+    )
 end
 
 function _make_time_array(component, time_series, start_time, len, ignore_scaling_factors)
@@ -478,8 +490,8 @@ function get_time_series_uuids(component::InfrastructureSystemsComponent)
     container = get_time_series_container(component)
 
     return [
-        (get_time_series_uuid(container.data[key]), key.name)
-        for key in get_time_series_keys(component)
+        (get_time_series_uuid(container.data[key]), key.name) for
+        key in get_time_series_keys(component)
     ]
 end
 
@@ -634,7 +646,9 @@ function _get_single_time_series_transformed_parameters(
     resolution = get_resolution(ts_metadata)
     len = length(ts_metadata)
     if len < horizon
-        throw(ConflictingInputsError("existing length=$len is shorter than horizon=$horizon"))
+        throw(
+            ConflictingInputsError("existing length=$len is shorter than horizon=$horizon"),
+        )
     end
 
     max_interval = horizon * resolution
@@ -642,7 +656,11 @@ function _get_single_time_series_transformed_parameters(
         interval = Dates.Second(0)
         @warn "There is only one forecast window. Setting interval = $interval"
     elseif interval > max_interval
-        throw(ConflictingInputsError("interval = $interval is bigger than the max of $max_interval"))
+        throw(
+            ConflictingInputsError(
+                "interval = $interval is bigger than the max of $max_interval",
+            ),
+        )
     end
 
     initial_timestamp = get_initial_timestamp(ts_metadata)

@@ -395,10 +395,9 @@ end
         forecasts = collect(IS.get_time_series_multiple(sys; type = IS.Deterministic))
         @test length(forecasts) == 1
         @test forecasts[1] isa IS.DeterministicSingleTimeSeries
-        forecasts = collect(IS.get_time_series_multiple(
-            sys;
-            type = IS.DeterministicSingleTimeSeries,
-        ))
+        forecasts = collect(
+            IS.get_time_series_multiple(sys; type = IS.DeterministicSingleTimeSeries),
+        )
         @test length(forecasts) == 1
         @test forecasts[1] isa IS.DeterministicSingleTimeSeries
 
@@ -502,11 +501,9 @@ end
 
     resolution = Dates.Hour(1)
     horizon = 24
-    dates = collect(range(
-        Dates.DateTime("2020-01-01T00:00:00");
-        length = horizon,
-        step = resolution,
-    ))
+    dates = collect(
+        range(Dates.DateTime("2020-01-01T00:00:00"); length = horizon, step = resolution),
+    )
     data = collect(1:horizon)
     ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
     name = "val"
@@ -1402,8 +1399,8 @@ end
         name = "test"
         horizon = 24
         data_pwl = SortedDict{Dates.DateTime, Vector{IS.PWL}}(
-            it => repeat([repeat([(999.0, 1.0 * i)], 5)], 24)
-            for (i, it) in enumerate(initial_times)
+            it => repeat([repeat([(999.0, 1.0 * i)], 5)], 24) for
+            (i, it) in enumerate(initial_times)
         )
 
         forecast = IS.Deterministic(data = data_pwl, name = name, resolution = resolution)
@@ -1629,13 +1626,15 @@ end
           TimeSeries.values(IS.get_time_series_array(component, forecast, start_time))
 
     # ignore_scaling_factors
-    TimeSeries.values(IS.get_time_series_array(
-        IS.Deterministic,
-        component,
-        name;
-        start_time = start_time,
-        ignore_scaling_factors = true,
-    )) == data[start_time]
+    TimeSeries.values(
+        IS.get_time_series_array(
+            IS.Deterministic,
+            component,
+            name;
+            start_time = start_time,
+            ignore_scaling_factors = true,
+        ),
+    ) == data[start_time]
     IS.get_time_series_values(
         IS.Deterministic,
         component,
@@ -1670,12 +1669,9 @@ end
     )
     @test TimeSeries.values(ta2)[1:10] ==
           IS.get_time_series_values(component, forecast, start_time; len = 10)
-    @test TimeSeries.values(ta2)[1:10] == TimeSeries.values(IS.get_time_series_array(
-        component,
-        forecast,
-        start_time,
-        len = 10,
-    ))
+    @test TimeSeries.values(ta2)[1:10] == TimeSeries.values(
+        IS.get_time_series_array(component, forecast, start_time, len = 10),
+    )
 end
 
 @testset "Test get_time_series_array Probabilistic" begin

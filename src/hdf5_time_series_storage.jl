@@ -188,7 +188,7 @@ const _TYPE_DICT = Dict("CONSTANT" => CONSTANT, "POLYNOMIAL" => POLYNOMIAL, "PWL
 
 function _read_time_series_attributes_common(storage::Hdf5TimeSeriesStorage, path, rows)
     initial_timestamp =
-        Dates.epochms2datetime(HDF5.read(HDF5.attributes(path)["initial_timestamp"]),)
+        Dates.epochms2datetime(HDF5.read(HDF5.attributes(path)["initial_timestamp"]))
     resolution = Dates.Millisecond(HDF5.read(HDF5.attributes(path)["resolution"]))
     data_type = _TYPE_DICT[HDF5.read(HDF5.attributes(path)["data_type"])]
     return Dict(
@@ -525,11 +525,9 @@ function deserialize_time_series(
                 path["data"][1:total_percentiles, rows, columns],
                 [3, 2, 1],
             )
-            for (i, it) in enumerate(range(
-                start_time;
-                length = length(columns),
-                step = attributes["interval"],
-            ))
+            for (i, it) in enumerate(
+                range(start_time; length = length(columns), step = attributes["interval"]),
+            )
                 data[it] = @view data_read[i, 1:length(rows), 1:total_percentiles]
             end
         end
@@ -566,11 +564,9 @@ function deserialize_time_series(
         else
             data_read =
                 PermutedDimsArray(path["data"][1:total_scenarios, rows, columns], [3, 2, 1])
-            for (i, it) in enumerate(range(
-                start_time;
-                length = length(columns),
-                step = attributes["interval"],
-            ))
+            for (i, it) in enumerate(
+                range(start_time; length = length(columns), step = attributes["interval"]),
+            )
                 data[it] = @view data_read[i, 1:length(rows), 1:total_scenarios]
             end
         end

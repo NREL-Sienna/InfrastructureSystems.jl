@@ -48,7 +48,9 @@ function get_config_descriptor(config::Vector, name::AbstractString)
         end
     end
 
-    @warn("struct $name does not exist in validation configuration file, validation skipped")
+    @warn(
+        "struct $name does not exist in validation configuration file, validation skipped"
+    )
     return nothing
 end
 
@@ -60,7 +62,11 @@ function get_field_descriptor(struct_descriptor::Dict, fieldname::AbstractString
         end
     end
 
-    throw(DataFormatError("field $fieldname does not exist in $(struct_descriptor["struct_name"]) validation config"))
+    throw(
+        DataFormatError(
+            "field $fieldname does not exist in $(struct_descriptor["struct_name"]) validation config",
+        ),
+    )
 end
 
 function validate_fields(
