@@ -266,10 +266,12 @@ function _validate_component(
     user_uuid = get_uuid(component)
     ps_uuid = get_uuid(comp)
     if user_uuid != ps_uuid
-        throw(ArgumentError(
-            "comp UUID doesn't match, perhaps it was copied?; " *
-            "$T name=$(get_name(component)) user=$user_uuid system=$ps_uuid",
-        ))
+        throw(
+            ArgumentError(
+                "comp UUID doesn't match, perhaps it was copied?; " *
+                "$T name=$(get_name(component)) user=$user_uuid system=$ps_uuid",
+            ),
+        )
     end
 end
 
@@ -432,7 +434,11 @@ function set_component!(metadata::TimeSeriesFileMetadata, data::SystemData, mod:
         metadata.component =
             get_component(category, data.components, metadata.component_name)
         if isnothing(metadata.component)
-            throw(DataFormatError("no component category=$category name=$(metadata.component_name)"))
+            throw(
+                DataFormatError(
+                    "no component category=$category name=$(metadata.component_name)",
+                ),
+            )
         end
     else
         # Note: this could dispatch to higher-level modules that reimplement it.
@@ -443,7 +449,11 @@ function set_component!(metadata::TimeSeriesFileMetadata, data::SystemData, mod:
         elseif length(components) == 1
             metadata.component = components[1]
         else
-            throw(DataFormatError("duplicate names type=$(category) name=$(metadata.component_name)"))
+            throw(
+                DataFormatError(
+                    "duplicate names type=$(category) name=$(metadata.component_name)",
+                ),
+            )
         end
     end
 end
@@ -519,7 +529,9 @@ function deserialize(::Type{SystemData}, raw; time_series_read_only = false)
         error("time series file $(raw["time_series_storage_file"]) does not exist")
     end
     if !isfile(raw["validation_descriptor_file"])
-        error("validation descriptor file $(raw["validation_descriptor_file"]) does not exist")
+        error(
+            "validation descriptor file $(raw["validation_descriptor_file"]) does not exist",
+        )
     end
     validation_descriptors = read_validation_descriptor(raw["validation_descriptor_file"])
 

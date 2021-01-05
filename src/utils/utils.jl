@@ -330,7 +330,11 @@ function get_resolution(ts::TimeSeries.TimeArray)
     end
 
     if length(res) > 1
-        throw(DataFormatError("time series has non-uniform resolution: this is currently not supported"))
+        throw(
+            DataFormatError(
+                "time series has non-uniform resolution: this is currently not supported",
+            ),
+        )
     end
 
     return res[1]

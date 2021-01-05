@@ -22,18 +22,28 @@ function check_params_compatibility(params::ForecastParameters, other::ForecastP
     _is_uninitialized(params) && return true
 
     if other.count != params.count
-        throw(ConflictingInputsError("forecast count $(other.count) does not match system count $(params.count)"))
+        throw(
+            ConflictingInputsError(
+                "forecast count $(other.count) does not match system count $(params.count)",
+            ),
+        )
     end
 
     if other.horizon != params.horizon
-        throw(ConflictingInputsError("forecast horizon $(other.horizon) does not match system horizon $(params.horizon)"))
+        throw(
+            ConflictingInputsError(
+                "forecast horizon $(other.horizon) does not match system horizon $(params.horizon)",
+            ),
+        )
     end
 
     if other.initial_timestamp != params.initial_timestamp
-        throw(ConflictingInputsError(
-            "forecast initial_timestamp $(other.initial_timestamp) does not match system " *
-            "initial_timestamp $(params.initial_timestamp)",
-        ))
+        throw(
+            ConflictingInputsError(
+                "forecast initial_timestamp $(other.initial_timestamp) does not match system " *
+                "initial_timestamp $(params.initial_timestamp)",
+            ),
+        )
     end
 
     return
@@ -149,10 +159,12 @@ function check_params_compatibility(
     _is_uninitialized(params) && return true
 
     if other.resolution != params.resolution
-        throw(ConflictingInputsError(
-            "time series resolution $(other.resolution) does not match system " *
-            "resolution $(params.resolution)",
-        ))
+        throw(
+            ConflictingInputsError(
+                "time series resolution $(other.resolution) does not match system " *
+                "resolution $(params.resolution)",
+            ),
+        )
     end
 
     check_params_compatibility(params.forecast_params, other.forecast_params)
