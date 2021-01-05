@@ -63,6 +63,9 @@ end
 
 get_uuid(internal::InfrastructureSystemsInternal) = internal.uuid
 
+get_units_info(internal::InfrastructureSystemsInternal) = internal.units_info
+set_units_info!(internal::InfrastructureSystemsInternal, value) = internal.units_info = value
+
 """
 Gets the UUID for any InfrastructureSystemsType.
 """
