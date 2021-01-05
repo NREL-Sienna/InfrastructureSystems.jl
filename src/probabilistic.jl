@@ -53,7 +53,11 @@ function Probabilistic(;
     data = handle_normalization_factor(convert_data(data), normalization_factor)
     quantile_count = size(first(values(data)))[2]
     if quantile_count != length(percentiles)
-        throw(ArgumentError("The amount of elements in the data doesn't match the length of the percentiles"))
+        throw(
+            ArgumentError(
+                "The amount of elements in the data doesn't match the length of the percentiles",
+            ),
+        )
     end
 
     Probabilistic(name, data, percentiles, resolution, scaling_factor_multiplier, internal)

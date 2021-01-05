@@ -232,7 +232,11 @@ function TimeSeriesParsedInfo(metadata::TimeSeriesFileMetadata, raw_data::RawTim
         metadata.scaling_factor_multiplier !== nothing &&
         metadata.scaling_factor_multiplier_module === nothing
     )
-        throw(DataFormatError("scaling_factor_multiplier and scaling_factor_multiplier_module must both be set or not set"))
+        throw(
+            DataFormatError(
+                "scaling_factor_multiplier and scaling_factor_multiplier_module must both be set or not set",
+            ),
+        )
     end
 
     if metadata.scaling_factor_multiplier === nothing

@@ -129,7 +129,11 @@ function deserialize_deterministic_from_single_time_series(
     interval = get_interval(ts_metadata)
     resolution = get_resolution(ts_metadata)
     if length(rows) != horizon
-        throw(ArgumentError("Transforming SingleTimeSeries to Deterministic requires a full horizon: $rows"))
+        throw(
+            ArgumentError(
+                "Transforming SingleTimeSeries to Deterministic requires a full horizon: $rows",
+            ),
+        )
     end
 
     sts_rows =

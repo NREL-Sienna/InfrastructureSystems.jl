@@ -34,10 +34,12 @@ function set_time_series_storage!(
     storage::Union{Nothing, TimeSeriesStorage},
 )
     if !isnothing(container.time_series_storage) && !isnothing(storage)
-        throw(ArgumentError(
-            "The time_series_storage reference is already set. Is this component being " *
-            "added to multiple systems?",
-        ))
+        throw(
+            ArgumentError(
+                "The time_series_storage reference is already set. Is this component being " *
+                "added to multiple systems?",
+            ),
+        )
     end
 
     container.time_series_storage = storage
