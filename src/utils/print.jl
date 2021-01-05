@@ -129,6 +129,14 @@ function Base.summary(ist::InfrastructureSystemsComponent)
     return "$(get_name(ist)) ($(typeof(ist)))"
 end
 
+function Base.show(io::IO, ::MIME"text/plain", system_units::SystemUnitsSettings)
+    print(io, summary(system_units), ":")
+    for name in fieldnames(typeof(system_units))
+        val = getfield(system_units, name)
+        print(io, "\n      ", name, ": ", val)
+    end
+end
+
 function Base.show(io::IO, ::MIME"text/plain", ist::InfrastructureSystemsComponent)
     print(io, summary(ist), ":")
     for (name, field_type) in zip(fieldnames(typeof(ist)), fieldtypes(typeof(ist)))
