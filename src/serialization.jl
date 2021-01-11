@@ -104,7 +104,7 @@ function get_type_from_serialization_data(data::Dict)
 end
 
 function get_type_from_serialization_metadata(metadata::Dict)
-    _module = Base.root_module(Base.__toplevel__, Symbol(metadata[MODULE_KEY]))
+    _module = get_module(metadata[MODULE_KEY])
     base_type = getfield(_module, Symbol(metadata[TYPE_KEY]))
     if !get(metadata, CONSTRUCT_WITH_PARAMETERS_KEY, false)
         return base_type

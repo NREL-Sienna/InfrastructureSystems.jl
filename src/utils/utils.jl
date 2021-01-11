@@ -344,9 +344,14 @@ function get_initial_timestamp(data::TimeSeries.TimeArray)
     return TimeSeries.timestamp(data)[1]
 end
 
-function get_type_from_strings(module_name, type)
-    return getfield(Base.root_module(Base.__toplevel__, Symbol(module_name)), Symbol(type))
+function get_module(module_name)
+    # root_module cannot find InfrastructureSystems if it hasn't been installed by the
+    # user (but has been installed as a dependency to another package).
+    return module_name == "InfrastructureSystems" ? InfrastructureSystems :
+           Base.root_module(Base.__toplevel__, Symbol(module_name))
 end
+
+get_type_from_strings(module_name, type) = getfield(get_module(module_name), Symbol(type))
 
 # This function is used instead of cp given
 # https://github.com/JuliaLang/julia/issues/30723
