@@ -237,7 +237,7 @@ function iterate_time_series(storage::Hdf5TimeSeriesStorage)
 
                 data = uuid_group["data"][:]
                 attributes = Dict()
-                for name in names(HDF5.attributes(uuid_group))
+                for name in keys(HDF5.attributes(uuid_group))
                     attributes[name] = HDF5.read(HDF5.attributes(uuid_group)[name])
                 end
                 for item in HDF5.read(uuid_group["components"])
