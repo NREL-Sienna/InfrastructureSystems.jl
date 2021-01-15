@@ -148,7 +148,11 @@ end
 """
 Check to see if a component exists.
 """
-function has_component(::Type{T}, components::Components, name::AbstractString) where T<:InfrastructureSystemsComponent
+function has_component(
+    ::Type{T},
+    components::Components,
+    name::AbstractString,
+) where {T <: InfrastructureSystemsComponent}
     !isnothing(get_component(T, components, name))
 end
 
