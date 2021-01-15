@@ -3,11 +3,7 @@ import UUIDs
 
 abstract type UnitsData end
 
-@enum UnitSystem begin
-    SYSTEM_BASE
-    DEVICE_BASE
-    NATURAL_UNITS
-end
+@scoped_enum(UnitSystem, SYSTEM_BASE = 0, DEVICE_BASE = 1, NATURAL_UNITS = 2,)
 
 const _UNIT_SYSTEM_MAP = Dict(string(x) => x for x in instances(UnitSystem))
 

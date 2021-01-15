@@ -64,7 +64,6 @@ set_name!(value::InfrastructureSystemsComponent, name) = value.name = name
 get_internal(value::InfrastructureSystemsComponent) = value.internal
 
 include("common.jl")
-include("internal.jl")
 include("utils/assert_op.jl")
 include("utils/recorder_events.jl")
 include("utils/flatten_iterator_wrapper.jl")
@@ -73,6 +72,7 @@ include("utils/lazy_dict_from_iterator.jl")
 include("utils/logging.jl")
 include("utils/stdout_redirector.jl")
 include("utils/utils.jl")
+include("internal.jl")
 include("time_series_storage.jl")
 include("abstract_time_series.jl")
 include("forecasts.jl")

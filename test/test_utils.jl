@@ -28,14 +28,17 @@ end
     @test IS.validate_exported_names(IS)
 end
 
-IS.@scoped_enum Fruit begin
-    APPLE
-    ORANGE
-end
+IS.@scoped_enum Fruit APPLE = 1 ORANGE = 2
 
 @testset "Test scoped_enum" begin
-    @test Fruits.APPLE isa Fruits.Fruit
-    @test Fruits.ORANGE isa Fruits.Fruit
+    @test Fruit.APPLE isa Fruit
+    @test Fruit.ORANGE isa Fruit
+    sort([Fruit.ORANGE, Fruit.APPLE]) == [Fruit.APPLE, Fruit.ORANGE]
+
+    struct Foo
+        fruit::Fruit
+    end
+    @test Foo(1) == Foo(Fruit.APPLE)
 end
 
 @testset "Test undef component prints" begin
