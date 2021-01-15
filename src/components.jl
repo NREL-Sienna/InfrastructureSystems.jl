@@ -153,7 +153,9 @@ function has_component(
     components::Components,
     name::AbstractString,
 ) where {T <: InfrastructureSystemsComponent}
-    !isnothing(get_component(T, components, name))
+        !isconcretetype(T) && return !isempty(get_components_by_name(T, components, name))
+        !haskey(components.data, T) && return false
+        return haskey(components.data[T], name)
 end
 
 """
