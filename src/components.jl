@@ -146,6 +146,19 @@ function _remove_component!(
 end
 
 """
+Check to see if a component exists.
+"""
+function has_component(
+    ::Type{T},
+    components::Components,
+    name::AbstractString,
+) where {T <: InfrastructureSystemsComponent}
+        !isconcretetype(T) && return !isempty(get_components_by_name(T, components, name))
+        !haskey(components.data, T) && return false
+        return haskey(components.data[T], name)
+end
+
+"""
 Get the component of type T with name. Returns nothing if no component matches. If T is an abstract
 type then the names of components across all subtypes of T must be unique.
 
