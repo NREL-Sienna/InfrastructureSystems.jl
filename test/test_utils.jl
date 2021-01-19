@@ -33,7 +33,7 @@ IS.@scoped_enum Fruit APPLE = 1 ORANGE = 2
 @testset "Test scoped_enum" begin
     @test Fruit.APPLE isa Fruit
     @test Fruit.ORANGE isa Fruit
-    sort([Fruit.ORANGE, Fruit.APPLE]) == [Fruit.APPLE, Fruit.ORANGE]
+    @test sort([Fruit.ORANGE, Fruit.APPLE]) == [Fruit.APPLE, Fruit.ORANGE]
 
     struct Foo
         fruit::Fruit
