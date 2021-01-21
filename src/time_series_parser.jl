@@ -145,11 +145,9 @@ function read_time_series_file_metadata(file_path::AbstractString)
     return metadata
 end
 
-@scoped_enum NormalizationType begin
-    MAX
-end
+@scoped_enum NormalizationTypes MAX = 1
 
-const NormalizationFactor = Union{Float64, NormalizationTypes.NormalizationType}
+const NormalizationFactor = Union{Float64, NormalizationTypes}
 
 function handle_normalization_factor(
     data::AbstractDict,
@@ -168,7 +166,7 @@ function handle_normalization_factor(
     ta::Union{TimeSeries.AbstractTimeSeries, AbstractArray},
     normalization_factor::NormalizationFactor,
 )
-    if normalization_factor isa NormalizationTypes.NormalizationType
+    if normalization_factor isa NormalizationTypes
         if normalization_factor == NormalizationTypes.MAX
             max_value = get_max_value(ta)
             ta = ta ./ max_value

@@ -192,30 +192,57 @@ function compare_values(x::T, y::U)::Bool where {T, U}
     return x == y
 end
 
+# Copied from https://discourse.julialang.org/t/encapsulating-enum-access-via-dot-syntax/11785/10
 """
-Macro to wrap Enum in a baremodule to keep the top level scope clean.
-The macro name should be singular. The macro will create a module for access that is plural.
+Macro to wrap Enum in a module to keep the top level scope clean.
 
 # Examples
 ```Julia
-@scoped_enum Fruit begin
-    APPLE
-    ORANGE
-end
+julia> @scoped_enum Fruit APPLE = 1 ORANGE = 2
 
-value = Fruits.APPLE
+julia> value = Fruit.APPLE
+Fruit.APPLE = 1
 
-# Usage as a function parameter
-foo(value::Fruits.Fruit) = nothing
+julia> value = Fruit(1)
+Fruit.APPLE = 1
+
+julia> @scoped_enum(Fruit,
+    APPLE = 1,  # comment
+    ORANGE = 2,  # comment
+)
 ```
-
 """
 macro scoped_enum(T, args...)
-    blk = esc(:(baremodule $(Symbol("$(T)s"))
-    using Base: @enum
-    @enum $T $(args...)
-    end))
-    return blk
+    blk = esc(
+        :(
+            module $(Symbol("$(T)Module"))
+            using JSON3
+            export $T
+            struct $T
+                value::Int64
+            end
+            const NAME2VALUE =
+                $(Dict(String(x.args[1]) => Int64(x.args[2]) for x in args))
+            $T(str::String) = $T(NAME2VALUE[str])
+            const VALUE2NAME =
+                $(Dict(Int64(x.args[2]) => String(x.args[1]) for x in args))
+            Base.string(e::$T) = VALUE2NAME[e.value]
+            Base.getproperty(::Type{$T}, sym::Symbol) =
+                haskey(NAME2VALUE, String(sym)) ? $T(String(sym)) : getfield($T, sym)
+            Base.show(io::IO, e::$T) =
+                print(io, string($T, ".", string(e), " = ", e.value))
+            Base.propertynames(::Type{$T}) = $([x.args[1] for x in args])
+            JSON3.StructType(::Type{$T}) = JSON3.StructTypes.StringType()
+
+            Base.convert(::Type{$T}, val::Integer) = $T(val)
+            Base.isless(val::$T, other::$T) = isless(val.value, other.value)
+            Base.instances(::Type{$T}) = tuple($T.($(x.args[2] for x in args))...)
+            end
+        ),
+    )
+    top = Expr(:toplevel, blk)
+    push!(top.args, :(using .$(Symbol("$(T)Module"))))
+    return top
 end
 
 function compose_function_delegation_string(
