@@ -249,7 +249,7 @@ function validate_components(components::Components)
 end
 
 """
-Validates a struct.
+Validates a struct using only information within the struct.
 """
 function validate_struct(ist::InfrastructureSystemsType)
     return true
