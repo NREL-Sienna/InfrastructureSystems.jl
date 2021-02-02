@@ -118,6 +118,8 @@ function get_type_from_serialization_metadata(metadata::Dict)
     return base_type{parameters...}
 end
 
+serialize(val::Base.RefValue{T}) where {T} = serialize(val[])
+
 # The default implementation allows any scalar type (or collection of scalar types) to
 # work. The JSON library must be able to encode and decode anything passed here.
 

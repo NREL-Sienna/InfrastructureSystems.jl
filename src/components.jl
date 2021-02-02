@@ -48,15 +48,7 @@ function add_component!(
         throw(ArgumentError("$(component_name) is already stored for type $T"))
     end
 
-    if !isempty(components.validation_descriptors) && !skip_validation
-        if !validate_fields(components, component)
-            throw(InvalidRange("Invalid value"))
-        end
-    end
-
-    if !skip_validation && !validate_struct(component)
-        throw(InvalidValue("Invalid value for $(component)"))
-    end
+    !skip_validation && check_component(components, component)
 
     if !deserialization_in_progress && has_time_series(component)
         throw(ArgumentError("cannot add a component with time_series: $component"))
@@ -65,6 +57,22 @@ function add_component!(
     set_time_series_storage!(component, components.time_series_storage)
     components.data[T][component_name] = component
     return
+end
+
+function check_components(components::Components)
+    for component in iterate_components(components)
+        check_component(component)
+    end
+end
+
+function check_component(components::Components, comp::InfrastructureSystemsComponent)
+    if !isempty(components.validation_descriptors) && !validate_fields(components, comp)
+        throw(InvalidRange("Invalid value"))
+    end
+
+    if !validate_struct(comp)
+        throw(InvalidValue("Invalid value for $(comp)"))
+    end
 end
 
 """

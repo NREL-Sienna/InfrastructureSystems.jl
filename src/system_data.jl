@@ -605,3 +605,6 @@ get_time_series_resolution(data::SystemData) =
     get_time_series_resolution(data.time_series_params)
 
 clear_components!(data::SystemData) = clear_components!(data.components)
+
+check_components(data::SystemData) = check_components(data.components)
+check_component(data::SystemData, component) = check_component(data.components, component)
