@@ -33,7 +33,7 @@ function configure_logging(;
     file_mode = "w+",
     tracker = LogEventTracker(),
     set_global = true,
-)::MultiLogger
+)
     if !console && !file
         error("At least one of console or file must be true")
     end
