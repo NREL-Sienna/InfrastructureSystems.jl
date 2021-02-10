@@ -178,6 +178,7 @@ function _attach_time_series_and_serialize!(
     check_add_time_series(data.time_series_params, ts)
     check_read_only(data.time_series_storage)
     if has_time_series(component, T, get_name(ts))
+        skip_if_present && return
         throw(ArgumentError("time_series $(typeof(ts)) $(get_name(ts)) is already stored"))
     end
 
