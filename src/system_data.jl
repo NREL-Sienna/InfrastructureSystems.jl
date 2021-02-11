@@ -522,7 +522,12 @@ function serialize(data::SystemData)
     return json_data
 end
 
-function deserialize(::Type{SystemData}, raw; time_series_read_only = false)
+function deserialize(
+    ::Type{SystemData},
+    raw;
+    time_series_read_only = false,
+    time_series_directory = nothing,
+)
     @debug "deserialize" raw
     time_series_params = deserialize(TimeSeriesParameters, raw["time_series_params"])
     # The code calling this function must have changed to this directory.
@@ -546,6 +551,7 @@ function deserialize(::Type{SystemData}, raw; time_series_read_only = false)
         Hdf5TimeSeriesStorage,
         raw["time_series_storage_file"];
         read_only = time_series_read_only,
+        directory = time_series_directory,
     )
 
     internal = deserialize(InfrastructureSystemsInternal, raw["internal"])
@@ -554,7 +560,8 @@ function deserialize(::Type{SystemData}, raw; time_series_read_only = false)
         time_series_params,
         validation_descriptors,
         time_series_storage,
-        internal,
+        internal;
+        time_series_directory = time_series_directory,
     )
     # Note: components need to be deserialized by the parent so that they can go through
     # the proper checks.
