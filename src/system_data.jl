@@ -560,8 +560,7 @@ function deserialize(
         time_series_params,
         validation_descriptors,
         time_series_storage,
-        internal;
-        time_series_directory = time_series_directory,
+        internal;,
     )
     # Note: components need to be deserialized by the parent so that they can go through
     # the proper checks.
