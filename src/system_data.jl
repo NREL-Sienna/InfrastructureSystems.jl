@@ -178,6 +178,7 @@ function _attach_time_series_and_serialize!(
     check_add_time_series(data.time_series_params, ts)
     check_read_only(data.time_series_storage)
     if has_time_series(component, T, get_name(ts))
+        skip_if_present && return
         throw(ArgumentError("time_series $(typeof(ts)) $(get_name(ts)) is already stored"))
     end
 
@@ -521,7 +522,12 @@ function serialize(data::SystemData)
     return json_data
 end
 
-function deserialize(::Type{SystemData}, raw; time_series_read_only = false)
+function deserialize(
+    ::Type{SystemData},
+    raw;
+    time_series_read_only = false,
+    time_series_directory = nothing,
+)
     @debug "deserialize" raw
     time_series_params = deserialize(TimeSeriesParameters, raw["time_series_params"])
     # The code calling this function must have changed to this directory.
@@ -545,6 +551,7 @@ function deserialize(::Type{SystemData}, raw; time_series_read_only = false)
         Hdf5TimeSeriesStorage,
         raw["time_series_storage_file"];
         read_only = time_series_read_only,
+        directory = time_series_directory,
     )
 
     internal = deserialize(InfrastructureSystemsInternal, raw["internal"])

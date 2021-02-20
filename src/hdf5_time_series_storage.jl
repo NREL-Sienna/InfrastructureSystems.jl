@@ -66,6 +66,7 @@ function from_file(
     ::Type{Hdf5TimeSeriesStorage},
     filename::AbstractString;
     read_only = false,
+    directory = nothing,
 )
     if !isfile(filename)
         error("time series storage $filename does not exist")
@@ -74,7 +75,8 @@ function from_file(
     if read_only
         file_path = abspath(filename)
     else
-        file_path, io = mktemp()
+        parent = isnothing(directory) ? tempdir() : directory
+        file_path, io = mktemp(parent)
         close(io)
         copy_file(filename, file_path)
     end
