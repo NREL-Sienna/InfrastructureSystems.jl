@@ -16,8 +16,8 @@ function get_total_cost(r::T) where {T <: Results}
     error("get_total_cost must be implemented for $T")
 end
 
-function get_optimizer_log(r::T) where {T <: Results}
-    error("get_optimizer_log must be implemented for $T")
+function get_optimizer_stats(r::T) where {T <: Results}
+    error("get_optimizer_stats must be implemented for $T")
 end
 
 function get_timestamp(r::T) where {T <: Results}
