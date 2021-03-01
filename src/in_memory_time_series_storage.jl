@@ -39,6 +39,8 @@ end
 
 check_read_only(storage::InMemoryTimeSeriesStorage) = nothing
 
+is_read_only(storage::InMemoryTimeSeriesStorage) = false
+
 function serialize_time_series!(
     storage::InMemoryTimeSeriesStorage,
     component_uuid::UUIDs.UUID,
