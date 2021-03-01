@@ -10,6 +10,7 @@ All subtypes must implement:
 - clear_time_series!
 - get_num_time_series
 - check_read_only
+- is_read_only
 """
 abstract type TimeSeriesStorage end
 
@@ -44,6 +45,15 @@ end
 
 function serialize(storage::TimeSeriesStorage, file_path::AbstractString)
     if storage isa Hdf5TimeSeriesStorage
+        if abspath(get_file_path(storage)) == abspath(file_path)
+            if !is_read_only(storage)
+                error("Attempting to overwrite identical time series file")
+            end
+
+            @debug "Skip time series serialization because the paths are identical"
+            return
+        end
+
         # The data is currently in a temp file, so we can just make a copy.
         copy_file(get_file_path(storage), file_path)
     elseif storage isa InMemoryTimeSeriesStorage

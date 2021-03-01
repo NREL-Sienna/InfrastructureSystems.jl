@@ -663,6 +663,8 @@ function check_read_only(storage::Hdf5TimeSeriesStorage)
     end
 end
 
+is_read_only(storage::Hdf5TimeSeriesStorage) = storage.read_only
+
 function compare_values(x::Hdf5TimeSeriesStorage, y::Hdf5TimeSeriesStorage)::Bool
     item_x = sort!(collect(iterate_time_series(x)), by = z -> z[1])
     item_y = sort!(collect(iterate_time_series(y)), by = z -> z[1])
