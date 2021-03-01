@@ -120,5 +120,4 @@ function compare_values(x::InfrastructureSystemsInternal, y::InfrastructureSyste
     return match
 end
 
-_RNG = Random.MersenneTwister()
-make_uuid() = UUIDs.uuid4(_RNG)
+make_uuid() = UUIDs.uuid4()
