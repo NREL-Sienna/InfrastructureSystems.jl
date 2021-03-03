@@ -10,6 +10,7 @@ This file is auto-generated. Do not edit.
         count::Int
         time_series_uuid::UUIDs.UUID
         horizon::Int
+        time_series_type::Type{<:AbstractDeterministic}
         scaling_factor_multiplier::Union{Nothing, Function}
         internal::InfrastructureSystemsInternal
     end
@@ -24,6 +25,7 @@ A deterministic forecast for a particular data field in a Component.
 - `count::Int`: number of forecast windows
 - `time_series_uuid::UUIDs.UUID`: reference to time series data
 - `horizon::Int`: length of this time series
+- `time_series_type::Type{<:AbstractDeterministic}`: Type of the time series data associated with this metadata.
 - `scaling_factor_multiplier::Union{Nothing, Function}`: Applicable when the time series data are scaling factors. Called on the associated component to convert the values.
 - `internal::InfrastructureSystemsInternal`
 """
@@ -41,17 +43,19 @@ mutable struct DeterministicMetadata <: ForecastMetadata
     time_series_uuid::UUIDs.UUID
     "length of this time series"
     horizon::Int
+    "Type of the time series data associated with this metadata."
+    time_series_type::Type{<:AbstractDeterministic}
     "Applicable when the time series data are scaling factors. Called on the associated component to convert the values."
     scaling_factor_multiplier::Union{Nothing, Function}
     internal::InfrastructureSystemsInternal
 end
 
-function DeterministicMetadata(name, resolution, initial_timestamp, interval, count, time_series_uuid, horizon, scaling_factor_multiplier=nothing, )
-    DeterministicMetadata(name, resolution, initial_timestamp, interval, count, time_series_uuid, horizon, scaling_factor_multiplier, InfrastructureSystemsInternal(), )
+function DeterministicMetadata(name, resolution, initial_timestamp, interval, count, time_series_uuid, horizon, time_series_type, scaling_factor_multiplier=nothing, )
+    DeterministicMetadata(name, resolution, initial_timestamp, interval, count, time_series_uuid, horizon, time_series_type, scaling_factor_multiplier, InfrastructureSystemsInternal(), )
 end
 
-function DeterministicMetadata(; name, resolution, initial_timestamp, interval, count, time_series_uuid, horizon, scaling_factor_multiplier=nothing, internal=InfrastructureSystemsInternal(), )
-    DeterministicMetadata(name, resolution, initial_timestamp, interval, count, time_series_uuid, horizon, scaling_factor_multiplier, internal, )
+function DeterministicMetadata(; name, resolution, initial_timestamp, interval, count, time_series_uuid, horizon, time_series_type, scaling_factor_multiplier=nothing, internal=InfrastructureSystemsInternal(), )
+    DeterministicMetadata(name, resolution, initial_timestamp, interval, count, time_series_uuid, horizon, time_series_type, scaling_factor_multiplier, internal, )
 end
 
 """Get [`DeterministicMetadata`](@ref) `name`."""
@@ -68,6 +72,8 @@ get_count(value::DeterministicMetadata) = value.count
 get_time_series_uuid(value::DeterministicMetadata) = value.time_series_uuid
 """Get [`DeterministicMetadata`](@ref) `horizon`."""
 get_horizon(value::DeterministicMetadata) = value.horizon
+"""Get [`DeterministicMetadata`](@ref) `time_series_type`."""
+get_time_series_type(value::DeterministicMetadata) = value.time_series_type
 """Get [`DeterministicMetadata`](@ref) `scaling_factor_multiplier`."""
 get_scaling_factor_multiplier(value::DeterministicMetadata) = value.scaling_factor_multiplier
 """Get [`DeterministicMetadata`](@ref) `internal`."""
@@ -87,6 +93,8 @@ set_count!(value::DeterministicMetadata, val) = value.count = val
 set_time_series_uuid!(value::DeterministicMetadata, val) = value.time_series_uuid = val
 """Set [`DeterministicMetadata`](@ref) `horizon`."""
 set_horizon!(value::DeterministicMetadata, val) = value.horizon = val
+"""Set [`DeterministicMetadata`](@ref) `time_series_type`."""
+set_time_series_type!(value::DeterministicMetadata, val) = value.time_series_type = val
 """Set [`DeterministicMetadata`](@ref) `scaling_factor_multiplier`."""
 set_scaling_factor_multiplier!(value::DeterministicMetadata, val) = value.scaling_factor_multiplier = val
 """Set [`DeterministicMetadata`](@ref) `internal`."""

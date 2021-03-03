@@ -340,6 +340,16 @@ end
         horizon = 6
         verify_show(sys)
 
+        # Create a Deterministic as a bystander.
+        forecast_count = 46
+        fdata = SortedDict{Dates.DateTime, Vector{Float64}}()
+        for i in 1:forecast_count
+            fdata[dates[i]] = ones(horizon)
+        end
+        bystander =
+            IS.Deterministic(data = fdata, name = "bystander", resolution = resolution)
+        IS.add_time_series!(sys, component, bystander)
+
         # This interval is greater than the max possible.
         @test_throws IS.ConflictingInputsError IS.transform_single_time_series!(
             sys,
@@ -359,6 +369,9 @@ end
         # The original should still be readable.
         single_vals = IS.get_time_series_values(IS.SingleTimeSeries, component, name)
         @test single_vals == data
+
+        @test IS.get_time_series(IS.Deterministic, component, "bystander") isa
+              IS.Deterministic
 
         # Get the transformed forecast.
         forecast = IS.get_time_series(IS.DeterministicSingleTimeSeries, component, name)
@@ -387,14 +400,12 @@ end
 
         # Verify that get_time_series_multiple works with these types.
         forecasts = collect(IS.get_time_series_multiple(sys))
-        @test length(forecasts) == 2
+        @test length(forecasts) == 3
         forecasts =
             collect(IS.get_time_series_multiple(sys; type = IS.AbstractDeterministic))
-        @test length(forecasts) == 1
-        @test forecasts[1] isa IS.DeterministicSingleTimeSeries
+        @test length(forecasts) == 2
         forecasts = collect(IS.get_time_series_multiple(sys; type = IS.Deterministic))
         @test length(forecasts) == 1
-        @test forecasts[1] isa IS.DeterministicSingleTimeSeries
         forecasts = collect(
             IS.get_time_series_multiple(sys; type = IS.DeterministicSingleTimeSeries),
         )
@@ -429,6 +440,10 @@ end
             1000, # horizon is longer than single time series
             interval,
         )
+
+        # The next test is not compatible with the bystander.
+        IS.remove_time_series!(sys, IS.Deterministic, component, "bystander")
+
         # Good but different horizon
         @test IS.transform_single_time_series!(
             sys,
@@ -436,6 +451,7 @@ end
             12,
             interval,
         ) == nothing
+
         # Good but different interval
         @test IS.transform_single_time_series!(
             sys,
@@ -443,6 +459,7 @@ end
             2,
             Dates.Minute(10),
         ) == nothing
+
         # Bad interval
         @test_throws IS.ConflictingInputsError IS.transform_single_time_series!(
             sys,
@@ -451,7 +468,7 @@ end
             resolution * (horizon + 1),
         )
 
-        # Ensure that attempted removal of nonexistant types works fine
+        # Ensure that attempted removal of nonexistent types works fine
         counts = IS.get_time_series_counts(sys)
         IS.remove_time_series!(sys, IS.Probabilistic)
         @test counts === IS.get_time_series_counts(sys)
