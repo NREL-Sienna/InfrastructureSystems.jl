@@ -533,19 +533,14 @@ function get_time_series_multiple(
 
     Channel() do channel
         for key in keys(container.data)
-            if !isnothing(type)
-                if type == DeterministicSingleTimeSeries
-                    # time_series_metadata_to_data will return Deterministic here, so we
-                    # must change the type to match.
-                    type = Deterministic
-                end
-                !(time_series_metadata_to_data(key.time_series_type) <: type) && continue
+            ts_metadata = container.data[key]
+            ts_type = time_series_metadata_to_data(ts_metadata)
+            if !isnothing(type) && !(ts_type <: type)
+                continue
             end
             if !isnothing(name) && key.name != name
                 continue
             end
-            ts_metadata = container.data[key]
-            ts_type = time_series_metadata_to_data(typeof(ts_metadata))
             ts = deserialize_time_series(
                 ts_type,
                 storage,
@@ -602,6 +597,7 @@ function transform_single_time_series_internal!(
                 count = params.forecast_params.count,
                 time_series_uuid = get_time_series_uuid(ts_metadata),
                 horizon = params.forecast_params.horizon,
+                time_series_type = DeterministicSingleTimeSeries,
                 scaling_factor_multiplier = get_scaling_factor_multiplier(ts_metadata),
                 internal = get_internal(ts_metadata),
             )
@@ -708,8 +704,11 @@ function get_time_series_by_key(
     len::Union{Nothing, Int} = nothing,
     count::Union{Nothing, Int} = nothing,
 )
+    container = get_time_series_container(component)
+    ts_metadata = container.data[key]
+    ts_type = time_series_metadata_to_data(ts_metadata)
     return get_time_series(
-        time_series_metadata_to_data(key.time_series_type),
+        ts_type,
         component,
         key.name,
         start_time = start_time,

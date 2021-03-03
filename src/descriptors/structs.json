@@ -39,6 +39,11 @@
           "comment": "length of this time series"
         },
         {
+          "name": "time_series_type",
+          "data_type": "Type{<:AbstractDeterministic}",
+          "comment": "Type of the time series data associated with this metadata."
+        },
+        {
           "name": "scaling_factor_multiplier",
           "data_type": "Union{Nothing, Function}",
           "default": "nothing",
