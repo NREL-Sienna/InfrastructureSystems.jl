@@ -197,8 +197,8 @@ function check_limits_impl(valid_info::ValidationInfo, field_value::Real)
     is_valid = true
     action_function = get_validation_action(valid_info.field_descriptor)
     if (
-        (!isnothing(valid_info.limits.min) && field_value < valid_info.limits.min) ||
-        (!isnothing(valid_info.limits.max) && field_value > valid_info.limits.max)
+        (!isnothing(valid_info.limits.min) && field_value + LIM_TOL < valid_info.limits.min) ||
+        (!isnothing(valid_info.limits.max) && field_value - LIM_TOL > valid_info.limits.max)
     ) && !(haskey(valid_info.limits, :zero) && field_value == 0.0)
         is_valid = action_function(valid_info, field_value)
     end
