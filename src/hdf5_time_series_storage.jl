@@ -339,11 +339,11 @@ function deserialize_time_series(
         end
 
         attributes = _read_time_series_attributes(storage, path, rows, T)
-        @assert_op attributes["type"] == T
+        @assert actual_type <: T "actual_type = $actual_type T = $T"
         @debug "deserializing a Forecast" T
         data_type = attributes["data_type"]
         data = get_hdf_array(path["data"], data_type, attributes, rows, columns)
-        new_ts = T(ts_metadata, data)
+        new_ts = actual_type(ts_metadata, data)
     end
 end
 
