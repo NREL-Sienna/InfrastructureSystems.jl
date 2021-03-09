@@ -383,14 +383,10 @@ get_type_from_strings(module_name, type) = getfield(get_module(module_name), Sym
 # This function is used instead of cp given
 # https://github.com/JuliaLang/julia/issues/30723
 function copy_file(src::AbstractString, dst::AbstractString)
-    try
+    if Sys.iswindows()
+        run(`cmd /c copy /Y $(src) $(dst)`)
+    else
         run(`cp -f $(src) $(dst)`)
-    catch e
-        if Sys.iswindows()
-            run(`cmd /c copy /Y $(src) $(dst)`)
-        else
-            rethrow()
-        end
     end
     return
 end
