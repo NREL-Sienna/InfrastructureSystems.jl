@@ -161,7 +161,7 @@ function deserialize_time_series(
         data[it] = @view full_data[initial_time][rows]
     end
 
-    if T isa AbstractDeterministic
+    if T <: AbstractDeterministic
         return Deterministic(ts, data)
     else
         return T(ts, data)
