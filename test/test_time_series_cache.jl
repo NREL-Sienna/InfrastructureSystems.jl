@@ -12,8 +12,7 @@
 
     cache = IS.ForecastCache(IS.Deterministic, component, "test")
     @test cache.in_memory_count == 168
-    @test cache.common.next_time == initial_timestamp
-    @test cache.common.ts === nothing
+    @test IS.get_next_time(cache) == initial_timestamp
     @test length(cache) == cache.common.num_iterations == 168
 
     # Iterate over all initial times with default cache size.
@@ -70,10 +69,10 @@
     # Test caching internals.
     cache = IS.ForecastCache(IS.Deterministic, component, "test"; cache_size_bytes = 1024)
     @test cache.in_memory_count == 5
-    @test cache.common.next_time == initial_timestamp
+    @test IS.get_next_time(cache) == initial_timestamp
     for it in initial_times[1:(cache.in_memory_count)]
         ta = IS.get_next_time_series_array!(cache)
-        @test cache.common.last_cached_time == initial_times[5]
+        @test IS._get_last_cached_time(cache) == initial_times[5]
         @test TimeSeries.timestamp(ta) ==
               IS.get_time_series_timestamps(component, forecast, it)
         @test TimeSeries.values(ta) == IS.get_time_series_values(component, forecast, it)
@@ -81,7 +80,7 @@
 
     # The next access should trigger a read.
     ta = IS.get_next_time_series_array!(cache)
-    @test cache.common.last_cached_time == initial_times[10]
+    @test IS._get_last_cached_time(cache) == initial_times[10]
     @test TimeSeries.timestamp(ta) ==
           IS.get_time_series_timestamps(component, forecast, initial_times[6])
     @test TimeSeries.values(ta) ==
@@ -107,8 +106,7 @@ end
 
     cache = IS.StaticTimeSeriesCache(IS.SingleTimeSeries, component, "test")
     @test cache.in_memory_rows == 365
-    @test cache.common.next_time == initial_timestamp
-    @test cache.common.ts === nothing
+    @test IS.get_next_time(cache) == initial_timestamp
     @test length(cache) == cache.common.num_iterations == 1
 
     # Iterate over all initial times with default cache size.
@@ -168,7 +166,7 @@ end
     )
     @test cache.in_memory_rows == 128
     @test cache.common.num_iterations == 2
-    @test cache.common.length_remaining == 365 - 128
+    @test IS._get_length_remaining(cache) == 365 - 128
     for i in 1:2
         ta = IS.get_next_time_series_array!(cache)
         it = initial_timestamp + i * cache.in_memory_rows * resolution
