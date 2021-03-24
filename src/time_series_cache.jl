@@ -224,7 +224,9 @@ function ForecastCache(
 
     count = get_count(ts_metadata)
     if start_time != initial_timestamp
-        count -= (start_time - initial_timestamp) ÷ get_interval(ts_metadata)
+        count -=
+            Dates.Millisecond(start_time - initial_timestamp) ÷
+            Dates.Millisecond(get_interval(ts_metadata))
     end
 
     window_size = row_size * horizon
