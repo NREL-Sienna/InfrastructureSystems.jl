@@ -1,4 +1,3 @@
-
 @testset "Test utility functions" begin
     concrete_types = IS.get_all_concrete_subtypes(IS.InfrastructureSystemsComponent)
     @test length([x for x in concrete_types if isconcretetype(x)]) == length(concrete_types)
@@ -45,4 +44,12 @@ end
     v = Vector{IS.InfrastructureSystemsComponent}(undef, 3)
     @test sprint(show, v) ==
           "InfrastructureSystems.InfrastructureSystemsComponent[#undef, #undef, #undef]"
+end
+
+struct FakeTimeSeries <: InfrastructureSystems.TimeSeriesData end
+Base.length(::FakeTimeSeries) = 42
+
+@testset "Test TimeSeriesData printing" begin
+    @test sprint(show, MIME("text/plain"), FakeTimeSeries()) ==
+          "FakeTimeSeries time_series (42):"
 end
