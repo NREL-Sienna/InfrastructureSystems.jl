@@ -52,7 +52,6 @@ function _get_columns(start_time, count, ts_metadata::ForecastMetadata)
     if window_count > 1
         index = Int(offset / interval) + 1
     else
-        @assert_op interval == Dates.Millisecond(0)
         index = 1
     end
     if count === nothing

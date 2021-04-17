@@ -400,11 +400,10 @@ function get_initial_times(
 )
     if count == 0
         return []
-    elseif count == 1
-        @assert_op interval == Dates.Second(0)
-        return range(initial_timestamp; stop = initial_timestamp, step = Dates.Second(1))
+    elseif interval == Dates.Second(0)
+        return [initial_timestamp]
     end
-    @assert interval != Dates.Second(0) "initial_timestamp=$initial_timestamp interval=$interval count=$count"
+
     return range(initial_timestamp; length = count, step = interval)
 end
 

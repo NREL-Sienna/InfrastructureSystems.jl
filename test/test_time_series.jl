@@ -535,8 +535,40 @@ end
         interval,
     )
 
+    initial_times = collect(IS.get_forecast_initial_times(sys))
+    @test initial_times == [Dates.DateTime("2020-01-01T00:00:00")]
     forecast = IS.get_time_series(IS.DeterministicSingleTimeSeries, component, name)
     @test IS.get_interval(forecast) == Dates.Second(0)
+end
+
+@testset "Test DeterministicSingleTimeSeries with interval = resolution" begin
+    sys = IS.SystemData(time_series_in_memory = true)
+    component = IS.TestComponent("Component1", 5)
+    IS.add_component!(sys, component)
+
+    resolution = Dates.Hour(1)
+    horizon = 24
+    dates = collect(
+        range(Dates.DateTime("2020-01-01T00:00:00"); length = horizon, step = resolution),
+    )
+    data = collect(1:horizon)
+    ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
+    name = "val"
+    ts = IS.SingleTimeSeries(name, ta)
+    IS.add_time_series!(sys, component, ts)
+
+    interval = resolution
+    IS.transform_single_time_series!(
+        sys,
+        IS.DeterministicSingleTimeSeries,
+        horizon,
+        interval,
+    )
+
+    initial_times = collect(IS.get_forecast_initial_times(sys))
+    @test initial_times == [Dates.DateTime("2020-01-01T00:00:00")]
+    forecast = IS.get_time_series(IS.DeterministicSingleTimeSeries, component, name)
+    @test IS.get_interval(forecast) == interval
 end
 
 @testset "Test component removal with DeterministicSingleTimeSeries" begin
@@ -1213,7 +1245,7 @@ end
     component = IS.TestComponent(name, 5)
     IS.add_component!(sys, component)
 
-    @test IS.get_forecast_initial_times(sys) == []
+    @test isempty(IS.get_forecast_initial_times(sys))
 
     resolution = Dates.Hour(1)
     initial_time = Dates.DateTime("2020-09-01")
