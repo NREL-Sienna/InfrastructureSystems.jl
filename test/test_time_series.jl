@@ -535,6 +535,8 @@ end
         interval,
     )
 
+    initial_times = collect(IS.get_forecast_initial_times(sys))
+    @test initial_times == [Dates.DateTime("2020-01-01T00:00:00")]
     forecast = IS.get_time_series(IS.DeterministicSingleTimeSeries, component, name)
     @test IS.get_interval(forecast) == Dates.Second(0)
 end
@@ -563,7 +565,8 @@ end
         interval,
     )
 
-    initial_times = IS.get_forecast_initial_times(sys)
+    initial_times = collect(IS.get_forecast_initial_times(sys))
+    @test initial_times == [Dates.DateTime("2020-01-01T00:00:00")]
     forecast = IS.get_time_series(IS.DeterministicSingleTimeSeries, component, name)
     @test IS.get_interval(forecast) == interval
 end
