@@ -475,6 +475,38 @@ end
     end
 end
 
+@testset "Test SingleTimeSeries transform with multiple forecasts per component" begin
+    sys = IS.SystemData(time_series_in_memory = true)
+    component = IS.TestComponent("Component1", 5)
+    IS.add_component!(sys, component)
+
+    resolution = Dates.Minute(5)
+    dates = create_dates("2020-01-01T00:00:00", resolution, "2020-01-01T23:05:00")
+    data = collect(1:length(dates))
+    ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
+    ts_names = []
+    for i in 1:10
+        name = string(UUIDs.uuid4())
+        ts = IS.SingleTimeSeries(name, ta)
+        IS.add_time_series!(sys, component, ts)
+        push!(ts_names, name)
+    end
+    horizon = 6
+
+    interval = Dates.Minute(30)
+    IS.transform_single_time_series!(
+        sys,
+        IS.DeterministicSingleTimeSeries,
+        horizon,
+        interval,
+    )
+
+    for name in ts_names
+        forecast = IS.get_time_series(IS.Deterministic, component, name)
+        @test forecast isa IS.DeterministicSingleTimeSeries
+    end
+end
+
 @testset "Test SingleTimeSeries transform deletions" begin
     for in_memory in (true, false)
         sys = IS.SystemData(time_series_in_memory = in_memory)
