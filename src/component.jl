@@ -583,9 +583,9 @@ function transform_single_time_series_internal!(
     ::Type{T},
     params::TimeSeriesParameters,
 ) where {T <: DeterministicSingleTimeSeries}
-    transformed = false
     container = get_time_series_container(component)
-    for (key, ts_metadata) in container.data
+    metadata_to_add = []
+    for ts_metadata in values(container.data)
         if ts_metadata isa SingleTimeSeriesMetadata
             resolution = get_resolution(ts_metadata)
             new_metadata = DeterministicMetadata(
@@ -600,15 +600,18 @@ function transform_single_time_series_internal!(
                 scaling_factor_multiplier = get_scaling_factor_multiplier(ts_metadata),
                 internal = get_internal(ts_metadata),
             )
-            add_time_series!(container, new_metadata)
-            @debug "Added $new_metadata from $ts_metadata."
-            if !transformed
-                transformed = true
-            end
+            push!(metadata_to_add, new_metadata)
         end
     end
 
-    return transformed
+    isempty(metadata_to_add) && return false
+
+    for new_metadata in metadata_to_add
+        add_time_series!(container, new_metadata)
+        @debug "Added $new_metadata."
+    end
+
+    return true
 end
 
 function get_single_time_series_transformed_parameters(
