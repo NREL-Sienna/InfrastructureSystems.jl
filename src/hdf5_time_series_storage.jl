@@ -619,7 +619,10 @@ function _append_item!(path::HDF5.Group, name::AbstractString, value::AbstractSt
     handle = HDF5.open_object(path, name)
     values = HDF5.read(handle)
     HDF5.close(handle)
-    push!(values, value)
+    # PowerSystems.HybridSystem could store the same reference twice for subcomponents.
+    if !in(value, values)
+        push!(values, value)
+    end
 
     ret = HDF5.delete_object(path, name)
     @assert_op ret === nothing
@@ -634,27 +637,29 @@ Returns true if the array is empty afterwards.
 """
 function _remove_item!(path::HDF5.Group, name::AbstractString, value::AbstractString)
     handle = HDF5.open_object(path, name)
-    values = HDF5.read(handle)
+    vals = HDF5.read(handle)
     HDF5.close(handle)
 
-    orig_len = length(values)
-    filter!(x -> x != value, values)
-    if length(values) != orig_len - 1
-        throw(ArgumentError("$value wasn't stored in $name"))
+    orig_len = length(vals)
+    filter!(x -> x != value, vals)
+    exp_len = orig_len - 1
+    if length(vals) != exp_len
+        throw(
+            ArgumentError(
+                "$value wasn't stored in $name or was stored more than once. " *
+                "exp_len = $exp_len actual = $(length(vals))",
+            ),
+        )
     end
 
-    ret = HDF5.delete_object(path, name)
-    @assert_op ret === nothing
+    # Delete and rewrite.
+    # This is not efficient, but this is expected to be uncommon and not to have
+    # large counts.
+    HDF5.delete_object(path, name)
+    path[name] = vals
 
-    if isempty(values)
-        is_empty = true
-    else
-        path[name] = values
-        is_empty = false
-    end
-    @debug "Removed $value from $name" values
-
-    return is_empty
+    @debug "Removed $value from $name" vals
+    return isempty(vals)
 end
 
 function check_read_only(storage::Hdf5TimeSeriesStorage)
