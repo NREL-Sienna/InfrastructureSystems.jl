@@ -5,6 +5,10 @@ const VALIDATION_DESCRIPTOR_FILE = "validation_descriptors.json"
 """
     mutable struct SystemData <: InfrastructureSystemsType
         components::Components
+        "Masked components are attached to the system for overall management purposes but
+        are not exposed in the standard library calls like [`get_components`](@ref).
+        Examples are components in a subsystem."
+        masked_components::Components
         time_series_params::TimeSeriesParameters
         validation_descriptors::Vector
         time_series_storage::TimeSeriesStorage
@@ -16,6 +20,7 @@ Container for system components and time series data
 """
 mutable struct SystemData <: InfrastructureSystemsType
     components::Components
+    masked_components::Components
     time_series_params::TimeSeriesParameters
     time_series_storage::TimeSeriesStorage
     validation_descriptors::Vector
@@ -49,8 +54,10 @@ function SystemData(;
         directory = time_series_directory,
     )
     components = Components(ts_storage, validation_descriptors)
+    masked_components = Components(ts_storage, validation_descriptors)
     return SystemData(
         components,
+        masked_components,
         TimeSeriesParameters(),
         ts_storage,
         validation_descriptors,
@@ -65,8 +72,10 @@ function SystemData(
     internal,
 )
     components = Components(time_series_storage, validation_descriptors)
+    masked_components = Components(time_series_storage, validation_descriptors)
     return SystemData(
         components,
+        masked_components,
         time_series_params,
         time_series_storage,
         validation_descriptors,
@@ -259,9 +268,13 @@ function _validate_component(
     data::SystemData,
     component::T,
 ) where {T <: InfrastructureSystemsComponent}
-    comp = get_component(T, data.components, get_name(component))
+    name = get_name(component)
+    comp = get_component(T, data.components, name)
     if isnothing(comp)
-        throw(ArgumentError("no $T with name=$(get_name(component)) is stored"))
+        comp = get_masked_component(T, data, name)
+        if comp === nothing
+            throw(ArgumentError("no $T with name=$name is stored"))
+        end
     end
 
     user_uuid = get_uuid(component)
@@ -279,7 +292,7 @@ end
 function compare_values(x::SystemData, y::SystemData)::Bool
     match = true
     for name in fieldnames(SystemData)
-        if name == :components
+        if name == :components || name == :masked_components
             # Not deserialized in IS.
             continue
         end
@@ -314,10 +327,31 @@ function remove_components!(::Type{T}, data::SystemData) where {T}
     return remove_components!(T, data.components)
 end
 
+"""
+Removes the component from the main container and adds it to the masked container.
+"""
+function mask_component!(data::SystemData, component::InfrastructureSystemsComponent)
+    remove_component!(data.components, component, remove_time_series = false)
+    set_time_series_storage!(component, nothing)
+    add_masked_component!(
+        data,
+        component,
+        skip_validation = true,  # validation has already occurred
+        allow_existing_time_series = true,
+    )
+end
+
 function clear_time_series!(data::SystemData)
     clear_time_series!(data.time_series_storage)
     clear_time_series!(data.components)
     reset_info!(data.time_series_params)
+end
+
+function iterate_components_with_time_series(data::SystemData)
+    return Iterators.Flatten((
+        iterate_components_with_time_series(data.components),
+        iterate_components_with_time_series(data.masked_components),
+    ))
 end
 
 """
@@ -328,7 +362,7 @@ Removes all time series of a particular type from a System.
 - `type::Type{<:TimeSeriesData}`: Type of time series objects to remove.
 """
 function remove_time_series!(data::SystemData, ::Type{T}) where {T <: TimeSeriesData}
-    for component in iterate_components_with_time_series(data.components)
+    for component in iterate_components_with_time_series(data)
         for ts in get_time_series_multiple(component, type = T)
             remove_time_series!(data, typeof(ts), component, get_name(ts))
         end
@@ -364,7 +398,7 @@ function get_time_series_multiple(
     name = nothing,
 )
     Channel() do channel
-        for component in iterate_components_with_time_series(data.components)
+        for component in iterate_components_with_time_series(data)
             for time_series in
                 get_time_series_multiple(component, filter_func; type = type, name = name)
                 put!(channel, time_series)
@@ -380,7 +414,7 @@ function get_time_series_counts(data::SystemData)
     component_count = 0
     static_time_series_count = 0
     forecast_count = 0
-    for component in iterate_components_with_time_series(data.components)
+    for component in iterate_components_with_time_series(data)
         component_count += 1
         _ts_count, _forecast_count = get_num_time_series(component)
         static_time_series_count += _ts_count
@@ -405,7 +439,7 @@ function transform_single_time_series!(
     remove_time_series!(data, DeterministicSingleTimeSeries)
     params = nothing
     set_params = false
-    for component in iterate_components_with_time_series(data.components)
+    for component in iterate_components_with_time_series(data)
         if params === nothing
             params = get_single_time_series_transformed_parameters(
                 component,
@@ -488,7 +522,7 @@ end
 function serialize(data::SystemData)
     @debug "serialize SystemData"
     json_data = Dict()
-    for field in (:components, :time_series_params, :internal)
+    for field in (:components, :masked_components, :time_series_params, :internal)
         json_data[string(field)] = serialize(getfield(data, field))
     end
 
@@ -567,6 +601,14 @@ end
 
 add_component!(data::SystemData, component; kwargs...) =
     add_component!(data.components, component; kwargs...)
+
+add_masked_component!(data::SystemData, component; kwargs...) = add_component!(
+    data.masked_components,
+    component;
+    allow_existing_time_series = true,
+    kwargs...,
+)
+
 iterate_components(data::SystemData) = iterate_components(data.components)
 
 get_component(::Type{T}, data::SystemData, args...) where {T} =
@@ -593,6 +635,31 @@ end
 
 get_components_by_name(::Type{T}, data::SystemData, args...) where {T} =
     get_components_by_name(T, data.components, args...)
+
+function get_masked_components(
+    ::Type{T},
+    data::SystemData,
+    filter_func::Union{Nothing, Function} = nothing,
+) where {T}
+    return get_components(T, data.masked_components, filter_func)
+end
+
+get_masked_components_by_name(::Type{T}, data::SystemData, args...) where {T} =
+    get_components_by_name(T, data.masked_components, args...)
+
+get_masked_component(::Type{T}, data::SystemData, name) where {T} =
+    get_component(T, data.masked_components, name)
+
+function get_masked_component(data::SystemData, uuid::Base.UUID)
+    for component in get_masked_components(InfrastructureSystemsComponent, data)
+        if get_uuid(component) == uuid
+            return component
+        end
+    end
+
+    @error "no component with UUID $uuid is stored"
+    return nothing
+end
 
 get_forecast_initial_times(data::SystemData) =
     get_forecast_initial_times(data.time_series_params)
