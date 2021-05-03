@@ -435,11 +435,7 @@ function set_component!(metadata::TimeSeriesFileMetadata, data::SystemData, mod:
         metadata.component =
             get_component(category, data.components, metadata.component_name)
         if isnothing(metadata.component)
-            throw(
-                DataFormatError(
-                    "no component category=$category name=$(metadata.component_name)",
-                ),
-            )
+            @warn "no component category=$category name=$(metadata.component_name)"
         end
     else
         # Note: this could dispatch to higher-level modules that reimplement it.
