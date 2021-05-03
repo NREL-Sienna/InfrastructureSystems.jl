@@ -35,7 +35,6 @@ function add_component!(
     components::Components,
     component::T;
     skip_validation = false,
-    deserialization_in_progress = false,
     allow_existing_time_series = false,
 ) where {T <: InfrastructureSystemsComponent}
     component_name = get_name(component)
@@ -51,9 +50,7 @@ function add_component!(
 
     !skip_validation && check_component(components, component)
 
-    if !deserialization_in_progress &&
-       !allow_existing_time_series &&
-       has_time_series(component)
+    if !allow_existing_time_series && has_time_series(component)
         throw(ArgumentError("cannot add a component with time_series: $component"))
     end
 
