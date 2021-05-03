@@ -619,14 +619,16 @@ function _append_item!(path::HDF5.Group, name::AbstractString, value::AbstractSt
     handle = HDF5.open_object(path, name)
     values = HDF5.read(handle)
     HDF5.close(handle)
-    # PowerSystems.HybridSystem could store the same reference twice for subcomponents.
-    if !in(value, values)
+
+    if in(value, values)
+        # Just in case any component tries to store the same reference twice.
+        return nothing
+    else
         push!(values, value)
     end
 
-    ret = HDF5.delete_object(path, name)
-    @assert_op ret === nothing
-
+    # Delete and re-write.
+    HDF5.delete_object(path, name)
     path[name] = values
     @debug "Appended $value to $name" values
 end

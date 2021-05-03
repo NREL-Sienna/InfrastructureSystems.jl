@@ -35,7 +35,7 @@ function add_component!(
     components::Components,
     component::T;
     skip_validation = false,
-    deserialization_in_progress = false,
+    allow_existing_time_series = false,
 ) where {T <: InfrastructureSystemsComponent}
     component_name = get_name(component)
     if !isconcretetype(T)
@@ -50,7 +50,7 @@ function add_component!(
 
     !skip_validation && check_component(components, component)
 
-    if !deserialization_in_progress && has_time_series(component)
+    if !allow_existing_time_series && has_time_series(component)
         throw(ArgumentError("cannot add a component with time_series: $component"))
     end
 
@@ -113,9 +113,15 @@ Throws ArgumentError if the component is not stored.
 """
 function remove_component!(
     components::Components,
-    component::T,
+    component::T;
+    remove_time_series = true,
 ) where {T <: InfrastructureSystemsComponent}
-    return _remove_component!(T, components, get_name(component))
+    return _remove_component!(
+        T,
+        components,
+        get_name(component),
+        remove_time_series = remove_time_series,
+    )
 end
 
 """
@@ -126,15 +132,17 @@ Throws ArgumentError if the component is not stored.
 function remove_component!(
     ::Type{T},
     components::Components,
-    name::AbstractString,
+    name::AbstractString;
+    remove_time_series = true,
 ) where {T <: InfrastructureSystemsComponent}
-    return _remove_component!(T, components, name)
+    return _remove_component!(T, components, name, remove_time_series = remove_time_series)
 end
 
 function _remove_component!(
     ::Type{T},
     components::Components,
-    name::AbstractString,
+    name::AbstractString;
+    remove_time_series = true,
 ) where {T <: InfrastructureSystemsComponent}
     if !haskey(components.data, T)
         throw(ArgumentError("component $T is not stored"))
@@ -148,7 +156,11 @@ function _remove_component!(
     if isempty(components.data[T])
         pop!(components.data, T)
     end
-    prepare_for_removal!(component)
+
+    if remove_time_series
+        prepare_for_removal!(component)
+    end
+
     @debug "Removed component" T name
     return component
 end
@@ -213,7 +225,7 @@ function get_components_by_name(
     ::Type{T},
     components::Components,
     name::AbstractString,
-)::Vector{T} where {T <: InfrastructureSystemsComponent}
+) where {T <: InfrastructureSystemsComponent}
     if isconcretetype(T)
         throw(ArgumentError("get_components_by_name does not support concrete types: $T"))
     end
@@ -322,4 +334,12 @@ function clear_time_series!(components::Components)
     for component in iterate_components_with_time_series(components)
         clear_time_series!(component)
     end
+end
+
+function is_attached(
+    component::T,
+    components::Components,
+) where {T <: InfrastructureSystemsComponent}
+    !in(T, keys(components.data)) && return false
+    return get_name(component) in keys(components.data[T])
 end
