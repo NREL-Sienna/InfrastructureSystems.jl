@@ -15,6 +15,7 @@ jobs:
         julia-version: [1]
         os: [ubuntu-latest]
         package_name: [PowerSystems, PowerSimulations]
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v2
       - uses: julia-actions/setup-julia@v1
