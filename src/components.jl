@@ -23,15 +23,8 @@ function serialize(components::Components)
     return [serialize(x) for y in values(components.data) for x in values(y)]
 end
 
-"""
-Add a component.
 
-Throws ArgumentError if the component's name is already stored for its concrete type.
-
-Throws InvalidRange if any of the component's field values are outside of defined valid
-range.
-"""
-function add_component!(
+function _add_component!(
     components::Components,
     component::T;
     skip_validation = false,
@@ -56,6 +49,24 @@ function add_component!(
 
     set_time_series_storage!(component, components.time_series_storage)
     components.data[T][component_name] = component
+    return
+end
+
+"""
+Add a component.
+
+Throws ArgumentError if the component's name is already stored for its concrete type.
+
+Throws InvalidRange if any of the component's field values are outside of defined valid
+range.
+"""
+function add_component!(
+    components::Components,
+    component::T;
+    kwargs...
+) where {T <: InfrastructureSystemsComponent}
+    kw = _add_component_kwarg_deprecation(kwargs)
+    _add_component!(components, component; kw...)
     return
 end
 
