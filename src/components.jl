@@ -23,7 +23,6 @@ function serialize(components::Components)
     return [serialize(x) for y in values(components.data) for x in values(y)]
 end
 
-
 function _add_component!(
     components::Components,
     component::T;
@@ -63,7 +62,7 @@ range.
 function add_component!(
     components::Components,
     component::T;
-    kwargs...
+    kwargs...,
 ) where {T <: InfrastructureSystemsComponent}
     kw = _add_component_kwarg_deprecation(kwargs)
     _add_component!(components, component; kw...)
