@@ -8,6 +8,15 @@ using DataStructures: SortedDict
 using DataFrames
 using Random
 
+import Aqua
+Aqua.test_unbound_args(InfrastructureSystems)
+Aqua.test_undefined_exports(InfrastructureSystems)
+Aqua.test_ambiguities(InfrastructureSystems)
+Aqua.test_ambiguities(InfrastructureSystems)
+Aqua.test_project_extras(InfrastructureSystems)
+Aqua.test_stale_deps(InfrastructureSystems)
+Aqua.test_deps_compat(InfrastructureSystems)
+
 import InfrastructureSystems
 const IS = InfrastructureSystems
 const BASE_DIR =
