@@ -97,6 +97,7 @@ function generate_structs(directory, data::Vector; print_results = true)
         accessors = Vector{Dict}()
         setters = Vector{Dict}()
         item["has_null_values"] = true
+        has_non_default_values = false
 
         item["constructor_func"] = item["struct_name"]
         item["closing_constructor_text"] = ""
@@ -166,6 +167,8 @@ function generate_structs(directory, data::Vector; print_results = true)
                 param["kwarg_value"] = "=" * string(param["internal_default"])
                 has_internal = true
                 continue
+            else
+                has_non_default_values = true
             end
 
             # This controls whether a demo constructor will be generated.
@@ -184,7 +187,9 @@ function generate_structs(directory, data::Vector; print_results = true)
         item["parameters"] = parameters
         item["accessors"] = accessors
         item["setters"] = setters
-        item["needs_positional_constructor"] = has_internal
+        # If all parameters have defaults then the positional constructor will
+        # collide with the kwarg constructor.
+        item["needs_positional_constructor"] = has_internal && has_non_default_values
 
         filename = joinpath(directory, item["struct_name"] * ".jl")
         open(filename, "w") do io
