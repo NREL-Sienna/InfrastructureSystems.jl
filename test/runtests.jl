@@ -18,7 +18,6 @@ Aqua.test_project_extras(InfrastructureSystems)
 Aqua.test_stale_deps(InfrastructureSystems)
 Aqua.test_deps_compat(InfrastructureSystems)
 
-
 const IS = InfrastructureSystems
 const BASE_DIR =
     abspath(joinpath(dirname(Base.find_package("InfrastructureSystems")), ".."))
