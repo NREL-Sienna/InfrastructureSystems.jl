@@ -152,3 +152,46 @@ end
         test_clear(IS.make_time_series_storage(; in_memory = in_memory))
     end
 end
+
+@testset "Test data format version" begin
+    storage = IS.make_time_series_storage(in_memory = false)
+    @test IS.read_data_format_version(storage) == IS.TIME_SERIES_DATA_FORMAT_VERSION
+end
+
+@testset "Test compression" begin
+    in_memory = false
+    for type in (IS.CompressionTypes.BLOSC, IS.CompressionTypes.DEFLATE)
+        for shuffle in (true, false)
+            compression = IS.CompressionSettings(
+                enabled = true,
+                type = type,
+                level = 5,
+                shuffle = shuffle,
+            )
+            test_add_remove(
+                IS.make_time_series_storage(;
+                    in_memory = in_memory,
+                    compression = compression,
+                ),
+            )
+            test_add_references(
+                IS.make_time_series_storage(;
+                    in_memory = in_memory,
+                    compression = compression,
+                ),
+            )
+            test_get_subset(
+                IS.make_time_series_storage(;
+                    in_memory = in_memory,
+                    compression = compression,
+                ),
+            )
+            test_clear(
+                IS.make_time_series_storage(;
+                    in_memory = in_memory,
+                    compression = compression,
+                ),
+            )
+        end
+    end
+end
