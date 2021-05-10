@@ -38,3 +38,66 @@ deserialize the system.
 1. Add an instance of `InfrastructureSystems.TimeSeriesContainer` to the component struct.
 2. Implement the method `InfrastructureSystems.get_time_series_container` for the
    component. It must return the TimeSeriesContainer object.
+
+
+## Data Format
+Time series arrays are stored in an
+[HDF5](https://support.hdfgroup.org/HDF5/whatishdf5.html) file according the
+format described here.
+
+The root path ``/time_series`` defines these HDF5 attributes to control deserialization:
+
+- ``data_format_version``: Designates the InfrastructureSystems format for the file.
+- ``compression_enabled``: Specifies whether compression is enabled and will be used for new time series.
+- ``compression_type``: Specifies the type of compression being used.
+- ``compression_level``: Specifies the level of compression being used.
+- ``compression_shuffle``: Specifies whether the shuffle filter is being used.
+
+Each time series array is stored in an HDF5 group named with the array's UUID.
+Each group contains a dataset called ``data`` which contains the actual data.
+Each group also contains a group called ``component_references`` which contains
+an HDF5 attribute for each component reference. The component reference uses the
+format ``<component_uuid>__<time_series_name>``.
+
+Each time series group defines attributes that control how the data will be
+deserialized into a ``TimeSeriesData`` instance.
+
+- ``initial_timestamp``: Defines the first timestamp of the array. (All times are not stored.)
+- ``resolution``: Resolution of the time series in milliseconds.
+- ``type``: Type of the time series. Subtype of ``TimeSeriesData``.
+- ``module``: Module that defines the type of the time series.
+- ``data_type``: Describes the type of the array stored.
+
+Example:
+
+```
+/time_series
+    data_format_version = "1.0.1"
+    compression_enabled = 1
+    /9f02f706-3394-4af3-8084-8903d302cbba
+        /component_references
+            0b6ecb61-8e8d-4563-b795-f001246c3ea5__max_active_power
+            613ddbc2-b666-4c9d-adb5-fa69e7f40a95__max_active_power
+        /data
+```
+
+## Debugging
+The HDF Group provides tools to inspect and manipulate files. Refer to their
+[website](https://support.hdfgroup.org/products/hdf5_tools/).
+
+``HDFView`` is especially useful for viewing data. Note that using ``h5ls`` and
+``h5dump`` in a terminal combined with UNIX tools like ``grep`` can sometimes be
+faster.
+
+
+## Maintenance
+
+If you delete time series arrays in your system you may notice that the actual
+size of the HDF5 does not decrease. The only way to recover this space is to
+build a new file with only the active objects. The HDF5 tools package provides
+the tool ``h5repack`` for this purpose.
+
+```bash
+$ h5repack time_series.h5 new.h5
+$ mv new.h5 time_series.h5
+```

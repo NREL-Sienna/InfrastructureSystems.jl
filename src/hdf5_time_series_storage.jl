@@ -2,6 +2,9 @@
 import HDF5
 
 const HDF5_TS_ROOT_PATH = "time_series"
+const TIME_SERIES_DATA_FORMAT_VERSION = "1.0.1"
+const TIME_SERIES_VERSION_KEY = "data_format_version"
+const COMPONENT_REFERENCES_KEY = "component_references"
 
 """
 Stores all time series data in an HDF5 file.
@@ -12,6 +15,7 @@ no more references to the storage object.
 mutable struct Hdf5TimeSeriesStorage <: TimeSeriesStorage
     file_path::String
     read_only::Bool
+    compression::CompressionSettings
 end
 
 """
@@ -38,6 +42,7 @@ function Hdf5TimeSeriesStorage(
     filename = nothing,
     directory = nothing,
     read_only = false,
+    compression = CompressionSettings(),
 )
     if create_file
         if isnothing(filename)
@@ -48,13 +53,13 @@ function Hdf5TimeSeriesStorage(
             close(io)
         end
 
-        storage = Hdf5TimeSeriesStorage(filename, read_only)
+        storage = Hdf5TimeSeriesStorage(filename, read_only, compression)
         _make_file(storage)
     else
-        storage = Hdf5TimeSeriesStorage(filename, read_only)
+        storage = Hdf5TimeSeriesStorage(filename, read_only, compression)
     end
 
-    @debug "Constructed new Hdf5TimeSeriesStorage" storage.file_path read_only
+    @debug "Constructed new Hdf5TimeSeriesStorage" storage.file_path read_only compression
 
     return storage
 end
@@ -80,12 +85,33 @@ function from_file(
         close(io)
         copy_file(filename, file_path)
     end
+
     storage = Hdf5TimeSeriesStorage(false; filename = file_path, read_only = read_only)
-    @info "Loaded time series from storage file existing=$filename new=$(storage.file_path)"
+    if !read_only
+        version = read_data_format_version(storage)
+        if version == "1.0.0"
+            _convert_from_1_0_0!(storage)
+        end
+        _deserialize_compression_settings!(storage)
+    end
+
+    @info "Loaded time series from storage file existing=$filename new=$(storage.file_path) compression=$(storage.compression)"
     return storage
 end
 
+get_compression_settings(storage::Hdf5TimeSeriesStorage) = storage.compression
+
 get_file_path(storage::Hdf5TimeSeriesStorage) = storage.file_path
+
+function read_data_format_version(storage::Hdf5TimeSeriesStorage)
+    HDF5.h5open(storage.file_path, "r") do file
+        root = _get_root(storage, file)
+        if !haskey(HDF5.attributes(root), TIME_SERIES_VERSION_KEY)
+            return "1.0.0"
+        end
+        return HDF5.read(HDF5.attributes(root)[TIME_SERIES_VERSION_KEY])
+    end
+end
 
 function serialize_time_series!(
     storage::Hdf5TimeSeriesStorage,
@@ -102,16 +128,34 @@ function serialize_time_series!(
         if !haskey(root, uuid)
             HDF5.create_group(root, uuid)
             path = root[uuid]
+            # Create a group to store component references as attributes.
+            # Use this instead of this time series' group or the dataset so that
+            # the only attributes are component references.
+            component_refs = HDF5.create_group(path, COMPONENT_REFERENCES_KEY)
             data = get_array_for_hdf(ts)
-            path["data"] = data
+            settings = storage.compression
+            if settings.enabled
+                if settings.type == CompressionTypes.BLOSC
+                    path["data", blosc = settings.level] = data
+                elseif settings.type == CompressionTypes.DEFLATE
+                    if settings.shuffle
+                        path["data", shuffle = (), deflate = settings.level] = data
+                    else
+                        path["data", deflate = settings.level] = data
+                    end
+                else
+                    error("not implemented for type=$(settings.type)")
+                end
+            else
+                path["data"] = data
+            end
             _write_time_series_attributes!(storage, ts, path)
-            path["components"] = [component_name]
             @debug "Create new time series entry." uuid component_uuid name
         else
-            path = root[uuid]
+            component_refs = root[uuid][COMPONENT_REFERENCES_KEY]
             @debug "Add reference to existing time series entry." uuid component_uuid name
-            _append_item!(path, "components", component_name)
         end
+        HDF5.attributes(component_refs)[component_name] = true
     end
 
     return
@@ -220,14 +264,14 @@ function add_time_series_reference!(
     component_name = make_component_name(component_uuid, name)
     HDF5.h5open(storage.file_path, "r+") do file
         root = _get_root(storage, file)
-        path = root[uuid]
-        _append_item!(path, "components", component_name)
+        path = root[uuid][COMPONENT_REFERENCES_KEY]
+        HDF5.attributes(path)[component_name] = true
         @debug "Add reference to existing time series entry." uuid component_uuid name
     end
 end
 
 # TODO: This needs to change if we want to directly convert Hdf5TimeSeriesStorage to
-# InMemoryTimeSeriesStorage, which is currently not supported System deserialization.
+# InMemoryTimeSeriesStorage, which is currently not supported at System deserialization.
 function iterate_time_series(storage::Hdf5TimeSeriesStorage)
     Channel() do channel
         HDF5.h5open(storage.file_path, "r") do file
@@ -242,8 +286,9 @@ function iterate_time_series(storage::Hdf5TimeSeriesStorage)
                 for name in keys(HDF5.attributes(uuid_group))
                     attributes[name] = HDF5.read(HDF5.attributes(uuid_group)[name])
                 end
-                for item in HDF5.read(uuid_group["components"])
-                    component, name = deserialize_component_name(item)
+                refs = uuid_group[COMPONENT_REFERENCES_KEY]
+                for ref in keys(HDF5.attributes(refs))
+                    component, name = deserialize_component_name(ref)
                     put!(channel, (component, name, data, attributes))
                 end
             end
@@ -276,7 +321,9 @@ function remove_time_series!(
     HDF5.h5open(storage.file_path, "r+") do file
         root = _get_root(storage, file)
         path = _get_time_series_path(root, uuid)
-        if _remove_item!(path, "components", make_component_name(component_uuid, name))
+        components = path[COMPONENT_REFERENCES_KEY]
+        HDF5.delete_attribute(components, make_component_name(component_uuid, name))
+        if isempty(keys(HDF5.attributes(components)))
             @debug "$path has no more references; delete it."
             HDF5.delete_object(path)
         end
@@ -600,8 +647,30 @@ end
 
 function _make_file(storage::Hdf5TimeSeriesStorage)
     HDF5.h5open(storage.file_path, "w") do file
-        HDF5.create_group(file, HDF5_TS_ROOT_PATH)
+        root = HDF5.create_group(file, HDF5_TS_ROOT_PATH)
+        HDF5.attributes(root)[TIME_SERIES_VERSION_KEY] = TIME_SERIES_DATA_FORMAT_VERSION
+        _serialize_compression_settings(storage, root)
     end
+end
+
+function _serialize_compression_settings(storage::Hdf5TimeSeriesStorage, root)
+    HDF5.attributes(root)["compression_enabled"] = storage.compression.enabled
+    HDF5.attributes(root)["compression_type"] = string(storage.compression.type)
+    HDF5.attributes(root)["compression_level"] = storage.compression.level
+    HDF5.attributes(root)["compression_shuffle"] = storage.compression.shuffle
+end
+
+function _deserialize_compression_settings!(storage::Hdf5TimeSeriesStorage)
+    HDF5.h5open(storage.file_path, "r+") do file
+        root = _get_root(storage, file)
+        storage.compression = CompressionSettings(
+            enabled = HDF5.read(HDF5.attributes(root)["compression_enabled"]),
+            type = CompressionTypes(HDF5.read(HDF5.attributes(root)["compression_type"])),
+            level = HDF5.read(HDF5.attributes(root)["compression_level"]),
+            shuffle = HDF5.read(HDF5.attributes(root)["compression_shuffle"]),
+        )
+    end
+    return
 end
 
 _get_root(storage::Hdf5TimeSeriesStorage, file) = file[HDF5_TS_ROOT_PATH]
@@ -613,55 +682,6 @@ function _get_time_series_path(root::HDF5.Group, uuid::UUIDs.UUID)
     end
 
     return root[uuid_str]
-end
-
-function _append_item!(path::HDF5.Group, name::AbstractString, value::AbstractString)
-    handle = HDF5.open_object(path, name)
-    values = HDF5.read(handle)
-    HDF5.close(handle)
-
-    if in(value, values)
-        # Just in case any component tries to store the same reference twice.
-        return nothing
-    else
-        push!(values, value)
-    end
-
-    # Delete and re-write.
-    HDF5.delete_object(path, name)
-    path[name] = values
-    @debug "Appended $value to $name" values
-end
-
-"""
-Removes value from the dataset called name.
-Returns true if the array is empty afterwards.
-"""
-function _remove_item!(path::HDF5.Group, name::AbstractString, value::AbstractString)
-    handle = HDF5.open_object(path, name)
-    vals = HDF5.read(handle)
-    HDF5.close(handle)
-
-    orig_len = length(vals)
-    filter!(x -> x != value, vals)
-    exp_len = orig_len - 1
-    if length(vals) != exp_len
-        throw(
-            ArgumentError(
-                "$value wasn't stored in $name or was stored more than once. " *
-                "exp_len = $exp_len actual = $(length(vals))",
-            ),
-        )
-    end
-
-    # Delete and rewrite.
-    # This is not efficient, but this is expected to be uncommon and not to have
-    # large counts.
-    HDF5.delete_object(path, name)
-    path[name] = vals
-
-    @debug "Removed $value from $name" vals
-    return isempty(vals)
 end
 
 function check_read_only(storage::Hdf5TimeSeriesStorage)
@@ -703,4 +723,27 @@ function compare_values(x::Hdf5TimeSeriesStorage, y::Hdf5TimeSeriesStorage)::Boo
     end
 
     return true
+end
+
+function _convert_from_1_0_0!(storage::Hdf5TimeSeriesStorage)
+    # 1.0.0 version did not support compression.
+    # 1.0.0 stored component name/UUID pairs in a dataset.
+    # That wasn't efficient if a user added many shared references.
+    HDF5.h5open(storage.file_path, "r+") do file
+        root = _get_root(storage, file)
+        for uuid_group in root
+            components = HDF5.create_group(uuid_group, COMPONENT_REFERENCES_KEY)
+            component_names = uuid_group["components"][:]
+            for name in component_names
+                HDF5.attributes(components)[name] = true
+            end
+            HDF5.delete_object(uuid_group["components"])
+        end
+
+        HDF5.attributes(root)[TIME_SERIES_VERSION_KEY] = TIME_SERIES_DATA_FORMAT_VERSION
+        compression = CompressionSettings()
+        _serialize_compression_settings(storage, root)
+    end
+
+    @debug "Converted file from 1.0.0 format"
 end

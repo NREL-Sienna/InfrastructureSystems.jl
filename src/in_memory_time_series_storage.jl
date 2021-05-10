@@ -39,6 +39,9 @@ end
 
 check_read_only(storage::InMemoryTimeSeriesStorage) = nothing
 
+get_compression_settings(storage::InMemoryTimeSeriesStorage) =
+    CompressionSettings(enabled = false)
+
 is_read_only(storage::InMemoryTimeSeriesStorage) = false
 
 function serialize_time_series!(
