@@ -41,7 +41,9 @@ deserialize the system.
 
 
 ## Data Format
-Time series arrays are stored in an HDF5 file accoring the format described here.
+Time series arrays are stored in an
+[HDF5](https://support.hdfgroup.org/HDF5/whatishdf5.html) file according the
+format described here.
 
 The root path ``/time_series`` defines these HDF5 attributes to control deserialization:
 
@@ -57,7 +59,8 @@ Each group also contains a group called ``component_references`` which contains
 an HDF5 attribute for each component reference. The component reference uses the
 format ``<component_uuid>__<time_series_name>``.
 
-Each time series group defines attributes that control how the data will be deserialized into a ``TimeSeriesData`` instance.
+Each time series group defines attributes that control how the data will be
+deserialized into a ``TimeSeriesData`` instance.
 
 - ``initial_timestamp``: Defines the first timestamp of the array. (All times are not stored.)
 - ``resolution``: Resolution of the time series in milliseconds.

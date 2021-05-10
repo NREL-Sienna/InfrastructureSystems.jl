@@ -56,7 +56,8 @@ generated. This allows you to enter ``val = MyType(nothing)`` in the REPL and
 see the layout of a struct without worrying about valid values.
 - ``valid_range``: Define this as a Dict with ``min`` and ``max`` and
 InfrastructureSystems will validate any value against that range when you add
-the component to the system.
+the component to the system. Use ``null`` if one doesn't apply, such as if there
+is no max limit.
 - ``validation_action``: Define this as ``error`` or ``warn``. If it is
 ``error`` then InfrastructureSystems will raise an exception if the validation
 code detects a problem. Otherwise, it will log a warning.
