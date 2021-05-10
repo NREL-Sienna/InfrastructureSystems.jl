@@ -169,23 +169,15 @@ function validate_range(
     valid_info::ValidationInfo,
     field_value,
 )
-    return check_limits(valid_info.field_type, valid_info, field_value)
+    return check_limits(valid_info, field_value)
 end
 
-function check_limits(
-    ::Type{T},
-    valid_info::ValidationInfo,
-    field_value,
-) where {T <: Union{Nothing, Real}}
+function check_limits(valid_info::ValidationInfo, field_value::Real)
     # Validates numbers.
     return check_limits_impl(valid_info, field_value)
 end
 
-function check_limits(
-    ::Type{T},
-    valid_info::ValidationInfo,
-    field_value,
-) where {T <: Union{Nothing, NamedTuple}}
+function check_limits(valid_info::ValidationInfo, field_value::NamedTuple)
     # Validates up/down, min/max, from/to named tuples.
     @assert_op length(field_value) == 2
     result1 = check_limits_impl(valid_info, field_value[1])
