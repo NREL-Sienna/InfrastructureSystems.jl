@@ -99,6 +99,8 @@ function from_file(
     return storage
 end
 
+get_compression_settings(storage::Hdf5TimeSeriesStorage) = storage.compression
+
 get_file_path(storage::Hdf5TimeSeriesStorage) = storage.file_path
 
 function read_data_format_version(storage::Hdf5TimeSeriesStorage)

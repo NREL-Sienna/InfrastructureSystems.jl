@@ -73,3 +73,11 @@ end
     @test length(collect(IS.get_time_series_multiple(data, type = IS.SingleTimeSeries))) ==
           3
 end
+
+@testset "Test compression settings" begin
+    none = IS.CompressionSettings(enabled = false)
+    @test IS.get_compression_settings(IS.SystemData()) == none
+    @test IS.get_compression_settings(IS.SystemData(time_series_in_memory = true)) == none
+    settings = IS.CompressionSettings(enabled = true, type = IS.CompressionTypes.DEFLATE)
+    @test IS.get_compression_settings(IS.SystemData(compression = settings)) == settings
+end
