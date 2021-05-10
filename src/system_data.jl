@@ -554,7 +554,7 @@ end
 
 function deserialize(
     ::Type{SystemData},
-    raw;
+    raw::Dict;
     time_series_read_only = false,
     time_series_directory = nothing,
 )

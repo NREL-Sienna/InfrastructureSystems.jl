@@ -208,6 +208,6 @@ get_count(forecast::Scenarios) = get_count_common(forecast)
 get_initial_times(forecast::Scenarios) = get_initial_times_common(forecast)
 get_initial_timestamp(forecast::Scenarios) = get_initial_timestamp_common(forecast)
 get_interval(forecast::Scenarios) = get_interval_common(forecast)
-get_window(f::Scenarios, initial_time; len = nothing) =
+get_window(f::Scenarios, initial_time::Dates.DateTime; len = nothing) =
     get_window_common(f, initial_time; len = len)
 iterate_windows(forecast::Scenarios) = iterate_windows_common(forecast)
