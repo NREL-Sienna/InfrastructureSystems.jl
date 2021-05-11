@@ -260,7 +260,7 @@ function add_time_series_info!(
 )
     time_series = _add_time_series_info!(cache, metadata)
     info = TimeSeriesParsedInfo(metadata, time_series)
-    @debug "Added TimeSeriesParsedInfo" metadata
+    @debug "Added TimeSeriesParsedInfo" _group = LOG_GROUP_TIME_SERIES metadata
     return info
 end
 
@@ -523,7 +523,7 @@ function prepare_for_serialization!(
 end
 
 function serialize(data::SystemData)
-    @debug "serialize SystemData"
+    @debug "serialize SystemData" _group = LOG_GROUP_SERIALIZATION
     json_data = Dict()
     for field in (:components, :masked_components, :time_series_params, :internal)
         json_data[string(field)] = serialize(getfield(data, field))
@@ -561,7 +561,7 @@ function deserialize(
     time_series_read_only = false,
     time_series_directory = nothing,
 )
-    @debug "deserialize" raw
+    @debug "deserialize" raw _group = LOG_GROUP_SERIALIZATION
     time_series_params = deserialize(TimeSeriesParameters, raw["time_series_params"])
     # The code calling this function must have changed to this directory.
     if !isfile(raw["time_series_storage_file"])
@@ -588,7 +588,7 @@ function deserialize(
     )
 
     internal = deserialize(InfrastructureSystemsInternal, raw["internal"])
-    @debug "deserialize" validation_descriptors time_series_storage internal
+    @debug "deserialize" _group = LOG_GROUP_SERIALIZATION validation_descriptors time_series_storage internal
     sys = SystemData(
         time_series_params,
         validation_descriptors,

@@ -81,7 +81,8 @@ function serialize(storage::TimeSeriesStorage, file_path::AbstractString)
                 error("Attempting to overwrite identical time series file")
             end
 
-            @debug "Skip time series serialization because the paths are identical"
+            @debug "Skip time series serialization because the paths are identical" _group =
+                LOG_GROUP_TIME_SERIES
             return
         end
 

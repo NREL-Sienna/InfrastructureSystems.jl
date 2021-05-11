@@ -25,13 +25,6 @@ const FORECASTS_DIR = joinpath(DATA_DIR, "time_series")
 
 const LOG_FILE = "infrastructure-systems.log"
 
-LOG_LEVELS = Dict(
-    "Debug" => Logging.Debug,
-    "Info" => Logging.Info,
-    "Warn" => Logging.Warn,
-    "Error" => Logging.Error,
-)
-
 include("common.jl")
 
 """
@@ -76,26 +69,39 @@ macro includetests(testarg...)
     end
 end
 
-function get_logging_level(env_name::String, default)
+function get_logging_level_from_env(env_name::String, default)
     level = get(ENV, env_name, default)
-    log_level = get(LOG_LEVELS, level, nothing)
-    if log_level === nothing
-        error("Invalid log level $level: Supported levels: $(values(LOG_LEVELS))")
-    end
+    return IS.get_logging_level(level)
+end
 
-    return log_level
+function get_exclude_from_debug_logging()
+    group_levels = Dict{Symbol, Base.LogLevel}()
+    groups = get(ENV, "SIIP_EXCLUDE_FROM_DEBUG_LOG", "")
+    return Dict(Symbol(x) => Logging.Error for x in split(groups, ",") if x != "")
 end
 
 function run_tests()
-    console_level = get_logging_level("SYS_CONSOLE_LOG_LEVEL", "Error")
-    console_logger = ConsoleLogger(stderr, console_level)
-    file_level = get_logging_level("SYS_LOG_LEVEL", "Info")
+    logging_config_filename = get(ENV, "SIIP_LOGGING_CONFIG", nothing)
+    if logging_config_filename !== nothing
+        config = IS.LoggingConfiguration(logging_config_filename)
+    else
+        config = IS.LoggingConfiguration(
+            filename = LOG_FILE,
+            file_level = Logging.Info,
+            console_level = Logging.Error,
+        )
+    end
+    console_logger = ConsoleLogger(config.console_stream, config.console_level)
 
-    IS.open_file_logger(LOG_FILE, file_level) do file_logger
+    IS.open_file_logger(config.filename, config.file_level) do file_logger
         levels = (Logging.Info, Logging.Warn, Logging.Error)
         multi_logger =
             IS.MultiLogger([console_logger, file_logger], IS.LogEventTracker(levels))
         global_logger(multi_logger)
+
+        if !isempty(config.group_levels)
+            IS.set_group_levels!(multi_logger, config.group_levels)
+        end
 
         @time @testset "Begin Systems tests" begin
             @includetests ARGS

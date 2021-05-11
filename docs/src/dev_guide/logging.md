@@ -13,7 +13,7 @@ This document describes logging facilities available in the modules that use `In
 
 ```Julia
 import Logging
-import InfrastructureSystems: configure_logging, open_file_logger, MultiLogger, LogEventTracker
+import InfrastructureSystems: configure_logging, open_file_logger, MultiLogger, LogEventTracker, make_logging_config_file
 ```
 
 **Note**: Packages that depend on `InfrastructureSystems.jl` already re-export `configure_logging`, `open_file_logger`, `MultiLogger`, `LogEventTracker`
@@ -38,7 +38,33 @@ flush(logger)
 close(logger)
 ```
 
-The function provides lots of customization. Refer to the docstring for complete details.
+You can also configure logging from a configuration file.
+
+```julia
+make_logging_config_file("logging_config.toml")
+# Customize in an editor.
+logger = configure_logging("logging_config.toml")
+```
+
+### Enable debug logging for code you are debugging but not for noisy areas you don't care about.
+
+```julia
+logger = configure_logging(console_level = Logging.Debug)
+InfrastructureSystems.set_group_level!(logger, InfrastructureSystems.LOG_GROUP_TIME_SERIES)
+
+# Or many at once.
+InfrastructureSystems.set_group_levels!(
+    logger,
+    Dict(
+        InfrastructureSystems.LOG_GROUP_SERIALIZATION => Logging.Info,
+        InfrastructureSystems.LOG_GROUP_TIME_SERIES => Logging.Info,
+    ),
+)
+
+# Get current settings
+InfrastructureSystems.get_group_levels(logger)
+InfrastructureSystems.get_group_level(logger, InfrastructureSystems.LOG_GROUP_TIME_SERIES)
+```
 
 ### Log to console and file in an application or unit test environment
 

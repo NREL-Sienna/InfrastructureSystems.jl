@@ -79,7 +79,7 @@ function Recorder(
     if isnothing(io)
         filename = joinpath(directory, string(name) * ".log")
         io = open(filename, mode)
-        @debug "opened recorder log at" filename
+        @debug "opened recorder log at" _group = LOG_GROUP_RECORDER filename
     end
 
     return Recorder(name, io)
@@ -111,7 +111,7 @@ function register_recorder!(
 )
     unregister_recorder!(name)
     g_recorders[name] = Recorder(name; io = io, mode = mode, directory = directory)
-    @debug "registered new Recorder" name
+    @debug "registered new Recorder" _group = LOG_GROUP_RECORDER name
 end
 
 """
@@ -119,7 +119,7 @@ Unregister the recorder with this name and stop recording events.
 """
 function unregister_recorder!(name::Symbol; close_io = true)
     if haskey(g_recorders, name)
-        @debug "unregister Recorder" name
+        @debug "unregister Recorder" _group = LOG_GROUP_RECORDER name
         recorder = pop!(g_recorders, name)
         close_io && close(recorder)
     end

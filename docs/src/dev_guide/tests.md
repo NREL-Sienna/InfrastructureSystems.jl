@@ -16,17 +16,12 @@ julia> push!(ARGS, "<test_filename_without_.jl>")
 julia> include("test/runtests.jl")
 ```
 
-- Change console logging level (defaults to Error):
+- Change logging level(s):
 
 ```Julia
-julia> ENV["PS_CONSOLE_LOG_LEVEL"] = Info
-julia> include("test/runtests.jl")
-```
-
-- Change log file (./power-systems.log) logging level (defaults to Info):
-
-```Julia
-julia> ENV["PS_LOG_LEVEL"] = Debug
+julia> IS.make_logging_config_file("logging_config.toml")
+julia> ENV["SIIP_LOGGING_CONFIG"] = "logging_config.toml"
+# Edit the file to suit your preferences.
 julia> include("test/runtests.jl")
 ```
 

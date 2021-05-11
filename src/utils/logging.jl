@@ -1,6 +1,187 @@
 
 import Logging
 
+# These use PascalCase to avoid clashing with source filenames.
+const LOG_GROUP_PARSING = :Parsing
+const LOG_GROUP_RECORDER = :Recorder
+const LOG_GROUP_SERIALIZATION = :Serialization
+const LOG_GROUP_SYSTEM = :System
+const LOG_GROUP_TIME_SERIES = :TimeSeries
+
+# Try to keep this updated so that users can check the known groups in the REPL.
+const LOG_GROUPS = (
+    LOG_GROUP_PARSING,
+    LOG_GROUP_RECORDER,
+    LOG_GROUP_SERIALIZATION,
+    LOG_GROUP_SYSTEM,
+    LOG_GROUP_TIME_SERIES,
+)
+const SIIP_LOGGING_CONFIG_FILENAME = joinpath(
+    abspath(joinpath(dirname(Base.find_package("InfrastructureSystems")))),
+    "utils",
+    "logging_config.toml",
+)
+
+const LOG_LEVELS = Dict(
+    "Debug" => Logging.Debug,
+    "Info" => Logging.Info,
+    "Warn" => Logging.Warn,
+    "Error" => Logging.Error,
+)
+
+"""Contains information describing a log event."""
+mutable struct LogEvent
+    file::String
+    line::Int
+    id::Symbol
+    message::String
+    level::Logging.LogLevel
+    count::Int
+    suppressed::Int
+end
+
+function LogEvent(file, line, id, message, level)
+    if isnothing(file)
+        file = "None"
+    end
+
+    LogEvent(file, line, id, message, level, 1, 0)
+end
+
+struct LogEventTracker
+    events::Dict{Logging.LogLevel, Dict{Symbol, LogEvent}}
+
+    # Defining an inner constructor to prohibit creation of a default constructor that
+    # takes a parameter of type Any. The outer constructor below causes an overwrite of
+    # that method, which results in a warning message from Julia.
+    LogEventTracker(events::Dict{Logging.LogLevel, Dict{Symbol, LogEvent}}) = new(events)
+end
+"""Returns a summary of log event counts by level."""
+function report_log_summary(tracker::LogEventTracker)::String
+    text = "\nLog message summary:\n"
+    # Order by criticality.
+    for level in sort!(collect(keys(tracker.events)), rev = true)
+        num_events = length(tracker.events[level])
+        text *= "\n$num_events $level events:\n"
+        for event in
+            sort!(collect(get_log_events(tracker, level)), by = x -> x.count, rev = true)
+            text *= "  count=$(event.count) at $(event.file):$(event.line)\n"
+            text *= "    example message=\"$(event.message)\"\n"
+            if event.suppressed > 0
+                text *= "    suppressed=$(event.suppressed)\n"
+            end
+        end
+    end
+
+    return text
+end
+
+"""Returns an iterable of log events for a level."""
+function get_log_events(tracker::LogEventTracker, level::Logging.LogLevel)
+    if !_is_level_valid(tracker, level)
+        return []
+    end
+
+    return values(tracker.events[level])
+end
+
+"""Increments the count of a log event."""
+function increment_count(tracker::LogEventTracker, event::LogEvent, suppressed::Bool)
+    if _is_level_valid(tracker, event.level)
+        if haskey(tracker.events[event.level], event.id)
+            tracker.events[event.level][event.id].count += 1
+            if suppressed
+                tracker.events[event.level][event.id].suppressed += 1
+            end
+        else
+            tracker.events[event.level][event.id] = event
+        end
+    end
+end
+
+function _is_level_valid(tracker::LogEventTracker, level::Logging.LogLevel)
+    return level in keys(tracker.events)
+end
+
+struct LoggingConfiguration
+    console::Bool
+    console_stream::IO
+    console_level::Base.LogLevel
+    file::Bool
+    filename::String
+    file_level::Base.LogLevel
+    file_mode::String
+    tracker::Union{Nothing, LogEventTracker}
+    set_global::Bool
+    group_levels::Dict{Symbol, Base.LogLevel}
+end
+
+function LoggingConfiguration(;
+    console = true,
+    console_stream = stderr,
+    console_level = Logging.Error,
+    file = true,
+    filename = "log.txt",
+    file_level = Logging.Info,
+    file_mode = "w+",
+    tracker = nothing,
+    set_global = true,
+    group_levels = Dict{Symbol, Base.LogLevel}(),
+)
+    return LoggingConfiguration(
+        console,
+        console_stream,
+        console_level,
+        file,
+        filename,
+        file_level,
+        file_mode,
+        tracker,
+        set_global,
+        group_levels,
+    )
+end
+
+function LoggingConfiguration(config_filename)
+    config = open(config_filename, "r") do io
+        TOML.parse(io)
+    end
+
+    console_stream_str = get(config, "console_stream", "stderr")
+    if console_stream_str == "stderr"
+        config["console_stream"] = stderr
+    elseif console_stream_str == "stdout"
+        config["console_stream"] = stdout
+    else
+        error("unsupport console_stream value: {console_stream_str")
+    end
+
+    config["console_level"] = get_logging_level(get(config, "console_level", "Info"))
+    config["file_level"] = get_logging_level(get(config, "file_level", "Info"))
+    config["group_levels"] =
+        Dict(Symbol(k) => get_logging_level(v) for (k, v) in config["group_levels"])
+    config["tracker"] = nothing
+    return LoggingConfiguration(; Dict(Symbol(k) => v for (k, v) in config)...)
+end
+
+function make_logging_config_file(filename = "logging_config.toml")
+    cp(SIIP_LOGGING_CONFIG_FILENAME, filename)
+    println("Created $filename")
+end
+
+"""
+Tracks counts of all log events by level.
+
+# Examples
+```Julia
+LogEventTracker()
+LogEventTracker((Logging.Info, Logging.Warn, Logging.Error))
+```
+"""
+function LogEventTracker(levels = (Logging.Info, Logging.Warn, Logging.Error))
+    return LogEventTracker(Dict(l => Dict{Symbol, LogEvent}() for l in levels))
+end
+
 """
 Creates console and file loggers per caller specification and returns a MultiLogger.
 
@@ -34,24 +215,43 @@ function configure_logging(;
     tracker = LogEventTracker(),
     set_global = true,
 )
-    if !console && !file
+    config = LoggingConfiguration(
+        console = console,
+        console_stream = console_stream,
+        console_level = console_level,
+        file = file,
+        filename = filename,
+        file_level = file_level,
+        file_mode = file_mode,
+        tracker = tracker,
+        set_global = set_global,
+    )
+    return configure_logging(config)
+end
+
+function configure_logging(config_filename::AbstractString)
+    return configure_logging(LoggingConfiguration(config_filename))
+end
+
+function configure_logging(config::LoggingConfiguration)
+    if !config.console && !config.file
         error("At least one of console or file must be true")
     end
 
-    loggers = Array{Logging.AbstractLogger, 1}()
-    if console
-        console_logger = Logging.ConsoleLogger(console_stream, console_level)
+    loggers = Vector{Logging.AbstractLogger}()
+    if config.console
+        console_logger = Logging.ConsoleLogger(config.console_stream, config.console_level)
         push!(loggers, console_logger)
     end
 
-    if file
-        io = open(filename, file_mode)
-        file_logger = FileLogger(io, file_level)
+    if config.file
+        io = open(config.filename, config.file_mode)
+        file_logger = FileLogger(io, config.file_level)
         push!(loggers, file_logger)
     end
 
-    logger = MultiLogger(loggers, tracker)
-    if set_global
+    logger = MultiLogger(loggers, config.tracker, Dict{Symbol, Base.LogLevel}())
+    if config.set_global
         Logging.global_logger(logger)
     end
 
@@ -130,94 +330,6 @@ function open_file_logger(
     end
 end
 
-"""Contains information describing a log event."""
-mutable struct LogEvent
-    file::String
-    line::Int
-    id::Symbol
-    message::String
-    level::Logging.LogLevel
-    count::Int
-    suppressed::Int
-end
-
-function LogEvent(file, line, id, message, level)
-    if isnothing(file)
-        file = "None"
-    end
-
-    LogEvent(file, line, id, message, level, 1, 0)
-end
-
-struct LogEventTracker
-    events::Dict{Logging.LogLevel, Dict{Symbol, LogEvent}}
-
-    # Defining an inner constructor to prohibit creation of a default constructor that
-    # takes a parameter of type Any. The outer constructor below causes an overwrite of
-    # that method, which results in a warning message from Julia.
-    LogEventTracker(events::Dict{Logging.LogLevel, Dict{Symbol, LogEvent}}) = new(events)
-end
-
-"""
-Tracks counts of all log events by level.
-
-# Examples
-```Julia
-LogEventTracker()
-LogEventTracker((Logging.Info, Logging.Warn, Logging.Error))
-```
-"""
-function LogEventTracker(levels = (Logging.Info, Logging.Warn, Logging.Error))
-    return LogEventTracker(Dict(l => Dict{Symbol, LogEvent}() for l in levels))
-end
-
-"""Returns a summary of log event counts by level."""
-function report_log_summary(tracker::LogEventTracker)::String
-    text = "\nLog message summary:\n"
-    # Order by criticality.
-    for level in sort!(collect(keys(tracker.events)), rev = true)
-        num_events = length(tracker.events[level])
-        text *= "\n$num_events $level events:\n"
-        for event in
-            sort!(collect(get_log_events(tracker, level)), by = x -> x.count, rev = true)
-            text *= "  count=$(event.count) at $(event.file):$(event.line)\n"
-            text *= "    example message=\"$(event.message)\"\n"
-            if event.suppressed > 0
-                text *= "    suppressed=$(event.suppressed)\n"
-            end
-        end
-    end
-
-    return text
-end
-
-"""Returns an iterable of log events for a level."""
-function get_log_events(tracker::LogEventTracker, level::Logging.LogLevel)
-    if !_is_level_valid(tracker, level)
-        return []
-    end
-
-    return values(tracker.events[level])
-end
-
-"""Increments the count of a log event."""
-function increment_count(tracker::LogEventTracker, event::LogEvent, suppressed::Bool)
-    if _is_level_valid(tracker, event.level)
-        if haskey(tracker.events[event.level], event.id)
-            tracker.events[event.level][event.id].count += 1
-            if suppressed
-                tracker.events[event.level][event.id].suppressed += 1
-            end
-        else
-            tracker.events[event.level][event.id] = event
-        end
-    end
-end
-
-function _is_level_valid(tracker::LogEventTracker, level::Logging.LogLevel)
-    return level in keys(tracker.events)
-end
-
 """
 Redirects log events to multiple loggers. The primary use case is to allow logging to
 both a file and the console. Secondarily, it can track the counts of all log messages.
@@ -230,6 +342,7 @@ MultiLogger([ConsoleLogger(stderr), SimpleLogger(stream)], LogEventTracker())
 mutable struct MultiLogger <: Logging.AbstractLogger
     loggers::Array{Logging.AbstractLogger}
     tracker::Union{LogEventTracker, Nothing}
+    group_levels::Dict{Symbol, Base.LogLevel}
 end
 
 """
@@ -241,10 +354,19 @@ MultiLogger([ConsoleLogger(stderr), SimpleLogger(stream)])
 ```
 """
 function MultiLogger(loggers::Array{T}) where {T <: Logging.AbstractLogger}
-    return MultiLogger(loggers, nothing)
+    return MultiLogger(loggers, nothing, Dict{Symbol, Base.LogLevel}())
 end
 
-Logging.shouldlog(logger::MultiLogger, level, _module, group, id) = true
+function MultiLogger(
+    loggers::Array{T},
+    tracker::LogEventTracker,
+) where {T <: Logging.AbstractLogger}
+    return MultiLogger(loggers, tracker, Dict{Symbol, Base.LogLevel}())
+end
+
+function Logging.shouldlog(logger::MultiLogger, level, _module, group, id)
+    return get(logger.group_levels, group, level) <= level
+end
 
 function Logging.min_enabled_level(logger::MultiLogger)
     return minimum([Logging.min_enabled_level(x) for x in logger.loggers])
@@ -295,8 +417,49 @@ function Logging.handle_message(
     return
 end
 
+"""
+Empty the minimum log levels stored for each group.
+"""
+function empty_group_levels!(logger::MultiLogger)
+    empty!(logger.group_levels)
+    return
+end
+
+"""
+Set the minimum log level for a group.
+
+The `group` field of a log message defaults to its file's base name (no extension) as a
+symbol. It can be customized by setting `_group = :a_group_name`.
+
+The minimum log level stored for a console or file logger supercede this setting.
+"""
+function set_group_level!(logger::MultiLogger, group::Symbol, level::Base.LogLevel)
+    logger.group_levels[group] = level
+    return
+end
+
+"""
+Set the minimum log levels for multiple groups. Refer to [`set_group_level`](@ref) for more
+information.
+"""
+function set_group_levels!(logger::MultiLogger, group_levels::Dict{Symbol, Base.LogLevel})
+    merge!(logger.group_levels, group_levels)
+    return
+end
+
+"""
+Return the minimum logging level for a group or nothing if `group` is not stored.
+"""
+get_group_level(logger::MultiLogger, group::Symbol) =
+    get(logger.group_levels, group, nothing)
+
+"""
+Return the minimum logging levels for groups that have been stored.
+"""
+get_group_levels(logger::MultiLogger) = deepcopy(logger.group_levels)
+
 """Returns a summary of log event counts by level."""
-function report_log_summary(logger::MultiLogger)::String
+function report_log_summary(logger::MultiLogger)
     if isnothing(logger.tracker)
         error("log event tracking is not enabled")
     end
@@ -312,6 +475,14 @@ end
 """Ensures that any file streams are flushed and closed."""
 function Base.close(logger::MultiLogger)
     _handle_log_func(logger, Base.close)
+end
+
+function get_logging_level(level::String)
+    if !haskey(LOG_LEVELS, level)
+        error("Invalid log level $level: Supported levels: $(values(LOG_LEVELS))")
+    end
+
+    return LOG_LEVELS[level]
 end
 
 function _handle_log_func(logger::MultiLogger, func::Function)

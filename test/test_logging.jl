@@ -150,3 +150,55 @@ end
     @test orig_logger != global_logger()
     global_logger(orig_logger)
 end
+
+@testset "Test group level" begin
+    levels = (Logging.Debug, Logging.Info, Logging.Warn, Logging.Error)
+    tracker = IS.LogEventTracker(levels)
+    logger = IS.MultiLogger([ConsoleLogger(devnull, Logging.Debug)], tracker)
+    IS.set_group_level!(logger, :test_group, Logging.Info)
+
+    @test IS.get_group_level(logger, :test_group) == Logging.Info
+    @test IS.get_group_level(logger, :not_stored) === nothing
+
+    with_logger(logger) do
+        @debug TEST_MSG _group = :test_group
+    end
+    @test length(IS.get_log_events(tracker, Logging.Debug)) == 0
+
+    IS.empty_group_levels!(logger)
+    with_logger(logger) do
+        @debug TEST_MSG _group = :test_group
+    end
+    @test length(IS.get_log_events(tracker, Logging.Debug)) == 1
+end
+
+@testset "Test group levels" begin
+    levels = (Logging.Debug, Logging.Info, Logging.Warn, Logging.Error)
+    tracker = IS.LogEventTracker(levels)
+    logger = IS.MultiLogger([ConsoleLogger(devnull, Logging.Debug)], tracker)
+    min_levels = Dict(:test_group => Logging.Warn)
+    IS.set_group_levels!(logger, min_levels)
+    @test IS.get_group_levels(logger) == min_levels
+    with_logger(logger) do
+        @info TEST_MSG _group = :test_group
+    end
+    @test length(IS.get_log_events(tracker, Logging.Info)) == 0
+
+    IS.empty_group_levels!(logger)
+    with_logger(logger) do
+        @info TEST_MSG _group = :test_group
+    end
+    @test length(IS.get_log_events(tracker, Logging.Info)) == 1
+end
+
+@testset "Test make_logging_config_file" begin
+    filename = joinpath(tempdir(), "logging_config.toml")
+    try
+        redirect_stdout(devnull) do
+            IS.make_logging_config_file(filename)
+        end
+        @test IS.LoggingConfiguration(filename) isa IS.LoggingConfiguration
+    finally
+        isfile(filename) && rm(filename)
+    end
+end
