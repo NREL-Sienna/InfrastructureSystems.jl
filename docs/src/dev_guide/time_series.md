@@ -45,28 +45,28 @@ Time series arrays are stored in an
 [HDF5](https://support.hdfgroup.org/HDF5/whatishdf5.html) file according the
 format described here.
 
-The root path ``/time_series`` defines these HDF5 attributes to control deserialization:
+The root path `/time_series` defines these HDF5 attributes to control deserialization:
 
-- ``data_format_version``: Designates the InfrastructureSystems format for the file.
-- ``compression_enabled``: Specifies whether compression is enabled and will be used for new time series.
-- ``compression_type``: Specifies the type of compression being used.
-- ``compression_level``: Specifies the level of compression being used.
-- ``compression_shuffle``: Specifies whether the shuffle filter is being used.
+- `data_format_version`: Designates the InfrastructureSystems format for the file.
+- `compression_enabled`: Specifies whether compression is enabled and will be used for new time series.
+- `compression_type`: Specifies the type of compression being used.
+- `compression_level`: Specifies the level of compression being used.
+- `compression_shuffle`: Specifies whether the shuffle filter is being used.
 
 Each time series array is stored in an HDF5 group named with the array's UUID.
-Each group contains a dataset called ``data`` which contains the actual data.
-Each group also contains a group called ``component_references`` which contains
+Each group contains a dataset called `data` which contains the actual data.
+Each group also contains a group called `component_references` which contains
 an HDF5 attribute for each component reference. The component reference uses the
-format ``<component_uuid>__<time_series_name>``.
+format `<component_uuid>__<time_series_name>`.
 
 Each time series group defines attributes that control how the data will be
-deserialized into a ``TimeSeriesData`` instance.
+deserialized into a `TimeSeriesData` instance.
 
-- ``initial_timestamp``: Defines the first timestamp of the array. (All times are not stored.)
-- ``resolution``: Resolution of the time series in milliseconds.
-- ``type``: Type of the time series. Subtype of ``TimeSeriesData``.
-- ``module``: Module that defines the type of the time series.
-- ``data_type``: Describes the type of the array stored.
+- `initial_timestamp`: Defines the first timestamp of the array. (All times are not stored.)
+- `resolution`: Resolution of the time series in milliseconds.
+- `type`: Type of the time series. Subtype of `TimeSeriesData`.
+- `module`: Module that defines the type of the time series.
+- `data_type`: Describes the type of the array stored.
 
 Example:
 
@@ -85,8 +85,8 @@ Example:
 The HDF Group provides tools to inspect and manipulate files. Refer to their
 [website](https://support.hdfgroup.org/products/hdf5_tools/).
 
-``HDFView`` is especially useful for viewing data. Note that using ``h5ls`` and
-``h5dump`` in a terminal combined with UNIX tools like ``grep`` can sometimes be
+`HDFView` is especially useful for viewing data. Note that using `h5ls` and
+`h5dump` in a terminal combined with UNIX tools like `grep` can sometimes be
 faster.
 
 
@@ -95,7 +95,7 @@ faster.
 If you delete time series arrays in your system you may notice that the actual
 size of the HDF5 does not decrease. The only way to recover this space is to
 build a new file with only the active objects. The HDF5 tools package provides
-the tool ``h5repack`` for this purpose.
+the tool `h5repack` for this purpose.
 
 ```bash
 $ h5repack time_series.h5 new.h5
