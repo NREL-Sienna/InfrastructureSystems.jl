@@ -25,6 +25,8 @@ julia> ENV["SIIP_LOGGING_CONFIG"] = "logging_config.toml"
 julia> include("test/runtests.jl")
 ```
 
+**Note** that you can filter out noisy log groups in this file.
+
 The unit test module appends a summary of all log message counts to the log
 file.  If a message is logged too frequently then consider tagging that message
 with maxlog=X to suppress it.
