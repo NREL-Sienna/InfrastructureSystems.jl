@@ -74,12 +74,6 @@ function get_logging_level_from_env(env_name::String, default)
     return IS.get_logging_level(level)
 end
 
-function get_exclude_from_debug_logging()
-    group_levels = Dict{Symbol, Base.LogLevel}()
-    groups = get(ENV, "SIIP_EXCLUDE_FROM_DEBUG_LOG", "")
-    return Dict(Symbol(x) => Logging.Error for x in split(groups, ",") if x != "")
-end
-
 function run_tests()
     logging_config_filename = get(ENV, "SIIP_LOGGING_CONFIG", nothing)
     if logging_config_filename !== nothing

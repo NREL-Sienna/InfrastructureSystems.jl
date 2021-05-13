@@ -6,6 +6,7 @@ const LOG_GROUP_PARSING = :Parsing
 const LOG_GROUP_RECORDER = :Recorder
 const LOG_GROUP_SERIALIZATION = :Serialization
 const LOG_GROUP_SYSTEM = :System
+const LOG_GROUP_SYSTEM_CHECKS = :SystemChecks
 const LOG_GROUP_TIME_SERIES = :TimeSeries
 
 # Try to keep this updated so that users can check the known groups in the REPL.
