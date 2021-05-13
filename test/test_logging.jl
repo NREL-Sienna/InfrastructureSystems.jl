@@ -106,7 +106,7 @@ end
         console = true,
         file = false,
         console_stream = devnull,
-        filename = logfile,
+        filename = nothing,
         file_level = Logging.Info,
         set_global = false,
     )

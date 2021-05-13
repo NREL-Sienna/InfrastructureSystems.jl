@@ -108,7 +108,7 @@ struct LoggingConfiguration
     console_stream::IO
     console_level::Base.LogLevel
     file::Bool
-    filename::String
+    filename::Union{Nothing, String}
     file_level::Base.LogLevel
     file_mode::String
     tracker::Union{Nothing, LogEventTracker}
@@ -193,7 +193,7 @@ ensure that all events get flushed.
 - `console_stream::IOStream=stderr`: stream for console logger
 - `console_level::Logging.LogLevel=Logging.Error`: level for console messages
 - `file::Bool=true`: create file logger
-- `filename::String=log.txt`: log file
+- `filename::Union{Nothing, String}=log.txt`: log file
 - `file_level::Logging.LogLevel=Logging.Info`: level for file messages
 - `file_mode::String=w+`: mode used when opening log file
 - `tracker::Union{LogEventTracker, Nothing}=LogEventTracker()`: optionally track log events
