@@ -48,6 +48,28 @@ logger = configure_logging("logging_config.toml")
 
 ### Enable debug logging for code you are debugging but not for noisy areas you don't care about.
 
+InfrastructureSystems uses the `_group` field of a log event to perform
+additional filtering. All debug log messages that run frequently should have
+this field defined.
+
+Note that the default value of `_group` for a log event is its filename. Refer
+to the [Julia
+docs](https://docs.julialang.org/en/v1/stdlib/Logging/#Log-event-structure) for
+more information.
+
+Run this in the REPL to see commonly-used groups in InfrastructureSystems:
+
+```julia
+@show InfrastructureSystems.LOG_GROUPS
+```
+
+You can tell InfrastructureSystems to filter out messages from a particular
+group in two ways:
+
+1. Specify the group level in the `logging_config.toml` file mentioned above
+   and configure logging with it.
+2. Change the logger dynamically from with Julia. Here is an example:
+
 ```julia
 logger = configure_logging(console_level = Logging.Debug)
 InfrastructureSystems.set_group_level!(logger, InfrastructureSystems.LOG_GROUP_TIME_SERIES)

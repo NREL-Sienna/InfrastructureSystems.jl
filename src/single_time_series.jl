@@ -137,7 +137,7 @@ function SingleTimeSeries(time_series::Vector{SingleTimeSeries})
         data = ta,
         scaling_factor_multiplier = time_series[1].scaling_factor_multiplier,
     )
-    @debug "concatenated time_series" time_series
+    @debug "concatenated time_series" LOG_GROUP_TIME_SERIES time_series
     return time_series
 end
 
