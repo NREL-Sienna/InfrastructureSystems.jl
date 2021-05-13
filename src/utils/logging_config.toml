@@ -1,0 +1,17 @@
+console = true
+console_level = "Info"
+console_stream = "stderr"
+file = true
+file_level = "Info"
+filename = "siip_log.txt"
+file_mode = "w+"
+set_global = true
+
+["group_levels"]
+# Set these to Info to suppress the group when debug logging is enabled.
+# You can also add the base name of any file (without '.jl') to suppress its debug logging.
+Parsing = "Debug"
+Recorder = "Debug"
+System = "Debug"
+Serialization = "Debug"
+TimeSeries = "Debug"

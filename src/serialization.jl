@@ -54,12 +54,12 @@ such as JSON. In cases where val is an instance of a struct, return a Dict. In c
 val is a scalar value, return that value.
 """
 function serialize(val::T) where {T <: InfrastructureSystemsType}
-    @debug "serialize InfrastructureSystemsType" val T
+    @debug "serialize InfrastructureSystemsType" _group = LOG_GROUP_SERIALIZATION val T
     return serialize_struct(val)
 end
 
 function serialize(vals::Vector{T}) where {T <: InfrastructureSystemsType}
-    @debug "serialize Vector{InfrastructureSystemsType}" vals T
+    @debug "serialize Vector{InfrastructureSystemsType}" _group = LOG_GROUP_SERIALIZATION vals T
     return serialize_struct.(vals)
 end
 
@@ -73,7 +73,7 @@ function serialize(func::Function)
 end
 
 function serialize_struct(val::T) where {T}
-    @debug "serialize_struct" val T
+    @debug "serialize_struct" _group = LOG_GROUP_SERIALIZATION val T
     data = Dict(string(name) => serialize(getfield(val, name)) for name in fieldnames(T))
     add_serialization_metadata!(data, T)
     return data
@@ -130,7 +130,7 @@ Deserialize an object from standard types stored in non-Julia formats, such as J
 Julia types.
 """
 function deserialize(::Type{T}, data::Dict) where {T <: InfrastructureSystemsType}
-    @debug "deserialize InfrastructureSystemsType" T data
+    @debug "deserialize InfrastructureSystemsType" _group = LOG_GROUP_SERIALIZATION T data
     return deserialize_struct(T, data)
 end
 
@@ -178,7 +178,7 @@ function deserialize(::Type{Function}, data::Dict)
 end
 
 function deserialize(::Type{T}, data::Any) where {T}
-    @debug "deserialize Any" T data
+    @debug "deserialize Any" _group = LOG_GROUP_SERIALIZATION T data
     return data
 end
 

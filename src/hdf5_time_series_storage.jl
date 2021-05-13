@@ -59,7 +59,7 @@ function Hdf5TimeSeriesStorage(
         storage = Hdf5TimeSeriesStorage(filename, read_only, compression)
     end
 
-    @debug "Constructed new Hdf5TimeSeriesStorage" storage.file_path read_only compression
+    @debug "Constructed new Hdf5TimeSeriesStorage" _group = LOG_GROUP_TIME_SERIES storage.file_path read_only compression
 
     return storage
 end
@@ -150,10 +150,11 @@ function serialize_time_series!(
                 path["data"] = data
             end
             _write_time_series_attributes!(storage, ts, path)
-            @debug "Create new time series entry." uuid component_uuid name
+            @debug "Create new time series entry." _group = LOG_GROUP_TIME_SERIES uuid component_uuid name
         else
             component_refs = root[uuid][COMPONENT_REFERENCES_KEY]
-            @debug "Add reference to existing time series entry." uuid component_uuid name
+            @debug "Add reference to existing time series entry." _group =
+                LOG_GROUP_TIME_SERIES uuid component_uuid name
         end
         HDF5.attributes(component_refs)[component_name] = true
     end
@@ -266,7 +267,7 @@ function add_time_series_reference!(
         root = _get_root(storage, file)
         path = root[uuid][COMPONENT_REFERENCES_KEY]
         HDF5.attributes(path)[component_name] = true
-        @debug "Add reference to existing time series entry." uuid component_uuid name
+        @debug "Add reference to existing time series entry." _group = LOG_GROUP_TIME_SERIES uuid component_uuid name
     end
 end
 
@@ -324,7 +325,7 @@ function remove_time_series!(
         components = path[COMPONENT_REFERENCES_KEY]
         HDF5.delete_attribute(components, make_component_name(component_uuid, name))
         if isempty(keys(HDF5.attributes(components)))
-            @debug "$path has no more references; delete it."
+            @debug "$path has no more references; delete it." _group = LOG_GROUP_TIME_SERIES
             HDF5.delete_object(path)
         end
     end
@@ -344,7 +345,7 @@ function deserialize_time_series(
         path = _get_time_series_path(root, uuid)
         attributes = _read_time_series_attributes(storage, path, rows, T)
         @assert_op attributes["type"] == T
-        @debug "deserializing a StaticTimeSeries" T
+        @debug "deserializing a StaticTimeSeries" _group = LOG_GROUP_TIME_SERIES T
         data_type = attributes["data_type"]
         data = get_hdf_array(path["data"], data_type, rows)
         return T(
@@ -387,7 +388,7 @@ function deserialize_time_series(
 
         attributes = _read_time_series_attributes(storage, path, rows, T)
         @assert actual_type <: T "actual_type = $actual_type T = $T"
-        @debug "deserializing a Forecast" T
+        @debug "deserializing a Forecast" _group = LOG_GROUP_TIME_SERIES T
         data_type = attributes["data_type"]
         data = get_hdf_array(path["data"], data_type, attributes, rows, columns)
         new_ts = actual_type(ts_metadata, data)
@@ -561,7 +562,7 @@ function deserialize_time_series(
         attributes = _read_time_series_attributes(storage, path, rows, T)
         @assert_op attributes["type"] == T
         @assert_op length(attributes["dataset_size"]) == 3
-        @debug "deserializing a Forecast" T
+        @debug "deserializing a Forecast" _group = LOG_GROUP_TIME_SERIES T
         data = SortedDict{Dates.DateTime, Matrix{attributes["data_type"]}}()
         initial_timestamp = attributes["start_time"]
         interval = attributes["interval"]
@@ -602,7 +603,7 @@ function deserialize_time_series(
         attributes = _read_time_series_attributes(storage, path, rows, T)
         @assert_op attributes["type"] == T
         @assert_op length(attributes["dataset_size"]) == 3
-        @debug "deserializing a Forecast" T
+        @debug "deserializing a Forecast" _group = LOG_GROUP_TIME_SERIES T
         data = SortedDict{Dates.DateTime, Matrix{attributes["data_type"]}}()
         initial_timestamp = attributes["start_time"]
         interval = attributes["interval"]
@@ -745,5 +746,5 @@ function _convert_from_1_0_0!(storage::Hdf5TimeSeriesStorage)
         _serialize_compression_settings(storage, root)
     end
 
-    @debug "Converted file from 1.0.0 format"
+    @debug "Converted file from 1.0.0 format" _group = LOG_GROUP_TIME_SERIES
 end

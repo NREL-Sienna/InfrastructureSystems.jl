@@ -294,7 +294,7 @@ function _add_time_series_info!(
 )
     if !haskey(cache.data_files, metadata.data_file)
         cache.data_files[metadata.data_file] = read_time_series(metadata)
-        @debug "Added time series file" metadata.data_file
+        @debug "Added time series file" _group = LOG_GROUP_TIME_SERIES metadata.data_file
     end
     return cache.data_files[metadata.data_file]
 end

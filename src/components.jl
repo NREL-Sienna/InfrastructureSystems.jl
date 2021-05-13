@@ -112,7 +112,7 @@ function remove_components!(
         prepare_for_removal!(component)
     end
 
-    @debug "Removed all components of type" T
+    @debug "Removed all components of type" _group = LOG_GROUP_SYSTEM T
     return values(_components)
 end
 
@@ -171,7 +171,7 @@ function _remove_component!(
         prepare_for_removal!(component)
     end
 
-    @debug "Removed component" T name
+    @debug "Removed component" _group = LOG_GROUP_SYSTEM T name
     return component
 end
 
@@ -215,7 +215,7 @@ function get_component(
     end
 
     if !haskey(components.data, T)
-        @debug "components of type $T are not stored"
+        @debug "components of type $T are not stored" _group = LOG_GROUP_SYSTEM
         return nothing
     end
 

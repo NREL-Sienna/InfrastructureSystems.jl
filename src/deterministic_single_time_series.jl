@@ -124,7 +124,7 @@ function deserialize_deterministic_from_single_time_series(
     columns,
     last_index,
 )
-    @debug "deserializing a SingleTimeSeries"
+    @debug "deserializing a SingleTimeSeries" _group = LOG_GROUP_TIME_SERIES
     horizon = get_horizon(ts_metadata)
     interval = get_interval(ts_metadata)
     resolution = get_resolution(ts_metadata)
@@ -167,7 +167,7 @@ function _translate_deterministic_offsets(
     interval_offset = Int(interval / resolution)
     s_index = (columns.start - 1) * interval_offset + 1
     e_index = (columns.stop - 1) * interval_offset + horizon
-    @debug "translated offsets" horizon columns s_index e_index last_index
+    @debug "translated offsets" _group = LOG_GROUP_TIME_SERIES horizon columns s_index e_index last_index
     @assert_op s_index <= last_index
     @assert_op e_index <= last_index
     return UnitRange(s_index, e_index)

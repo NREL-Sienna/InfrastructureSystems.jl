@@ -10,6 +10,7 @@ import Random
 import Pkg
 import PrettyTables
 import TimeSeries
+import TOML
 using DataStructures: SortedDict
 
 using DocStringExtensions

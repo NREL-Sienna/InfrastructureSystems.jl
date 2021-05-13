@@ -24,10 +24,10 @@ function read_time_series(
     end
 
     file = CSV.File(data_file)
-    @debug "Read CSV data from $(data_file)."
+    @debug "Read CSV data from $(data_file)." _group = LOG_GROUP_TIME_SERIES
 
     format = get_time_series_format(file)
-    @debug "$format detected for the time series"
+    @debug "$format detected for the time series" _group = LOG_GROUP_TIME_SERIES
     return read_time_series(format, T, file, component_name; kwargs...)
 end
 
@@ -178,7 +178,7 @@ function read_time_series(
     component_name = nothing;
     kwargs...,
 ) where {T <: TimeSeriesFormatDateTimeAsColumn}
-    @debug "Read CSV data from $file."
+    @debug "Read CSV data from $file." _group = LOG_GROUP_TIME_SERIES
     horizon = length(first(file)) - 1
     data = SortedDict{Dates.DateTime, Vector{Float64}}()
     # First element in the row is the time series. We use integer indexes not to rely on

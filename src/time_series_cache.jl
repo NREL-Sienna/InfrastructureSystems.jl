@@ -41,10 +41,10 @@ function get_time_series_array!(cache::TimeSeriesCache, timestamp::Dates.DateTim
     end
 
     if next_time > _get_last_cached_time(cache)
-        @debug "get_next_time_series_array! update cache" next_time
+        @debug "get_next_time_series_array! update cache" _group = LOG_GROUP_TIME_SERIES next_time
         _update!(cache)
     else
-        @debug "get_next_time_series_array! data is in cache" next_time
+        @debug "get_next_time_series_array! data is in cache" _group = LOG_GROUP_TIME_SERIES next_time
     end
 
     len = _get_length_available(cache)
@@ -231,7 +231,7 @@ function ForecastCache(
 
     window_size = row_size * horizon
     in_memory_count = minimum((trunc(Int, cache_size_bytes / window_size), count))
-    @debug "ForecastCache" row_size window_size in_memory_count
+    @debug "ForecastCache" _group = LOG_GROUP_TIME_SERIES row_size window_size in_memory_count
 
     return ForecastCache(
         TimeSeriesCacheCommon(
@@ -331,7 +331,7 @@ function StaticTimeSeriesCache(
     row_size = _get_row_size(vals)
     max_chunk_size = row_size * len
     in_memory_rows = minimum((trunc(Int, cache_size_bytes / row_size), len))
-    @debug "StaticTimeSeriesCache" row_size max_chunk_size in_memory_rows
+    @debug "StaticTimeSeriesCache" _group = LOG_GROUP_TIME_SERIES row_size max_chunk_size in_memory_rows
 
     num_iterations = ceil(Int, len / in_memory_rows)
     return StaticTimeSeriesCache(

@@ -21,7 +21,7 @@ end
 
 function InMemoryTimeSeriesStorage()
     storage = InMemoryTimeSeriesStorage(Dict{UUIDs.UUID, _TimeSeriesRecord}())
-    @debug "Created InMemoryTimeSeriesStorage"
+    @debug "Created InMemoryTimeSeriesStorage" _group = LOG_GROUP_TIME_SERIES
     return storage
 end
 
@@ -52,7 +52,7 @@ function serialize_time_series!(
 )
     uuid = get_uuid(ts)
     if !haskey(storage.data, uuid)
-        @debug "Create new time series entry." uuid component_uuid name
+        @debug "Create new time series entry." _group = LOG_GROUP_TIME_SERIES uuid component_uuid name
         storage.data[uuid] = _TimeSeriesRecord(component_uuid, name, ts)
     else
         add_time_series_reference!(storage, component_uuid, name, uuid)
@@ -67,7 +67,7 @@ function add_time_series_reference!(
     name::AbstractString,
     ts_uuid::UUIDs.UUID,
 )
-    @debug "Add reference to existing time series entry." ts_uuid component_uuid name
+    @debug "Add reference to existing time series entry." _group = LOG_GROUP_TIME_SERIES ts_uuid component_uuid name
     record = storage.data[ts_uuid]
     push!(record.component_names, (component_uuid, name))
 end
@@ -89,10 +89,10 @@ function remove_time_series!(
     end
 
     pop!(record.component_names, component_name)
-    @debug "Removed $component_name from $uuid."
+    @debug "Removed $component_name from $uuid." _group = LOG_GROUP_TIME_SERIES
 
     if isempty(record.component_names)
-        @debug "$uuid has no more references; delete it."
+        @debug "$uuid has no more references; delete it." _group = LOG_GROUP_TIME_SERIES
         pop!(storage.data, uuid)
     end
 end
