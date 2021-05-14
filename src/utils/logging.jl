@@ -17,11 +17,8 @@ const LOG_GROUPS = (
     LOG_GROUP_SYSTEM,
     LOG_GROUP_TIME_SERIES,
 )
-const SIIP_LOGGING_CONFIG_FILENAME = joinpath(
-    abspath(joinpath(dirname(Base.find_package("InfrastructureSystems")))),
-    "utils",
-    "logging_config.toml",
-)
+const SIIP_LOGGING_CONFIG_FILENAME =
+    joinpath(dirname(pathof(InfrastructureSystems)), "utils", "logging_config.toml")
 
 const LOG_LEVELS = Dict(
     "Debug" => Logging.Debug,
