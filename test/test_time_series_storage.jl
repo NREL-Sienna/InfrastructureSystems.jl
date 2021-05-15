@@ -53,6 +53,14 @@ function test_add_references(storage::IS.TimeSeriesStorage)
     IS.serialize_time_series!(storage, IS.get_uuid(component1), name, ts)
     IS.add_time_series_reference!(storage, IS.get_uuid(component2), name, ts_uuid)
 
+    # Adding duplicate references is not allowed.
+    @test_throws AssertionError IS.add_time_series_reference!(
+        storage,
+        IS.get_uuid(component2),
+        name,
+        ts_uuid,
+    )
+
     @test IS.get_num_time_series(storage) == 1
 
     IS.remove_time_series!(storage, ts_uuid, IS.get_uuid(component1), name)
