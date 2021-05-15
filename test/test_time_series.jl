@@ -1093,6 +1093,43 @@ end
     @test_throws ArgumentError IS.get_time_series(IS.SingleTimeSeries, component2, name2a)
 end
 
+@testset "Test copy time_series with transformed time series" begin
+    sys = create_system_data(time_series_in_memory = true)
+    components = collect(IS.get_components(IS.InfrastructureSystemsComponent, sys))
+    @test length(components) == 1
+    component = components[1]
+
+    resolution = Dates.Minute(5)
+    dates = create_dates("2020-01-01T00:00:00", resolution, "2020-01-01T23:00:00")
+    data = collect(1:length(dates))
+    ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
+    name = "val"
+    ts = IS.SingleTimeSeries(name, ta)
+    IS.add_time_series!(sys, component, ts)
+    horizon = 6
+    interval = Dates.Minute(10)
+    IS.transform_single_time_series!(
+        sys,
+        IS.DeterministicSingleTimeSeries,
+        horizon,
+        interval,
+    )
+
+    component2 = IS.TestComponent("component2", 6)
+    IS.add_component!(sys, component2)
+    IS.copy_time_series!(component2, component)
+
+    time_series = IS.get_time_series(IS.SingleTimeSeries, component2, name)
+    @test time_series isa IS.SingleTimeSeries
+    @test IS.get_initial_timestamp(time_series) == dates[1]
+    @test IS.get_name(time_series) == name
+
+    time_series = IS.get_time_series(IS.DeterministicSingleTimeSeries, component2, name)
+    @test time_series isa IS.DeterministicSingleTimeSeries
+    @test IS.get_initial_timestamp(time_series) == dates[1]
+    @test IS.get_name(time_series) == name
+end
+
 @testset "Test component-time_series being added to multiple systems" begin
     sys1 = IS.SystemData()
     sys2 = IS.SystemData()

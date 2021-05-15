@@ -266,6 +266,11 @@ function add_time_series_reference!(
     HDF5.h5open(storage.file_path, "r+") do file
         root = _get_root(storage, file)
         path = root[uuid][COMPONENT_REFERENCES_KEY]
+
+        # It's possible that this is overly restrictive, but as of now there is not a good
+        # reason for a caller to add a reference multiple times. This should be a bug.
+        @assert !haskey(HDF5.attributes(path), component_name) "There is already a reference to $component_name for time series $ts_uuid"
+
         HDF5.attributes(path)[component_name] = true
         @debug "Add reference to existing time series entry." _group = LOG_GROUP_TIME_SERIES uuid component_uuid name
     end

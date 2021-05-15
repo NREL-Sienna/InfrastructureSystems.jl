@@ -410,6 +410,21 @@ function copy_time_series!(
     name_mapping::Union{Nothing, Dict{String, String}} = nothing,
     scaling_factor_multiplier_mapping::Union{Nothing, Dict{String, String}} = nothing,
 )
+    storage = _get_time_series_storage(dst)
+    if isnothing(storage)
+        throw(
+            ArgumentError(
+                "Component does not have time series storage. " *
+                "It may not be attached to the system.",
+            ),
+        )
+    end
+
+    # There may be time series that share time series arrays as a result of
+    # transform_single_time_series! being called.
+    # Don't add these references to the storage more than once.
+    refs = Set{Tuple{String, Base.UUID}}()
+
     for ts_metadata in get_time_series_multiple(TimeSeriesMetadata, src)
         name = get_name(ts_metadata)
         new_name = name
@@ -436,12 +451,12 @@ function copy_time_series!(
         set_name!(new_time_series, new_name)
         set_scaling_factor_multiplier!(new_time_series, new_multiplier)
         add_time_series!(dst, new_time_series)
-        storage = _get_time_series_storage(dst)
-        if isnothing(storage)
-            throw(ArgumentError("component does not have time series storage"))
+        ts_uuid = get_time_series_uuid(new_time_series)
+        ref = (new_name, ts_uuid)
+        if !in(ref, refs)
+            add_time_series_reference!(storage, get_uuid(dst), new_name, ts_uuid)
+            push!(refs, ref)
         end
-        ts_uuid = get_time_series_uuid(ts_metadata)
-        add_time_series_reference!(storage, get_uuid(dst), new_name, ts_uuid)
     end
 end
 
