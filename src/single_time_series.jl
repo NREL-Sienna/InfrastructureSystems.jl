@@ -41,7 +41,7 @@ function _get_resolution(data::TimeSeries.TimeArray)
     if length(data) < 2
         throw(
             ConflictingInputsError(
-                "Resolution can't be infered from the data. Please select an appropiate constructor.",
+                "Resolution can't be inferred from the data. Please select an appropiate constructor.",
             ),
         )
     end
