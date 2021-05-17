@@ -20,6 +20,7 @@ mutable struct SingleTimeSeries <: StaticTimeSeries
     name::String
     "timestamp - scalingfactor"
     data::TimeSeries.TimeArray
+    resolution::Dates.Period
     "Applicable when the time series data are scaling factors. Called on the associated component to convert the values."
     scaling_factor_multiplier::Union{Nothing, Function}
     internal::InfrastructureSystemsInternal
@@ -33,7 +34,18 @@ function SingleTimeSeries(;
     internal = InfrastructureSystemsInternal(),
 )
     data = handle_normalization_factor(data, normalization_factor)
-    SingleTimeSeries(name, data, scaling_factor_multiplier, internal)
+    SingleTimeSeries(name, data, _get_resolution(data), scaling_factor_multiplier, internal)
+end
+
+function _get_resolution(data::TimeSeries.TimeArray)
+    if length(data) < 2
+        throw(
+            ConflictingInputsError(
+                "Resolution can't be inferred from the data. Please select an appropiate constructor.",
+            ),
+        )
+    end
+    return TimeSeries.timestamp(data)[2] - TimeSeries.timestamp(data)[1]
 end
 
 """
@@ -145,6 +157,7 @@ function SingleTimeSeries(ts_metadata::SingleTimeSeriesMetadata, data::TimeSerie
     return SingleTimeSeries(
         get_name(ts_metadata),
         data,
+        get_resolution(ts_metadata),
         get_scaling_factor_multiplier(ts_metadata),
         InfrastructureSystemsInternal(get_time_series_uuid(ts_metadata)),
     )
@@ -175,6 +188,8 @@ end
 get_name(value::SingleTimeSeries) = value.name
 """Get [`SingleTimeSeries`](@ref) `data`."""
 get_data(value::SingleTimeSeries) = value.data
+"""Get [`SingleTimeSeries`](@ref) `resolution`."""
+get_resolution(value::SingleTimeSeries) = value.resolution
 """Get [`SingleTimeSeries`](@ref) `scaling_factor_multiplier`."""
 get_scaling_factor_multiplier(value::SingleTimeSeries) = value.scaling_factor_multiplier
 """Get [`SingleTimeSeries`](@ref) `internal`."""
@@ -194,11 +209,6 @@ eltype_data(ts::SingleTimeSeries) = eltype(TimeSeries.values(ts.data))
 
 get_initial_timestamp(time_series::SingleTimeSeries) =
     TimeSeries.timestamp(get_data(time_series))[1]
-
-function get_resolution(time_series::SingleTimeSeries)
-    data = get_data(time_series)
-    return TimeSeries.timestamp(data)[2] - TimeSeries.timestamp(data)[1]
-end
 
 function get_array_for_hdf(ts::SingleTimeSeries)
     return transform_array_for_hdf(TimeSeries.values(ts.data))
