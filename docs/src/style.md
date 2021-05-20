@@ -114,6 +114,21 @@ Good:
 There are many examples in our codebase that use the form ```<cond> ? <statement> : <statement>```.
 These can be expressed much more clearly in an if/else statement.
 
+## Logging
+
+When adding a debug log statement consider whether it is appropriate to append
+`_group = <some-name>`. The packages use this Julia feature to suppress
+debug logging of entire groups at once.  InfrastructureSystems defines
+`LOG_GROUPS` with commonly-used group names.
+
+If you are developing a feature with functionality in a single file then you
+can let Julia use the default name (the base name of the file). However, if the
+feature spans files then you should use an existing group or add a new one.
+Group names should be of type `Symbol` and follow the `PascalCase` naming convention.
+
+Common group names should be defined in InfrastructureSystems but packages can
+add their own as needed.
+
 ## Unit Tests
 
 All code should be tested. The packages in SIIP have a minimum of 70% coverage to be merged
