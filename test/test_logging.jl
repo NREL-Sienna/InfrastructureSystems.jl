@@ -196,6 +196,7 @@ end
     try
         redirect_stdout(devnull) do
             IS.make_logging_config_file(filename)
+            IS.make_logging_config_file(filename, force = true)
         end
         @test IS.LoggingConfiguration(filename) isa IS.LoggingConfiguration
     finally

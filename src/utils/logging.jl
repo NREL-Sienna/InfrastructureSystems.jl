@@ -162,8 +162,8 @@ function LoggingConfiguration(config_filename)
     return LoggingConfiguration(; Dict(Symbol(k) => v for (k, v) in config)...)
 end
 
-function make_logging_config_file(filename = "logging_config.toml")
-    cp(SIIP_LOGGING_CONFIG_FILENAME, filename)
+function make_logging_config_file(filename = "logging_config.toml"; force = false)
+    cp(SIIP_LOGGING_CONFIG_FILENAME, filename, force = force)
     println("Created $filename")
 end
 
