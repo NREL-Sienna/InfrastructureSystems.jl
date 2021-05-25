@@ -106,7 +106,7 @@ function get_time_series_names(
     return Vector{String}(collect(names))
 end
 
-function has_time_series(
+function has_time_series_internal(
     container::TimeSeriesContainer,
     ::Type{T},
     name::AbstractString,

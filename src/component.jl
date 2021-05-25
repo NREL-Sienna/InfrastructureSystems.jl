@@ -29,10 +29,10 @@ function remove_time_series_metadata!(
     @debug "Removed time_series from $(get_name(component)):  $name." _group =
         LOG_GROUP_TIME_SERIES
     if T <: DeterministicMetadata &&
-       has_time_series(container, SingleTimeSeriesMetadata, name)
+       has_time_series_internal(container, SingleTimeSeriesMetadata, name)
         return false
     elseif T <: SingleTimeSeriesMetadata &&
-           has_time_series(container, DeterministicMetadata, name)
+           has_time_series_internal(container, DeterministicMetadata, name)
         return false
     end
 
@@ -372,6 +372,9 @@ function _make_time_array(component, time_series, start_time, len, ignore_scalin
     return ta .* multiplier(component)
 end
 
+"""
+Return true if the component has time series data.
+"""
 function has_time_series(component::InfrastructureSystemsComponent)
     container = get_time_series_container(component)
     return !isnothing(container) && !isempty(container)
@@ -384,7 +387,7 @@ function has_time_series(
 )
     container = get_time_series_container(component)
     container === nothing && return false
-    return has_time_series(container, type, name)
+    return has_time_series_internal(container, type, name)
 end
 
 """
