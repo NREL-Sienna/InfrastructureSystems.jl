@@ -7,10 +7,6 @@ system.
 
 Make every component a subtype of `InfrastructureSystems.jl`Component.
 
-## Interface requirements
-
-Implement a `get_name(c::MyComponent)::String` method for every struct.
-
 ## InfrastructureSystemsInternal
 
 Add this struct to every component struct.
@@ -42,6 +38,17 @@ returns the component UUID.
 - The extension dictionary is not created until the first time `get_ext` is
   called.
 
+## Interface requirements
+
+Implement these methods for every struct.
+
+- `get_internal(c::MyComponent)::InfrastructureSystemsInternal`
+- `get_name(c::MyComponent)::String`
+
+If the struct stores time series data:
+
+- `get_time_series_container(c::MyComponent)::TimeSeriesContainer`
+
 ## Component Container
 
 `InfrastructureSystems.jl` provides the `SystemData` struct to store a collection of
@@ -71,3 +78,21 @@ It is recommended but not required that you include this struct within your own
 - `get_components`
 - `get_components_by_name`
 - `add_time_series!`
+
+## Importing InfrastructureSystems methods
+
+It is recommended that you perform redirection on methods that act on
+`SystemData` so that those methods don't show up in `Julia` help or in
+`methods` output. For example:
+
+```julia
+get_time_series_resolution(sys::MySystem) = InfrastructureSystems.get_time_series_resolution(sys.data)
+```
+
+On the other hand, it is recommended that you import methods that act on an
+`InfrastructureSystemsComponent` into your package's namespace so that you
+don't have to duplicate docstrings and perform redirection. For example:
+
+```julia
+import InfrastructureSystems: get_time_series
+```
