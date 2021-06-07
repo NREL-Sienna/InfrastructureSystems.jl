@@ -1,12 +1,12 @@
 
-struct TestComponent <: InfrastructureSystemsComponent
+mutable struct TestComponent <: InfrastructureSystemsComponent
     name::String
     val::Int
     time_series_container::TimeSeriesContainer
     internal::InfrastructureSystemsInternal
 end
 
-struct AdditionalTestComponent <: InfrastructureSystemsComponent
+mutable struct AdditionalTestComponent <: InfrastructureSystemsComponent
     name::String
     val::Int
     time_series_container::TimeSeriesContainer

@@ -40,6 +40,21 @@
     @test_throws ArgumentError IS.remove_components!(IS.TestComponent, data)
 end
 
+@testset "Test change component name" begin
+    data = IS.SystemData()
+    name = "component1"
+    component = IS.TestComponent(name, 5)
+    IS.add_component!(data, component)
+
+    new_name = "component1-new"
+    IS.set_name!(data, component, new_name)
+    @test IS.get_name(component) == new_name
+    @test IS.get_component(typeof(component), data, new_name) === component
+
+    component2 = IS.TestComponent("unattached", 5)
+    @test_throws ArgumentError IS.set_name!(data, component2, new_name)
+end
+
 @testset "Test masked components" begin
     data = IS.SystemData()
     initial_time = Dates.DateTime("2020-09-01")
