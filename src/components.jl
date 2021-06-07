@@ -353,3 +353,29 @@ function is_attached(
     !in(T, keys(components.data)) && return false
     return get_name(component) in keys(components.data[T])
 end
+
+function set_name!(
+    components::Components,
+    component::T,
+    name,
+) where {T <: InfrastructureSystemsComponent}
+    if !is_attached(component, components)
+        throw(ArgumentError("$(summary(component)) is not attached to the system"))
+    end
+
+    old_name = get_name(component)
+    _component = components.data[T][old_name]
+
+    if component !== _component
+        throw(
+            ArgumentError(
+                "component does not match the stored component: $(summary(component))",
+            ),
+        )
+    end
+
+    pop!(components.data[T], old_name)
+    set_name!(component, name)
+    components.data[T][name] = component
+    @debug "Changed the name of component $(summary(component))" _group LOG_GROUP_SYSTEM
+end

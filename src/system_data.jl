@@ -684,3 +684,5 @@ check_component(data::SystemData, component) = check_component(data.components, 
 
 get_compression_settings(data::SystemData) =
     get_compression_settings(data.time_series_storage)
+
+set_name!(data::SystemData, component, name) = set_name!(data.components, component, name)
