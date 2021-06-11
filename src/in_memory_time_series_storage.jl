@@ -211,11 +211,11 @@ function compare_values(x::InMemoryTimeSeriesStorage, y::InMemoryTimeSeriesStora
             @error "component_names don't match" record_x.component_names record_y.component_names
             return false
         end
-        if TimeSeries.timestamp(record_x.ta.data) != TimeSeries.timestamp(record_y.ta.data)
+        if TimeSeries.timestamp(record_x.ts.data) != TimeSeries.timestamp(record_y.ts.data)
             @error "timestamps don't match" record_x record_y
             return false
         end
-        if TimeSeries.values(record_x.ta.data) != TimeSeries.values(record_y.ta.data)
+        if TimeSeries.values(record_x.ts.data) != TimeSeries.values(record_y.ts.data)
             @error "values don't match" record_x record_y
             return false
         end
