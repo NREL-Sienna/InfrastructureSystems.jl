@@ -1985,3 +1985,32 @@ end
         count = 3,
     )
 end
+
+@testset "Test copy_to_new_file! on HDF5" begin
+    sys = IS.SystemData(time_series_in_memory = false)
+    name = "Component1"
+    name = "val"
+    component = IS.TestComponent(name, 5)
+    IS.add_component!(sys, component)
+
+    initial_timestamp = Dates.DateTime("2020-01-01T00:00:00")
+    horizon = 24
+    resolution = Dates.Hour(1)
+    data_input = rand(horizon)
+    data = SortedDict(initial_timestamp => data_input)
+    time_series = IS.Deterministic(name = name, resolution = resolution, data = data)
+    fdata = IS.get_data(time_series)
+    @test initial_timestamp == first(keys((fdata)))
+    @test data_input == first(values((fdata)))
+
+    IS.add_time_series!(sys, component, time_series)
+    orig_file = IS.get_file_path(sys.time_series_storage)
+    IS.copy_to_new_file!(sys.time_series_storage)
+    @test orig_file != IS.get_file_path(sys.time_series_storage)
+
+    time_series2 = IS.get_time_series(IS.Deterministic, component, name)
+    @test time_series2 isa IS.Deterministic
+    fdata2 = IS.get_data(time_series2)
+    @test initial_timestamp == first(keys((fdata2)))
+    @test data_input == first(values((fdata2)))
+end
