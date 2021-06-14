@@ -99,6 +99,27 @@ function from_file(
     return storage
 end
 
+"""
+Copy the time series data to a new file. This should get called when the system is
+undergoing a deepcopy.
+
+# Arguments
+- `storage::Hdf5TimeSeriesStorage`: storage instance
+- `directory::String`: If nothing, use tempdir
+"""
+function copy_to_new_file!(storage::Hdf5TimeSeriesStorage, directory = nothing)
+    if directory === nothing
+        directory = tempdir()
+    end
+
+    # If we ever choose to keep the HDF5 file open then this will break.
+    # Any open buffers will need to be flushed.
+    filename, io = mktemp(directory)
+    close(io)
+    copy_file(get_file_path(storage), filename)
+    storage.file_path = filename
+end
+
 get_compression_settings(storage::Hdf5TimeSeriesStorage) = storage.compression
 
 get_file_path(storage::Hdf5TimeSeriesStorage) = storage.file_path
