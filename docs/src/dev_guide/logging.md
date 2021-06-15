@@ -72,7 +72,7 @@ group in two ways:
 
 ```julia
 logger = configure_logging(console_level = Logging.Debug)
-InfrastructureSystems.set_group_level!(logger, InfrastructureSystems.LOG_GROUP_TIME_SERIES)
+InfrastructureSystems.set_group_level!(logger, InfrastructureSystems.LOG_GROUP_TIME_SERIES, Logging.Info)
 
 # Or many at once.
 InfrastructureSystems.set_group_levels!(
