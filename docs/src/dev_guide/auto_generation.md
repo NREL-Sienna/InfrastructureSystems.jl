@@ -47,9 +47,10 @@ reimplementing a method defined in a different module.
 - `exclude_setter`: Do not generate a setter function for this field.
 - `internal_default`: Set to true for non-user-facing fields like
 InfrastructureSystemsInternal that have default values.
-- `needs_conversion`: Set to true if the getter function needs apply unit
+- `needs_conversion`: Set to true if the getter and setter function needs to apply unit
 conversion. The type must implement `get_value(::InfrastructureSystemsComponent,
-::Type) for this combination of component type and member type.`
+::Type) and set_value(::InfrastructureSystemsComponent,
+::Type) a for this combination of component type and member type.`
 - `null_value`: Value to indicate the value is null, such as 0.0 for floats.
 If all members in the struct define this field then a "demo" constructor will be
 generated. This allows you to enter `val = MyType(nothing)` in the REPL and

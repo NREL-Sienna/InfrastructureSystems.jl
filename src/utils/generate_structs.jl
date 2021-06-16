@@ -66,7 +66,7 @@ end
 
 {{#setters}}
 {{#create_docstring}}\"\"\"Set [`{{struct_name}}`](@ref) `{{name}}`.\"\"\"{{/create_docstring}}
-{{setter}}(value::{{struct_name}}, val) = value.{{name}} = val
+{{setter}}(value::{{struct_name}}, val) = value.{{name}} = {{#needs_conversion}}set_value(value, val){{/needs_conversion}}{{^needs_conversion}}val{{/needs_conversion}}
 {{/setters}}
 
 {{#custom_code}}
@@ -152,6 +152,7 @@ function generate_structs(directory, data::Vector; print_results = true)
                         "setter" => setter_name,
                         "data_type" => param["data_type"],
                         "create_docstring" => create_docstring,
+                        "needs_conversion" => get(param, "needs_conversion", false),
                     ),
                 )
             end
