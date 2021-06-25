@@ -89,6 +89,52 @@ end
           3
 end
 
+@testset "Test compare_values" begin
+    component1 = IS.TestComponent("a", 5)
+    component2 = IS.TestComponent("a", 5)
+    @test IS.compare_values(component1, component2)
+    @test(
+        @test_logs(
+            (:error, r"not match"),
+            match_mode = :any,
+            !IS.compare_values(component1, component2, compare_uuids = true)
+        )
+    )
+    component2.name = "b"
+    @test(
+        @test_logs(
+            (:error, r"not match"),
+            match_mode = :any,
+            !IS.compare_values(component1, component2, compare_uuids = false)
+        )
+    )
+
+    data1 = IS.SystemData()
+    IS.add_component!(data1, component1)
+    IS.add_component!(data1, component2)
+    @test(
+        @test_logs(
+            (:error, r"not match"),
+            match_mode = :any,
+            !IS.compare_values(
+                IS.get_component(IS.TestComponent, data1, "a"),
+                IS.get_component(IS.TestComponent, data1, "b"),
+            )
+        )
+    )
+
+    # Creating two systems in the same way should produce the same values aside from UUIDs.
+    data2 = IS.SystemData()
+    IS.add_component!(data2, IS.TestComponent("a", 5))
+    IS.add_component!(data2, IS.TestComponent("b", 5))
+
+    @test IS.compare_values(data1, data2)
+    @test IS.compare_values(
+        IS.get_component(IS.TestComponent, data1, "a"),
+        IS.get_component(IS.TestComponent, data2, "a"),
+    )
+end
+
 @testset "Test compression settings" begin
     none = IS.CompressionSettings(enabled = false)
     @test IS.get_compression_settings(IS.SystemData()) == none

@@ -292,22 +292,19 @@ function _validate_component(
     end
 end
 
-function compare_values(x::SystemData, y::SystemData)::Bool
+function compare_values(x::SystemData, y::SystemData; compare_uuids = false)
     match = true
     for name in fieldnames(SystemData)
-        if name == :components || name == :masked_components
-            # Not deserialized in IS.
-            continue
-        end
         val_x = getfield(x, name)
         val_y = getfield(y, name)
         if name == :time_series_storage && typeof(val_x) != typeof(val_y)
+            @warn "Cannot compare $(typeof(val_x)) and $(typeof(val_y))"
             # TODO 1.0: workaround for not being able to convert Hdf5TimeSeriesStorage to
             # InMemoryTimeSeriesStorage
             continue
         end
-        if !compare_values(val_x, val_y)
-            @error "SystemData field=$name does not match" getfield(x, name) getfield(
+        if !compare_values(val_x, val_y, compare_uuids = compare_uuids)
+            @error "SystemData field = $name does not match" getfield(x, name) getfield(
                 y,
                 name,
             )

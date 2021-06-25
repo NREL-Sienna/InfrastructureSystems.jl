@@ -95,9 +95,16 @@ function serialize(internal::InfrastructureSystemsInternal)
     return data
 end
 
-function compare_values(x::InfrastructureSystemsInternal, y::InfrastructureSystemsInternal)
+function compare_values(
+    x::InfrastructureSystemsInternal,
+    y::InfrastructureSystemsInternal;
+    compare_uuids = false,
+)
     match = true
     for name in fieldnames(InfrastructureSystemsInternal)
+        if name == :uuid && !compare_uuids
+            continue
+        end
         if name == :ext
             val1 = getfield(x, name)
             if val1 isa Dict && isempty(val1)
@@ -107,11 +114,15 @@ function compare_values(x::InfrastructureSystemsInternal, y::InfrastructureSyste
             if val2 isa Dict && isempty(val2)
                 val2 = nothing
             end
-            if !compare_values(val1, val2)
+            if !compare_values(val1, val2, compare_uuids = compare_uuids)
                 @error "ext does not match" val1 val2
                 match = false
             end
-        elseif !compare_values(getfield(x, name), getfield(y, name))
+        elseif !compare_values(
+            getfield(x, name),
+            getfield(y, name),
+            compare_uuids = compare_uuids,
+        )
             @error "InfrastructureSystemsInternal field=$name does not match"
             match = false
         end
