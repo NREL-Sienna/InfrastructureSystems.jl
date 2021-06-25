@@ -196,7 +196,11 @@ function convert_to_hdf5(storage::InMemoryTimeSeriesStorage, filename::AbstractS
     end
 end
 
-function compare_values(x::InMemoryTimeSeriesStorage, y::InMemoryTimeSeriesStorage)::Bool
+function compare_values(
+    x::InMemoryTimeSeriesStorage,
+    y::InMemoryTimeSeriesStorage;
+    compare_uuids = false,
+)
     keys_x = sort!(collect(keys(x.data)))
     keys_y = sort!(collect(keys(y.data)))
     if keys_x != keys_y

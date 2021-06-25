@@ -28,10 +28,6 @@ function validate_serialization(sys::IS.SystemData; time_series_read_only = fals
     v_file = splitext(basename(path))[1] * "_" * IS.VALIDATION_DESCRIPTOR_FILE
     mv(v_file, joinpath(test_dir, v_file))
 
-    ts_file = open(path) do file
-        JSON3.read(file, Dict)["time_series_storage_file"]
-    end
-
     data = open(path) do io
         JSON3.read(io, Dict)
     end
@@ -44,7 +40,14 @@ function validate_serialization(sys::IS.SystemData; time_series_read_only = fals
             data;
             time_series_read_only = time_series_read_only,
         )
-        return sys2, IS.compare_values(sys, sys2)
+        # Deserialization of components should be directed by the parent of SystemData.
+        # There isn't one in IS, so perform the deserialization in the test code.
+        for component in data["components"]
+            type = IS.get_type_from_serialization_data(component)
+            comp = IS.deserialize(type, component)
+            IS.add_component!(sys2, comp, allow_existing_time_series = true)
+        end
+        return sys2, IS.compare_values(sys, sys2, compare_uuids = true)
     finally
         cd(orig)
     end

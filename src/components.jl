@@ -377,5 +377,21 @@ function set_name!(
     pop!(components.data[T], old_name)
     set_name!(component, name)
     components.data[T][name] = component
-    @debug "Changed the name of component $(summary(component))" _group LOG_GROUP_SYSTEM
+    @debug "Changed the name of component $(summary(component))" _group = LOG_GROUP_SYSTEM
+end
+
+function compare_values(x::Components, y::Components; compare_uuids = false)
+    match = true
+    for name in fieldnames(Components)
+        # This gets validated in SystemData.
+        name == :time_series_storage && continue
+        val_x = getfield(x, name)
+        val_y = getfield(y, name)
+        if !compare_values(val_x, val_y, compare_uuids = compare_uuids)
+            @error "Components field = $name does not match" val_x val_y
+            match = false
+        end
+    end
+
+    return match
 end

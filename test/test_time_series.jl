@@ -432,7 +432,7 @@ end
             IS.DeterministicSingleTimeSeries,
             horizon,
             interval,
-        ) == nothing
+        ) === nothing
         # Bad horizon
         @test_throws IS.ConflictingInputsError IS.transform_single_time_series!(
             sys,
@@ -450,7 +450,7 @@ end
             IS.DeterministicSingleTimeSeries,
             12,
             interval,
-        ) == nothing
+        ) === nothing
 
         # Good but different interval
         @test IS.transform_single_time_series!(
@@ -458,7 +458,7 @@ end
             IS.DeterministicSingleTimeSeries,
             2,
             Dates.Minute(10),
-        ) == nothing
+        ) === nothing
 
         # Bad interval
         @test_throws IS.ConflictingInputsError IS.transform_single_time_series!(

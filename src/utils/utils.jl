@@ -102,21 +102,14 @@ function validate_exported_names(mod::Module)
 end
 
 """
-Recursively compares struct values by performing == on each field in the struct.
-When performing == on values of immutable structs Julia will perform === on
-each field.  This will return false if any field is mutable even if the
-contents are the same.  So, comparison of any InfrastructureSystems type with an array
-will fail.
+Recursively compares struct values. Prints all mismatched values to stdout.
 
-This is an unresolved Julia issue. Refer to
-https://github.com/JuliaLang/julia/issues/4648.
-
-An option is to overload == for all subtypes of PowerSystemType. That may not be
-appropriate in all cases. Until the Julia developers decide on a solution, this
-function is provided for convenience for specific comparisons.
-
+# Arguments
+- `x::T`: First value
+- `y::T`: Second value
+- `compare_uuids::Bool = false`: Compare any UUID in the object or composed objects.
 """
-function compare_values(x::T, y::T)::Bool where {T}
+function compare_values(x::T, y::T; compare_uuids = false) where {T}
     match = true
     fields = fieldnames(T)
     if isempty(fields)
@@ -130,20 +123,19 @@ function compare_values(x::T, y::T)::Bool where {T}
             val1 = getfield(x, field_name)
             val2 = getfield(y, field_name)
             if !isempty(fieldnames(typeof(val1)))
-                if !compare_values(val1, val2)
+                if !compare_values(val1, val2, compare_uuids = compare_uuids)
                     @error "values do not match" T field_name val1 val2
                     match = false
-                    break
                 end
             elseif val1 isa AbstractArray
-                if !compare_values(val1, val2)
+                if !compare_values(val1, val2, compare_uuids = compare_uuids)
+                    @error "values do not match" T field_name val1 val2
                     match = false
                 end
             else
                 if val1 != val2
                     @error "values do not match" T field_name val1 val2
                     match = false
-                    break
                 end
             end
         end
@@ -152,23 +144,24 @@ function compare_values(x::T, y::T)::Bool where {T}
     return match
 end
 
-function compare_values(x::Vector{T}, y::Vector{T})::Bool where {T}
+function compare_values(x::Vector{T}, y::Vector{T}; compare_uuids = false) where {T}
     if length(x) != length(y)
         @error "lengths do not match" T length(x) length(y)
         return false
     end
 
+    match = true
     for i in range(1, length = length(x))
-        if !compare_values(x[i], y[i])
+        if !compare_values(x[i], y[i], compare_uuids = compare_uuids)
             @error "values do not match" typeof(x[i]) i x[i] y[i]
-            return false
+            match = false
         end
     end
 
-    return true
+    return match
 end
 
-function compare_values(x::Dict, y::Dict)::Bool
+function compare_values(x::Dict, y::Dict; compare_uuids = false)
     keys_x = Set(keys(x))
     keys_y = Set(keys(y))
     if keys_x != keys_y
@@ -176,21 +169,19 @@ function compare_values(x::Dict, y::Dict)::Bool
         return false
     end
 
+    match = true
     for key in keys_x
-        if !compare_values(x[key], y[key])
+        if !compare_values(x[key], y[key], compare_uuids = compare_uuids)
             @error "values do not match" typeof(x[key]) key x[key] y[key]
-            return false
+            match = false
         end
     end
 
-    return true
+    return match
 end
 
-function compare_values(x::T, y::U)::Bool where {T, U}
-    # This is a catch-all for where where the types may not be identical but are close
-    # enough.
-    return x == y
-end
+compare_values(::Type{T}, ::Type{T}; compare_uuids = false) where {T} = true
+compare_values(::Type{T}, ::Type{U}; compare_uuids = false) where {T, U} = false
 
 # Copied from https://discourse.julialang.org/t/encapsulating-enum-access-via-dot-syntax/11785/10
 """
