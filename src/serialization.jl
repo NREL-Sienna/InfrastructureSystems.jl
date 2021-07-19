@@ -201,6 +201,10 @@ function deserialize(
     return isnothing(data) ? nothing : deserialize(T.b, data)
 end
 
+function deserialize(::Type{T}, data::Array) where {T <: Vector{<:Tuple}}
+    return [tuple(x...) for x in data]
+end
+
 # Enables JSON serialization of Dates.Period.
 # The default implementation fails because the field is defined as abstract.
 # Encode the type when serializing so that the correct value can be deserialized.
