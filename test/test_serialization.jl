@@ -23,8 +23,13 @@ function validate_serialization(sys::IS.SystemData; time_series_read_only = fals
     test_dir = mktempdir()
     path = mv(filename, joinpath(test_dir, filename))
 
+    @test haskey(data, "time_series_storage_file") == !isempty(sys.time_series_storage)
     t_file = splitext(basename(path))[1] * "_" * IS.TIME_SERIES_STORAGE_FILE
-    mv(t_file, joinpath(test_dir, t_file))
+    if haskey(data, "time_series_storage_file")
+        mv(t_file, joinpath(test_dir, t_file))
+    else
+        @test !isfile(t_file)
+    end
     v_file = splitext(basename(path))[1] * "_" * IS.VALIDATION_DESCRIPTOR_FILE
     mv(v_file, joinpath(test_dir, v_file))
 
@@ -77,6 +82,12 @@ end
 @testset "Test JSON serialization of with mutable time series" begin
     sys = create_system_data_shared_time_series(; time_series_in_memory = false)
     sys2, result = validate_serialization(sys; time_series_read_only = false)
+    @test result
+end
+
+@testset "Test JSON serialization with no time series" begin
+    sys = create_system_data(with_time_series = false)
+    sys2, result = validate_serialization(sys)
     @test result
 end
 

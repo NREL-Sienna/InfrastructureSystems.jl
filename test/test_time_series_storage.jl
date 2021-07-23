@@ -203,3 +203,16 @@ end
         end
     end
 end
+
+@testset "Test isempty" begin
+    for in_memory in (true, false)
+        storage = IS.make_time_series_storage(in_memory = in_memory)
+        @test isempty(storage)
+        name = "component1"
+        name = "val"
+        component = IS.TestComponent(name, 5)
+        ts = IS.SingleTimeSeries(data = create_time_array(), name = "test")
+        IS.serialize_time_series!(storage, IS.get_uuid(component), name, ts)
+        @test !isempty(storage)
+    end
+end
