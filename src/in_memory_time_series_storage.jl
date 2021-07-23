@@ -37,6 +37,8 @@ function InMemoryTimeSeriesStorage(hdf5_storage::Hdf5TimeSeriesStorage)
     return storage
 end
 
+Base.isempty(storage::InMemoryTimeSeriesStorage) = isempty(storage.data)
+
 check_read_only(storage::InMemoryTimeSeriesStorage) = nothing
 
 get_compression_settings(storage::InMemoryTimeSeriesStorage) =

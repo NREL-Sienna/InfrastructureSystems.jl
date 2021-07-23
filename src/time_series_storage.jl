@@ -12,6 +12,7 @@ All subtypes must implement:
 - is_read_only
 - remove_time_series!
 - serialize_time_series!
+- Base.isempty
 """
 abstract type TimeSeriesStorage end
 

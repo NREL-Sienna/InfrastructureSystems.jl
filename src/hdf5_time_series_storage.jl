@@ -99,6 +99,13 @@ function from_file(
     return storage
 end
 
+function Base.isempty(storage::Hdf5TimeSeriesStorage)
+    return HDF5.h5open(storage.file_path, "r+") do file
+        root = _get_root(storage, file)
+        return isempty(keys(root))
+    end
+end
+
 """
 Copy the time series data to a new file. This should get called when the system is
 undergoing a deepcopy.

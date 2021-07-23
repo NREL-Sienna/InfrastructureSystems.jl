@@ -534,11 +534,18 @@ function serialize(data::SystemData)
     base = pop!(ext, "basename")
     isempty(ext) && clear_ext!(data.internal)
 
-    time_series_base_name = base * "_" * TIME_SERIES_STORAGE_FILE
-    time_series_storage_file = joinpath(directory, time_series_base_name)
-    serialize(data.time_series_storage, time_series_storage_file)
-    json_data["time_series_storage_file"] = time_series_base_name
-    json_data["time_series_storage_type"] = string(typeof(data.time_series_storage))
+    if isempty(data.time_series_storage)
+        json_data["time_series_compression_enabled"] =
+            get_compression_settings(data.time_series_storage).enabled
+        json_data["time_series_in_memory"] =
+            data.time_series_storage isa InMemoryTimeSeriesStorage
+    else
+        time_series_base_name = base * "_" * TIME_SERIES_STORAGE_FILE
+        time_series_storage_file = joinpath(directory, time_series_base_name)
+        serialize(data.time_series_storage, time_series_storage_file)
+        json_data["time_series_storage_file"] = time_series_base_name
+        json_data["time_series_storage_type"] = string(typeof(data.time_series_storage))
+    end
 
     descriptor_base_name = base * "_" * VALIDATION_DESCRIPTOR_FILE
     descriptor_file = joinpath(directory, descriptor_base_name)
@@ -561,9 +568,6 @@ function deserialize(
     @debug "deserialize" raw _group = LOG_GROUP_SERIALIZATION
     time_series_params = deserialize(TimeSeriesParameters, raw["time_series_params"])
     # The code calling this function must have changed to this directory.
-    if !isfile(raw["time_series_storage_file"])
-        error("time series file $(raw["time_series_storage_file"]) does not exist")
-    end
     if !isfile(raw["validation_descriptor_file"])
         error(
             "validation descriptor file $(raw["validation_descriptor_file"]) does not exist",
@@ -571,18 +575,29 @@ function deserialize(
     end
     validation_descriptors = read_validation_descriptor(raw["validation_descriptor_file"])
 
-    # TODO 1.0: need to address this limitation
-    if strip_module_name(raw["time_series_storage_type"]) == "InMemoryTimeSeriesStorage"
-        @info "Deserializing with InMemoryTimeSeriesStorage is currently not supported. Using HDF"
-        #hdf5_storage = Hdf5TimeSeriesStorage(raw["time_series_storage_file"], true)
-        #time_series_storage = InMemoryTimeSeriesStorage(hdf5_storage)
+    if haskey(raw, "time_series_storage_file")
+        if !isfile(raw["time_series_storage_file"])
+            error("time series file $(raw["time_series_storage_file"]) does not exist")
+        end
+        # TODO: need to address this limitation
+        if strip_module_name(raw["time_series_storage_type"]) == "InMemoryTimeSeriesStorage"
+            @info "Deserializing with InMemoryTimeSeriesStorage is currently not supported. Using HDF"
+            #hdf5_storage = Hdf5TimeSeriesStorage(raw["time_series_storage_file"], true)
+            #time_series_storage = InMemoryTimeSeriesStorage(hdf5_storage)
+        end
+        time_series_storage = from_file(
+            Hdf5TimeSeriesStorage,
+            raw["time_series_storage_file"];
+            read_only = time_series_read_only,
+            directory = time_series_directory,
+        )
+    else
+        time_series_storage = make_time_series_storage(
+            in_memory = raw["time_series_compression_enabled"],
+            compression = CompressionSettings(enabled = raw["time_series_in_memory"]),
+            directory = time_series_directory,
+        )
     end
-    time_series_storage = from_file(
-        Hdf5TimeSeriesStorage,
-        raw["time_series_storage_file"];
-        read_only = time_series_read_only,
-        directory = time_series_directory,
-    )
 
     internal = deserialize(InfrastructureSystemsInternal, raw["internal"])
     @debug "deserialize" _group = LOG_GROUP_SERIALIZATION validation_descriptors time_series_storage internal
