@@ -2014,3 +2014,15 @@ end
     @test initial_timestamp == first(keys((fdata2)))
     @test data_input == first(values((fdata2)))
 end
+
+@testset "Test custom time series directory via env" begin
+    @assert !haskey(ENV, IS.TIME_SERIES_DIRECTORY_ENV_VAR)
+    path = mkpath("tmp-ts-dir")
+    ENV[IS.TIME_SERIES_DIRECTORY_ENV_VAR] = path
+    try
+        sys = IS.SystemData()
+        @test splitpath(sys.time_series_storage.file_path)[1] == path
+    finally
+        pop!(ENV, IS.TIME_SERIES_DIRECTORY_ENV_VAR)
+    end
+end
