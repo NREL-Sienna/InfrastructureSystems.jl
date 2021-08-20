@@ -6,6 +6,7 @@ import CSV
 import DataFrames
 import Dates
 import JSON3
+import Logging
 import Random
 import Pkg
 import PrettyTables

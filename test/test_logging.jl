@@ -1,5 +1,10 @@
 
-import InfrastructureSystems: increment_count
+import InfrastructureSystems:
+    increment_count!,
+    LogEventSuppressionStats,
+    LogSuppressionTracker,
+    should_suppress!,
+    get_log_events
 
 TEST_MSG = "test log message"
 
@@ -16,7 +21,7 @@ TEST_MSG = "test log message"
 
     for i in range(1, length = 2)
         for event in events
-            increment_count(tracker, event, false)
+            increment_count!(tracker, event, false)
         end
     end
 
@@ -33,11 +38,6 @@ TEST_MSG = "test log message"
     for level in ("Error", "Warn", "Info")
         @test occursin("1 $level event", text)
     end
-
-    # Test again with suppression.
-    increment_count(tracker, events[2], true)
-    text = IS.report_log_summary(tracker)
-    @test occursin("suppressed=1", text)
 end
 
 @testset "Test MultiLogger with no event tracking" begin
@@ -202,4 +202,103 @@ end
     finally
         isfile(filename) && rm(filename)
     end
+end
+
+@testset "Test log suppression for single event" begin
+    event_id = :my_event
+    cur_time = time()
+    period = 10
+    maxlog = 3
+    stats = LogEventSuppressionStats(event_id, cur_time, period)
+    @test !stats.is_tracking_active
+    @test stats.period == period
+
+    for i in 1:maxlog
+        suppress, num = should_suppress!(stats, cur_time, maxlog)
+        @test !suppress
+        @test num == 0
+        @test stats.is_tracking_active
+    end
+
+    suppress, num = should_suppress!(stats, cur_time, maxlog)
+    @test suppress
+    @test num == 1
+    @test stats.is_suppression_enabled
+    suppress, num = should_suppress!(stats, cur_time, maxlog)
+    @test suppress
+    @test num == 2
+
+    # Fake a jump in time.
+    stats.tracking_start_time -= period
+    suppress, num = should_suppress!(stats, cur_time, maxlog)
+    @test !suppress
+    @test num == 2
+    @test !stats.is_suppression_enabled
+    @test stats.count == 1
+    @test stats.num_suppressed == 0
+
+    for i in 1:(maxlog - 1)
+        suppress, num = should_suppress!(stats, cur_time, maxlog)
+        @test !suppress
+        @test num == 0
+        @test stats.is_tracking_active
+    end
+
+    suppress, num = should_suppress!(stats, cur_time, maxlog)
+    @test suppress
+    @test num == 1
+end
+
+@testset "Test log suppression" begin
+    levels = (Logging.Info, Logging.Warn, Logging.Error)
+    tracker = IS.LogEventTracker(levels)
+    logger = IS.MultiLogger(
+        [ConsoleLogger(devnull, Logging.Info), SimpleLogger(devnull, Logging.Debug)],
+        tracker,
+    )
+
+    function run()
+        @info TEST_MSG maxlog = 5 _suppression_period = 10
+    end
+
+    with_logger(logger) do
+        for _ in 1:15
+            run()
+        end
+    end
+
+    log_events = values(get_log_events(tracker, Logging.Info))
+    @test length(log_events) == 1
+    log_event = first(log_events)
+    @test log_event.count == 15
+    @test log_event.suppressed == 10
+end
+
+@testset "Test log suppression logging of num_suppressed" begin
+    io = IOBuffer()
+    logger = IS.MultiLogger([ConsoleLogger(io, Logging.Info)])
+
+    function run()
+        @info TEST_MSG maxlog = 1 _suppression_period = 5
+    end
+
+    with_logger(logger) do
+        # Not suppressed
+        run()
+        # Suppressed
+        run()
+        # Fake a jump in time.
+        for stats in values(logger.suppression_tracker.event_stats)
+            stats.tracking_start_time -= 10
+        end
+        # Not suppressed
+        run()
+    end
+
+    count_occurrences(str, substr) = length(split(str, substr)) - 1
+
+    output = String(take!(io))
+    @test count_occurrences(output, TEST_MSG) == 2
+    @test count_occurrences(output, "num_suppressed") == 1
+    @test count_occurrences(output, "num_suppressed = 1") == 1
 end

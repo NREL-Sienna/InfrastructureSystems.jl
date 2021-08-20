@@ -1,6 +1,3 @@
-
-import Logging
-
 # These use PascalCase to avoid clashing with source filenames.
 const LOG_GROUP_PARSING = :Parsing
 const LOG_GROUP_RECORDER = :Recorder
@@ -27,7 +24,9 @@ const LOG_LEVELS = Dict(
     "Error" => Logging.Error,
 )
 
-"""Contains information describing a log event."""
+"""
+Contains information describing a log event.
+"""
 mutable struct LogEvent
     file::String
     line::Int
@@ -54,8 +53,11 @@ struct LogEventTracker
     # that method, which results in a warning message from Julia.
     LogEventTracker(events::Dict{Logging.LogLevel, Dict{Symbol, LogEvent}}) = new(events)
 end
-"""Returns a summary of log event counts by level."""
-function report_log_summary(tracker::LogEventTracker)::String
+
+"""
+Returns a summary of log event counts by level.
+"""
+function report_log_summary(tracker::LogEventTracker)
     text = "\nLog message summary:\n"
     # Order by criticality.
     for level in sort!(collect(keys(tracker.events)), rev = true)
@@ -74,7 +76,9 @@ function report_log_summary(tracker::LogEventTracker)::String
     return text
 end
 
-"""Returns an iterable of log events for a level."""
+"""
+Returns an iterable of log events for a level.
+"""
 function get_log_events(tracker::LogEventTracker, level::Logging.LogLevel)
     if !_is_level_valid(tracker, level)
         return []
@@ -83,8 +87,10 @@ function get_log_events(tracker::LogEventTracker, level::Logging.LogLevel)
     return values(tracker.events[level])
 end
 
-"""Increments the count of a log event."""
-function increment_count(tracker::LogEventTracker, event::LogEvent, suppressed::Bool)
+"""
+Increments the count of a log event.
+"""
+function increment_count!(tracker::LogEventTracker, event::LogEvent, suppressed::Bool)
     if _is_level_valid(tracker, event.level)
         if haskey(tracker.events[event.level], event.id)
             tracker.events[event.level][event.id].count += 1
@@ -183,6 +189,15 @@ end
 """
 Creates console and file loggers per caller specification and returns a MultiLogger.
 
+Suppress noisy events by specifying per-event values of `maxlog = X` and 
+`_suppression_period = Y` where X is the max number of events that can occur in Y
+seconds. After the period ends, messages will no longer be suppressed. Note that
+if you don't specify `_suppression_period` then `maxlog` applies for the for the
+duration of your process (standard Julia logging behavior).
+    
+**Note:** Use of log message suppression and the LogEventTracker are not thread-safe.
+Please contact the package developers if you need this functionality.
+
 **Note:** If logging to a file users must call Base.close() on the returned MultiLogger to
 ensure that all events get flushed.
 
@@ -200,6 +215,8 @@ ensure that all events get flushed.
 # Example
 ```Julia
 logger = configure_logging(filename="mylog.txt")
+@info "hello world"
+@info "hello world" maxlog = 5 _suppression_period = 10
 ```
 """
 function configure_logging(;
@@ -248,7 +265,12 @@ function configure_logging(config::LoggingConfiguration)
         push!(loggers, file_logger)
     end
 
-    logger = MultiLogger(loggers, config.tracker, Dict{Symbol, Base.LogLevel}())
+    logger = MultiLogger(
+        loggers,
+        config.tracker,
+        Dict{Symbol, Base.LogLevel}(),
+        LogSuppressionTracker(),
+    )
     if config.set_global
         Logging.global_logger(logger)
     end
@@ -328,6 +350,90 @@ function open_file_logger(
     end
 end
 
+mutable struct LogEventSuppressionStats
+    "The event being tracked"
+    event_id::Symbol
+    "The time we started tracking an event."
+    tracking_start_time::Float64
+    "Number of times an event has occurred since tracking started."
+    count::Int
+    "Length in seconds of one tracking period"
+    period::Int
+    "Number of times an event has been suppressed since tracking started."
+    num_suppressed::Int
+    "Whether tracking is active"
+    is_tracking_active::Bool
+    "Whether the event is being suppressed"
+    is_suppression_enabled::Bool
+end
+
+function LogEventSuppressionStats(event_id::Symbol, cur_time::Float64, period::Int)
+    return LogEventSuppressionStats(event_id, cur_time, 0, period, 0, false, false)
+end
+
+function start_tracking!(stats::LogEventSuppressionStats, cur_time::Float64)
+    stats.is_tracking_active = true
+    stats.tracking_start_time = cur_time
+    stats.count = 1
+    stats.is_suppression_enabled = false
+    stats.num_suppressed = 0
+    return
+end
+
+function increment!(stats::LogEventSuppressionStats, maxlog::Int)
+    @assert stats.is_tracking_active
+    stats.count += 1
+    if stats.count > maxlog
+        if !stats.is_suppression_enabled
+            stats.is_suppression_enabled = true
+        end
+        stats.num_suppressed += 1
+    end
+    return
+end
+
+function should_suppress!(stats::LogEventSuppressionStats, cur_time::Float64, maxlog::Int)
+    diff = cur_time - stats.tracking_start_time
+    num_suppressed = 0
+    if !stats.is_tracking_active
+        start_tracking!(stats, cur_time)
+    elseif cur_time - stats.tracking_start_time < stats.period
+        increment!(stats, maxlog)
+        num_suppressed = stats.num_suppressed
+    else
+        # The suppression period has ended.
+        num_suppressed = stats.num_suppressed
+        start_tracking!(stats, cur_time)
+    end
+
+    return stats.is_suppression_enabled, num_suppressed
+end
+
+struct LogSuppressionTracker
+    event_stats::Dict{Symbol, LogEventSuppressionStats}
+end
+
+function LogSuppressionTracker()
+    return LogSuppressionTracker(Dict{Symbol, LogEventSuppressionStats}())
+end
+
+should_suppress!(tracker::LogSuppressionTracker, ::Any, ::Any, ::Nothing) = false, 0
+
+function should_suppress!(
+    tracker::LogSuppressionTracker,
+    event_id::Symbol,
+    maxlog::Int,
+    suppression_period::Int,
+)
+    cur_time = time()
+    stats = get!(
+        tracker.event_stats,
+        event_id,
+        LogEventSuppressionStats(event_id, cur_time, suppression_period),
+    )
+    return should_suppress!(stats, cur_time, maxlog)
+end
+
 """
 Redirects log events to multiple loggers. The primary use case is to allow logging to
 both a file and the console. Secondarily, it can track the counts of all log messages.
@@ -341,6 +447,7 @@ mutable struct MultiLogger <: Logging.AbstractLogger
     loggers::Array{Logging.AbstractLogger}
     tracker::Union{LogEventTracker, Nothing}
     group_levels::Dict{Symbol, Base.LogLevel}
+    suppression_tracker::LogSuppressionTracker
 end
 
 """
@@ -352,14 +459,24 @@ MultiLogger([ConsoleLogger(stderr), SimpleLogger(stream)])
 ```
 """
 function MultiLogger(loggers::Array{T}) where {T <: Logging.AbstractLogger}
-    return MultiLogger(loggers, nothing, Dict{Symbol, Base.LogLevel}())
+    return MultiLogger(
+        loggers,
+        nothing,
+        Dict{Symbol, Base.LogLevel}(),
+        LogSuppressionTracker(),
+    )
 end
 
 function MultiLogger(
     loggers::Array{T},
     tracker::LogEventTracker,
 ) where {T <: Logging.AbstractLogger}
-    return MultiLogger(loggers, tracker, Dict{Symbol, Base.LogLevel}())
+    return MultiLogger(
+        loggers,
+        tracker,
+        Dict{Symbol, Base.LogLevel}(),
+        LogSuppressionTracker(),
+    )
 end
 
 function Logging.shouldlog(logger::MultiLogger, level, _module, group, id)
@@ -382,26 +499,34 @@ function Logging.handle_message(
     file,
     line;
     maxlog = nothing,
+    _suppression_period = nothing,
     kwargs...,
 )
-    suppressed = false
-    for _logger in logger.loggers
-        if level >= Logging.min_enabled_level(_logger)
-            if Logging.shouldlog(_logger, level, _module, group, id)
-                Logging.handle_message(
-                    _logger,
-                    level,
-                    message,
-                    _module,
-                    group,
-                    id,
-                    file,
-                    line;
-                    maxlog = maxlog,
-                    kwargs...,
-                )
-            else
-                suppressed = true
+    suppressed, num_suppressed =
+        should_suppress!(logger.suppression_tracker, id, maxlog, _suppression_period)
+    if !suppressed
+        # Takeover maxlog if suppression_period is set.
+        maxlog = _suppression_period === nothing ? maxlog : nothing
+        for _logger in logger.loggers
+            if level >= Logging.min_enabled_level(_logger)
+                if Logging.shouldlog(_logger, level, _module, group, id)
+                    if num_suppressed > 0
+                        kwargs =
+                            merge(Dict(kwargs), Dict(:num_suppressed => num_suppressed))
+                    end
+                    Logging.handle_message(
+                        _logger,
+                        level,
+                        message,
+                        _module,
+                        group,
+                        id,
+                        file,
+                        line;
+                        maxlog = maxlog,
+                        kwargs...,
+                    )
+                end
             end
         end
     end
@@ -409,7 +534,7 @@ function Logging.handle_message(
     if !isnothing(logger.tracker)
         id = isa(id, Symbol) ? id : :empty
         event = LogEvent(file, line, id, string(message), level)
-        increment_count(logger.tracker, event, suppressed)
+        increment_count!(logger.tracker, event, suppressed)
     end
 
     return
@@ -456,7 +581,9 @@ Return the minimum logging levels for groups that have been stored.
 """
 get_group_levels(logger::MultiLogger) = deepcopy(logger.group_levels)
 
-"""Returns a summary of log event counts by level."""
+"""
+Returns a summary of log event counts by level.
+"""
 function report_log_summary(logger::MultiLogger)
     if isnothing(logger.tracker)
         error("log event tracking is not enabled")
@@ -465,12 +592,16 @@ function report_log_summary(logger::MultiLogger)
     return report_log_summary(logger.tracker)
 end
 
-"""Flush any file streams."""
+"""
+Flush any file streams.
+"""
 function Base.flush(logger::MultiLogger)
     _handle_log_func(logger, Base.flush)
 end
 
-"""Ensures that any file streams are flushed and closed."""
+"""
+Ensures that any file streams are flushed and closed.
+"""
 function Base.close(logger::MultiLogger)
     _handle_log_func(logger, Base.close)
 end

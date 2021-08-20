@@ -11,7 +11,7 @@ during `build()` and `execute()`.
 
 This document describes logging facilities available in the modules that use `InfrastructureSystems.jl`. The examples assume the following imports:
 
-```Julia
+```julia
 import Logging
 import InfrastructureSystems: configure_logging, open_file_logger, MultiLogger, LogEventTracker, make_logging_config_file
 ```
@@ -30,7 +30,7 @@ preferences (console and/or file, levels, etc.).
 
 **Example**: Global logger configuration
 
-```Julia
+```julia
 logger = configure_logging(; filename="log.txt")
 @info "hello world"
 flush(logger)
@@ -109,7 +109,7 @@ end
 **Note:** If someone may execute the code in the REPL then wrap that code in a
 try/finally block and reset the global logger upon exit.
 
-```Julia
+```julia
 function run_tests()
     console_logger = ConsoleLogger(stderr, Logging.Error)
 
@@ -135,22 +135,38 @@ end
 ### Suppress frequent messages
 
 The standard Logging module in Julia provides a method to suppress messages.
-Tag the log message with maxlog=X.
+Tag the log message with maxlog = X.
 
-```Julia
+```julia
 for i in range(1, length=100)
-    @error "something happened" i maxlog=2
+    @error "something happened" i maxlog = 2
 end
 ```
 
 Only 2 messages will get logged.
+
+The InfrastructureSystems logger provides a customization to make `maxlog`
+apply to a period of time instead of the duration of the Julia process.
+
+In this example the suppression will timeout and two messages will get logged
+every five seconds. It will log how many log messages were suppressed on the
+first message that gets logged after a timeout.
+
+```julia
+for i in range(1, length=100)
+    @error "something happened" i maxlog = 2 _suppression_period = 5
+    sleep(0.5)
+end
+```
+
+
 
 ### Get a summary of log messages
 
 By default a `MultiLogger` creates a `LogEventTracker` that keeps counts of all
 messages. Call `report_log_summary` after execution.
 
-```Julia
+```julia
 logger = configure_logging(; filename="log.txt")
 @info "hello world"
 
@@ -161,7 +177,7 @@ close(logger)
 
 The output of the logger can ve explored in the REPL
 
-```Julia
+```julia
 julia> for i in range(1, length=100)
            @info "hello" maxlog=2
            @warn "beware" maxlog=2
