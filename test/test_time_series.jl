@@ -2014,3 +2014,46 @@ end
     @test initial_timestamp == first(keys((fdata2)))
     @test data_input == first(values((fdata2)))
 end
+
+@testset "Test assign_new_uuid! for component with time series" begin
+    for in_memory in (true, false)
+        sys = IS.SystemData(time_series_in_memory = in_memory)
+        name = "Component1"
+        component = IS.TestComponent(name, 5)
+        IS.add_component!(sys, component)
+
+        initial_time = Dates.DateTime("2020-09-01")
+        resolution = Dates.Hour(1)
+        name = "test"
+
+        data = TimeSeries.TimeArray(
+            range(initial_time; length = 24, step = resolution),
+            ones(24),
+        )
+        data = IS.SingleTimeSeries(data = data, name = name)
+        IS.add_time_series!(sys, component, data)
+        @test IS.get_time_series(IS.SingleTimeSeries, component, name) isa
+              IS.SingleTimeSeries
+
+        old_uuid = IS.get_uuid(component)
+        IS.assign_new_uuid!(component)
+        new_uuid = IS.get_uuid(component)
+        @test old_uuid != new_uuid
+
+        # The time series storage uses component UUIDs, so they must get updated.
+        @test IS.get_time_series(IS.SingleTimeSeries, component, name) isa
+              IS.SingleTimeSeries
+    end
+end
+
+@testset "Test custom time series directory via env" begin
+    @assert !haskey(ENV, IS.TIME_SERIES_DIRECTORY_ENV_VAR)
+    path = mkpath("tmp-ts-dir")
+    ENV[IS.TIME_SERIES_DIRECTORY_ENV_VAR] = path
+    try
+        sys = IS.SystemData()
+        @test splitpath(sys.time_series_storage.file_path)[1] == path
+    finally
+        pop!(ENV, IS.TIME_SERIES_DIRECTORY_ENV_VAR)
+    end
+end

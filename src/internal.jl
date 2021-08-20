@@ -58,6 +58,7 @@ function clear_ext!(obj::InfrastructureSystemsInternal)
 end
 
 get_uuid(internal::InfrastructureSystemsInternal) = internal.uuid
+set_uuid!(internal::InfrastructureSystemsInternal, uuid) = internal.uuid = uuid
 
 get_units_info(internal::InfrastructureSystemsInternal) = internal.units_info
 set_units_info!(internal::InfrastructureSystemsInternal, value) =

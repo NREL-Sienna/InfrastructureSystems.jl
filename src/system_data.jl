@@ -1,5 +1,6 @@
 
 const TIME_SERIES_STORAGE_FILE = "time_series_storage.h5"
+const TIME_SERIES_DIRECTORY_ENV_VAR = "SIIP_TIME_SERIES_DIRECTORY"
 const VALIDATION_DESCRIPTOR_FILE = "validation_descriptors.json"
 
 """
@@ -49,6 +50,10 @@ function SystemData(;
         validation_descriptors = Vector()
     else
         validation_descriptors = read_validation_descriptor(validation_descriptor_file)
+    end
+
+    if time_series_directory === nothing && haskey(ENV, TIME_SERIES_DIRECTORY_ENV_VAR)
+        time_series_directory = ENV[TIME_SERIES_DIRECTORY_ENV_VAR]
     end
 
     ts_storage = make_time_series_storage(;

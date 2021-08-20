@@ -739,3 +739,28 @@ function get_time_series_by_key(
         count = count,
     )
 end
+
+function assign_new_uuid!(component::InfrastructureSystemsComponent)
+    old_uuid = get_uuid(component)
+    new_uuid = make_uuid()
+    if has_time_series(component)
+        container = get_time_series_container(component)
+        # There may be duplicates because of transform operations.
+        changed_uuids = Set{Tuple{Base.UUID, String}}()
+        for (key, ts_metadata) in container.data
+            changed_uuid = (old_uuid, key.name)
+            if !in(changed_uuid, changed_uuids)
+                replace_component_uuid!(
+                    container.time_series_storage,
+                    get_time_series_uuid(ts_metadata),
+                    old_uuid,
+                    new_uuid,
+                    key.name,
+                )
+                push!(changed_uuids, changed_uuid)
+            end
+        end
+    end
+
+    set_uuid!(get_internal(component), new_uuid)
+end

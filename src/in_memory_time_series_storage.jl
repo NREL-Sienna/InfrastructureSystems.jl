@@ -188,6 +188,33 @@ function get_num_time_series(storage::InMemoryTimeSeriesStorage)
     return length(storage.data)
 end
 
+function replace_component_uuid!(
+    storage::InMemoryTimeSeriesStorage,
+    ts_uuid,
+    old_component_uuid,
+    new_component_uuid,
+    name,
+)
+    if !haskey(storage.data, ts_uuid)
+        throw(ArgumentError("$ts_uuid is not stored"))
+    end
+
+    record = storage.data[ts_uuid]
+    component_name = (old_component_uuid, name)
+    if !(component_name in record.component_names)
+        throw(ArgumentError("$component_name wasn't stored for $ts_uuid"))
+    end
+
+    pop!(record.component_names, component_name)
+    new_component_name = (new_component_uuid, name)
+    if new_component_name in record.component_names
+        error("BUG! $new_component_name is already stored in time series $ts_uuid")
+    end
+    push!(record.component_names, new_component_name)
+
+    @debug "Replaced $component_name with $new_component_name for $uuid." _group =
+        LOG_GROUP_TIME_SERIES
+end
 function convert_to_hdf5(storage::InMemoryTimeSeriesStorage, filename::AbstractString)
     create_file = true
     hdf5_storage = Hdf5TimeSeriesStorage(create_file; filename = filename)
@@ -213,7 +240,7 @@ function compare_values(
     for key in keys_x
         record_x = x.data[key]
         record_y = y.data[key]
-        if record_x.component_names != record_y.component_names
+        if compare_uuids && record_x.component_names != record_y.component_names
             @error "component_names don't match" record_x.component_names record_y.component_names
             return false
         end
