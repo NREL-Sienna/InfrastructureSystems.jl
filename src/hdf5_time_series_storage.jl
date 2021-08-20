@@ -679,6 +679,28 @@ function get_num_time_series(storage::Hdf5TimeSeriesStorage)
     return num
 end
 
+function replace_component_uuid!(
+    storage::Hdf5TimeSeriesStorage,
+    ts_uuid,
+    old_component_uuid,
+    new_component_uuid,
+    name,
+)
+    check_read_only(storage)
+    HDF5.h5open(storage.file_path, "r+") do file
+        root = _get_root(storage, file)
+        path = _get_time_series_path(root, ts_uuid)
+        components = path[COMPONENT_REFERENCES_KEY]
+        HDF5.delete_attribute(components, make_component_name(old_component_uuid, name))
+        new_component_name = make_component_name(new_component_uuid, name)
+        if haskey(HDF5.attributes(components), new_component_name)
+            error("BUG! $new_component_name is already stored in time series $ts_uuid")
+        end
+
+        HDF5.attributes(components)[new_component_name] = true
+    end
+end
+
 function _make_file(storage::Hdf5TimeSeriesStorage)
     HDF5.h5open(storage.file_path, "w") do file
         root = HDF5.create_group(file, HDF5_TS_ROOT_PATH)
@@ -736,6 +758,12 @@ function compare_values(
     if length(item_x) != length(item_y)
         @error "lengths don't match" length(item_x) length(item_y)
         return false
+    end
+
+    if !compare_uuids
+        # TODO: This could be improved. But we still get plenty of verification when
+        # UUIDs are not changed.
+        return true
     end
 
     for ((uuid_x, name_x, data_x, attrs_x), (uuid_y, name_y, data_y, attrs_y)) in
