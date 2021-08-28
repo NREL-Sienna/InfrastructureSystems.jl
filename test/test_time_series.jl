@@ -268,7 +268,6 @@ end
 
     initial_time = Dates.DateTime("2020-09-01")
     resolution = Dates.Hour(1)
-    other_time = initial_time + resolution
 
     data = TimeSeries.TimeArray(
         range(initial_time; length = 365, step = resolution),
@@ -1319,12 +1318,19 @@ end
     resolution = Dates.Hour(1)
     initial_time = Dates.DateTime("2020-09-01")
     second_time = initial_time + resolution
-    name = "test"
+    name = "test_forecast"
     horizon = 24
     data = SortedDict(initial_time => ones(horizon), second_time => ones(horizon))
 
     forecast = IS.Deterministic(data = data, name = name, resolution = resolution)
     IS.add_time_series!(sys, component, forecast)
+
+    sts_data = TimeSeries.TimeArray(
+        range(initial_time; length = 365, step = resolution),
+        ones(365),
+    )
+    sts = IS.SingleTimeSeries(data = sts_data, name = "test_sts")
+    IS.add_time_series!(sys, component, sts)
 
     @test IS.get_time_series_resolution(sys) == resolution
     @test IS.get_forecast_window_count(sys) == 2
