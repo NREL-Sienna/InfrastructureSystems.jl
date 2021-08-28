@@ -150,7 +150,7 @@ function _is_uninitialized(params::TimeSeriesParameters)
 end
 
 """
-Return true if `params` match `other` or if `params` is uninitialized.
+Return true if `params` match `other` or if one of them is uninitialized.
 """
 function check_params_compatibility(
     params::TimeSeriesParameters,
@@ -167,7 +167,10 @@ function check_params_compatibility(
         )
     end
 
-    check_params_compatibility(params.forecast_params, other.forecast_params)
+    # `other` might be for a static time series and not have forecast params
+    if !_is_uninitialized(other.forecast_params)
+        check_params_compatibility(params.forecast_params, other.forecast_params)
+    end
 end
 
 function check_add_time_series(params::TimeSeriesParameters, ts::TimeSeriesData)
