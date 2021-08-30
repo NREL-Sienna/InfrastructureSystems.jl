@@ -142,3 +142,67 @@ end
     settings = IS.CompressionSettings(enabled = true, type = IS.CompressionTypes.DEFLATE)
     @test IS.get_compression_settings(IS.SystemData(compression = settings)) == settings
 end
+
+@testset "Test single time series consistency" begin
+    data = IS.SystemData()
+    initial_time = Dates.DateTime("2020-09-01")
+    resolution = Dates.Hour(1)
+    len = 24
+    ta = TimeSeries.TimeArray(
+        range(initial_time; length = len, step = resolution),
+        ones(len),
+    )
+    ts = IS.SingleTimeSeries(data = ta, name = "test")
+
+    for i in 1:2
+        name = "component_$(i)"
+        component = IS.TestComponent(name, 5)
+        IS.add_component!(data, component)
+        IS.add_time_series!(data, component, ts)
+    end
+
+    returned_it, returned_len = IS.check_time_series_consistency(data, IS.SingleTimeSeries)
+    @test returned_it == initial_time
+    @test returned_len == len
+end
+
+@testset "Test single time series initial time inconsistency" begin
+    data = IS.SystemData()
+    initial_time = Dates.DateTime("2020-09-01")
+    resolution = Dates.Hour(1)
+    len = 24
+
+    for i in 1:2
+        it = initial_time + resolution * i
+        ta = TimeSeries.TimeArray(range(it; length = len, step = resolution), ones(len))
+        ts = IS.SingleTimeSeries(data = ta, name = "test")
+        name = "component_$(i)"
+        component = IS.TestComponent(name, 5)
+        IS.add_component!(data, component)
+        IS.add_time_series!(data, component, ts)
+    end
+
+    @test_throws IS.InvalidValue IS.check_time_series_consistency(data, IS.SingleTimeSeries)
+end
+
+@testset "Test single time series length inconsistency" begin
+    data = IS.SystemData()
+    initial_time = Dates.DateTime("2020-09-01")
+    resolution = Dates.Hour(1)
+    len = 24
+
+    for i in 1:2
+        len += i
+        ta = TimeSeries.TimeArray(
+            range(initial_time; length = len, step = resolution),
+            ones(len),
+        )
+        ts = IS.SingleTimeSeries(data = ta, name = "test")
+        name = "component_$(i)"
+        component = IS.TestComponent(name, 5)
+        IS.add_component!(data, component)
+        IS.add_time_series!(data, component, ts)
+    end
+
+    @test_throws IS.InvalidValue IS.check_time_series_consistency(data, IS.SingleTimeSeries)
+end
