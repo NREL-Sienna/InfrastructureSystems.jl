@@ -412,6 +412,47 @@ function get_time_series_multiple(
     end
 end
 
+# These are guaranteed to be consistent already.
+check_time_series_consistency(::SystemData, ::Type{<:Forecast}) = nothing
+
+function check_time_series_consistency(data::SystemData, ::Type{SingleTimeSeries})
+    first_initial_timestamp = Dates.now()
+    first_len = 0
+    found_first = false
+    for component in iterate_components_with_time_series(data)
+        container = get_time_series_container(component)
+        for key in keys(container.data)
+            ts_metadata = container.data[key]
+            if time_series_metadata_to_data(ts_metadata) === SingleTimeSeries
+                initial_timestamp = get_initial_timestamp(ts_metadata)
+                len = get_length(ts_metadata)
+                if !found_first
+                    first_initial_timestamp = get_initial_timestamp(ts_metadata)
+                    first_len = get_length(ts_metadata)
+                    found_first = true
+                else
+                    if initial_timestamp != first_initial_timestamp
+                        throw(
+                            InvalidValue(
+                                "SingleTimeSeries initial timestamps are inconsistent; $initial_timestamp != $first_initial_timestamp",
+                            ),
+                        )
+                    end
+                    if len != first_len
+                        throw(
+                            InvalidValue(
+                                "SingleTimeSeries lengths are inconsistent; $len != $first_len",
+                            ),
+                        )
+                    end
+                end
+            end
+        end
+    end
+
+    return first_initial_timestamp, first_len
+end
+
 """
 Return a tuple of counts of components with time series and total time series and forecasts.
 """
