@@ -380,6 +380,31 @@ function has_time_series(component::InfrastructureSystemsComponent)
     return !isnothing(container) && !isempty(container)
 end
 
+"""
+Return true if the component has time series data of type T.
+"""
+function has_time_series(
+    component::InfrastructureSystemsComponent,
+    ::Type{T},
+) where {T <: TimeSeriesData}
+    container = get_time_series_container(component)
+    if container === nothing
+        return false
+    end
+
+    for key in keys(container.data)
+        if isabstracttype(T)
+            if is_time_series_sub_type(key.time_series_type, T)
+                return true
+            end
+        elseif time_series_data_to_metadata(T) <: key.time_series_type
+            return true
+        end
+    end
+
+    return false
+end
+
 function has_time_series(
     component::InfrastructureSystemsComponent,
     type::Type{<:TimeSeriesMetadata},

@@ -24,26 +24,22 @@ function Base.show(io::IO, components::Components)
 end
 
 function Base.show(io::IO, ::MIME"text/plain", components::Components)
-    df = create_components_df(components)
     num_components = get_num_components(components)
     println(io, "Components")
     println(io, "==========")
     println(io, "Num components: $num_components")
     if num_components > 0
         println(io)
-        show(io, df)
+        show_components_table(io, components, backend = :auto)
     end
 end
 
 function Base.show(io::IO, ::MIME"text/html", components::Components)
-    df = create_components_df(components)
     num_components = get_num_components(components)
     println(io, "<h2>Components</h2>")
     println(io, "<p><b>Num components</b>: $num_components</p>")
     if num_components > 0
-        withenv("LINES" => 100, "COLUMNS" => 200) do
-            show(io, MIME"text/html"(), df)
-        end
+        show_components_table(io, components, backend = :html)
     end
 end
 
@@ -73,54 +69,55 @@ function Base.show(io::IO, data::SystemData)
 end
 
 function Base.show(io::IO, ::MIME"text/plain", data::SystemData)
-    component_count, ts_count, forecast_count = get_time_series_counts(data)
     show(io, MIME"text/plain"(), data.components)
     println(io, "\n")
-
-    println(io, "TimeSeriesContainer")
-    println(io, "===================")
-    println(io, "Components with time series data: $component_count")
-    println(io, "Total StaticTimeSeries: $ts_count")
-    println(io, "Total Forecasts: $forecast_count")
-    if component_count == 0
-        return
-    end
-
-    res = get_time_series_resolution(data)
-    res = res <= Dates.Minute(1) ? Dates.Second(res) : Dates.Minute(res)
-    println(io, "Resolution: $res")
-    if forecast_count > 0
-        initial_times = get_forecast_initial_times(data)
-        println(io, "First initial time: $(first(initial_times))")
-        println(io, "Last initial time: $(last(initial_times))")
-        println(io, "Horizon: $(get_forecast_horizon(data))")
-        println(io, "Interval: $(Dates.Minute(get_forecast_interval(data)))")
-        println(io, "Forecast window count: $(get_forecast_window_count(data))")
-    end
+    show_time_series_data(io, data, backend = :auto)
+    show(io, data.time_series_params)
 end
 
 function Base.show(io::IO, ::MIME"text/html", data::SystemData)
     show(io, MIME"text/html"(), data.components)
     println(io, "\n")
+    show_time_series_data(io, data, backend = :html)
+    show(io, data.time_series_params)
+end
 
+function show_time_series_data(io::IO, data::SystemData; kwargs...)
     component_count, ts_count, forecast_count = get_time_series_counts(data)
-    println(io, "<h2>TimeSeriesContainer</h2>")
-    println(io, "<p><b>Components with time series data</b>: $component_count</p>")
-    println(io, "<p><b>Total StaticTimeSeries</b>: $ts_count</p>")
-    println(io, "<p><b>Total Forecasts</b>: $forecast_count</p>")
-
     res = get_time_series_resolution(data)
     res = res <= Dates.Minute(1) ? Dates.Second(res) : Dates.Minute(res)
-    println(io, "<p><b>Resolution</b>: $(res)</p>")
+
+    header = ["Property", "Value"]
+    table = [
+        "Components with time series data" string(component_count)
+        "Total StaticTimeSeries" string(ts_count)
+        "Total Forecasts" string(forecast_count)
+        "Resolution" string(res)
+    ]
+    if component_count == 0
+        return
+    end
+
     if forecast_count > 0
         initial_times = get_forecast_initial_times(data)
-        window_count = get_forecast_window_count(data)
-        println(io, "<p><b>First initial time</b>: $(first(initial_times))</p>")
-        println(io, "<p><b>Last initial time</b>: $(last(initial_times))</p>")
-        println(io, "<p><b>Horizon</b>: $(get_forecast_horizon(data))</p>")
-        println(io, "<p><b>Interval</b>: $(Dates.Minute(get_forecast_interval(data)))</p>")
-        println(io, "<p><b>Forecast window count</b>: $(window_count)</p>")
+        table2 = [
+            "First initial time" string(first(initial_times))
+            "Last initial time" string(last(initial_times))
+            "Horizon" string(get_forecast_horizon(data))
+            "Interval" string(Dates.Minute(get_forecast_interval(data)))
+            "Forecast window count" string(get_forecast_window_count(data))
+        ]
+        table = vcat(table, table2)
     end
+
+    PrettyTables.pretty_table(
+        io,
+        table,
+        header;
+        title = "Time Series Summary",
+        alignment = :l,
+        kwargs...,
+    )
 end
 
 function Base.summary(ist::InfrastructureSystemsComponent)
@@ -198,27 +195,95 @@ function _get_type_counts(it::FlattenIteratorWrapper)
     return data
 end
 
-function create_components_df(components::Components)
-    counts = Dict{String, Int}()
-    rows = []
+function show_components_table(io::IO, components::Components; kwargs...)
+    header = ["Type", "Count", "Has Static Time Series", "Has Forecasts"]
+    data = Array{Any, 2}(undef, length(components.data), length(header))
 
-    for (subtype, values) in components.data
-        type_str = strip_module_name(string(subtype))
-        counts[type_str] = length(values)
-        parents = [strip_module_name(string(x)) for x in supertypes(subtype)]
-        row = (
-            ConcreteType = type_str,
-            SuperTypes = join(parents, " <: "),
-            Count = length(values),
-        )
-        push!(rows, row)
+    type_names = [(strip_module_name(string(x)), x) for x in keys(components.data)]
+    sort!(type_names, by = x -> x[1])
+    for (i, (type_name, type)) in enumerate(type_names)
+        vals = components.data[type]
+        has_ts = false
+        for (_, val) in vals
+            if has_time_series(val)
+                has_ts = true
+                break
+            end
+        end
+        data[i, 1] = type_name
+        data[i, 2] = length(vals)
+        data[i, 3] = has_ts
     end
 
-    isempty(rows) && return DataFrames.DataFrame()
+    PrettyTables.pretty_table(io, data, header, alignment = :l; kwargs...)
+end
 
-    sort!(rows, by = x -> x.ConcreteType)
+function show_components(
+    io::IO,
+    components::Components,
+    component_type::Type{<:InfrastructureSystemsComponent},
+    additional_columns::Union{Dict, Vector} = [];
+    kwargs...,
+)
+    if !isconcretetype(component_type)
+        error("$component_type must be a concrete type")
+    end
 
-    return DataFrames.DataFrame(rows)
+    title = string(strip_module_name(component_type))
+    header = ["name"]
+    has_available = false
+    if :available in fieldnames(component_type)
+        push!(header, "available")
+        has_available = true
+    end
+
+    if additional_columns isa Dict
+        columns = sort!(collect(keys(additional_columns)))
+    else
+        columns = additional_columns
+    end
+
+    for column in columns
+        push!(header, string(column))
+    end
+
+    comps = get_components(component_type, components)
+    data = Array{Any, 2}(undef, length(comps), length(header))
+    for (i, component) in enumerate(comps)
+        data[i, 1] = get_name(component)
+        j = 2
+        if has_available
+            data[i, 2] = getproperty(component, :available)
+            j += 1
+        end
+
+        if additional_columns isa Dict
+            for column in columns
+                data[i, j] = additional_columns[column](component)
+                j += 1
+            end
+        else
+            for column in additional_columns
+                getter_name = Symbol("get_$column")
+                parent = parentmodule(component_type)
+                # This logic enables application of system units in PowerSystems through
+                # its getter functions.
+                val = getproperty(component, column)
+                if val isa TimeSeriesContainer ||
+                   val isa InfrastructureSystemsType ||
+                   val isa Vector{<:InfrastructureSystemsComponent}
+                    val = summary(val)
+                elseif hasproperty(parent, getter_name)
+                    getter_func = getproperty(parent, getter_name)
+                    val = getter_func(component)
+                end
+                data[i, j] = val
+                j += 1
+            end
+        end
+    end
+
+    PrettyTables.pretty_table(io, data, header, title = title, alignment = :l; kwargs...)
 end
 
 ## This function takes in a time period or date period and returns a compound period
