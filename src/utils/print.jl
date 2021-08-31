@@ -203,16 +203,23 @@ function show_components_table(io::IO, components::Components; kwargs...)
     sort!(type_names, by = x -> x[1])
     for (i, (type_name, type)) in enumerate(type_names)
         vals = components.data[type]
-        has_ts = false
-        for (_, val) in vals
-            if has_time_series(val)
-                has_ts = true
+        has_sts = false
+        has_forecasts = false
+        for val in values(vals)
+            if has_time_series(val, StaticTimeSeries)
+                has_sts = true
+            end
+            if has_time_series(val, Forecast)
+                has_forecasts = true
+            end
+            if has_sts && has_forecasts
                 break
             end
         end
         data[i, 1] = type_name
         data[i, 2] = length(vals)
-        data[i, 3] = has_ts
+        data[i, 3] = has_sts
+        data[i, 4] = has_forecasts
     end
 
     PrettyTables.pretty_table(io, data, header, alignment = :l; kwargs...)
