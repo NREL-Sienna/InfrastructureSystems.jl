@@ -206,3 +206,20 @@ end
 
     @test_throws IS.InvalidValue IS.check_time_series_consistency(data, IS.SingleTimeSeries)
 end
+
+@testset "Test check_components" begin
+    data = IS.SystemData()
+
+    for i in 1:5
+        name = "component_$i"
+        component = IS.TestComponent(name, i)
+        IS.add_component!(data, component)
+    end
+
+    IS.check_components(data)
+    IS.check_components(data, IS.get_components(IS.TestComponent, data))
+    IS.check_components(data, collect(IS.get_components(IS.TestComponent, data)))
+    IS.check_components(data, IS.TestComponent)
+    component = IS.get_component(IS.TestComponent, data, "component_3")
+    IS.check_component(data, component)
+end

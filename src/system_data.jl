@@ -737,7 +737,11 @@ get_time_series_resolution(data::SystemData) =
 
 clear_components!(data::SystemData) = clear_components!(data.components)
 
-check_components(data::SystemData) = check_components(data.components)
+function check_components(data::SystemData, args...)
+    check_components(data.components, args...)
+    check_components(data.masked_components, args...)
+end
+
 check_component(data::SystemData, component) = check_component(data.components, component)
 
 get_compression_settings(data::SystemData) =

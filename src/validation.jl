@@ -233,23 +233,6 @@ function validation_error(valid_info::ValidationInfo, field_value)
 end
 
 """
-Iterates over all components and throws InvalidRange if any of the component's field values
-are outside of defined valid range.
-"""
-function validate_components(components::Components)
-    error_detected = false
-    for component in iterate_components(components)
-        if validate_fields(components, component)
-            error_detected = true
-        end
-    end
-
-    if error_detected
-        throw(InvalidRange("Invalid range detected"))
-    end
-end
-
-"""
 Validates a struct using only information within the struct.
 """
 function validate_struct(ist::InfrastructureSystemsType)
