@@ -70,18 +70,29 @@ function add_component!(
 end
 
 function check_components(components::Components)
-    for component in iterate_components(components)
-        check_component(component)
+    return check_components(components, iterate_components(components))
+end
+
+function check_components(
+    components::Components,
+    ::Type{<:T},
+) where {T <: InfrastructureSystemsComponent}
+    return check_components(components, get_components(T, components))
+end
+
+function check_components(components::Components, components_iterable)
+    for component in components_iterable
+        check_component(components, component)
     end
 end
 
 function check_component(components::Components, comp::InfrastructureSystemsComponent)
     if !isempty(components.validation_descriptors) && !validate_fields(components, comp)
-        throw(InvalidRange("Invalid value"))
+        throw(InvalidValue("$(summary(comp)) has an invalid field"))
     end
 
     if !validate_struct(comp)
-        throw(InvalidValue("Invalid value for $(comp)"))
+        throw(InvalidValue("$(summary(comp)) is invalid"))
     end
 end
 
