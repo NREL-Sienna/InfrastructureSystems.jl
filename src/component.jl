@@ -678,7 +678,7 @@ function get_single_time_series_transformed_parameters(
         end
     end
 
-    return throw(
+    throw(
         ArgumentError("component $(get_name(component)) does not have SingleTimeSeries"),
     )
 end
@@ -789,5 +789,6 @@ function assign_new_uuid!(component::InfrastructureSystemsComponent)
         end
     end
 
-    return set_uuid!(get_internal(component), new_uuid)
+    set_uuid!(get_internal(component), new_uuid)
+    return
 end

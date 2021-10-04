@@ -62,7 +62,7 @@ function get_field_descriptor(struct_descriptor::Dict, fieldname::AbstractString
         end
     end
 
-    return throw(
+    throw(
         DataFormatError(
             "field $fieldname does not exist in $(struct_descriptor["struct_name"]) validation config",
         ),

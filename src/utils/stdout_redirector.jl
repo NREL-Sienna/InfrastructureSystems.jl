@@ -8,7 +8,7 @@ function redirect_stdout_to_log(func::Function)
     try
         open(path, "w") do out
             redirect_stdout(out) do
-                return func()
+                func()
             end
         end
     finally

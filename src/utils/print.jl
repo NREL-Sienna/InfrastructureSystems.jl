@@ -72,14 +72,14 @@ function Base.show(io::IO, ::MIME"text/plain", data::SystemData)
     show(io, MIME"text/plain"(), data.components)
     println(io, "\n")
     show_time_series_data(io, data, backend = :auto)
-    return show(io, data.time_series_params)
+    show(io, data.time_series_params)
 end
 
 function Base.show(io::IO, ::MIME"text/html", data::SystemData)
     show(io, MIME"text/html"(), data.components)
     println(io, "\n")
     show_time_series_data(io, data, backend = :html)
-    return show(io, data.time_series_params)
+    show(io, data.time_series_params)
 end
 
 function show_time_series_data(io::IO, data::SystemData; kwargs...)

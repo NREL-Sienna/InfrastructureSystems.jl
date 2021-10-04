@@ -77,7 +77,8 @@ function add_time_series_reference!(
     # reason for a caller to add a reference multiple times. This should be a bug.
     @assert !in(key, record.component_names) "There is already a reference to $key for time series $ts_uuid"
 
-    return push!(record.component_names, key)
+    push!(record.component_names, key)
+    return
 end
 
 function remove_time_series!(

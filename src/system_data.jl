@@ -600,7 +600,7 @@ function serialize(data::SystemData)
     descriptors = Dict("struct_validation_descriptors" => data.validation_descriptors)
     text = JSON3.write(descriptors)
     open(descriptor_file, "w") do io
-        return write(io, text)
+        write(io, text)
     end
     json_data["validation_descriptor_file"] = descriptor_base_name
     json_data["version_info"] = serialize_julia_info()
