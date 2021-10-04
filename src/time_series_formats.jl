@@ -266,7 +266,7 @@ function get_num_steps(
     file::CSV.File,
     period::AbstractArray,
 ) where {T <: TimeSeriesFileFormat}
-    error("Unsupported time series file format")
+    return error("Unsupported time series file format")
 end
 
 """

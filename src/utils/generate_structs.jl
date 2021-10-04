@@ -195,7 +195,7 @@ function generate_structs(directory, data::Vector; print_results = true)
         filename = joinpath(directory, item["struct_name"] * ".jl")
         open(filename, "w") do io
             write(io, Mustache.render(template, item))
-            push!(struct_names, item["struct_name"])
+            return push!(struct_names, item["struct_name"])
         end
 
         if print_results
@@ -235,7 +235,7 @@ function generate_structs(
     end
 
     data = read_json_data(input_file)
-    generate_structs(output_directory, data, print_results = print_results)
+    return generate_structs(output_directory, data, print_results = print_results)
 end
 
 """

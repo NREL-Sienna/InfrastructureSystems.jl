@@ -37,7 +37,7 @@ Deserializes a InfrastructureSystemsType from a JSON filename.
 """
 function from_json(::Type{T}, filename::String) where {T <: InfrastructureSystemsType}
     return open(filename) do io
-        from_json(io, T)
+        return from_json(io, T)
     end
 end
 

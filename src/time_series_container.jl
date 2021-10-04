@@ -42,7 +42,7 @@ function set_time_series_storage!(
         )
     end
 
-    container.time_series_storage = storage
+    return container.time_series_storage = storage
 end
 
 function add_time_series!(
@@ -72,11 +72,11 @@ function remove_time_series!(
         throw(ArgumentError("time_series $key is not stored"))
     end
 
-    pop!(container.data, key)
+    return pop!(container.data, key)
 end
 
 function clear_time_series!(container::TimeSeriesContainer)
-    empty!(container.data)
+    return empty!(container.data)
 end
 
 function get_time_series(

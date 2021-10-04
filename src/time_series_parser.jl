@@ -204,7 +204,7 @@ struct TimeSeriesParsedInfo
         resolution,
         scaling_factor_multiplier = nothing,
     )
-        new(
+        return new(
             simulation,
             component,
             name,

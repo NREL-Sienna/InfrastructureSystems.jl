@@ -12,7 +12,7 @@ function validate_serialization(sys::IS.SystemData; time_series_read_only = fals
         IS.prepare_for_serialization!(sys, filename; force = true)
         data = IS.serialize(sys)
         open(filename, "w") do io
-            JSON3.write(io, data)
+            return JSON3.write(io, data)
         end
     catch
         rm(filename)
@@ -34,7 +34,7 @@ function validate_serialization(sys::IS.SystemData; time_series_read_only = fals
     mv(v_file, joinpath(test_dir, v_file))
 
     data = open(path) do io
-        JSON3.read(io, Dict)
+        return JSON3.read(io, Dict)
     end
 
     orig = pwd()

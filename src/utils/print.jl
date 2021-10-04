@@ -65,21 +65,21 @@ end
 function Base.show(io::IO, data::SystemData)
     show(io, data.components)
     println(io, "\n")
-    show(io, data.time_series_params)
+    return show(io, data.time_series_params)
 end
 
 function Base.show(io::IO, ::MIME"text/plain", data::SystemData)
     show(io, MIME"text/plain"(), data.components)
     println(io, "\n")
     show_time_series_data(io, data, backend = :auto)
-    show(io, data.time_series_params)
+    return show(io, data.time_series_params)
 end
 
 function Base.show(io::IO, ::MIME"text/html", data::SystemData)
     show(io, MIME"text/html"(), data.components)
     println(io, "\n")
     show_time_series_data(io, data, backend = :html)
-    show(io, data.time_series_params)
+    return show(io, data.time_series_params)
 end
 
 function show_time_series_data(io::IO, data::SystemData; kwargs...)
@@ -110,7 +110,7 @@ function show_time_series_data(io::IO, data::SystemData; kwargs...)
         table = vcat(table, table2)
     end
 
-    PrettyTables.pretty_table(
+    return PrettyTables.pretty_table(
         io,
         table;
         header = header,
@@ -171,7 +171,7 @@ function Base.show(io::IO, ist::InfrastructureSystemsComponent)
         end
         print(io, val)
     end
-    print(io, ")")
+    return print(io, ")")
 end
 
 function Base.show(io::IO, ::MIME"text/plain", it::FlattenIteratorWrapper)
@@ -222,7 +222,7 @@ function show_components_table(io::IO, components::Components; kwargs...)
         data[i, 4] = has_forecasts
     end
 
-    PrettyTables.pretty_table(io, data; header = header, alignment = :l, kwargs...)
+    return PrettyTables.pretty_table(io, data; header = header, alignment = :l, kwargs...)
 end
 
 function show_components(
@@ -290,7 +290,7 @@ function show_components(
         end
     end
 
-    PrettyTables.pretty_table(
+    return PrettyTables.pretty_table(
         io,
         data;
         header = header,

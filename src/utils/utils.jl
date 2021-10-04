@@ -48,7 +48,7 @@ function supertypes(::Type{T}, types = []) where {T}
         return types
     end
 
-    supertypes(super, types)
+    return supertypes(super, types)
 end
 
 """Converts a DataType to a Symbol, stripping off the module name(s)."""

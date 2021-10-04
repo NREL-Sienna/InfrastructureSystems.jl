@@ -13,7 +13,7 @@ ERROR: AssertionError: 6 > 8
 ```
 """
 macro assert_op(expr)
-    assert_op(expr)
+    return assert_op(expr)
 end
 
 function assert_op(expr::Expr)

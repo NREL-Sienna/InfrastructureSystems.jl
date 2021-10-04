@@ -70,12 +70,12 @@ end
 """Reset the iterator for cases where underlying arrays have changed."""
 function reset_iterator(container::LazyDictFromIterator)
     @debug "reset_iterator"
-    container.state = nothing
+    return container.state = nothing
 end
 
 """Replace the iterator, maintaining the cached dict."""
 function replace_iterator(container::LazyDictFromIterator, iter)
     @debug "replace_iterator"
     container.state = nothing
-    container.iter = iter
+    return container.iter = iter
 end

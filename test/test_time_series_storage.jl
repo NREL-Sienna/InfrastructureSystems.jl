@@ -41,7 +41,7 @@ function test_add_remove(storage::IS.TimeSeriesStorage)
 
     IS.remove_time_series!(storage, IS.get_uuid(ts), IS.get_uuid(component), name)
     @test_throws ArgumentError _deserialize_full(storage, ts)
-    IS.get_num_time_series(storage) == 0
+    return IS.get_num_time_series(storage) == 0
 end
 
 function test_add_references(storage::IS.TimeSeriesStorage)
@@ -70,7 +70,7 @@ function test_add_references(storage::IS.TimeSeriesStorage)
 
     IS.remove_time_series!(storage, ts_uuid, IS.get_uuid(component2), name)
     @test_throws ArgumentError _deserialize_full(storage, ts)
-    IS.get_num_time_series(storage) == 0
+    return IS.get_num_time_series(storage) == 0
 end
 
 function test_get_subset(storage::IS.TimeSeriesStorage)

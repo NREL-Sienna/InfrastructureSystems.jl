@@ -124,7 +124,7 @@ function copy_to_new_file!(storage::Hdf5TimeSeriesStorage, directory = nothing)
     filename, io = mktemp(directory)
     close(io)
     copy_file(get_file_path(storage), filename)
-    storage.file_path = filename
+    return storage.file_path = filename
 end
 
 get_compression_settings(storage::Hdf5TimeSeriesStorage) = storage.compression
@@ -184,7 +184,7 @@ function serialize_time_series!(
             @debug "Add reference to existing time series entry." _group =
                 LOG_GROUP_TIME_SERIES uuid component_uuid name
         end
-        HDF5.attributes(component_refs)[component_name] = true
+        return HDF5.attributes(component_refs)[component_name] = true
     end
 
     return
@@ -215,7 +215,7 @@ function _write_time_series_attributes!(
     ts::T,
     path,
 ) where {T <: StaticTimeSeries}
-    _write_time_series_attributes_common!(storage, ts, path)
+    return _write_time_series_attributes_common!(storage, ts, path)
 end
 
 function _write_time_series_attributes!(
@@ -225,7 +225,7 @@ function _write_time_series_attributes!(
 ) where {T <: Forecast}
     _write_time_series_attributes_common!(storage, ts, path)
     interval = get_interval(ts)
-    HDF5.attributes(path)["interval"] = time_period_conversion(interval).value
+    return HDF5.attributes(path)["interval"] = time_period_conversion(interval).value
 end
 
 function _write_time_series_attributes_common!(storage::Hdf5TimeSeriesStorage, ts, path)
@@ -236,7 +236,7 @@ function _write_time_series_attributes_common!(storage::Hdf5TimeSeriesStorage, t
     HDF5.attributes(path)["type"] = string(nameof(typeof(ts)))
     HDF5.attributes(path)["initial_timestamp"] = initial_timestamp
     HDF5.attributes(path)["resolution"] = time_period_conversion(resolution).value
-    HDF5.attributes(path)["data_type"] = data_type
+    return HDF5.attributes(path)["data_type"] = data_type
 end
 
 function _read_time_series_attributes(
@@ -424,7 +424,7 @@ function deserialize_time_series(
         @debug "deserializing a Forecast" _group = LOG_GROUP_TIME_SERIES T
         data_type = attributes["data_type"]
         data = get_hdf_array(path["data"], data_type, attributes, rows, columns)
-        new_ts = actual_type(ts_metadata, data)
+        return new_ts = actual_type(ts_metadata, data)
     end
 end
 
@@ -615,7 +615,7 @@ function deserialize_time_series(
             end
         end
 
-        new_ts = T(ts_metadata, data)
+        return new_ts = T(ts_metadata, data)
     end
 end
 
@@ -654,7 +654,7 @@ function deserialize_time_series(
             end
         end
 
-        new_ts = T(ts_metadata, data)
+        return new_ts = T(ts_metadata, data)
     end
 end
 
@@ -697,7 +697,7 @@ function replace_component_uuid!(
             error("BUG! $new_component_name is already stored in time series $ts_uuid")
         end
 
-        HDF5.attributes(components)[new_component_name] = true
+        return HDF5.attributes(components)[new_component_name] = true
     end
 end
 
@@ -705,7 +705,7 @@ function _make_file(storage::Hdf5TimeSeriesStorage)
     HDF5.h5open(storage.file_path, "w") do file
         root = HDF5.create_group(file, HDF5_TS_ROOT_PATH)
         HDF5.attributes(root)[TIME_SERIES_VERSION_KEY] = TIME_SERIES_DATA_FORMAT_VERSION
-        _serialize_compression_settings(storage, root)
+        return _serialize_compression_settings(storage, root)
     end
 end
 
@@ -713,13 +713,13 @@ function _serialize_compression_settings(storage::Hdf5TimeSeriesStorage, root)
     HDF5.attributes(root)["compression_enabled"] = storage.compression.enabled
     HDF5.attributes(root)["compression_type"] = string(storage.compression.type)
     HDF5.attributes(root)["compression_level"] = storage.compression.level
-    HDF5.attributes(root)["compression_shuffle"] = storage.compression.shuffle
+    return HDF5.attributes(root)["compression_shuffle"] = storage.compression.shuffle
 end
 
 function _deserialize_compression_settings!(storage::Hdf5TimeSeriesStorage)
     HDF5.h5open(storage.file_path, "r+") do file
         root = _get_root(storage, file)
-        storage.compression = CompressionSettings(
+        return storage.compression = CompressionSettings(
             enabled = HDF5.read(HDF5.attributes(root)["compression_enabled"]),
             type = CompressionTypes(HDF5.read(HDF5.attributes(root)["compression_type"])),
             level = HDF5.read(HDF5.attributes(root)["compression_level"]),
@@ -808,7 +808,7 @@ function _convert_from_1_0_0!(storage::Hdf5TimeSeriesStorage)
 
         HDF5.attributes(root)[TIME_SERIES_VERSION_KEY] = TIME_SERIES_DATA_FORMAT_VERSION
         compression = CompressionSettings()
-        _serialize_compression_settings(storage, root)
+        return _serialize_compression_settings(storage, root)
     end
 
     @debug "Converted file from 1.0.0 format" _group = LOG_GROUP_TIME_SERIES

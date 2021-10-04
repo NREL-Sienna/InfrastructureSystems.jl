@@ -34,7 +34,13 @@ function SingleTimeSeries(;
     internal = InfrastructureSystemsInternal(),
 )
     data = handle_normalization_factor(data, normalization_factor)
-    SingleTimeSeries(name, data, _get_resolution(data), scaling_factor_multiplier, internal)
+    return SingleTimeSeries(
+        name,
+        data,
+        _get_resolution(data),
+        scaling_factor_multiplier,
+        internal,
+    )
 end
 
 function _get_resolution(data::TimeSeries.TimeArray)
@@ -236,7 +242,8 @@ Base.iterate(time_series::SingleTimeSeries, n = 1) = iterate(get_data(time_serie
 Refer to TimeSeries.when(). Underlying data is copied.
 """
 function when(time_series::SingleTimeSeries, period::Function, t::Integer)
-    new = SingleTimeSeries(time_series, TimeSeries.when(get_data(time_series), period, t))
+    return new =
+        SingleTimeSeries(time_series, TimeSeries.when(get_data(time_series), period, t))
 end
 
 """
