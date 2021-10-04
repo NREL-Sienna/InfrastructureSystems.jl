@@ -1,3 +1,9 @@
+using Pkg
+Pkg.activate(@__DIR__)
+Pkg.instantiate()
+
+using JuliaFormatter
+
 main_paths = ["./src", "./test"]
 for main_path in main_paths
     for folder in readdir(main_path)
