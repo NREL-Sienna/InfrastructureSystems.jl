@@ -256,5 +256,5 @@ function show_recorder_events(
         end
     end
 
-    PrettyTables.pretty_table(io, data, header; kwargs...)
+    PrettyTables.pretty_table(io, data; header = header, kwargs...)
 end

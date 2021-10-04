@@ -112,8 +112,8 @@ function show_time_series_data(io::IO, data::SystemData; kwargs...)
 
     PrettyTables.pretty_table(
         io,
-        table,
-        header;
+        table;
+        header = header,
         title = "Time Series Summary",
         alignment = :l,
         kwargs...,
@@ -222,7 +222,7 @@ function show_components_table(io::IO, components::Components; kwargs...)
         data[i, 4] = has_forecasts
     end
 
-    PrettyTables.pretty_table(io, data, header, alignment = :l; kwargs...)
+    PrettyTables.pretty_table(io, data; header = header, alignment = :l, kwargs...)
 end
 
 function show_components(
@@ -290,7 +290,14 @@ function show_components(
         end
     end
 
-    PrettyTables.pretty_table(io, data, header, title = title, alignment = :l; kwargs...)
+    PrettyTables.pretty_table(
+        io,
+        data;
+        header = header,
+        title = title,
+        alignment = :l,
+        kwargs...,
+    )
 end
 
 ## This function takes in a time period or date period and returns a compound period
