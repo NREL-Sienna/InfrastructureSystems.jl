@@ -349,7 +349,8 @@ end
 function clear_time_series!(data::SystemData)
     clear_time_series!(data.time_series_storage)
     clear_time_series!(data.components)
-    return reset_info!(data.time_series_params)
+    reset_info!(data.time_series_params)
+    return
 end
 
 function iterate_components_with_time_series(data::SystemData)
@@ -562,7 +563,8 @@ function prepare_for_serialization!(
 
     ext = get_ext(data.internal)
     ext["serialization_directory"] = directory
-    return ext["basename"] = splitext(basename(filename))[1]
+    ext["basename"] = splitext(basename(filename))[1]
+    return
 end
 
 function serialize(data::SystemData)
@@ -739,7 +741,8 @@ clear_components!(data::SystemData) = clear_components!(data.components)
 
 function check_components(data::SystemData, args...)
     check_components(data.components, args...)
-    return check_components(data.masked_components, args...)
+    check_components(data.masked_components, args...)
+    return
 end
 
 check_component(data::SystemData, component) = check_component(data.components, component)

@@ -110,7 +110,7 @@ function show_time_series_data(io::IO, data::SystemData; kwargs...)
         table = vcat(table, table2)
     end
 
-    return PrettyTables.pretty_table(
+    PrettyTables.pretty_table(
         io,
         table;
         header = header,
@@ -118,6 +118,7 @@ function show_time_series_data(io::IO, data::SystemData; kwargs...)
         alignment = :l,
         kwargs...,
     )
+    return
 end
 
 function Base.summary(ist::InfrastructureSystemsComponent)
@@ -171,7 +172,8 @@ function Base.show(io::IO, ist::InfrastructureSystemsComponent)
         end
         print(io, val)
     end
-    return print(io, ")")
+    print(io, ")")
+    return
 end
 
 function Base.show(io::IO, ::MIME"text/plain", it::FlattenIteratorWrapper)
@@ -222,7 +224,8 @@ function show_components_table(io::IO, components::Components; kwargs...)
         data[i, 4] = has_forecasts
     end
 
-    return PrettyTables.pretty_table(io, data; header = header, alignment = :l, kwargs...)
+    PrettyTables.pretty_table(io, data; header = header, alignment = :l, kwargs...)
+    return
 end
 
 function show_components(
@@ -290,7 +293,7 @@ function show_components(
         end
     end
 
-    return PrettyTables.pretty_table(
+    PrettyTables.pretty_table(
         io,
         data;
         header = header,
@@ -298,6 +301,7 @@ function show_components(
         alignment = :l,
         kwargs...,
     )
+    return
 end
 
 ## This function takes in a time period or date period and returns a compound period

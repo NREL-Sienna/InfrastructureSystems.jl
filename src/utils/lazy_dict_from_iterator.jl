@@ -77,5 +77,6 @@ end
 function replace_iterator(container::LazyDictFromIterator, iter)
     @debug "replace_iterator"
     container.state = nothing
-    return container.iter = iter
+    container.iter = iter
+    return
 end

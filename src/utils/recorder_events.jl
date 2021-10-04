@@ -223,7 +223,8 @@ function show_recorder_events(
         return
     end
 
-    return show_recorder_events(io, events; kwargs...)
+    show_recorder_events(io, events; kwargs...)
+    return
 end
 
 function show_recorder_events(
@@ -256,5 +257,6 @@ function show_recorder_events(
         end
     end
 
-    return PrettyTables.pretty_table(io, data; header = header, kwargs...)
+    PrettyTables.pretty_table(io, data; header = header, kwargs...)
+    return
 end

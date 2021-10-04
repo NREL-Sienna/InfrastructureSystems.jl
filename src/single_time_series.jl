@@ -242,8 +242,7 @@ Base.iterate(time_series::SingleTimeSeries, n = 1) = iterate(get_data(time_serie
 Refer to TimeSeries.when(). Underlying data is copied.
 """
 function when(time_series::SingleTimeSeries, period::Function, t::Integer)
-    return new =
-        SingleTimeSeries(time_series, TimeSeries.when(get_data(time_series), period, t))
+    return SingleTimeSeries(time_series, TimeSeries.when(get_data(time_series), period, t))
 end
 
 """

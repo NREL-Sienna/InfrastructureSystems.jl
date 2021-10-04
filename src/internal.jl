@@ -54,7 +54,8 @@ end
 Clear any value stored in ext.
 """
 function clear_ext!(obj::InfrastructureSystemsInternal)
-    return obj.ext = nothing
+    obj.ext = nothing
+    return
 end
 
 get_uuid(internal::InfrastructureSystemsInternal) = internal.uuid
@@ -75,7 +76,8 @@ end
 Assign a new UUID.
 """
 function assign_new_uuid!(obj::InfrastructureSystemsType)
-    return get_internal(obj).uuid = make_uuid()
+    get_internal(obj).uuid = make_uuid()
+    return
 end
 
 function serialize(internal::InfrastructureSystemsInternal)

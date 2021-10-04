@@ -170,7 +170,8 @@ end
 
 function make_logging_config_file(filename = "logging_config.toml"; force = false)
     cp(SIIP_LOGGING_CONFIG_FILENAME, filename, force = force)
-    return println("Created $filename")
+    println("Created $filename")
+    return
 end
 
 """
