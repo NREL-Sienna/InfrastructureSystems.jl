@@ -18,7 +18,7 @@ for main_path in main_paths
             verbose = true,
             always_for_in = true,
             whitespace_typedefs = true,
-            always_use_return = true
+            # always_use_return = true
             )
     end
 end
