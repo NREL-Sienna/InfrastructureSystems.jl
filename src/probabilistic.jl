@@ -60,7 +60,14 @@ function Probabilistic(;
         )
     end
 
-    Probabilistic(name, data, percentiles, resolution, scaling_factor_multiplier, internal)
+    return Probabilistic(
+        name,
+        data,
+        percentiles,
+        resolution,
+        scaling_factor_multiplier,
+        internal,
+    )
 end
 
 """

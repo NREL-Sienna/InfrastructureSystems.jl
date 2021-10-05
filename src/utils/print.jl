@@ -65,7 +65,7 @@ end
 function Base.show(io::IO, data::SystemData)
     show(io, data.components)
     println(io, "\n")
-    show(io, data.time_series_params)
+    return show(io, data.time_series_params)
 end
 
 function Base.show(io::IO, ::MIME"text/plain", data::SystemData)
@@ -118,6 +118,7 @@ function show_time_series_data(io::IO, data::SystemData; kwargs...)
         alignment = :l,
         kwargs...,
     )
+    return
 end
 
 function Base.summary(ist::InfrastructureSystemsComponent)
@@ -172,6 +173,7 @@ function Base.show(io::IO, ist::InfrastructureSystemsComponent)
         print(io, val)
     end
     print(io, ")")
+    return
 end
 
 function Base.show(io::IO, ::MIME"text/plain", it::FlattenIteratorWrapper)
@@ -223,6 +225,7 @@ function show_components_table(io::IO, components::Components; kwargs...)
     end
 
     PrettyTables.pretty_table(io, data; header = header, alignment = :l, kwargs...)
+    return
 end
 
 function show_components(
@@ -298,6 +301,7 @@ function show_components(
         alignment = :l,
         kwargs...,
     )
+    return
 end
 
 ## This function takes in a time period or date period and returns a compound period

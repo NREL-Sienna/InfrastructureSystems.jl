@@ -12,11 +12,11 @@ end
 function read_validation_descriptor(filename::AbstractString)
     if occursin(r"(\.yaml)|(\.yml)"i, filename)
         data = open(filename) do file
-            YAML.load(file)
+            return YAML.load(file)
         end
     elseif occursin(r"(\.json)"i, filename)
         data = open(filename) do file
-            JSON3.read(file, Dict)
+            return JSON3.read(file, Dict)
         end
     else
         error("Filename is not a YAML or JSON file.")

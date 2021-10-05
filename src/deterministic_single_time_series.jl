@@ -36,7 +36,7 @@ function DeterministicSingleTimeSeries(;
     count,
     horizon,
 )
-    DeterministicSingleTimeSeries(
+    return DeterministicSingleTimeSeries(
         single_time_series,
         initial_timestamp,
         interval,

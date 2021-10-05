@@ -61,6 +61,7 @@ function reset_info!(params::ForecastParameters)
     params.initial_timestamp = UNINITIALIZED_DATETIME
     params.interval = UNINITIALIZED_PERIOD
     params.count = UNINITIALIZED_LENGTH
+    return
 end
 
 function get_forecast_initial_times(params::ForecastParameters)
@@ -176,6 +177,7 @@ end
 function check_add_time_series(params::TimeSeriesParameters, ts::TimeSeriesData)
     check_params_compatibility(params, TimeSeriesParameters(ts))
     _check_time_series_lengths(ts)
+    return
 end
 
 function set_parameters!(params::TimeSeriesParameters, ts::StaticTimeSeries)

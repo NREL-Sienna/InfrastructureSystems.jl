@@ -236,6 +236,7 @@ function generate_structs(
 
     data = read_json_data(input_file)
     generate_structs(output_directory, data, print_results = print_results)
+    return
 end
 
 """

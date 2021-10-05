@@ -13,11 +13,11 @@ mutable struct SystemUnitsSettings <: UnitsData
 end
 
 function serialize(val::SystemUnitsSettings)
-    Dict("base_value" => val.base_value, "unit_system" => string(val.unit_system))
+    return Dict("base_value" => val.base_value, "unit_system" => string(val.unit_system))
 end
 
 function deserialize(::Type{SystemUnitsSettings}, data::Dict)
-    SystemUnitsSettings(data["base_value"], _UNIT_SYSTEM_MAP[data["unit_system"]])
+    return SystemUnitsSettings(data["base_value"], _UNIT_SYSTEM_MAP[data["unit_system"]])
 end
 
 """Internal storage common to InfrastructureSystems types."""
@@ -55,6 +55,7 @@ Clear any value stored in ext.
 """
 function clear_ext!(obj::InfrastructureSystemsInternal)
     obj.ext = nothing
+    return
 end
 
 get_uuid(internal::InfrastructureSystemsInternal) = internal.uuid
@@ -76,6 +77,7 @@ Assign a new UUID.
 """
 function assign_new_uuid!(obj::InfrastructureSystemsType)
     get_internal(obj).uuid = make_uuid()
+    return
 end
 
 function serialize(internal::InfrastructureSystemsInternal)

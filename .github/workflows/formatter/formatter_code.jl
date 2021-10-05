@@ -1,3 +1,9 @@
+using Pkg
+Pkg.activate(@__DIR__)
+Pkg.instantiate()
+
+using JuliaFormatter
+
 main_paths = ["./src", "./test"]
 for main_path in main_paths
     for folder in readdir(main_path)
@@ -11,7 +17,8 @@ for main_path in main_paths
             remove_extra_newlines = true,
             verbose = true,
             always_for_in = true,
-            whitespace_typedefs = true
+            whitespace_typedefs = true,
+            # always_use_return = true # removed since it has false positives.
             )
     end
 end

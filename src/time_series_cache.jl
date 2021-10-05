@@ -141,7 +141,7 @@ struct TimeSeriesCacheCommon{T <: TimeSeriesData, U <: InfrastructureSystemsComp
         num_iterations,
         ignore_scaling_factors,
     )
-        new{typeof(ts), typeof(component)}(
+        return new{typeof(ts), typeof(component)}(
             Ref(ts),
             component,
             name,
@@ -274,15 +274,18 @@ function _update!(cache::ForecastCache)
     _set_time_series!(cache, ts)
     _set_last_cached_time!(cache, next_time)
     _decrement_length_remaining!(cache, count)
+    return
 end
 
 function _increment_next_time!(cache::ForecastCache, len)
     cache.common.next_time[] += get_interval(_get_time_series(cache))
+    return
 end
 
 function _set_last_cached_time!(cache::ForecastCache, next_time)
     interval = get_interval(_get_time_series(cache))
     cache.common.last_cached_time[] = next_time + (cache.in_memory_count - 1) * interval
+    return
 end
 
 struct StaticTimeSeriesCache{T <: TimeSeriesData, U <: InfrastructureSystemsComponent} <:
@@ -372,15 +375,18 @@ function _update!(cache::StaticTimeSeriesCache)
     _set_time_series!(cache, ts)
     _set_last_cached_time!(cache, next_time)
     _decrement_length_remaining!(cache, len)
+    return
 end
 
 function _set_last_cached_time!(c::StaticTimeSeriesCache, next_time)
     resolution = get_resolution(_get_time_series(c))
     c.common.last_cached_time[] = next_time + (c.in_memory_rows - 1) * resolution
+    return
 end
 
 function _increment_next_time!(cache::StaticTimeSeriesCache, len)
     cache.common.next_time[] += len * get_resolution(_get_time_series(cache))
+    return
 end
 
 function _get_row_size(vals)

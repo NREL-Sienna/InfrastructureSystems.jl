@@ -325,7 +325,7 @@ function remove_component!(::Type{T}, data::SystemData, name) where {T}
 end
 
 function remove_component!(data::SystemData, component)
-    remove_component!(data.components, component)
+    return remove_component!(data.components, component)
 end
 
 function remove_components!(::Type{T}, data::SystemData) where {T}
@@ -338,7 +338,7 @@ Removes the component from the main container and adds it to the masked containe
 function mask_component!(data::SystemData, component::InfrastructureSystemsComponent)
     remove_component!(data.components, component, remove_time_series = false)
     set_time_series_storage!(component, nothing)
-    add_masked_component!(
+    return add_masked_component!(
         data,
         component,
         skip_validation = true,  # validation has already occurred
@@ -350,6 +350,7 @@ function clear_time_series!(data::SystemData)
     clear_time_series!(data.time_series_storage)
     clear_time_series!(data.components)
     reset_info!(data.time_series_params)
+    return
 end
 
 function iterate_components_with_time_series(data::SystemData)
@@ -563,6 +564,7 @@ function prepare_for_serialization!(
     ext = get_ext(data.internal)
     ext["serialization_directory"] = directory
     ext["basename"] = splitext(basename(filename))[1]
+    return
 end
 
 function serialize(data::SystemData)
@@ -740,6 +742,7 @@ clear_components!(data::SystemData) = clear_components!(data.components)
 function check_components(data::SystemData, args...)
     check_components(data.components, args...)
     check_components(data.masked_components, args...)
+    return
 end
 
 check_component(data::SystemData, component) = check_component(data.components, component)

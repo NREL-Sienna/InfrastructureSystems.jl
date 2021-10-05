@@ -145,7 +145,7 @@ function _record_event(name::Symbol, event::AbstractRecorderEvent)
     # Key is not checked. Callers must use @record and not call this directly.
     recorder = g_recorders[name]
     write(recorder.io, JSON3.write(serialize(event)))
-    write(recorder.io, "\n")
+    return write(recorder.io, "\n")
 end
 
 """
@@ -207,7 +207,7 @@ function show_recorder_events(
     filter_func::Union{Nothing, Function} = nothing;
     kwargs...,
 ) where {T <: AbstractRecorderEvent}
-    show_recorder_events(stdout, T, filename, filter_func; kwargs...)
+    return show_recorder_events(stdout, T, filename, filter_func; kwargs...)
 end
 
 function show_recorder_events(
@@ -224,6 +224,7 @@ function show_recorder_events(
     end
 
     show_recorder_events(io, events; kwargs...)
+    return
 end
 
 function show_recorder_events(
@@ -257,4 +258,5 @@ function show_recorder_events(
     end
 
     PrettyTables.pretty_table(io, data; header = header, kwargs...)
+    return
 end

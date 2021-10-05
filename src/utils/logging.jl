@@ -42,7 +42,7 @@ function LogEvent(file, line, id, message, level)
         file = "None"
     end
 
-    LogEvent(file, line, id, message, level, 1, 0)
+    return LogEvent(file, line, id, message, level, 1, 0)
 end
 
 struct LogEventTracker
@@ -148,7 +148,7 @@ end
 
 function LoggingConfiguration(config_filename)
     config = open(config_filename, "r") do io
-        TOML.parse(io)
+        return TOML.parse(io)
     end
 
     console_stream_str = get(config, "console_stream", "stderr")
@@ -171,6 +171,7 @@ end
 function make_logging_config_file(filename = "logging_config.toml"; force = false)
     cp(SIIP_LOGGING_CONFIG_FILENAME, filename, force = force)
     println("Created $filename")
+    return
 end
 
 """
@@ -301,7 +302,7 @@ function Logging.handle_message(
     maxlog = nothing,
     kwargs...,
 )
-    Logging.handle_message(
+    return Logging.handle_message(
         file_logger.logger,
         level,
         "$(Dates.now()) [$(getpid()):$(Base.Threads.threadid())]: $message",
@@ -596,14 +597,14 @@ end
 Flush any file streams.
 """
 function Base.flush(logger::MultiLogger)
-    _handle_log_func(logger, Base.flush)
+    return _handle_log_func(logger, Base.flush)
 end
 
 """
 Ensures that any file streams are flushed and closed.
 """
 function Base.close(logger::MultiLogger)
-    _handle_log_func(logger, Base.close)
+    return _handle_log_func(logger, Base.close)
 end
 
 function get_logging_level(level::String)

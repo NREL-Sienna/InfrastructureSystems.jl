@@ -43,6 +43,7 @@ function set_time_series_storage!(
     end
 
     container.time_series_storage = storage
+    return
 end
 
 function add_time_series!(
@@ -73,10 +74,12 @@ function remove_time_series!(
     end
 
     pop!(container.data, key)
+    return
 end
 
 function clear_time_series!(container::TimeSeriesContainer)
     empty!(container.data)
+    return
 end
 
 function get_time_series(

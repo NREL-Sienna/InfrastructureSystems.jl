@@ -78,6 +78,7 @@ function add_time_series_reference!(
     @assert !in(key, record.component_names) "There is already a reference to $key for time series $ts_uuid"
 
     push!(record.component_names, key)
+    return
 end
 
 function remove_time_series!(

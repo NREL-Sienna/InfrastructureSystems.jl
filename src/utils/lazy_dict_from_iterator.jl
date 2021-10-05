@@ -71,6 +71,7 @@ end
 function reset_iterator(container::LazyDictFromIterator)
     @debug "reset_iterator"
     container.state = nothing
+    return
 end
 
 """Replace the iterator, maintaining the cached dict."""
@@ -78,4 +79,5 @@ function replace_iterator(container::LazyDictFromIterator, iter)
     @debug "replace_iterator"
     container.state = nothing
     container.iter = iter
+    return
 end

@@ -51,7 +51,14 @@ function Scenarios(;
     internal = InfrastructureSystemsInternal(),
 )
     data = handle_normalization_factor(convert_data(data), normalization_factor)
-    Scenarios(name, data, scenario_count, resolution, scaling_factor_multiplier, internal)
+    return Scenarios(
+        name,
+        data,
+        scenario_count,
+        resolution,
+        scaling_factor_multiplier,
+        internal,
+    )
 end
 
 """

@@ -196,7 +196,7 @@ end
     try
         redirect_stdout(devnull) do
             IS.make_logging_config_file(filename)
-            IS.make_logging_config_file(filename, force = true)
+            return IS.make_logging_config_file(filename, force = true)
         end
         @test IS.LoggingConfiguration(filename) isa IS.LoggingConfiguration
     finally
@@ -292,7 +292,7 @@ end
             stats.tracking_start_time -= 10
         end
         # Not suppressed
-        run()
+        return run()
     end
 
     count_occurrences(str, substr) = length(split(str, substr)) - 1
