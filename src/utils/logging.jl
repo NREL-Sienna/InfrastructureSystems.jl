@@ -256,7 +256,7 @@ function configure_logging(config::LoggingConfiguration)
 
     loggers = Vector{Logging.AbstractLogger}()
     if config.console
-        console_logger = Logging.ConsoleLogger(config.console_stream, config.console_level)
+        console_logger = TerminalLogger(config.console_stream, config.console_level)
         push!(loggers, console_logger)
     end
 
@@ -441,7 +441,7 @@ both a file and the console. Secondarily, it can track the counts of all log mes
 
 # Example
 ```Julia
-MultiLogger([ConsoleLogger(stderr), SimpleLogger(stream)], LogEventTracker())
+MultiLogger([TerminalLogger(stderr), SimpleLogger(stream)], LogEventTracker())
 ```
 """
 mutable struct MultiLogger <: Logging.AbstractLogger
@@ -456,7 +456,7 @@ Creates a MultiLogger with no event tracking.
 
 # Example
 ```Julia
-MultiLogger([ConsoleLogger(stderr), SimpleLogger(stream)])
+MultiLogger([TerminalLogger(stderr), SimpleLogger(stream)])
 ```
 """
 function MultiLogger(loggers::Array{T}) where {T <: Logging.AbstractLogger}

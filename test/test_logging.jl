@@ -42,7 +42,7 @@ end
 
 @testset "Test MultiLogger with no event tracking" begin
     logger = IS.MultiLogger([
-        ConsoleLogger(devnull, Logging.Info),
+        TerminalLogger(devnull, Logging.Info),
         SimpleLogger(devnull, Logging.Debug),
     ])
     with_logger(logger) do
@@ -55,7 +55,7 @@ end
 @testset "Test MultiLogger with event tracking" begin
     levels = (Logging.Debug, Logging.Info, Logging.Warn, Logging.Error)
     logger = IS.MultiLogger(
-        [ConsoleLogger(devnull, Logging.Info), SimpleLogger(devnull, Logging.Debug)],
+        [TerminalLogger(devnull, Logging.Info), SimpleLogger(devnull, Logging.Debug)],
         IS.LogEventTracker(levels),
     )
 
@@ -154,7 +154,7 @@ end
 @testset "Test group level" begin
     levels = (Logging.Debug, Logging.Info, Logging.Warn, Logging.Error)
     tracker = IS.LogEventTracker(levels)
-    logger = IS.MultiLogger([ConsoleLogger(devnull, Logging.Debug)], tracker)
+    logger = IS.MultiLogger([TerminalLogger(devnull, Logging.Debug)], tracker)
     IS.set_group_level!(logger, :test_group, Logging.Info)
 
     @test IS.get_group_level(logger, :test_group) == Logging.Info
@@ -175,7 +175,7 @@ end
 @testset "Test group levels" begin
     levels = (Logging.Debug, Logging.Info, Logging.Warn, Logging.Error)
     tracker = IS.LogEventTracker(levels)
-    logger = IS.MultiLogger([ConsoleLogger(devnull, Logging.Debug)], tracker)
+    logger = IS.MultiLogger([TerminalLogger(devnull, Logging.Debug)], tracker)
     min_levels = Dict(:test_group => Logging.Warn)
     IS.set_group_levels!(logger, min_levels)
     @test IS.get_group_levels(logger) == min_levels
@@ -253,7 +253,7 @@ end
     levels = (Logging.Info, Logging.Warn, Logging.Error)
     tracker = IS.LogEventTracker(levels)
     logger = IS.MultiLogger(
-        [ConsoleLogger(devnull, Logging.Info), SimpleLogger(devnull, Logging.Debug)],
+        [TerminalLogger(devnull, Logging.Info), SimpleLogger(devnull, Logging.Debug)],
         tracker,
     )
 
@@ -276,7 +276,7 @@ end
 
 @testset "Test log suppression logging of num_suppressed" begin
     io = IOBuffer()
-    logger = IS.MultiLogger([ConsoleLogger(io, Logging.Info)])
+    logger = IS.MultiLogger([TerminalLogger(io, Logging.Info)])
 
     function run()
         @info TEST_MSG maxlog = 1 _suppression_period = 5
