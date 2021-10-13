@@ -90,13 +90,15 @@ InfrastructureSystems.get_group_level(logger, InfrastructureSystems.LOG_GROUP_TI
 
 ### Log to console and file in an application or unit test environment
 
-Create a `MultiLogger` from `Logging.ConsoleLogger` and `Logging.SimpleLogger`.
+Create a `MultiLogger` from `TerminalLoggers.TerminalLogger` and `Logging.SimpleLogger`.
 Use `open_file_logger` to guarantee that all messages get flushed to the file.
+
+Note that you can use `Logging.ConsoleLogger` if you don't have `TerminalLoggers` installed.
 
 **Example** Multilogger configuration
 
 ```Julia
-console_logger = ConsoleLogger(stderr, Logging.Error)
+console_logger = TerminalLogger(stderr, Logging.Error)
 
 open_file_logger("log.txt", Logging.Info) do file_logger
     multi_logger = MultiLogger([console_logger, file_logger])
@@ -111,7 +113,7 @@ try/finally block and reset the global logger upon exit.
 
 ```julia
 function run_tests()
-    console_logger = ConsoleLogger(stderr, Logging.Error)
+    console_logger = TerminalLogger(stderr, Logging.Error)
 
     open_file_logger("log.txt", Logging.Info) do file_logger
         multi_logger = MultiLogger([console_logger, file_logger])

@@ -1,6 +1,7 @@
 using Test
 using Logging
 import Dates
+import TerminalLoggers: TerminalLogger
 import TimeSeries
 import UUIDs
 import JSON3
@@ -85,7 +86,7 @@ function run_tests()
             console_level = Logging.Error,
         )
     end
-    console_logger = ConsoleLogger(config.console_stream, config.console_level)
+    console_logger = TerminalLogger(config.console_stream, config.console_level)
 
     IS.open_file_logger(config.filename, config.file_level) do file_logger
         levels = (Logging.Info, Logging.Warn, Logging.Error)
