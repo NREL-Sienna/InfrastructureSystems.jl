@@ -302,3 +302,30 @@ end
     @test count_occurrences(output, "num_suppressed") == 1
     @test count_occurrences(output, "num_suppressed = 1") == 1
 end
+
+@testset "Test progress logger" begin
+    io = IOBuffer()
+    logger = IS.configure_logging(
+        console_stream = io,
+        console = false,
+        file = false,
+        progress = true,
+        set_global = false,
+    )
+    with_logger(logger) do
+        @progress for i in 1:5
+            sleep(0.01)
+        end
+    end
+
+    output = String(take!(io))
+    @test occursin("Progress", output)
+end
+
+@testset "Test bad input" begin
+    @test_throws ErrorException IS.configure_logging(
+        console = false,
+        file = false,
+        progress = false,
+    )
+end
