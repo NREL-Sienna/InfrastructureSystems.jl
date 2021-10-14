@@ -503,7 +503,7 @@ function Logging.handle_message(
 )
     return Logging.handle_message(
         logger::MultiLogger,
-        Logging.Logging.LogLevel(level),
+        Logging.LogLevel(level),
         message,
         _module,
         group,
@@ -538,6 +538,7 @@ function Logging.handle_message(
                         kwargs =
                             merge(Dict(kwargs), Dict(:num_suppressed => num_suppressed))
                     end
+                    # @show typeof(_logger)
                     Logging.handle_message(
                         _logger,
                         level,
