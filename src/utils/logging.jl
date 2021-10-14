@@ -190,12 +190,12 @@ end
 """
 Creates console and file loggers per caller specification and returns a MultiLogger.
 
-Suppress noisy events by specifying per-event values of `maxlog = X` and 
+Suppress noisy events by specifying per-event values of `maxlog = X` and
 `_suppression_period = Y` where X is the max number of events that can occur in Y
 seconds. After the period ends, messages will no longer be suppressed. Note that
 if you don't specify `_suppression_period` then `maxlog` applies for the for the
 duration of your process (standard Julia logging behavior).
-    
+
 **Note:** Use of log message suppression and the LogEventTracker are not thread-safe.
 Please contact the package developers if you need this functionality.
 
@@ -492,7 +492,30 @@ Logging.catch_exceptions(logger::MultiLogger) = false
 
 function Logging.handle_message(
     logger::MultiLogger,
-    level,
+    level::Int,
+    message,
+    _module,
+    group,
+    id,
+    file,
+    line;
+    kwargs...,
+)
+    return Logging.handle_message(
+        logger::MultiLogger,
+        Logging.Logging.LogLevel(level),
+        message,
+        _module,
+        group,
+        id,
+        file,
+        line;
+        kwargs...,
+    )
+end
+function Logging.handle_message(
+    logger::MultiLogger,
+    level::Logging.LogLevel,
     message,
     _module,
     group,
