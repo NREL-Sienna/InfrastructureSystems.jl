@@ -8,6 +8,7 @@ import JSON3
 using DataStructures: SortedDict
 using DataFrames
 using Random
+using ProgressLogging
 
 import InfrastructureSystems
 

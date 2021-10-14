@@ -10,7 +10,7 @@ import Logging
 import Random
 import Pkg
 import PrettyTables
-import TerminalLoggers: TerminalLogger
+import TerminalLoggers: TerminalLogger, ProgressLevel
 import TimeSeries
 import TOML
 using DataStructures: SortedDict

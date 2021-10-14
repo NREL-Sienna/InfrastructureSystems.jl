@@ -19,6 +19,7 @@ const SIIP_LOGGING_CONFIG_FILENAME =
 
 const LOG_LEVELS = Dict(
     "Debug" => Logging.Debug,
+    "Progress" => ProgressLevel,
     "Info" => Logging.Info,
     "Warn" => Logging.Warn,
     "Error" => Logging.Error,
@@ -111,6 +112,7 @@ struct LoggingConfiguration
     console::Bool
     console_stream::IO
     console_level::Base.LogLevel
+    progress::Bool
     file::Bool
     filename::Union{Nothing, String}
     file_level::Base.LogLevel
@@ -124,6 +126,7 @@ function LoggingConfiguration(;
     console = true,
     console_stream = stderr,
     console_level = Logging.Error,
+    progress = true,
     file = true,
     filename = "log.txt",
     file_level = Logging.Info,
@@ -136,6 +139,7 @@ function LoggingConfiguration(;
         console,
         console_stream,
         console_level,
+        progress,
         file,
         filename,
         file_level,
@@ -206,6 +210,7 @@ ensure that all events get flushed.
 - `console::Bool=true`: create console logger
 - `console_stream::IOStream=stderr`: stream for console logger
 - `console_level::Logging.LogLevel=Logging.Error`: level for console messages
+- `progress::Bool=true`: enable progress logger
 - `file::Bool=true`: create file logger
 - `filename::Union{Nothing, String}=log.txt`: log file
 - `file_level::Logging.LogLevel=Logging.Info`: level for file messages
@@ -224,6 +229,7 @@ function configure_logging(;
     console = true,
     console_stream = stderr,
     console_level = Logging.Error,
+    progress = true,
     file = true,
     filename = "log.txt",
     file_level = Logging.Info,
@@ -235,6 +241,7 @@ function configure_logging(;
         console = console,
         console_stream = console_stream,
         console_level = console_level,
+        progress = progress,
         file = file,
         filename = filename,
         file_level = file_level,
@@ -250,14 +257,19 @@ function configure_logging(config_filename::AbstractString)
 end
 
 function configure_logging(config::LoggingConfiguration)
-    if !config.console && !config.file
-        error("At least one of console or file must be true")
+    if !config.console && !config.file && !config.progress
+        error("At least one of console, file, or progress must be true")
     end
 
     loggers = Vector{Logging.AbstractLogger}()
     if config.console
         console_logger = TerminalLogger(config.console_stream, config.console_level)
         push!(loggers, console_logger)
+    end
+
+    if config.progress
+        progress_logger = ProgressLogger(config.console_stream, ProgressLevel)
+        push!(loggers, progress_logger)
     end
 
     if config.file
@@ -513,6 +525,7 @@ function Logging.handle_message(
         kwargs...,
     )
 end
+
 function Logging.handle_message(
     logger::MultiLogger,
     level::Logging.LogLevel,
@@ -647,4 +660,21 @@ function _handle_log_func(logger::MultiLogger, func::Function)
             func(_logger)
         end
     end
+end
+
+mutable struct ProgressLogger <: Logging.AbstractLogger
+    logger::TerminalLogger
+end
+
+ProgressLogger(args...) = ProgressLogger(TerminalLogger(args...))
+
+function Logging.shouldlog(logger::ProgressLogger, level, _module, group, id)
+    return level == ProgressLevel
+end
+
+Logging.min_enabled_level(x::ProgressLogger) = Logging.min_enabled_level(x.logger)
+Logging.catch_exceptions(x::ProgressLogger) = Logging.catch_exceptions(x.logger)
+
+function Logging.handle_message(x::ProgressLogger, args...; kwargs...)
+    Logging.handle_message(x.logger, args...; kwargs...)
 end
