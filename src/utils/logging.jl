@@ -263,7 +263,9 @@ function configure_logging(config::LoggingConfiguration)
 
     loggers = Vector{Logging.AbstractLogger}()
     if config.console
-        console_logger = TerminalLogger(config.console_stream, config.console_level)
+        # We could use TerminalLogger here but it renders messages as Markdown, and that
+        # can cause unexpected results, particularly with variable names and underscores.
+        console_logger = Logging.ConsoleLogger(config.console_stream, config.console_level)
         push!(loggers, console_logger)
     end
 
