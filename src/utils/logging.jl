@@ -331,6 +331,7 @@ function Logging.handle_message(
 end
 
 function Logging.shouldlog(logger::FileLogger, level, _module, group, id)
+    level == ProgressLevel && return false
     return Logging.shouldlog(logger.logger, level, _module, group, id)
 end
 
@@ -553,7 +554,9 @@ function Logging.handle_message(
                         kwargs =
                             merge(Dict(kwargs), Dict(:num_suppressed => num_suppressed))
                     end
-                    # @show typeof(_logger)
+                    # Without this line, the ConsoleLogger would log progress messages if
+                    # its min_enabled_level was debug.
+                    level == ProgressLevel && !isa(_logger, ProgressLogger) && continue
                     Logging.handle_message(
                         _logger,
                         level,
