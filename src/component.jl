@@ -638,6 +638,13 @@ function transform_single_time_series_internal!(
     for ts_metadata in values(container.data)
         if ts_metadata isa SingleTimeSeriesMetadata
             resolution = get_resolution(ts_metadata)
+            _params = _get_single_time_series_transformed_parameters(
+                ts_metadata,
+                T,
+                params.forecast_params.horizon,
+                params.forecast_params.interval,
+            )
+            check_params_compatibility(params, _params)
             new_metadata = DeterministicMetadata(
                 name = get_name(ts_metadata),
                 resolution = params.resolution,

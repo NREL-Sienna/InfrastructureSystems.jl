@@ -474,6 +474,37 @@ end
     end
 end
 
+@testset "Test Deterministic with a wrapped SingleTimeSeries different offsets" begin
+    for in_memory in (true, false)
+        sys = IS.SystemData(time_series_in_memory = in_memory)
+        component = IS.TestComponent("Component1", 5)
+        IS.add_component!(sys, component)
+
+        resolution = Dates.Hour(1)
+        dates1 = create_dates("2020-01-01T00:00:00", resolution, "2020-01-02T00:00:00")
+        dates2 = create_dates("2020-01-01T00:00:00", resolution, "2020-01-01T23:00:00")
+        data1 = collect(1:length(dates1))
+        data2 = collect(1:length(dates2))
+        ta1 = TimeSeries.TimeArray(dates1, data1, [IS.get_name(component)])
+        ta2 = TimeSeries.TimeArray(dates2, data2, [IS.get_name(component)])
+        name1 = "val1"
+        name2 = "val2"
+        ts1 = IS.SingleTimeSeries(name1, ta1)
+        ts2 = IS.SingleTimeSeries(name2, ta2)
+        IS.add_time_series!(sys, component, ts1)
+        IS.add_time_series!(sys, component, ts2)
+
+        horizon = 1
+        interval = Dates.Hour(1)
+        @test_throws IS.ConflictingInputsError IS.transform_single_time_series!(
+            sys,
+            IS.DeterministicSingleTimeSeries,
+            horizon,
+            interval,
+        )
+    end
+end
+
 @testset "Test SingleTimeSeries transform with multiple forecasts per component" begin
     sys = IS.SystemData(time_series_in_memory = true)
     component = IS.TestComponent("Component1", 5)
