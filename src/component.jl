@@ -492,6 +492,10 @@ function get_time_series_keys(component::InfrastructureSystemsComponent)
     return keys(get_time_series_container(component).data)
 end
 
+function list_time_series_metadata(component::InfrastructureSystemsComponent)
+    return collect(values(get_time_series_container(component).data))
+end
+
 function get_time_series_names(
     ::Type{T},
     component::InfrastructureSystemsComponent,
