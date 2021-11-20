@@ -243,6 +243,20 @@ function remove_time_series!(
     return
 end
 
+function remove_time_series!(
+    data::SystemData,
+    component::InfrastructureSystemsComponent,
+    ts_metadata::TimeSeriesMetadata,
+)
+    uuid = get_time_series_uuid(ts_metadata)
+    name = get_name(ts_metadata)
+    if remove_time_series_metadata!(component, typeof(ts_metadata), name)
+        remove_time_series!(data.time_series_storage, uuid, get_uuid(component), name)
+    end
+
+    return
+end
+
 """
 Return a time series from TimeSeriesFileMetadata.
 
@@ -369,8 +383,10 @@ Removes all time series of a particular type from a System.
 """
 function remove_time_series!(data::SystemData, ::Type{T}) where {T <: TimeSeriesData}
     for component in iterate_components_with_time_series(data)
-        for ts in get_time_series_multiple(component, type = T)
-            remove_time_series!(data, typeof(ts), component, get_name(ts))
+        for ts_metadata in list_time_series_metadata(component)
+            if time_series_metadata_to_data(ts_metadata) <: T
+                remove_time_series!(data, component, ts_metadata)
+            end
         end
     end
     counts = get_time_series_counts(data)
