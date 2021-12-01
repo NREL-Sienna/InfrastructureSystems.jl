@@ -63,7 +63,13 @@ end
 set_time_series_container!(value::InfrastructureSystemsComponent) = nothing
 
 get_name(value::InfrastructureSystemsComponent) = value.name
-set_name!(value::InfrastructureSystemsComponent, name) = value.name = name
+
+function set_name_internal!(value::InfrastructureSystemsComponent, name)
+    value.name = name
+    return
+end
+
+set_name!(value::InfrastructureSystemsComponent, name) = set_name_internal!(value)
 get_internal(value::InfrastructureSystemsComponent) = value.internal
 
 include("common.jl")
