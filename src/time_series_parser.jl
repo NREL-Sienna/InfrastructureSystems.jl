@@ -36,7 +36,7 @@ mutable struct TimeSeriesFileMetadata
 end
 
 function TimeSeriesFileMetadata(;
-    simulation,
+    simulation = "",
     category,
     component_name,
     name,
@@ -81,10 +81,11 @@ function read_time_series_file_metadata(file_path::AbstractString)
                     get(item, "scaling_factor_multiplier", nothing)
                 scaling_factor_multiplier_module =
                     get(item, "scaling_factor_multiplier_module", nothing)
+                simulation = get(item, "simulation", "")
                 push!(
                     metadata,
                     TimeSeriesFileMetadata(;
-                        simulation = item["simulation"],
+                        simulation = simulation,
                         category = item["category"],
                         component_name = item["component_name"],
                         name = item["name"],
@@ -114,10 +115,11 @@ function read_time_series_file_metadata(file_path::AbstractString)
             scaling_factor_multiplier = get(row, :scaling_factor_multiplier, nothing)
             scaling_factor_multiplier_module =
                 get(row, :scaling_factor_multiplier_module, nothing)
+            simulation = get(row, :simulation, "")
             push!(
                 metadata,
                 TimeSeriesFileMetadata(;
-                    simulation = row.simulation,
+                    simulation = simulation,
                     category = row.category,
                     component_name = row.component_name,
                     name = row.name,
