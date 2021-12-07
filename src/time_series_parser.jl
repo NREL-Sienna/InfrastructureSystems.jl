@@ -36,7 +36,7 @@ mutable struct TimeSeriesFileMetadata
 end
 
 function TimeSeriesFileMetadata(;
-    simulation,
+    simulation = "",
     category,
     component_name,
     name,
