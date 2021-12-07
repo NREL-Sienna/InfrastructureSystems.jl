@@ -386,7 +386,7 @@ function set_name!(
     end
 
     pop!(components.data[T], old_name)
-    set_name!(component, name)
+    set_name_internal!(component, name)
     components.data[T][name] = component
     @debug "Changed the name of component $(summary(component))" _group = LOG_GROUP_SYSTEM
 end
