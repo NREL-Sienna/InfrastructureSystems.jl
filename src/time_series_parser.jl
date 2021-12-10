@@ -8,21 +8,21 @@ end
 """Describes how to construct time_series from raw time series data files."""
 mutable struct TimeSeriesFileMetadata
     "User description of simulation"
-    simulation::String
+    simulation::AbstractString
     "String version of abstract type for the component associated with the time series."
-    category::String
+    category::AbstractString
     "Calling module should determine the actual type."
     "Name of time_series component"
-    component_name::String
+    component_name::AbstractString
     "User-defined name"
-    name::String
+    name::AbstractString
     "Controls normalization of time series.
      Use 1.0 for pre-normalized data.
      Use 'Max' to divide the time series by the max value in the column.
      Use any float for a custom scaling factor."
-    normalization_factor::Union{String, Float64}
+    normalization_factor::Union{AbstractString, Float64}
     "Path to the time series data file"
-    data_file::String
+    data_file::AbstractString
     "Resolution of the data being parsed in seconds"
     resolution::Dates.Period
     percentiles::Vector{Float64}
@@ -31,8 +31,8 @@ mutable struct TimeSeriesFileMetadata
     component::Union{Nothing, InfrastructureSystemsComponent}
     "Applicable when data are scaling factors. Accessor function on component to apply to
     values."
-    scaling_factor_multiplier::Union{Nothing, String}
-    scaling_factor_multiplier_module::Union{Nothing, String}
+    scaling_factor_multiplier::Union{Nothing, AbstractString}
+    scaling_factor_multiplier_module::Union{Nothing, AbstractString}
 end
 
 function TimeSeriesFileMetadata(;
@@ -185,13 +185,13 @@ function handle_normalization_factor(
 end
 
 struct TimeSeriesParsedInfo
-    simulation::String
+    simulation::AbstractString
     component::InfrastructureSystemsComponent
-    name::String  # Component field on which time series data is based.
+    name::AbstractString  # Component field on which time series data is based.
     normalization_factor::NormalizationFactor
     data::RawTimeSeries
     percentiles::Vector{Float64}
-    file_path::String
+    file_path::AbstractString
     resolution::Dates.Period
     scaling_factor_multiplier::Union{Nothing, Function}
 
