@@ -239,6 +239,11 @@ deserialize(::Type{Complex{T}}, data::Dict) where {T} =
 
 deserialize(::Type{Vector{Symbol}}, data::Vector) = Symbol.(data)
 
+# This handles Union{Nothing, Complex} and possibly others.
+function deserialize(::Type{Union{Nothing, T}}, data::Dict) where {T <: Number}
+    return deserialize(T, data)
+end
+
 function serialize_julia_info()
     data = Dict{String, Any}("julia_version" => string(VERSION))
     io = IOBuffer()
