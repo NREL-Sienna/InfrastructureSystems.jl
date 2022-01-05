@@ -97,83 +97,86 @@ end
     initial_timestamp = Dates.DateTime("2020-09-01")
     resolution = Dates.Hour(1)
 
+    len = 96
     data = TimeSeries.TimeArray(
-        range(initial_timestamp; length = 365, step = resolution),
-        rand(365),
+        range(initial_timestamp; length = len, step = resolution),
+        rand(len),
     )
     ts = IS.SingleTimeSeries(data = data, name = "test")
     IS.add_time_series!(sys, component, ts)
 
     cache = IS.StaticTimeSeriesCache(IS.SingleTimeSeries, component, "test")
-    @test cache.in_memory_rows == 365
+    @test cache.in_memory_rows == len
     @test IS.get_next_time(cache) == initial_timestamp
-    @test length(cache) == cache.common.num_iterations == 1
+    @test length(cache) == cache.common.num_iterations == len
 
     # Iterate over all initial times with default cache size.
     cache = IS.StaticTimeSeriesCache(IS.SingleTimeSeries, component, "test")
     for (i, ta) in enumerate(cache)
         it = initial_timestamp + (i - 1) * resolution
-        @test TimeSeries.timestamp(ta) == IS.get_time_series_timestamps(component, ts, it)
-        @test TimeSeries.values(ta) == IS.get_time_series_values(component, ts, it)
+        @test TimeSeries.timestamp(ta) ==
+              IS.get_time_series_timestamps(component, ts, it, len = 1)
+        @test TimeSeries.values(ta) == IS.get_time_series_values(component, ts, it, len = 1)
     end
 
     ta = IS.get_next_time_series_array!(cache)
     @test first(TimeSeries.timestamp(ta)) == initial_timestamp
     @test TimeSeries.timestamp(ta) ==
-          IS.get_time_series_timestamps(component, ts, initial_timestamp)
+          IS.get_time_series_timestamps(component, ts, initial_timestamp, len = 1)
     @test TimeSeries.values(ta) ==
-          IS.get_time_series_values(component, ts, initial_timestamp)
+          IS.get_time_series_values(component, ts, initial_timestamp, len = 1)
 
     # Iterate over all initial times with custom cache size.
+    cache_size_bytes = 96
     cache = IS.StaticTimeSeriesCache(
         IS.SingleTimeSeries,
         component,
         "test";
-        cache_size_bytes = 1024,
+        cache_size_bytes = cache_size_bytes,
     )
-    @test cache.in_memory_rows == 128
-    @test length(cache) == cache.common.num_iterations == 3
+    @test cache.in_memory_rows == cache_size_bytes / 8
+    @test length(cache) == cache.common.num_iterations == len
     ta = IS.get_next_time_series_array!(cache)
     @test first(TimeSeries.timestamp(ta)) == initial_timestamp
-    @test length(ta) == 128
-    @test TimeSeries.values(ta) == TimeSeries.values(data)[1:128]
+    @test length(ta) == 1
+    @test TimeSeries.values(ta) == [TimeSeries.values(data)[1]]
 
     IS.reset!(cache)
     for (i, ta) in enumerate(cache)
-        it = initial_timestamp + (i - 1) * cache.in_memory_rows * resolution
+        it = initial_timestamp + (i - 1) * resolution
         @test TimeSeries.timestamp(ta) ==
-              IS.get_time_series_timestamps(component, ts, it; len = length(ta))
-        @test TimeSeries.values(ta) ==
-              IS.get_time_series_values(component, ts, it; len = length(ta))
+              IS.get_time_series_timestamps(component, ts, it; len = 1)
+        @test TimeSeries.values(ta) == IS.get_time_series_values(component, ts, it; len = 1)
     end
 
     IS.reset!(cache)
     for i in 1:3
         ta = IS.get_next_time_series_array!(cache)
-        it = initial_timestamp + (i - 1) * cache.in_memory_rows * resolution
+        it = initial_timestamp + (i - 1) * resolution
         @test TimeSeries.timestamp(ta) ==
-              IS.get_time_series_timestamps(component, ts, it; len = length(ta))
-        @test TimeSeries.values(ta) ==
-              IS.get_time_series_values(component, ts, it; len = length(ta))
+              IS.get_time_series_timestamps(component, ts, it; len = 1)
+        @test TimeSeries.values(ta) == IS.get_time_series_values(component, ts, it; len = 1)
     end
 
+    cache_size_bytes = 96
+    start_time = Dates.DateTime("2020-09-02T08:00:00")
     cache = IS.StaticTimeSeriesCache(
         IS.SingleTimeSeries,
         component,
         "test";
-        start_time = Dates.DateTime("2020-09-06T08:00:00"),
-        cache_size_bytes = 1024,
+        start_time = start_time,
+        cache_size_bytes = cache_size_bytes,
     )
-    @test cache.in_memory_rows == 128
-    @test cache.common.num_iterations == 2
-    @test IS._get_length_remaining(cache) == 365 - 128
+    @test cache.in_memory_rows == cache_size_bytes / 8
+    @test cache.common.num_iterations ==
+          len - (start_time - initial_timestamp) / Dates.Millisecond(resolution)
+    @test IS._get_length_remaining(cache) == cache.common.num_iterations
     for i in 1:2
         ta = IS.get_next_time_series_array!(cache)
-        it = initial_timestamp + i * cache.in_memory_rows * resolution
+        it = start_time + (i - 1) * resolution
         @test TimeSeries.timestamp(ta) ==
-              IS.get_time_series_timestamps(component, ts, it; len = length(ta))
-        @test TimeSeries.values(ta) ==
-              IS.get_time_series_values(component, ts, it; len = length(ta))
+              IS.get_time_series_timestamps(component, ts, it; len = 1)
+        @test TimeSeries.values(ta) == IS.get_time_series_values(component, ts, it; len = 1)
     end
 end
 
