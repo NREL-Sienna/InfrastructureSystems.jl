@@ -47,7 +47,7 @@ function get_time_series_array!(cache::TimeSeriesCache, timestamp::Dates.DateTim
         @debug "get_next_time_series_array! data is in cache" _group = LOG_GROUP_TIME_SERIES next_time
     end
 
-    len = _get_length_available(cache)
+    len = _get_length(cache)
     ta = get_time_series_array(
         _get_component(cache),
         _get_time_series(cache),
@@ -113,6 +113,7 @@ _get_time_series(c::TimeSeriesCache) = c.common.ts[]
 _set_time_series!(c::TimeSeriesCache, ts) = c.common.ts[] = ts
 _get_iterations_remaining(c::TimeSeriesCache) = c.common.iterations_remaining[]
 _decrement_iterations_remaining!(c::TimeSeriesCache) = c.common.iterations_remaining[] -= 1
+_get_resolution(cache::TimeSeriesCache) = get_resolution(_get_time_series(cache))
 
 struct TimeSeriesCacheCommon{T <: TimeSeriesData, U <: InfrastructureSystemsComponent}
     ts::Base.RefValue{T}
@@ -180,7 +181,8 @@ end
 Construct ForecastCache to automatically control caching of forecast data.
 Maintains some count of forecast windows in memory based on `cache_size_bytes`.
 
-Call Base.iterate or [`get_next_time_series_array!`](@ref) to retrieve data.
+Call Base.iterate or [`get_next_time_series_array!`](@ref) to retrieve data. Each iteration
+will return a TimeSeries.TimeArray covering one forecast window of length ``horizon``.
 
 # Arguments
 - `::Type{T}`: subtype of Forecast
@@ -230,7 +232,7 @@ function ForecastCache(
     end
 
     window_size = row_size * horizon
-    in_memory_count = minimum((trunc(Int, cache_size_bytes / window_size), count))
+    in_memory_count = minimum((cache_size_bytes ÷ window_size, count))
     @debug "ForecastCache" _group = LOG_GROUP_TIME_SERIES row_size window_size in_memory_count
 
     return ForecastCache(
@@ -298,7 +300,8 @@ end
 Construct StaticTimeSeriesCache to automatically control caching of time series data.
 Maintains rows of data in memory based on `cache_size_bytes`.
 
-Call Base.iterate or [`get_time_series_array`](@ref) to retrieve data.
+Call Base.iterate or [`get_time_series_array`](@ref) to retrieve data. Each iteration will
+return a TimeSeries.TimeArray of size 1.
 
 # Arguments
 - `::Type{T}`: subtype of StaticTimeSeries
@@ -323,28 +326,31 @@ function StaticTimeSeriesCache(
         start_time = initial_timestamp
     end
 
-    len = length(ts_metadata)
+    total_length = length(ts_metadata)
     if start_time != initial_timestamp
-        len -= (start_time - initial_timestamp) ÷ get_resolution(ts_metadata)
+        total_length -= (start_time - initial_timestamp) ÷ get_resolution(ts_metadata)
     end
 
     # Get an instance to assess data size.
     ts = get_time_series(T, component, name; start_time = start_time, len = 1)
     vals = get_time_series_values(component, ts, start_time, len = 1)
     row_size = _get_row_size(vals)
-    max_chunk_size = row_size * len
-    in_memory_rows = minimum((trunc(Int, cache_size_bytes / row_size), len))
-    @debug "StaticTimeSeriesCache" _group = LOG_GROUP_TIME_SERIES row_size max_chunk_size in_memory_rows
 
-    num_iterations = ceil(Int, len / in_memory_rows)
+    if row_size > cache_size_bytes
+        @warn "Increasing cache size to $row_size in order to accommodate" row_size
+        cache_size_bytes = row_size
+    end
+    in_memory_rows = minimum((cache_size_bytes ÷ row_size, total_length))
+
+    @debug "StaticTimeSeriesCache" _group = LOG_GROUP_TIME_SERIES total_length in_memory_rows
     return StaticTimeSeriesCache(
         TimeSeriesCacheCommon(
             ts = ts,
             component = component,
             name = name,
             next_time = start_time,
-            len = len,
-            num_iterations = num_iterations,
+            len = total_length,
+            num_iterations = total_length,
             ignore_scaling_factors = ignore_scaling_factors,
         ),
         in_memory_rows,
@@ -352,17 +358,14 @@ function StaticTimeSeriesCache(
 end
 
 _get_count(c::StaticTimeSeriesCache) = nothing
-
-function _get_length(cache::StaticTimeSeriesCache)
-    return minimum((cache.in_memory_rows, _get_length_remaining(cache)))
-end
+_get_length(cache::StaticTimeSeriesCache) = 1
 
 function _update!(cache::StaticTimeSeriesCache)
     if _get_length_remaining(cache) == 0
         throw(ArgumentError("Exceeded time series range"))
     end
 
-    len = _get_length(cache)
+    len = minimum((cache.in_memory_rows, _get_length_remaining(cache)))
     next_time = get_next_time(cache)
     ts = get_time_series(
         _get_type(cache),
@@ -373,14 +376,13 @@ function _update!(cache::StaticTimeSeriesCache)
     )
     _set_length_available!(cache, len)
     _set_time_series!(cache, ts)
-    _set_last_cached_time!(cache, next_time)
+    _set_last_cached_time!(cache, next_time, len)
     _decrement_length_remaining!(cache, len)
     return
 end
 
-function _set_last_cached_time!(c::StaticTimeSeriesCache, next_time)
-    resolution = get_resolution(_get_time_series(c))
-    c.common.last_cached_time[] = next_time + (c.in_memory_rows - 1) * resolution
+function _set_last_cached_time!(cache::StaticTimeSeriesCache, next_time, len)
+    cache.common.last_cached_time[] = next_time + (len - 1) * _get_resolution(cache)
     return
 end
 
