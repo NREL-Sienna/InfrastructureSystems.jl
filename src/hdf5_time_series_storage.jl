@@ -1,5 +1,6 @@
 
 import HDF5
+import H5Zblosc
 
 const HDF5_TS_ROOT_PATH = "time_series"
 const TIME_SERIES_DATA_FORMAT_VERSION = "1.0.1"
