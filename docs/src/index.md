@@ -21,13 +21,13 @@ This document describes how to integrate it with other packages.
 The latest stable release of `InfrastructureSystems.jl` can be installed using the Julia
 package manager with
 
-```Julia
+```julia
 ] add InfrastructureSystems
 ```
 
 For the current development version, "checkout" this package with
 
-```Julia
+```julia
 ] add InfrastructureSystems#master
 ```
 
@@ -51,7 +51,8 @@ Pages = [
 Depth = 1
 ```
 
-------------
+* * *
+
 InfrastructureSystems has been developed as part of the Scalable Integrated Infrastructure Planning
 (SIIP) initiative at the U.S. Department of Energy's National Renewable Energy Laboratory
 ([NREL](https://www.nrel.gov/))

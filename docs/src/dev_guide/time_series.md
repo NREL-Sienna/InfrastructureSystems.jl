@@ -2,22 +2,20 @@
 
 `InfrastructureSystems.jl` implements containers and routines to efficiently manage time
 series data. This document contains content for developers of new time series data. For the
-usage please refer to the documentation in [PowerSystems.jl](https://nrel-siip.github.io/PowerSystems.jl/stable)
+usage please refer to the documentation in [PowerSystems.jl](https://nrel-siip.github.io/PowerSystems.jl/stable).
 
 `InfrastructureSystems.jl` provides a mechanism to store time series data for
 components. Here are reasons to consider using it:
 
-- Time series data, by default, is stored independently of components in HDF5 files.
-Components store references to that data.
-- System memory is not depleted by loading all time series data at once. Only data that you
-need is loaded.
-- Multiple components can share the same time series data by sharing references instead of
-making expensive copies.
-- Supports serialization and deserialization.
-- Supports parsing raw data files of several formats as well as data stored in
-  `TimeSeries.TimeArray` and `DataFrames.DataFrame` objects.
+  - Time series data, by default, is stored independently of components in HDF5 files. Components store references to that data.
+  - System memory is not depleted by loading all time series data at once. Only data that you need is loaded.
+  - Multiple components can share the same time series data by sharing references instead of
+    making expensive copies.
+  - Supports serialization and deserialization.
+  - Supports parsing raw data files of several formats as well as data stored in
+    `TimeSeries.TimeArray` and `DataFrames.DataFrame` objects.
 
-> **Your package must reimplement a deepcopy method if you use HDF5 storage for TimeSeriesData**
+> **Your package must reimplement a deepcopy method if you use HDF5 storage for TimeSeriesData.**
 
 If you store an instance of [`InfrastructureSystems.SystemData`](@ref) within your
 system and then a user calls `deepcopy` on a system, the .h5 file will not be copied.
@@ -27,31 +25,28 @@ deserialize the system.
 
 *Notes*:
 
-- Time series data can optionally be stored fully in memory. Refer to the
-[`InfrastructureSystems.SystemData`](@ref) documentation.
-- `InfrastructureSystems.jl` creates HDF5 files on the tmp filesystem by default.
-  This can be changed if the time series data is larger than the amount of
-  tmp space available. Refer to the [`InfrastructureSystems.SystemData`](@ref) link above.
+  - Time series data can optionally be stored fully in memory. Refer to the [`InfrastructureSystems.SystemData`](@ref) documentation.
+  - `InfrastructureSystems.jl` creates HDF5 files on the tmp filesystem by default, using the location obtained from `tempdir()`. This can be changed if the time series data is larger than the amount of tmp space available. Refer to the [`InfrastructureSystems.SystemData`](@ref) link above.
 
 ## Instructions
 
-1. Add an instance of `InfrastructureSystems.TimeSeriesContainer` to the component struct.
-2. Implement the method `InfrastructureSystems.get_time_series_container` for the
-   component. It must return the TimeSeriesContainer object.
-
+ 1. Add an instance of `InfrastructureSystems.TimeSeriesContainer` to the component struct.
+ 2. Implement the method `InfrastructureSystems.get_time_series_container` for the
+    component. It must return the `TimeSeriesContainer` object.
 
 ## Data Format
+
 Time series arrays are stored in an
 [HDF5](https://support.hdfgroup.org/HDF5/whatishdf5.html) file according the
 format described here.
 
 The root path `/time_series` defines these HDF5 attributes to control deserialization:
 
-- `data_format_version`: Designates the InfrastructureSystems format for the file.
-- `compression_enabled`: Specifies whether compression is enabled and will be used for new time series.
-- `compression_type`: Specifies the type of compression being used.
-- `compression_level`: Specifies the level of compression being used.
-- `compression_shuffle`: Specifies whether the shuffle filter is being used.
+  - `data_format_version`: Designates the InfrastructureSystems format for the file.
+  - `compression_enabled`: Specifies whether compression is enabled and will be used for new time series.
+  - `compression_type`: Specifies the type of compression being used.
+  - `compression_level`: Specifies the level of compression being used.
+  - `compression_shuffle`: Specifies whether the shuffle filter is being used.
 
 Each time series array is stored in an HDF5 group named with the array's UUID.
 Each group contains a dataset called `data` which contains the actual data.
@@ -62,11 +57,11 @@ format `<component_uuid>__<time_series_name>`.
 Each time series group defines attributes that control how the data will be
 deserialized into a `TimeSeriesData` instance.
 
-- `initial_timestamp`: Defines the first timestamp of the array. (All times are not stored.)
-- `resolution`: Resolution of the time series in milliseconds.
-- `type`: Type of the time series. Subtype of `TimeSeriesData`.
-- `module`: Module that defines the type of the time series.
-- `data_type`: Describes the type of the array stored.
+  - `initial_timestamp`: Defines the first timestamp of the array. (All times are not stored.)
+  - `resolution`: Resolution of the time series in milliseconds.
+  - `type`: Type of the time series. Subtype of `TimeSeriesData`.
+  - `module`: Module that defines the type of the time series.
+  - `data_type`: Describes the type of the array stored.
 
 Example:
 
@@ -82,13 +77,13 @@ Example:
 ```
 
 ## Debugging
+
 The HDF Group provides tools to inspect and manipulate files. Refer to their
 [website](https://support.hdfgroup.org/products/hdf5_tools/).
 
 `HDFView` is especially useful for viewing data. Note that using `h5ls` and
 `h5dump` in a terminal combined with UNIX tools like `grep` can sometimes be
 faster.
-
 
 ## Maintenance
 
