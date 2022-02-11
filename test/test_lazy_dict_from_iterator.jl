@@ -16,7 +16,7 @@ end
     container = IS.LazyDictFromIterator(Int, TestItem, iter, get_field)
 
     # Run through twice because the items must persist in the dict.
-    for i in range(1, length = 2)
+    for i in range(1, length=2)
         for x in 1:10
             @test get(container, x) isa TestItem
         end

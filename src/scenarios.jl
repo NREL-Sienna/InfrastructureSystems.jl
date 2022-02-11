@@ -46,9 +46,9 @@ function Scenarios(;
     data,
     scenario_count,
     resolution,
-    scaling_factor_multiplier = nothing,
-    normalization_factor = 1.0,
-    internal = InfrastructureSystemsInternal(),
+    scaling_factor_multiplier=nothing,
+    normalization_factor=1.0,
+    internal=InfrastructureSystemsInternal(),
 )
     data = handle_normalization_factor(convert_data(data), normalization_factor)
     return Scenarios(
@@ -78,19 +78,19 @@ function Scenarios(
     name::AbstractString,
     input_data::AbstractDict,
     resolution::Dates.Period;
-    normalization_factor::NormalizationFactor = 1.0,
-    scaling_factor_multiplier::Union{Nothing, Function} = nothing,
+    normalization_factor::NormalizationFactor=1.0,
+    scaling_factor_multiplier::Union{Nothing, Function}=nothing,
 )
     scenario_count = size(first(values(input_data)))[2]
 
     return Scenarios(
-        name = name,
-        data = input_data,
-        scenario_count = scenario_count,
-        resolution = resolution,
-        scaling_factor_multiplier = scaling_factor_multiplier,
-        normalization_factor = normalization_factor,
-        internal = InfrastructureSystemsInternal(),
+        name=name,
+        data=input_data,
+        scenario_count=scenario_count,
+        resolution=resolution,
+        scaling_factor_multiplier=scaling_factor_multiplier,
+        normalization_factor=normalization_factor,
+        internal=InfrastructureSystemsInternal(),
     )
 end
 
@@ -111,8 +111,8 @@ Construct Scenarios from a Dict of TimeArrays.
 function Scenarios(
     name::AbstractString,
     input_data::AbstractDict{Dates.DateTime, <:TimeSeries.TimeArray};
-    normalization_factor::NormalizationFactor = 1.0,
-    scaling_factor_multiplier::Union{Nothing, Function} = nothing,
+    normalization_factor::NormalizationFactor=1.0,
+    scaling_factor_multiplier::Union{Nothing, Function}=nothing,
 )
     data = SortedDict{Dates.DateTime, Matrix{Float64}}()
     resolution =
@@ -126,19 +126,19 @@ function Scenarios(
         name,
         data,
         resolution;
-        normalization_factor = normalization_factor,
-        scaling_factor_multiplier = scaling_factor_multiplier,
+        normalization_factor=normalization_factor,
+        scaling_factor_multiplier=scaling_factor_multiplier,
     )
 end
 
 function Scenarios(ts_metadata::ScenariosMetadata, data::SortedDict)
     return Scenarios(
-        name = get_name(ts_metadata),
-        scenario_count = get_scenario_count(ts_metadata),
-        resolution = get_resolution(ts_metadata),
-        data = data,
-        scaling_factor_multiplier = get_scaling_factor_multiplier(ts_metadata),
-        internal = InfrastructureSystemsInternal(get_time_series_uuid(ts_metadata)),
+        name=get_name(ts_metadata),
+        scenario_count=get_scenario_count(ts_metadata),
+        resolution=get_resolution(ts_metadata),
+        data=data,
+        scaling_factor_multiplier=get_scaling_factor_multiplier(ts_metadata),
+        internal=InfrastructureSystemsInternal(get_time_series_uuid(ts_metadata)),
     )
 end
 
@@ -147,8 +147,8 @@ function Scenarios(info::TimeSeriesParsedInfo)
         info.name,
         info.data,
         info.resolution;
-        normalization_factor = info.normalization_factor,
-        scaling_factor_multiplier = info.scaling_factor_multiplier,
+        normalization_factor=info.normalization_factor,
+        scaling_factor_multiplier=info.scaling_factor_multiplier,
     )
 end
 
@@ -215,6 +215,6 @@ get_count(forecast::Scenarios) = get_count_common(forecast)
 get_initial_times(forecast::Scenarios) = get_initial_times_common(forecast)
 get_initial_timestamp(forecast::Scenarios) = get_initial_timestamp_common(forecast)
 get_interval(forecast::Scenarios) = get_interval_common(forecast)
-get_window(f::Scenarios, initial_time::Dates.DateTime; len = nothing) =
-    get_window_common(f, initial_time; len = len)
+get_window(f::Scenarios, initial_time::Dates.DateTime; len=nothing) =
+    get_window_common(f, initial_time; len=len)
 iterate_windows(forecast::Scenarios) = iterate_windows_common(forecast)

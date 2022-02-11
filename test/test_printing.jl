@@ -1,5 +1,5 @@
 @testset "Test printing of the system and components" begin
-    sys = create_system_data(with_time_series = true, time_series_in_memory = true)
+    sys = create_system_data(with_time_series=true, time_series_in_memory=true)
     io = IOBuffer()
     show(io, "text/plain", sys)
     text = String(take!(io))
@@ -8,7 +8,7 @@
 end
 
 @testset "Test show_component_tables" begin
-    sys = create_system_data(with_time_series = true, time_series_in_memory = true)
+    sys = create_system_data(with_time_series=true, time_series_in_memory=true)
     io = IOBuffer()
     IS.show_components(io, sys.components, IS.TestComponent)
     @test occursin("TestComponent", String(take!(io)))

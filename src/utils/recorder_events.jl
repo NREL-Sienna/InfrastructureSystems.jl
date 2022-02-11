@@ -70,12 +70,7 @@ Construct a Recorder.
 - `mode = "w"`:  Only used when io is nothing.
 - `directory = "."`:  Only used when io is nothing.
 """
-function Recorder(
-    name::Symbol;
-    io::Union{Nothing, IO} = nothing,
-    mode = "w",
-    directory = ".",
-)
+function Recorder(name::Symbol; io::Union{Nothing, IO}=nothing, mode="w", directory=".")
     if isnothing(io)
         filename = joinpath(directory, string(name) * ".log")
         io = open(filename, mode)
@@ -105,19 +100,19 @@ handle.
 """
 function register_recorder!(
     name::Symbol;
-    io::Union{Nothing, IO} = nothing,
-    mode = "w",
-    directory = ".",
+    io::Union{Nothing, IO}=nothing,
+    mode="w",
+    directory=".",
 )
     unregister_recorder!(name)
-    g_recorders[name] = Recorder(name; io = io, mode = mode, directory = directory)
+    g_recorders[name] = Recorder(name; io=io, mode=mode, directory=directory)
     @debug "registered new Recorder" _group = LOG_GROUP_RECORDER name
 end
 
 """
 Unregister the recorder with this name and stop recording events.
 """
-function unregister_recorder!(name::Symbol; close_io = true)
+function unregister_recorder!(name::Symbol; close_io=true)
     if haskey(g_recorders, name)
         @debug "unregister Recorder" _group = LOG_GROUP_RECORDER name
         recorder = pop!(g_recorders, name)
@@ -161,7 +156,7 @@ Return the events of type T in filename.
 function list_recorder_events(
     ::Type{T},
     filename::AbstractString,
-    filter_func::Union{Nothing, Function} = nothing,
+    filter_func::Union{Nothing, Function}=nothing,
 ) where {T <: AbstractRecorderEvent}
     events = Vector{T}()
     for line in eachline(filename)
@@ -204,7 +199,7 @@ show_recorder_events(TestEvent, test_recorder.log; x -> x.val2 > 2)
 function show_recorder_events(
     ::Type{T},
     filename::AbstractString,
-    filter_func::Union{Nothing, Function} = nothing;
+    filter_func::Union{Nothing, Function}=nothing;
     kwargs...,
 ) where {T <: AbstractRecorderEvent}
     return show_recorder_events(stdout, T, filename, filter_func; kwargs...)
@@ -214,7 +209,7 @@ function show_recorder_events(
     io::IO,
     ::Type{T},
     filename::AbstractString,
-    filter_func::Union{Nothing, Function} = nothing;
+    filter_func::Union{Nothing, Function}=nothing;
     kwargs...,
 ) where {T <: AbstractRecorderEvent}
     events = list_recorder_events(T, filename, filter_func)
@@ -257,6 +252,6 @@ function show_recorder_events(
         end
     end
 
-    PrettyTables.pretty_table(io, data; header = header, kwargs...)
+    PrettyTables.pretty_table(io, data; header=header, kwargs...)
     return
 end

@@ -41,9 +41,9 @@ function Deterministic(;
     name,
     data,
     resolution,
-    scaling_factor_multiplier = nothing,
-    normalization_factor = 1.0,
-    internal = InfrastructureSystemsInternal(),
+    scaling_factor_multiplier=nothing,
+    normalization_factor=1.0,
+    internal=InfrastructureSystemsInternal(),
 )
     data = handle_normalization_factor(convert_data(data), normalization_factor)
     return Deterministic(name, data, resolution, scaling_factor_multiplier, internal)
@@ -53,15 +53,15 @@ function Deterministic(
     name::AbstractString,
     data::AbstractDict,
     resolution::Dates.Period;
-    normalization_factor::NormalizationFactor = 1.0,
-    scaling_factor_multiplier::Union{Nothing, Function} = nothing,
+    normalization_factor::NormalizationFactor=1.0,
+    scaling_factor_multiplier::Union{Nothing, Function}=nothing,
 )
     return Deterministic(
-        name = name,
-        data = data,
-        resolution = resolution,
-        scaling_factor_multiplier = scaling_factor_multiplier,
-        internal = InfrastructureSystemsInternal(),
+        name=name,
+        data=data,
+        resolution=resolution,
+        scaling_factor_multiplier=scaling_factor_multiplier,
+        internal=InfrastructureSystemsInternal(),
     )
 end
 
@@ -82,8 +82,8 @@ Construct Deterministic from a Dict of TimeArrays.
 function Deterministic(
     name::AbstractString,
     input_data::AbstractDict{Dates.DateTime, <:TimeSeries.TimeArray};
-    normalization_factor::NormalizationFactor = 1.0,
-    scaling_factor_multiplier::Union{Nothing, Function} = nothing,
+    normalization_factor::NormalizationFactor=1.0,
+    scaling_factor_multiplier::Union{Nothing, Function}=nothing,
 )
     data_type = eltype(TimeSeries.values(first(values(input_data))))
     data = SortedDict{Dates.DateTime, Vector{data_type}}()
@@ -98,11 +98,11 @@ function Deterministic(
     end
 
     return Deterministic(
-        name = name,
-        data = data,
-        resolution = resolution,
-        normalization_factor = normalization_factor,
-        scaling_factor_multiplier = scaling_factor_multiplier,
+        name=name,
+        data=data,
+        resolution=resolution,
+        normalization_factor=normalization_factor,
+        scaling_factor_multiplier=scaling_factor_multiplier,
     )
 end
 
@@ -125,8 +125,8 @@ function Deterministic(
     filename::AbstractString,
     component::InfrastructureSystemsComponent,
     resolution::Dates.Period;
-    normalization_factor::NormalizationFactor = 1.0,
-    scaling_factor_multiplier::Union{Nothing, Function} = nothing,
+    normalization_factor::NormalizationFactor=1.0,
+    scaling_factor_multiplier::Union{Nothing, Function}=nothing,
 )
     component_name = get_name(component)
     raw_data = read_time_series(Deterministic, filename, component_name)
@@ -134,8 +134,8 @@ function Deterministic(
         name,
         raw_data,
         resolution;
-        normalization_factor = normalization_factor,
-        scaling_factor_multiplier = scaling_factor_multiplier,
+        normalization_factor=normalization_factor,
+        scaling_factor_multiplier=scaling_factor_multiplier,
     )
 end
 
@@ -146,25 +146,25 @@ function Deterministic(
     name::AbstractString,
     series_data::RawTimeSeries,
     resolution::Dates.Period;
-    normalization_factor::NormalizationFactor = 1.0,
-    scaling_factor_multiplier::Union{Nothing, Function} = nothing,
+    normalization_factor::NormalizationFactor=1.0,
+    scaling_factor_multiplier::Union{Nothing, Function}=nothing,
 )
     return Deterministic(
-        name = name,
-        data = series_data.data,
-        resolution = resolution,
-        normalization_factor = normalization_factor,
-        scaling_factor_multiplier = scaling_factor_multiplier,
+        name=name,
+        data=series_data.data,
+        resolution=resolution,
+        normalization_factor=normalization_factor,
+        scaling_factor_multiplier=scaling_factor_multiplier,
     )
 end
 
 function Deterministic(ts_metadata::DeterministicMetadata, data::SortedDict)
     return Deterministic(
-        name = get_name(ts_metadata),
-        resolution = get_resolution(ts_metadata),
-        data = data,
-        scaling_factor_multiplier = get_scaling_factor_multiplier(ts_metadata),
-        internal = InfrastructureSystemsInternal(get_time_series_uuid(ts_metadata)),
+        name=get_name(ts_metadata),
+        resolution=get_resolution(ts_metadata),
+        data=data,
+        scaling_factor_multiplier=get_scaling_factor_multiplier(ts_metadata),
+        internal=InfrastructureSystemsInternal(get_time_series_uuid(ts_metadata)),
     )
 end
 
@@ -173,8 +173,8 @@ function Deterministic(info::TimeSeriesParsedInfo)
         info.name,
         info.data,
         info.resolution;
-        normalization_factor = info.normalization_factor,
-        scaling_factor_multiplier = info.scaling_factor_multiplier,
+        normalization_factor=info.normalization_factor,
+        scaling_factor_multiplier=info.scaling_factor_multiplier,
     )
 end
 
@@ -255,16 +255,16 @@ get_initial_times(forecast::Deterministic) = get_initial_times_common(forecast)
 get_initial_timestamp(forecast::Deterministic) = get_initial_timestamp_common(forecast)
 get_interval(forecast::Deterministic) = get_interval_common(forecast)
 iterate_windows(forecast::Deterministic) = iterate_windows_common(forecast)
-get_window(f::Deterministic, initial_time::Dates.DateTime; len = nothing) =
-    get_window_common(f, initial_time; len = len)
+get_window(f::Deterministic, initial_time::Dates.DateTime; len=nothing) =
+    get_window_common(f, initial_time; len=len)
 
 function make_time_array(forecast::Deterministic)
     # Artificial limitation to reduce scope.
     @assert_op get_count(forecast) == 1
     timestamps = range(
         get_initial_timestamp(forecast);
-        step = get_resolution(forecast),
-        length = get_horizon(forecast),
+        step=get_resolution(forecast),
+        length=get_horizon(forecast),
     )
     data = first(values(get_data(forecast)))
     return TimeSeries.TimeArray(timestamps, data)

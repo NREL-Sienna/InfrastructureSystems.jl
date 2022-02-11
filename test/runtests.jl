@@ -82,9 +82,9 @@ function run_tests()
         config = IS.LoggingConfiguration(logging_config_filename)
     else
         config = IS.LoggingConfiguration(
-            filename = LOG_FILE,
-            file_level = Logging.Info,
-            console_level = Logging.Error,
+            filename=LOG_FILE,
+            file_level=Logging.Info,
+            console_level=Logging.Error,
         )
     end
     console_logger = TerminalLogger(config.console_stream, config.console_level)

@@ -35,7 +35,7 @@
     @test IS.get_next_time(cache) === nothing
 
     # Iterate over all initial times with custom cache size.
-    cache = IS.ForecastCache(IS.Deterministic, component, "test"; cache_size_bytes = 1024)
+    cache = IS.ForecastCache(IS.Deterministic, component, "test"; cache_size_bytes=1024)
     @test length(cache) == cache.common.num_iterations == 168
     for (i, ta) in enumerate(cache)
         it = initial_times[i]
@@ -57,7 +57,7 @@
         IS.Deterministic,
         component,
         "test";
-        start_time = Dates.DateTime("2020-01-02T00:00:00"),
+        start_time=Dates.DateTime("2020-01-02T00:00:00"),
     )
     for (i, ta) in enumerate(cache)
         it = initial_times[i + 24]
@@ -67,7 +67,7 @@
     end
 
     # Test caching internals.
-    cache = IS.ForecastCache(IS.Deterministic, component, "test"; cache_size_bytes = 1024)
+    cache = IS.ForecastCache(IS.Deterministic, component, "test"; cache_size_bytes=1024)
     @test cache.in_memory_count == 5
     @test IS.get_next_time(cache) == initial_timestamp
     for it in initial_times[1:(cache.in_memory_count)]
@@ -99,10 +99,10 @@ end
 
     len = 96
     data = TimeSeries.TimeArray(
-        range(initial_timestamp; length = len, step = resolution),
+        range(initial_timestamp; length=len, step=resolution),
         rand(len),
     )
-    ts = IS.SingleTimeSeries(data = data, name = "test")
+    ts = IS.SingleTimeSeries(data=data, name="test")
     IS.add_time_series!(sys, component, ts)
 
     cache = IS.StaticTimeSeriesCache(IS.SingleTimeSeries, component, "test")
@@ -115,16 +115,16 @@ end
     for (i, ta) in enumerate(cache)
         it = initial_timestamp + (i - 1) * resolution
         @test TimeSeries.timestamp(ta) ==
-              IS.get_time_series_timestamps(component, ts, it, len = 1)
-        @test TimeSeries.values(ta) == IS.get_time_series_values(component, ts, it, len = 1)
+              IS.get_time_series_timestamps(component, ts, it, len=1)
+        @test TimeSeries.values(ta) == IS.get_time_series_values(component, ts, it, len=1)
     end
 
     ta = IS.get_next_time_series_array!(cache)
     @test first(TimeSeries.timestamp(ta)) == initial_timestamp
     @test TimeSeries.timestamp(ta) ==
-          IS.get_time_series_timestamps(component, ts, initial_timestamp, len = 1)
+          IS.get_time_series_timestamps(component, ts, initial_timestamp, len=1)
     @test TimeSeries.values(ta) ==
-          IS.get_time_series_values(component, ts, initial_timestamp, len = 1)
+          IS.get_time_series_values(component, ts, initial_timestamp, len=1)
 
     # Iterate over all initial times with custom cache size.
     cache_size_bytes = 96
@@ -132,7 +132,7 @@ end
         IS.SingleTimeSeries,
         component,
         "test";
-        cache_size_bytes = cache_size_bytes,
+        cache_size_bytes=cache_size_bytes,
     )
     @test cache.in_memory_rows == cache_size_bytes / 8
     @test length(cache) == cache.common.num_iterations == len
@@ -145,8 +145,8 @@ end
     for (i, ta) in enumerate(cache)
         it = initial_timestamp + (i - 1) * resolution
         @test TimeSeries.timestamp(ta) ==
-              IS.get_time_series_timestamps(component, ts, it; len = 1)
-        @test TimeSeries.values(ta) == IS.get_time_series_values(component, ts, it; len = 1)
+              IS.get_time_series_timestamps(component, ts, it; len=1)
+        @test TimeSeries.values(ta) == IS.get_time_series_values(component, ts, it; len=1)
     end
 
     IS.reset!(cache)
@@ -154,8 +154,8 @@ end
         ta = IS.get_next_time_series_array!(cache)
         it = initial_timestamp + (i - 1) * resolution
         @test TimeSeries.timestamp(ta) ==
-              IS.get_time_series_timestamps(component, ts, it; len = 1)
-        @test TimeSeries.values(ta) == IS.get_time_series_values(component, ts, it; len = 1)
+              IS.get_time_series_timestamps(component, ts, it; len=1)
+        @test TimeSeries.values(ta) == IS.get_time_series_values(component, ts, it; len=1)
     end
 
     cache_size_bytes = 96
@@ -164,8 +164,8 @@ end
         IS.SingleTimeSeries,
         component,
         "test";
-        start_time = start_time,
-        cache_size_bytes = cache_size_bytes,
+        start_time=start_time,
+        cache_size_bytes=cache_size_bytes,
     )
     @test cache.in_memory_rows == cache_size_bytes / 8
     @test cache.common.num_iterations ==
@@ -175,8 +175,8 @@ end
         ta = IS.get_next_time_series_array!(cache)
         it = start_time + (i - 1) * resolution
         @test TimeSeries.timestamp(ta) ==
-              IS.get_time_series_timestamps(component, ts, it; len = 1)
-        @test TimeSeries.values(ta) == IS.get_time_series_values(component, ts, it; len = 1)
+              IS.get_time_series_timestamps(component, ts, it; len=1)
+        @test TimeSeries.values(ta) == IS.get_time_series_values(component, ts, it; len=1)
     end
 end
 
@@ -204,7 +204,7 @@ end
     forecast = IS.get_time_series(IS.AbstractDeterministic, component, name)
     initial_times = collect(IS.get_initial_times(forecast))
     cache =
-        IS.ForecastCache(IS.AbstractDeterministic, component, name; cache_size_bytes = 1024)
+        IS.ForecastCache(IS.AbstractDeterministic, component, name; cache_size_bytes=1024)
 
     for (i, ta) in enumerate(cache)
         @test TimeSeries.timestamp(ta) ==
@@ -221,7 +221,7 @@ end
     name = "test"
     horizon = 24
     data = SortedDict{Dates.DateTime, Matrix{Float64}}()
-    for (i, it) in enumerate(range(initial_time, step = interval, length = 100))
+    for (i, it) in enumerate(range(initial_time, step=interval, length=100))
         data[it] = ones(horizon, 99) * i
     end
     sys = IS.SystemData()
@@ -233,7 +233,7 @@ end
 
     # Iterate over all initial times with custom cache size.
     sz = 1024 * 1024
-    cache = IS.ForecastCache(IS.Probabilistic, component, "test"; cache_size_bytes = sz)
+    cache = IS.ForecastCache(IS.Probabilistic, component, "test"; cache_size_bytes=sz)
     initial_times = collect(keys(data))
     @test cache.in_memory_count == trunc(Int, sz / (99 * 8 * 24))
     for (i, ta) in enumerate(cache)

@@ -36,7 +36,7 @@ mutable struct TimeSeriesFileMetadata
 end
 
 function TimeSeriesFileMetadata(;
-    simulation = "",
+    simulation="",
     category,
     component_name,
     name,
@@ -46,8 +46,8 @@ function TimeSeriesFileMetadata(;
     percentiles,
     time_series_type_module,
     time_series_type,
-    scaling_factor_multiplier = nothing,
-    scaling_factor_multiplier_module = nothing,
+    scaling_factor_multiplier=nothing,
+    scaling_factor_multiplier_module=nothing,
 )
     return TimeSeriesFileMetadata(
         simulation,
@@ -85,23 +85,23 @@ function read_time_series_file_metadata(file_path::AbstractString)
                 push!(
                     metadata,
                     TimeSeriesFileMetadata(;
-                        simulation = simulation,
-                        category = item["category"],
-                        component_name = item["component_name"],
-                        name = item["name"],
-                        normalization_factor = normalization_factor,
-                        data_file = item["data_file"],
-                        resolution = parsed_resolution,
+                        simulation=simulation,
+                        category=item["category"],
+                        component_name=item["component_name"],
+                        name=item["name"],
+                        normalization_factor=normalization_factor,
+                        data_file=item["data_file"],
+                        resolution=parsed_resolution,
                         # Use default values until CDM data is updated.
-                        percentiles = get(item, "percentiles", []),
-                        time_series_type_module = get(
+                        percentiles=get(item, "percentiles", []),
+                        time_series_type_module=get(
                             item,
                             "module",
                             "InfrastructureSystems",
                         ),
-                        time_series_type = get(item, "type", "SingleTimeSeries"),
-                        scaling_factor_multiplier = scaling_factor_multiplier,
-                        scaling_factor_multiplier_module = scaling_factor_multiplier_module,
+                        time_series_type=get(item, "type", "SingleTimeSeries"),
+                        scaling_factor_multiplier=scaling_factor_multiplier,
+                        scaling_factor_multiplier_module=scaling_factor_multiplier_module,
                     ),
                 )
             end
@@ -119,18 +119,18 @@ function read_time_series_file_metadata(file_path::AbstractString)
             push!(
                 metadata,
                 TimeSeriesFileMetadata(;
-                    simulation = simulation,
-                    category = row.category,
-                    component_name = row.component_name,
-                    name = row.name,
-                    resolution = Dates.Millisecond(Dates.Second(row.resolution)),
-                    normalization_factor = row.normalization_factor,
-                    data_file = row.data_file,
-                    percentiles = [],
-                    time_series_type_module = get(row, :module, "InfrastructureSystems"),
-                    time_series_type = get(row, :type, "SingleTimeSeries"),
-                    scaling_factor_multiplier = scaling_factor_multiplier,
-                    scaling_factor_multiplier_module = scaling_factor_multiplier_module,
+                    simulation=simulation,
+                    category=row.category,
+                    component_name=row.component_name,
+                    name=row.name,
+                    resolution=Dates.Millisecond(Dates.Second(row.resolution)),
+                    normalization_factor=row.normalization_factor,
+                    data_file=row.data_file,
+                    percentiles=[],
+                    time_series_type_module=get(row, :module, "InfrastructureSystems"),
+                    time_series_type=get(row, :type, "SingleTimeSeries"),
+                    scaling_factor_multiplier=scaling_factor_multiplier,
+                    scaling_factor_multiplier_module=scaling_factor_multiplier_module,
                 ),
             )
         end
@@ -204,7 +204,7 @@ struct TimeSeriesParsedInfo
         percentiles,
         file_path,
         resolution,
-        scaling_factor_multiplier = nothing,
+        scaling_factor_multiplier=nothing,
     )
         return new(
             simulation,
@@ -277,7 +277,7 @@ end
 function make_time_array(raw::RawTimeSeries, component_name, resolution)
     series_length = raw.length
     ini_time = raw.initial_time
-    timestamps = range(ini_time; length = series_length, step = resolution)
+    timestamps = range(ini_time; length=series_length, step=resolution)
     return TimeSeries.TimeArray(timestamps, raw.data[component_name])
 end
 

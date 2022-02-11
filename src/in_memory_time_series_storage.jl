@@ -42,7 +42,7 @@ Base.isempty(storage::InMemoryTimeSeriesStorage) = isempty(storage.data)
 check_read_only(storage::InMemoryTimeSeriesStorage) = nothing
 
 get_compression_settings(storage::InMemoryTimeSeriesStorage) =
-    CompressionSettings(enabled = false)
+    CompressionSettings(enabled=false)
 
 is_read_only(storage::InMemoryTimeSeriesStorage) = false
 
@@ -164,7 +164,7 @@ function deserialize_time_series(
     interval = get_interval(ts)
     start_time = initial_timestamp + interval * (columns.start - 1)
     data = SortedDict{Dates.DateTime, eltype(typeof(full_data)).parameters[2]}()
-    for initial_time in range(start_time; step = interval, length = length(columns))
+    for initial_time in range(start_time; step=interval, length=length(columns))
         if rows.start == 1
             it = initial_time
         else
@@ -218,7 +218,7 @@ function replace_component_uuid!(
 end
 function convert_to_hdf5(storage::InMemoryTimeSeriesStorage, filename::AbstractString)
     create_file = true
-    hdf5_storage = Hdf5TimeSeriesStorage(create_file; filename = filename)
+    hdf5_storage = Hdf5TimeSeriesStorage(create_file; filename=filename)
     for record in values(storage.data)
         for pair in record.component_names
             serialize_time_series!(hdf5_storage, pair[1], pair[2], record.ts)
@@ -229,7 +229,7 @@ end
 function compare_values(
     x::InMemoryTimeSeriesStorage,
     y::InMemoryTimeSeriesStorage;
-    compare_uuids = false,
+    compare_uuids=false,
 )
     keys_x = sort!(collect(keys(x.data)))
     keys_y = sort!(collect(keys(y.data)))

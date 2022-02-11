@@ -1,7 +1,7 @@
 function add_time_series!(
     component::T,
     time_series::TimeSeriesMetadata;
-    skip_if_present = false,
+    skip_if_present=false,
 ) where {T <: InfrastructureSystemsComponent}
     component_name = get_name(component)
     container = get_time_series_container(component)
@@ -9,7 +9,7 @@ function add_time_series!(
         throw(ArgumentError("type $T does not support storing time series"))
     end
 
-    add_time_series!(container, time_series, skip_if_present = skip_if_present)
+    add_time_series!(container, time_series, skip_if_present=skip_if_present)
     @debug "Added $time_series to $(typeof(component)) $(component_name) " *
            "num_time_series=$(length(get_time_series_container(component).data))." _group =
         LOG_GROUP_TIME_SERIES
@@ -149,9 +149,9 @@ function get_time_series(
     ::Type{T},
     component::InfrastructureSystemsComponent,
     name::AbstractString;
-    start_time::Union{Nothing, Dates.DateTime} = nothing,
-    len::Union{Nothing, Int} = nothing,
-    count::Union{Nothing, Int} = nothing,
+    start_time::Union{Nothing, Dates.DateTime}=nothing,
+    len::Union{Nothing, Int}=nothing,
+    count::Union{Nothing, Int}=nothing,
 ) where {T <: TimeSeriesData}
     if !has_time_series(component)
         throw(ArgumentError("no forecasts are stored in $component"))
@@ -184,11 +184,11 @@ function get_time_series_array(
     ::Type{T},
     component::InfrastructureSystemsComponent,
     name::AbstractString;
-    start_time::Union{Nothing, Dates.DateTime} = nothing,
-    len::Union{Nothing, Int} = nothing,
-    ignore_scaling_factors = false,
+    start_time::Union{Nothing, Dates.DateTime}=nothing,
+    len::Union{Nothing, Int}=nothing,
+    ignore_scaling_factors=false,
 ) where {T <: TimeSeriesData}
-    ts = get_time_series(T, component, name; start_time = start_time, len = len, count = 1)
+    ts = get_time_series(T, component, name; start_time=start_time, len=len, count=1)
     if start_time === nothing
         start_time = get_initial_timestamp(ts)
     end
@@ -197,8 +197,8 @@ function get_time_series_array(
         component,
         ts,
         start_time;
-        len = len,
-        ignore_scaling_factors = ignore_scaling_factors,
+        len=len,
+        ignore_scaling_factors=ignore_scaling_factors,
     )
 end
 
@@ -214,8 +214,8 @@ function get_time_series_array(
     component::InfrastructureSystemsComponent,
     forecast::Forecast,
     start_time::Dates.DateTime;
-    len = nothing,
-    ignore_scaling_factors = false,
+    len=nothing,
+    ignore_scaling_factors=false,
 )
     return _make_time_array(component, forecast, start_time, len, ignore_scaling_factors)
 end
@@ -231,9 +231,9 @@ See also [`StaticTimeSeriesCache`](@ref).
 function get_time_series_array(
     component::InfrastructureSystemsComponent,
     time_series::StaticTimeSeries,
-    start_time::Union{Nothing, Dates.DateTime} = nothing;
-    len::Union{Nothing, Int} = nothing,
-    ignore_scaling_factors = false,
+    start_time::Union{Nothing, Dates.DateTime}=nothing;
+    len::Union{Nothing, Int}=nothing,
+    ignore_scaling_factors=false,
 )
     if start_time === nothing
         start_time = get_initial_timestamp(time_series)
@@ -253,11 +253,11 @@ function get_time_series_timestamps(
     ::Type{T},
     component::InfrastructureSystemsComponent,
     name::AbstractString;
-    start_time::Union{Nothing, Dates.DateTime} = nothing,
-    len::Union{Nothing, Int} = nothing,
+    start_time::Union{Nothing, Dates.DateTime}=nothing,
+    len::Union{Nothing, Int}=nothing,
 ) where {T <: TimeSeriesData}
     return TimeSeries.timestamp(
-        get_time_series_array(T, component, name; start_time = start_time, len = len),
+        get_time_series_array(T, component, name; start_time=start_time, len=len),
     )
 end
 
@@ -267,11 +267,11 @@ Return a vector of timestamps from a cached Forecast instance.
 function get_time_series_timestamps(
     component::InfrastructureSystemsComponent,
     forecast::Forecast,
-    start_time::Union{Nothing, Dates.DateTime} = nothing;
-    len::Union{Nothing, Int} = nothing,
+    start_time::Union{Nothing, Dates.DateTime}=nothing;
+    len::Union{Nothing, Int}=nothing,
 )
     return TimeSeries.timestamp(
-        get_time_series_array(component, forecast, start_time; len = len),
+        get_time_series_array(component, forecast, start_time; len=len),
     )
 end
 
@@ -281,11 +281,11 @@ Return a vector of timestamps from a cached StaticTimeSeries instance.
 function get_time_series_timestamps(
     component::InfrastructureSystemsComponent,
     time_series::StaticTimeSeries,
-    start_time::Union{Nothing, Dates.DateTime} = nothing;
-    len::Union{Nothing, Int} = nothing,
+    start_time::Union{Nothing, Dates.DateTime}=nothing;
+    len::Union{Nothing, Int}=nothing,
 )
     return TimeSeries.timestamp(
-        get_time_series_array(component, time_series, start_time; len = len),
+        get_time_series_array(component, time_series, start_time; len=len),
     )
 end
 
@@ -299,18 +299,18 @@ function get_time_series_values(
     ::Type{T},
     component::InfrastructureSystemsComponent,
     name::AbstractString;
-    start_time::Union{Nothing, Dates.DateTime} = nothing,
-    len::Union{Nothing, Int} = nothing,
-    ignore_scaling_factors = false,
+    start_time::Union{Nothing, Dates.DateTime}=nothing,
+    len::Union{Nothing, Int}=nothing,
+    ignore_scaling_factors=false,
 ) where {T <: TimeSeriesData}
     return TimeSeries.values(
         get_time_series_array(
             T,
             component,
             name;
-            start_time = start_time,
-            len = len,
-            ignore_scaling_factors = ignore_scaling_factors,
+            start_time=start_time,
+            len=len,
+            ignore_scaling_factors=ignore_scaling_factors,
         ),
     )
 end
@@ -322,16 +322,16 @@ function get_time_series_values(
     component::InfrastructureSystemsComponent,
     forecast::Forecast,
     start_time::Dates.DateTime;
-    len::Union{Nothing, Int} = nothing,
-    ignore_scaling_factors = false,
+    len::Union{Nothing, Int}=nothing,
+    ignore_scaling_factors=false,
 )
     return TimeSeries.values(
         get_time_series_array(
             component,
             forecast,
             start_time;
-            len = len,
-            ignore_scaling_factors = ignore_scaling_factors,
+            len=len,
+            ignore_scaling_factors=ignore_scaling_factors,
         ),
     )
 end
@@ -343,23 +343,23 @@ series parameters.
 function get_time_series_values(
     component::InfrastructureSystemsComponent,
     time_series::StaticTimeSeries,
-    start_time::Union{Nothing, Dates.DateTime} = nothing;
-    len::Union{Nothing, Int} = nothing,
-    ignore_scaling_factors = false,
+    start_time::Union{Nothing, Dates.DateTime}=nothing;
+    len::Union{Nothing, Int}=nothing,
+    ignore_scaling_factors=false,
 )
     return TimeSeries.values(
         get_time_series_array(
             component,
             time_series,
             start_time;
-            len = len,
-            ignore_scaling_factors = ignore_scaling_factors,
+            len=len,
+            ignore_scaling_factors=ignore_scaling_factors,
         ),
     )
 end
 
 function _make_time_array(component, time_series, start_time, len, ignore_scaling_factors)
-    ta = make_time_array(time_series, start_time; len = len)
+    ta = make_time_array(time_series, start_time; len=len)
     if ignore_scaling_factors
         return ta
     end
@@ -435,8 +435,8 @@ references.
 function copy_time_series!(
     dst::InfrastructureSystemsComponent,
     src::InfrastructureSystemsComponent;
-    name_mapping::Union{Nothing, Dict{String, String}} = nothing,
-    scaling_factor_multiplier_mapping::Union{Nothing, Dict{String, String}} = nothing,
+    name_mapping::Union{Nothing, Dict{String, String}}=nothing,
+    scaling_factor_multiplier_mapping::Union{Nothing, Dict{String, String}}=nothing,
 )
     storage = _get_time_series_storage(dst)
     if isnothing(storage)
@@ -572,10 +572,10 @@ Call `collect` on the result to get an array.
 """
 function get_time_series_multiple(
     component::InfrastructureSystemsComponent,
-    filter_func = nothing;
-    type = nothing,
-    start_time = nothing,
-    name = nothing,
+    filter_func=nothing;
+    type=nothing,
+    start_time=nothing,
+    name=nothing,
 )
     container = get_time_series_container(component)
     storage = _get_time_series_storage(component)
@@ -646,16 +646,16 @@ function transform_single_time_series_internal!(
             )
             check_params_compatibility(params, _params)
             new_metadata = DeterministicMetadata(
-                name = get_name(ts_metadata),
-                resolution = params.resolution,
-                initial_timestamp = params.forecast_params.initial_timestamp,
-                interval = params.forecast_params.interval,
-                count = params.forecast_params.count,
-                time_series_uuid = get_time_series_uuid(ts_metadata),
-                horizon = params.forecast_params.horizon,
-                time_series_type = DeterministicSingleTimeSeries,
-                scaling_factor_multiplier = get_scaling_factor_multiplier(ts_metadata),
-                internal = get_internal(ts_metadata),
+                name=get_name(ts_metadata),
+                resolution=params.resolution,
+                initial_timestamp=params.forecast_params.initial_timestamp,
+                interval=params.forecast_params.interval,
+                count=params.forecast_params.count,
+                time_series_uuid=get_time_series_uuid(ts_metadata),
+                horizon=params.forecast_params.horizon,
+                time_series_type=DeterministicSingleTimeSeries,
+                scaling_factor_multiplier=get_scaling_factor_multiplier(ts_metadata),
+                internal=get_internal(ts_metadata),
             )
             push!(metadata_to_add, new_metadata)
         end
@@ -759,9 +759,9 @@ end
 function get_time_series_by_key(
     key::TimeSeriesKey,
     component::InfrastructureSystemsComponent;
-    start_time::Union{Nothing, Dates.DateTime} = nothing,
-    len::Union{Nothing, Int} = nothing,
-    count::Union{Nothing, Int} = nothing,
+    start_time::Union{Nothing, Dates.DateTime}=nothing,
+    len::Union{Nothing, Int}=nothing,
+    count::Union{Nothing, Int}=nothing,
 )
     container = get_time_series_container(component)
     ts_metadata = container.data[key]
@@ -770,9 +770,9 @@ function get_time_series_by_key(
         ts_type,
         component,
         key.name,
-        start_time = start_time,
-        len = len,
-        count = count,
+        start_time=start_time,
+        len=len,
+        count=count,
     )
 end
 

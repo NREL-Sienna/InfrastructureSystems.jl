@@ -113,7 +113,7 @@ end
 
 function get_limits(valid_range::String, ist_struct::InfrastructureSystemsType)
     # Gets min and max values from activepowerlimits for activepower, etc.
-    function recur(d, a, i = 1)
+    function recur(d, a, i=1)
         if i <= length(a)
             d = getfield(d, Symbol(a[i]))
             recur(d, a, i + 1)
@@ -126,7 +126,7 @@ function get_limits(valid_range::String, ist_struct::InfrastructureSystemsType)
     vr = recur(ist_struct, split(valid_range, "."))
 
     if isnothing(vr)
-        limits = (min = nothing, max = nothing)
+        limits = (min=nothing, max=nothing)
     else
         limits = get_limits(vr, ist_struct)
     end
@@ -137,7 +137,7 @@ end
 function get_limits(valid_range::Dict, unused::InfrastructureSystemsType)
     # Gets min and max value defined for a field,
     # e.g. "valid_range": {"min":-1.571, "max":1.571}.
-    return (min = valid_range["min"], max = valid_range["max"])
+    return (min=valid_range["min"], max=valid_range["max"])
 end
 
 function get_limits(
@@ -146,7 +146,7 @@ function get_limits(
 )
     # Gets min and max value defined for a field,
     # e.g. "valid_range": {"min":-1.571, "max":1.571}.
-    return (min = valid_range.min, max = valid_range.max)
+    return (min=valid_range.min, max=valid_range.max)
 end
 
 function validate_range(::String, valid_info::ValidationInfo, field_value)

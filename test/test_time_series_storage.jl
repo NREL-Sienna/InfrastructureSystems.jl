@@ -21,7 +21,7 @@ function test_add_remove(storage::IS.TimeSeriesStorage)
     name = "component1"
     name = "val"
     component = IS.TestComponent(name, 5)
-    ts = IS.SingleTimeSeries(data = create_time_array(), name = "test")
+    ts = IS.SingleTimeSeries(data=create_time_array(), name="test")
     IS.serialize_time_series!(storage, IS.get_uuid(component), name, ts)
 
     ts2 = _deserialize_full(storage, ts)
@@ -48,7 +48,7 @@ function test_add_references(storage::IS.TimeSeriesStorage)
     name = "val"
     component1 = IS.TestComponent("component1", 5)
     component2 = IS.TestComponent("component2", 6)
-    ts = IS.SingleTimeSeries(data = create_time_array(), name = "test")
+    ts = IS.SingleTimeSeries(data=create_time_array(), name="test")
     ts_uuid = IS.get_uuid(ts)
     IS.serialize_time_series!(storage, IS.get_uuid(component1), name, ts)
     IS.add_time_series_reference!(storage, IS.get_uuid(component2), name, ts_uuid)
@@ -77,7 +77,7 @@ function test_get_subset(storage::IS.TimeSeriesStorage)
     name = "component1"
     name = "val"
     component = IS.TestComponent(name, 1)
-    ts = IS.SingleTimeSeries(data = create_time_array(), name = "test")
+    ts = IS.SingleTimeSeries(data=create_time_array(), name="test")
     IS.serialize_time_series!(storage, IS.get_uuid(component), name, ts)
     ts2 = _deserialize_full(storage, ts)
 
@@ -97,7 +97,7 @@ function test_get_subset(storage::IS.TimeSeriesStorage)
     horizon = 24
     data = SortedDict(initial_time1 => ones(horizon), initial_time2 => ones(horizon))
 
-    ts = IS.Deterministic(data = data, name = name, resolution = resolution)
+    ts = IS.Deterministic(data=data, name=name, resolution=resolution)
     IS.serialize_time_series!(storage, IS.get_uuid(component), name, ts)
     ts_metadata = make_metadata(ts)
     rows = UnitRange(1, horizon)
@@ -129,7 +129,7 @@ function test_clear(storage::IS.TimeSeriesStorage)
     name = "component1"
     name = "val"
     component = IS.TestComponent(name, 5)
-    ts = IS.SingleTimeSeries(data = create_time_array(), name = "test")
+    ts = IS.SingleTimeSeries(data=create_time_array(), name="test")
     IS.serialize_time_series!(storage, IS.get_uuid(component), name, ts)
 
     ts2 = _deserialize_full(storage, ts)
@@ -142,27 +142,27 @@ end
 
 @testset "Test time series storage implementations" begin
     for in_memory in (true, false)
-        test_add_remove(IS.make_time_series_storage(; in_memory = in_memory))
-        test_get_subset(IS.make_time_series_storage(; in_memory = in_memory))
-        test_clear(IS.make_time_series_storage(; in_memory = in_memory))
+        test_add_remove(IS.make_time_series_storage(; in_memory=in_memory))
+        test_get_subset(IS.make_time_series_storage(; in_memory=in_memory))
+        test_clear(IS.make_time_series_storage(; in_memory=in_memory))
     end
 
-    test_add_remove(IS.make_time_series_storage(; in_memory = false, directory = "."))
-    test_get_subset(IS.make_time_series_storage(; in_memory = false, directory = "."))
-    test_clear(IS.make_time_series_storage(; in_memory = false, directory = "."))
+    test_add_remove(IS.make_time_series_storage(; in_memory=false, directory="."))
+    test_get_subset(IS.make_time_series_storage(; in_memory=false, directory="."))
+    test_clear(IS.make_time_series_storage(; in_memory=false, directory="."))
 end
 
 @testset "Test copy time series references" begin
     for in_memory in (true, false)
-        test_add_remove(IS.make_time_series_storage(; in_memory = in_memory))
-        test_add_references(IS.make_time_series_storage(; in_memory = in_memory))
-        test_get_subset(IS.make_time_series_storage(; in_memory = in_memory))
-        test_clear(IS.make_time_series_storage(; in_memory = in_memory))
+        test_add_remove(IS.make_time_series_storage(; in_memory=in_memory))
+        test_add_references(IS.make_time_series_storage(; in_memory=in_memory))
+        test_get_subset(IS.make_time_series_storage(; in_memory=in_memory))
+        test_clear(IS.make_time_series_storage(; in_memory=in_memory))
     end
 end
 
 @testset "Test data format version" begin
-    storage = IS.make_time_series_storage(in_memory = false)
+    storage = IS.make_time_series_storage(in_memory=false)
     @test IS.read_data_format_version(storage) == IS.TIME_SERIES_DATA_FORMAT_VERSION
 end
 
@@ -170,35 +170,19 @@ end
     in_memory = false
     for type in (IS.CompressionTypes.BLOSC, IS.CompressionTypes.DEFLATE)
         for shuffle in (true, false)
-            compression = IS.CompressionSettings(
-                enabled = true,
-                type = type,
-                level = 5,
-                shuffle = shuffle,
-            )
+            compression =
+                IS.CompressionSettings(enabled=true, type=type, level=5, shuffle=shuffle)
             test_add_remove(
-                IS.make_time_series_storage(;
-                    in_memory = in_memory,
-                    compression = compression,
-                ),
+                IS.make_time_series_storage(; in_memory=in_memory, compression=compression),
             )
             test_add_references(
-                IS.make_time_series_storage(;
-                    in_memory = in_memory,
-                    compression = compression,
-                ),
+                IS.make_time_series_storage(; in_memory=in_memory, compression=compression),
             )
             test_get_subset(
-                IS.make_time_series_storage(;
-                    in_memory = in_memory,
-                    compression = compression,
-                ),
+                IS.make_time_series_storage(; in_memory=in_memory, compression=compression),
             )
             test_clear(
-                IS.make_time_series_storage(;
-                    in_memory = in_memory,
-                    compression = compression,
-                ),
+                IS.make_time_series_storage(; in_memory=in_memory, compression=compression),
             )
         end
     end
@@ -206,12 +190,12 @@ end
 
 @testset "Test isempty" begin
     for in_memory in (true, false)
-        storage = IS.make_time_series_storage(in_memory = in_memory)
+        storage = IS.make_time_series_storage(in_memory=in_memory)
         @test isempty(storage)
         name = "component1"
         name = "val"
         component = IS.TestComponent(name, 5)
-        ts = IS.SingleTimeSeries(data = create_time_array(), name = "test")
+        ts = IS.SingleTimeSeries(data=create_time_array(), name="test")
         IS.serialize_time_series!(storage, IS.get_uuid(component), name, ts)
         @test !isempty(storage)
     end

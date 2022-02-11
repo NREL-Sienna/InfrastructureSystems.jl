@@ -59,8 +59,8 @@ end
     data = IS.SystemData()
     initial_time = Dates.DateTime("2020-09-01")
     resolution = Dates.Hour(1)
-    ta = TimeSeries.TimeArray(range(initial_time; length = 24, step = resolution), ones(24))
-    ts = IS.SingleTimeSeries(data = ta, name = "test")
+    ta = TimeSeries.TimeArray(range(initial_time; length=24, step=resolution), ones(24))
+    ts = IS.SingleTimeSeries(data=ta, name="test")
 
     for i in 1:3
         name = "component_$(i)"
@@ -85,8 +85,7 @@ end
     @test IS.is_attached(component, data.masked_components)
 
     # This needs to return time series for masked components.
-    @test length(collect(IS.get_time_series_multiple(data, type = IS.SingleTimeSeries))) ==
-          3
+    @test length(collect(IS.get_time_series_multiple(data, type=IS.SingleTimeSeries))) == 3
 end
 
 @testset "Test compare_values" begin
@@ -97,7 +96,7 @@ end
         @test_logs(
             (:error, r"not match"),
             match_mode = :any,
-            !IS.compare_values(component1, component2, compare_uuids = true)
+            !IS.compare_values(component1, component2, compare_uuids=true)
         )
     )
     component2.name = "b"
@@ -105,7 +104,7 @@ end
         @test_logs(
             (:error, r"not match"),
             match_mode = :any,
-            !IS.compare_values(component1, component2, compare_uuids = false)
+            !IS.compare_values(component1, component2, compare_uuids=false)
         )
     )
 
@@ -136,11 +135,11 @@ end
 end
 
 @testset "Test compression settings" begin
-    none = IS.CompressionSettings(enabled = false)
+    none = IS.CompressionSettings(enabled=false)
     @test IS.get_compression_settings(IS.SystemData()) == none
-    @test IS.get_compression_settings(IS.SystemData(time_series_in_memory = true)) == none
-    settings = IS.CompressionSettings(enabled = true, type = IS.CompressionTypes.DEFLATE)
-    @test IS.get_compression_settings(IS.SystemData(compression = settings)) == settings
+    @test IS.get_compression_settings(IS.SystemData(time_series_in_memory=true)) == none
+    settings = IS.CompressionSettings(enabled=true, type=IS.CompressionTypes.DEFLATE)
+    @test IS.get_compression_settings(IS.SystemData(compression=settings)) == settings
 end
 
 @testset "Test single time series consistency" begin
@@ -148,11 +147,8 @@ end
     initial_time = Dates.DateTime("2020-09-01")
     resolution = Dates.Hour(1)
     len = 24
-    ta = TimeSeries.TimeArray(
-        range(initial_time; length = len, step = resolution),
-        ones(len),
-    )
-    ts = IS.SingleTimeSeries(data = ta, name = "test")
+    ta = TimeSeries.TimeArray(range(initial_time; length=len, step=resolution), ones(len))
+    ts = IS.SingleTimeSeries(data=ta, name="test")
 
     for i in 1:2
         name = "component_$(i)"
@@ -174,8 +170,8 @@ end
 
     for i in 1:2
         it = initial_time + resolution * i
-        ta = TimeSeries.TimeArray(range(it; length = len, step = resolution), ones(len))
-        ts = IS.SingleTimeSeries(data = ta, name = "test")
+        ta = TimeSeries.TimeArray(range(it; length=len, step=resolution), ones(len))
+        ts = IS.SingleTimeSeries(data=ta, name="test")
         name = "component_$(i)"
         component = IS.TestComponent(name, 5)
         IS.add_component!(data, component)
@@ -194,10 +190,10 @@ end
     for i in 1:2
         len += i
         ta = TimeSeries.TimeArray(
-            range(initial_time; length = len, step = resolution),
+            range(initial_time; length=len, step=resolution),
             ones(len),
         )
-        ts = IS.SingleTimeSeries(data = ta, name = "test")
+        ts = IS.SingleTimeSeries(data=ta, name="test")
         name = "component_$(i)"
         component = IS.TestComponent(name, 5)
         IS.add_component!(data, component)

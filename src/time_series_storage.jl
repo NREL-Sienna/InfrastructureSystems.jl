@@ -37,27 +37,26 @@ struct CompressionSettings
 end
 
 function CompressionSettings(;
-    enabled = DEFAULT_COMPRESSION,
-    type = CompressionTypes.DEFLATE,
-    level = 3,
-    shuffle = true,
+    enabled=DEFAULT_COMPRESSION,
+    type=CompressionTypes.DEFLATE,
+    level=3,
+    shuffle=true,
 )
     return CompressionSettings(enabled, type, level, shuffle)
 end
 
 function make_time_series_storage(;
-    in_memory = false,
-    filename = nothing,
-    directory = nothing,
-    compression = CompressionSettings(),
+    in_memory=false,
+    filename=nothing,
+    directory=nothing,
+    compression=CompressionSettings(),
 )
     if in_memory
         storage = InMemoryTimeSeriesStorage()
     elseif !isnothing(filename)
-        storage = Hdf5TimeSeriesStorage(; filename = filename, compression = compression)
+        storage = Hdf5TimeSeriesStorage(; filename=filename, compression=compression)
     else
-        storage =
-            Hdf5TimeSeriesStorage(true; directory = directory, compression = compression)
+        storage = Hdf5TimeSeriesStorage(true; directory=directory, compression=compression)
     end
 
     return storage

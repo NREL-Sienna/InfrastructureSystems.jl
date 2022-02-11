@@ -12,7 +12,7 @@ Serializes a InfrastructureSystemsType to a JSON file.
 function to_json(
     obj::T,
     filename::AbstractString;
-    force = false,
+    force=false,
 ) where {T <: InfrastructureSystemsType}
     if !force && isfile(filename)
         error("$file already exists. Set force=true to overwrite.")
@@ -242,7 +242,7 @@ deserialize(::Type{Vector{Symbol}}, data::Vector) = Symbol.(data)
 function serialize_julia_info()
     data = Dict{String, Any}("julia_version" => string(VERSION))
     io = IOBuffer()
-    Pkg.status(io = io, mode = Pkg.PKGMODE_MANIFEST)
+    Pkg.status(io=io, mode=Pkg.PKGMODE_MANIFEST)
     data["package_info"] = String(take!(io))
     return data
 end
