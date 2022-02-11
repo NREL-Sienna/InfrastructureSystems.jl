@@ -13,7 +13,13 @@ This document describes logging facilities available in the modules that use `In
 
 ```julia
 import Logging
-import InfrastructureSystems: configure_logging, open_file_logger, MultiLogger, LogEventTracker, make_logging_config_file
+import InfrastructureSystems:
+    configure_logging,
+    open_file_logger,
+    MultiLogger,
+    LogEventTracker,
+    make_logging_config_file,
+    report_log_summary
 ```
 
 **Note**: Packages that depend on `InfrastructureSystems.jl` already re-export `configure_logging`, `open_file_logger`, `MultiLogger`, `LogEventTracker`
@@ -66,13 +72,17 @@ Run this in the REPL to see commonly-used groups in InfrastructureSystems:
 You can tell InfrastructureSystems to filter out messages from a particular
 group in two ways:
 
-1. Specify the group level in the `logging_config.toml` file mentioned above
-   and configure logging with it.
-2. Change the logger dynamically from with Julia. Here is an example:
+ 1. Specify the group level in the `logging_config.toml` file mentioned above
+    and configure logging with it.
+ 2. Change the logger dynamically from with Julia. Here is an example:
 
 ```julia
-logger = configure_logging(console_level = Logging.Debug)
-InfrastructureSystems.set_group_level!(logger, InfrastructureSystems.LOG_GROUP_TIME_SERIES, Logging.Info)
+logger = configure_logging(console_level=Logging.Debug)
+InfrastructureSystems.set_group_level!(
+    logger,
+    InfrastructureSystems.LOG_GROUP_TIME_SERIES,
+    Logging.Info,
+)
 
 # Or many at once.
 InfrastructureSystems.set_group_levels!(
@@ -97,7 +107,7 @@ Note that you can use `Logging.ConsoleLogger` if you don't have `TerminalLoggers
 
 **Example** Multilogger configuration
 
-```Julia
+```julia
 console_logger = TerminalLogger(stderr, Logging.Error)
 
 open_file_logger("log.txt", Logging.Info) do file_logger
@@ -161,8 +171,6 @@ for i in range(1, length=100)
 end
 ```
 
-
-
 ### Get a summary of log messages
 
 By default a `MultiLogger` creates a `LogEventTracker` that keeps counts of all
@@ -177,26 +185,12 @@ logger = configure_logging(; filename="log.txt")
 close(logger)
 ```
 
-The output of the logger can ve explored in the REPL
+The output of the logger can be explored in the REPL:
 
 ```julia
-julia> for i in range(1, length=100)
-           @info "hello" maxlog=2
-           @warn "beware" maxlog=2
-       end
-julia> @info report_log_summary(logger)
-┌ Info:
-│ Log message summary:
-│
-│ 0 Error events:
-│
-│ 1 Warn events:
-│   count=100 at REPL[19]:3
-│     example message="beware"
-│     suppressed=98
-│
-│ 1 Info events:
-│   count=100 at REPL[19]:2
-│     example message="hello"
-└     suppressed=98
+for i in range(1, length=100)
+    @info "hello" maxlog = 2
+    @warn "beware" maxlog = 2
+end
+@info report_log_summary(logger)
 ```
