@@ -9,11 +9,12 @@
 A deterministic forecast for a particular data field in a Component.
 
 # Arguments
-- `name::String`: user-defined name
-- `data::TimeSeries.TimeArray`: timestamp - scalingfactor
-- `scaling_factor_multiplier::Union{Nothing, Function}`: Applicable when the time series
-  data are scaling factors. Called on the associated component to convert the values.
-- `internal::InfrastructureSystemsInternal`
+
+  - `name::String`: user-defined name
+  - `data::TimeSeries.TimeArray`: timestamp - scalingfactor
+  - `scaling_factor_multiplier::Union{Nothing, Function}`: Applicable when the time series
+    data are scaling factors. Called on the associated component to convert the values.
+  - `internal::InfrastructureSystemsInternal`
 """
 mutable struct SingleTimeSeries <: StaticTimeSeries
     "user-defined name"
@@ -58,15 +59,16 @@ end
 Construct SingleTimeSeries from a TimeArray or DataFrame.
 
 # Arguments
-- `name::AbstractString`: user-defined name
-- `data::Union{TimeSeries.TimeArray, DataFrames.DataFrame}`: time series data
-- `normalization_factor::NormalizationFactor = 1.0`: optional normalization factor to apply
-  to each data entry
-- `scaling_factor_multiplier::Union{Nothing, Function} = nothing`: If the data are scaling
-  factors then this function will be called on the component and applied to the data when
-  [`get_time_series_array`](@ref) is called.
-- `timestamp = :timestamp`: If a DataFrame is passed then this must be the column name that
-  contains timestamps.
+
+  - `name::AbstractString`: user-defined name
+  - `data::Union{TimeSeries.TimeArray, DataFrames.DataFrame}`: time series data
+  - `normalization_factor::NormalizationFactor = 1.0`: optional normalization factor to apply
+    to each data entry
+  - `scaling_factor_multiplier::Union{Nothing, Function} = nothing`: If the data are scaling
+    factors then this function will be called on the component and applied to the data when
+    [`get_time_series_array`](@ref) is called.
+  - `timestamp = :timestamp`: If a DataFrame is passed then this must be the column name that
+    contains timestamps.
 """
 function SingleTimeSeries(
     name::AbstractString,
@@ -97,15 +99,16 @@ Construct SingleTimeSeries from a CSV file. The file must have a column that is 
 component.
 
 # Arguments
-- `name::AbstractString`: user-defined name
-- `filename::AbstractString`: name of CSV file containing data
-- `component::InfrastructureSystemsComponent`: component associated with the data
-- `resolution::Dates.Period`: resolution of the time series
-- `normalization_factor::NormalizationFactor = 1.0`: optional normalization factor to apply
-  to each data entry
-- `scaling_factor_multiplier::Union{Nothing, Function} = nothing`: If the data are scaling
-  factors then this function will be called on the component and applied to the data when
-  [`get_time_series_array`](@ref) is called.
+
+  - `name::AbstractString`: user-defined name
+  - `filename::AbstractString`: name of CSV file containing data
+  - `component::InfrastructureSystemsComponent`: component associated with the data
+  - `resolution::Dates.Period`: resolution of the time series
+  - `normalization_factor::NormalizationFactor = 1.0`: optional normalization factor to apply
+    to each data entry
+  - `scaling_factor_multiplier::Union{Nothing, Function} = nothing`: If the data are scaling
+    factors then this function will be called on the component and applied to the data when
+    [`get_time_series_array`](@ref) is called.
 """
 function SingleTimeSeries(
     name::AbstractString,
@@ -190,25 +193,43 @@ function SingleTimeSeries(info::TimeSeriesParsedInfo)
     )
 end
 
-"""Get [`SingleTimeSeries`](@ref) `name`."""
+"""
+Get [`SingleTimeSeries`](@ref) `name`.
+"""
 get_name(value::SingleTimeSeries) = value.name
-"""Get [`SingleTimeSeries`](@ref) `data`."""
+"""
+Get [`SingleTimeSeries`](@ref) `data`.
+"""
 get_data(value::SingleTimeSeries) = value.data
-"""Get [`SingleTimeSeries`](@ref) `resolution`."""
+"""
+Get [`SingleTimeSeries`](@ref) `resolution`.
+"""
 get_resolution(value::SingleTimeSeries) = value.resolution
-"""Get [`SingleTimeSeries`](@ref) `scaling_factor_multiplier`."""
+"""
+Get [`SingleTimeSeries`](@ref) `scaling_factor_multiplier`.
+"""
 get_scaling_factor_multiplier(value::SingleTimeSeries) = value.scaling_factor_multiplier
-"""Get [`SingleTimeSeries`](@ref) `internal`."""
+"""
+Get [`SingleTimeSeries`](@ref) `internal`.
+"""
 get_internal(value::SingleTimeSeries) = value.internal
 
-"""Set [`SingleTimeSeries`](@ref) `name`."""
+"""
+Set [`SingleTimeSeries`](@ref) `name`.
+"""
 set_name!(value::SingleTimeSeries, val) = value.name = val
-"""Set [`SingleTimeSeries`](@ref) `data`."""
+"""
+Set [`SingleTimeSeries`](@ref) `data`.
+"""
 set_data!(value::SingleTimeSeries, val) = value.data = val
-"""Set [`SingleTimeSeries`](@ref) `scaling_factor_multiplier`."""
+"""
+Set [`SingleTimeSeries`](@ref) `scaling_factor_multiplier`.
+"""
 set_scaling_factor_multiplier!(value::SingleTimeSeries, val) =
     value.scaling_factor_multiplier = val
-"""Set [`SingleTimeSeries`](@ref) `internal`."""
+"""
+Set [`SingleTimeSeries`](@ref) `internal`.
+"""
 set_internal!(value::SingleTimeSeries, val) = value.internal = val
 
 eltype_data(ts::SingleTimeSeries) = eltype(TimeSeries.values(ts.data))

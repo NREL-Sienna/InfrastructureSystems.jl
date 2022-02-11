@@ -14,12 +14,13 @@
 A deterministic forecast for a particular data field in a Component.
 
 # Arguments
-- `name::String`: user-defined name
-- `data::Union{SortedDict{Dates.DateTime, Vector{CONSTANT}}, SortedDict{Dates.DateTime, Vector{POLYNOMIAL}}, SortedDict{Dates.DateTime, Vector{PWL}}}`: timestamp - scalingfactor
-- `resolution::Dates.Period`: forecast resolution
-- `scaling_factor_multiplier::Union{Nothing, Function}`: Applicable when the time series
-  data are scaling factors. Called on the associated component to convert the values.
-- `internal::InfrastructureSystemsInternal`
+
+  - `name::String`: user-defined name
+  - `data::Union{SortedDict{Dates.DateTime, Vector{CONSTANT}}, SortedDict{Dates.DateTime, Vector{POLYNOMIAL}}, SortedDict{Dates.DateTime, Vector{PWL}}}`: timestamp - scalingfactor
+  - `resolution::Dates.Period`: forecast resolution
+  - `scaling_factor_multiplier::Union{Nothing, Function}`: Applicable when the time series
+    data are scaling factors. Called on the associated component to convert the values.
+  - `internal::InfrastructureSystemsInternal`
 """
 mutable struct Deterministic <: AbstractDeterministic
     "user-defined name"
@@ -69,15 +70,16 @@ end
 Construct Deterministic from a Dict of TimeArrays.
 
 # Arguments
-- `name::AbstractString`: user-defined name
-- `input_data::AbstractDict{Dates.DateTime, TimeSeries.TimeArray}`: time series data.
-- `normalization_factor::NormalizationFactor = 1.0`: optional normalization factor to apply
-  to each data entry
-- `scaling_factor_multiplier::Union{Nothing, Function} = nothing`: If the data are scaling
-  factors then this function will be called on the component and applied to the data when
-  [`get_time_series_array`](@ref) is called.
-- `timestamp = :timestamp`: If the values are DataFrames is passed then this must be the
-  column name that contains timestamps.
+
+  - `name::AbstractString`: user-defined name
+  - `input_data::AbstractDict{Dates.DateTime, TimeSeries.TimeArray}`: time series data.
+  - `normalization_factor::NormalizationFactor = 1.0`: optional normalization factor to apply
+    to each data entry
+  - `scaling_factor_multiplier::Union{Nothing, Function} = nothing`: If the data are scaling
+    factors then this function will be called on the component and applied to the data when
+    [`get_time_series_array`](@ref) is called.
+  - `timestamp = :timestamp`: If the values are DataFrames is passed then this must be the
+    column name that contains timestamps.
 """
 function Deterministic(
     name::AbstractString,
@@ -111,14 +113,15 @@ Construct Deterministic from a CSV file. The first column must be a timestamp in
 DateTime format and the columns the values in the forecast window.
 
 # Arguments
-- `name::AbstractString`: user-defined name
-- `filename::AbstractString`: name of CSV file containing data
-- `component::InfrastructureSystemsComponent`: component associated with the data
-- `normalization_factor::NormalizationFactor = 1.0`: optional normalization factor to apply
-  to each data entry
-- `scaling_factor_multiplier::Union{Nothing, Function} = nothing`: If the data are scaling
-  factors then this function will be called on the component and applied to the data when
-  [`get_time_series_array`](@ref) is called.
+
+  - `name::AbstractString`: user-defined name
+  - `filename::AbstractString`: name of CSV file containing data
+  - `component::InfrastructureSystemsComponent`: component associated with the data
+  - `normalization_factor::NormalizationFactor = 1.0`: optional normalization factor to apply
+    to each data entry
+  - `scaling_factor_multiplier::Union{Nothing, Function} = nothing`: If the data are scaling
+    factors then this function will be called on the component and applied to the data when
+    [`get_time_series_array`](@ref) is called.
 """
 function Deterministic(
     name::AbstractString,
@@ -225,27 +228,47 @@ function get_array_for_hdf(forecast::Deterministic)
     return transform_array_for_hdf(forecast.data)
 end
 
-"""Get [`Deterministic`](@ref) `name`."""
+"""
+Get [`Deterministic`](@ref) `name`.
+"""
 get_name(value::Deterministic) = value.name
-"""Get [`Deterministic`](@ref) `data`."""
+"""
+Get [`Deterministic`](@ref) `data`.
+"""
 get_data(value::Deterministic) = value.data
-"""Get [`Deterministic`](@ref) `resolution`."""
+"""
+Get [`Deterministic`](@ref) `resolution`.
+"""
 get_resolution(value::Deterministic) = value.resolution
-"""Get [`Deterministic`](@ref) `scaling_factor_multiplier`."""
+"""
+Get [`Deterministic`](@ref) `scaling_factor_multiplier`.
+"""
 get_scaling_factor_multiplier(value::Deterministic) = value.scaling_factor_multiplier
-"""Get [`Deterministic`](@ref) `internal`."""
+"""
+Get [`Deterministic`](@ref) `internal`.
+"""
 get_internal(value::Deterministic) = value.internal
 
-"""Set [`Deterministic`](@ref) `name`."""
+"""
+Set [`Deterministic`](@ref) `name`.
+"""
 set_name!(value::Deterministic, val) = value.name = val
-"""Set [`Deterministic`](@ref) `data`."""
+"""
+Set [`Deterministic`](@ref) `data`.
+"""
 set_data!(value::Deterministic, val) = value.data = val
-"""Set [`Deterministic`](@ref) `resolution`."""
+"""
+Set [`Deterministic`](@ref) `resolution`.
+"""
 set_resolution!(value::Deterministic, val) = value.resolution = val
-"""Set [`Deterministic`](@ref) `scaling_factor_multiplier`."""
+"""
+Set [`Deterministic`](@ref) `scaling_factor_multiplier`.
+"""
 set_scaling_factor_multiplier!(value::Deterministic, val) =
     value.scaling_factor_multiplier = val
-"""Set [`Deterministic`](@ref) `internal`."""
+"""
+Set [`Deterministic`](@ref) `internal`.
+"""
 set_internal!(value::Deterministic, val) = value.internal = val
 
 eltype_data(forecast::Deterministic) = eltype_data_common(forecast)

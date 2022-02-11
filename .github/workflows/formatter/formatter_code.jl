@@ -18,7 +18,9 @@ for main_path in main_paths
             verbose = true,
             always_for_in = true,
             whitespace_typedefs = true,
-            whitespace_in_kwargs = false
+            whitespace_in_kwargs = false,
+            format_docstrings = true,
+
             # always_use_return = true # removed since it has false positives.
             )
     end

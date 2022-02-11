@@ -65,10 +65,11 @@ end
 Construct a Recorder.
 
 # Arguments
-- `name::Symbol`: name of recorder
-- `io::Union{Nothing, IO}`:  If nothing, record events in a file using name.
-- `mode = "w"`:  Only used when io is nothing.
-- `directory = "."`:  Only used when io is nothing.
+
+  - `name::Symbol`: name of recorder
+  - `io::Union{Nothing, IO}`:  If nothing, record events in a file using name.
+  - `mode = "w"`:  Only used when io is nothing.
+  - `directory = "."`:  Only used when io is nothing.
 """
 function Recorder(name::Symbol; io::Union{Nothing, IO}=nothing, mode="w", directory=".")
     if isnothing(io)
@@ -93,10 +94,11 @@ Callers should guarantee that [`unregister_recorder!`](@ref) is called to close 
 handle.
 
 # Arguments
-- `name::Symbol`: name of recorder
-- `io::Union{Nothing, IO}`:  If nothing, record events in a file using name.
-- `mode = "w"`:  Only used when io is nothing.
-- `directory = "."`:  Only used when io is nothing.
+
+  - `name::Symbol`: name of recorder
+  - `io::Union{Nothing, IO}`:  If nothing, record events in a file using name.
+  - `mode = "w"`:  Only used when io is nothing.
+  - `directory = "."`:  Only used when io is nothing.
 """
 function register_recorder!(
     name::Symbol;
@@ -124,10 +126,12 @@ end
 Record an event if the recorder with name is enabled.
 
 # Arguments
-- `name::Symbol`: name of recorder
-- `event::AbstractRecorderEvent`: event to record
+
+  - `name::Symbol`: name of recorder
+  - `event::AbstractRecorderEvent`: event to record
 
 # Examples
+
 ```Julia
 @record simulation TestEvent("start", 1, 2.0)
 ```
@@ -147,11 +151,12 @@ end
 Return the events of type T in filename.
 
 # Arguments
-- `T`: event type
-- `filename::AbstractString`: filename containing recorder events
-- `filter_func::Union{Nothing, Function} = nothing`: Optional function that accepts an event
-   of type T and returns a Bool. Apply this function to each event and only return events
-   where the result is true.
+
+  - `T`: event type
+  - `filename::AbstractString`: filename containing recorder events
+  - `filter_func::Union{Nothing, Function} = nothing`: Optional function that accepts an event
+    of type T and returns a Bool. Apply this function to each event and only return events
+    where the result is true.
 """
 function list_recorder_events(
     ::Type{T},
@@ -183,14 +188,16 @@ Show the events of type T in filename in a table. Refer to PrettyTables.jl docum
 for accepted kwargs.
 
 # Arguments
-- `T`: event type
-- `filename::AbstractString`: filename containing recorder events
-- `filter_func::Union{Nothing, Function} = nothing`: Optional function that accepts an event
-   of type T and returns a Bool. Apply this function to each event and only return events
-   where the result is true.
-- `kwargs`: Passed to PrettyTables
+
+  - `T`: event type
+  - `filename::AbstractString`: filename containing recorder events
+  - `filter_func::Union{Nothing, Function} = nothing`: Optional function that accepts an event
+    of type T and returns a Bool. Apply this function to each event and only return events
+    where the result is true.
+  - `kwargs`: Passed to PrettyTables
 
 # Examples
+
 ```Julia
 show_recorder_events(TestEvent, test_recorder.log)
 show_recorder_events(TestEvent, test_recorder.log; x -> x.val2 > 2)

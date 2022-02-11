@@ -17,7 +17,9 @@ function get_all_concrete_subtypes(::Type{T}) where {T}
     return sub_types
 end
 
-"""Recursively builds a vector of subtypes."""
+"""
+Recursively builds a vector of subtypes.
+"""
 function _get_all_concrete_subtypes(::Type{T}, sub_types::Vector{DataType}) where {T}
     for sub_type in InteractiveUtils.subtypes(T)
         if isconcretetype(sub_type)
@@ -30,17 +32,23 @@ function _get_all_concrete_subtypes(::Type{T}, sub_types::Vector{DataType}) wher
     return nothing
 end
 
-"""Returns an array of concrete types that are direct subtypes of T."""
+"""
+Returns an array of concrete types that are direct subtypes of T.
+"""
 function get_concrete_subtypes(::Type{T}) where {T}
     return [x for x in InteractiveUtils.subtypes(T) if isconcretetype(x)]
 end
 
-"""Returns an array of abstract types that are direct subtypes of T."""
+"""
+Returns an array of abstract types that are direct subtypes of T.
+"""
 function get_abstract_subtypes(::Type{T}) where {T}
     return [x for x in InteractiveUtils.subtypes(T) if isabstracttype(x)]
 end
 
-"""Returns an array of all super types of T."""
+"""
+Returns an array of all super types of T.
+"""
 function supertypes(::Type{T}, types=[]) where {T}
     super = supertype(T)
     push!(types, super)
@@ -51,12 +59,16 @@ function supertypes(::Type{T}, types=[]) where {T}
     return supertypes(super, types)
 end
 
-"""Converts a DataType to a Symbol, stripping off the module name(s)."""
+"""
+Converts a DataType to a Symbol, stripping off the module name(s).
+"""
 function type_to_symbol(data_type::DataType)
     return Symbol(strip_module_name(string(data_type)))
 end
 
-"""Strips the module name off of a type."""
+"""
+Strips the module name off of a type.
+"""
 function strip_module_name(name::String)
     index = findfirst(".", name)
     # Account for the period being part of a parametric type.
@@ -105,9 +117,10 @@ end
 Recursively compares struct values. Prints all mismatched values to stdout.
 
 # Arguments
-- `x::T`: First value
-- `y::T`: Second value
-- `compare_uuids::Bool = false`: Compare any UUID in the object or composed objects.
+
+  - `x::T`: First value
+  - `y::T`: Second value
+  - `compare_uuids::Bool = false`: Compare any UUID in the object or composed objects.
 """
 function compare_values(x::T, y::T; compare_uuids=false) where {T}
     match = true
@@ -188,6 +201,7 @@ compare_values(::Type{T}, ::Type{U}; compare_uuids=false) where {T, U} = false
 Macro to wrap Enum in a module to keep the top level scope clean.
 
 # Examples
+
 ```Julia
 julia> @scoped_enum Fruit APPLE = 1 ORANGE = 2
 

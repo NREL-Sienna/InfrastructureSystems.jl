@@ -134,16 +134,17 @@ end
 Return a time series corresponding to the given parameters.
 
 # Arguments
-- `::Type{T}`: Concrete subtype of TimeSeriesData to return
-- `component::InfrastructureSystemsComponent`: Component containing the time series
-- `name::AbstractString`: name of time series
-- `start_time::Union{Nothing, Dates.DateTime} = nothing`: If nothing, use the
-  `initial_timestamp` of the time series. If T is a subtype of Forecast then `start_time`
-  must be the first timstamp of a window.
-- `len::Union{Nothing, Int} = nothing`: Length in the time dimension. If nothing, use the
-  entire length.
-- `count::Union{Nothing, Int} = nothing`: Only applicable to subtypes of Forecast. Number
-  of forecast windows starting at `start_time` to return. Defaults to all available.
+
+  - `::Type{T}`: Concrete subtype of TimeSeriesData to return
+  - `component::InfrastructureSystemsComponent`: Component containing the time series
+  - `name::AbstractString`: name of time series
+  - `start_time::Union{Nothing, Dates.DateTime} = nothing`: If nothing, use the
+    `initial_timestamp` of the time series. If T is a subtype of Forecast then `start_time`
+    must be the first timstamp of a window.
+  - `len::Union{Nothing, Int} = nothing`: Length in the time dimension. If nothing, use the
+    entire length.
+  - `count::Union{Nothing, Int} = nothing`: Only applicable to subtypes of Forecast. Number
+    of forecast windows starting at `start_time` to return. Defaults to all available.
 """
 function get_time_series(
     ::Type{T},
@@ -420,17 +421,18 @@ Efficiently add all time_series in one component to another by copying the under
 references.
 
 # Arguments
-- `dst::InfrastructureSystemsComponent`: Destination component
-- `src::InfrastructureSystemsComponent`: Source component
-- `name_mapping::Dict = nothing`: Optionally map src names to different dst names.
-  If provided and src has a time_series with a name not present in name_mapping, that
-  time_series will not copied. If name_mapping is nothing then all time_series will be
-  copied with src's names.
-- `scaling_factor_multiplier_mapping::Dict = nothing`: Optionally map src multipliers to
-  different dst multipliers.  If provided and src has a time_series with a multiplier not
-  present in scaling_factor_multiplier_mapping, that time_series will not copied. If
-  scaling_factor_multiplier_mapping is nothing then all time_series will be copied with
-  src's multipliers.
+
+  - `dst::InfrastructureSystemsComponent`: Destination component
+  - `src::InfrastructureSystemsComponent`: Source component
+  - `name_mapping::Dict = nothing`: Optionally map src names to different dst names.
+    If provided and src has a time_series with a name not present in name_mapping, that
+    time_series will not copied. If name_mapping is nothing then all time_series will be
+    copied with src's names.
+  - `scaling_factor_multiplier_mapping::Dict = nothing`: Optionally map src multipliers to
+    different dst multipliers.  If provided and src has a time_series with a multiplier not
+    present in scaling_factor_multiplier_mapping, that time_series will not copied. If
+    scaling_factor_multiplier_mapping is nothing then all time_series will be copied with
+    src's multipliers.
 """
 function copy_time_series!(
     dst::InfrastructureSystemsComponent,
@@ -565,10 +567,11 @@ because it reads time series data from media.
 Call `collect` on the result to get an array.
 
 # Arguments
-- `component::InfrastructureSystemsComponent`: component from which to get time_series
-- `filter_func = nothing`: Only return time_series for which this returns true.
-- `type = nothing`: Only return time_series with this type.
-- `name = nothing`: Only return time_series matching this value.
+
+  - `component::InfrastructureSystemsComponent`: component from which to get time_series
+  - `filter_func = nothing`: Only return time_series for which this returns true.
+  - `type = nothing`: Only return time_series with this type.
+  - `name = nothing`: Only return time_series matching this value.
 """
 function get_time_series_multiple(
     component::InfrastructureSystemsComponent,

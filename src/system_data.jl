@@ -32,13 +32,14 @@ end
 Construct SystemData to store components and time series data.
 
 # Arguments
-- `validation_descriptor_file = nothing`: Optionally, a file defining component validation
-  descriptors.
-- `time_series_in_memory = false`: Controls whether time series data is stored in memory or
-  in a file.
-- `time_series_directory = nothing`: Controls what directory time series data is stored in.
-  Default is tempdir().
-- `compression = CompressionSettings()`: Controls compression of time series data.
+
+  - `validation_descriptor_file = nothing`: Optionally, a file defining component validation
+    descriptors.
+  - `time_series_in_memory = false`: Controls whether time series data is stored in memory or
+    in a file.
+  - `time_series_directory = nothing`: Controls what directory time series data is stored in.
+    Default is tempdir().
+  - `compression = CompressionSettings()`: Controls compression of time series data.
 """
 function SystemData(;
     validation_descriptor_file=nothing,
@@ -95,11 +96,12 @@ end
 Adds time_series from a metadata file or metadata descriptors.
 
 # Arguments
-- `data::SystemData`: system
-- `::Type{T}`: type of the component associated with time series data; may be abstract
-- `metadata_file::AbstractString`: metadata file for time series
-  that includes an array of TimeSeriesFileMetadata instances or a vector.
-- `resolution::DateTime.Period=nothing`: skip time_series that don't match this resolution.
+
+  - `data::SystemData`: system
+  - `::Type{T}`: type of the component associated with time series data; may be abstract
+  - `metadata_file::AbstractString`: metadata file for time series
+    that includes an array of TimeSeriesFileMetadata instances or a vector.
+  - `resolution::DateTime.Period=nothing`: skip time_series that don't match this resolution.
 """
 function add_time_series_from_file_metadata!(
     data::SystemData,
@@ -115,9 +117,10 @@ end
 Adds time series data from a metadata file or metadata descriptors.
 
 # Arguments
-- `data::SystemData`: system
-- `file_metadata::Vector{TimeSeriesFileMetadata}`: metadata for time series
-- `resolution::DateTime.Period=nothing`: skip time_series that don't match this resolution.
+
+  - `data::SystemData`: system
+  - `file_metadata::Vector{TimeSeriesFileMetadata}`: metadata for time series
+  - `resolution::DateTime.Period=nothing`: skip time_series that don't match this resolution.
 """
 function add_time_series_from_file_metadata!(
     data::SystemData,
@@ -138,12 +141,12 @@ end
 Add time series data to a component.
 
 # Arguments
-- `data::SystemData`: SystemData
-- `component::InfrastructureSystemsComponent`: will store the time series reference
-- `time_series::TimeSeriesData`: Any object of subtype TimeSeriesData
+
+  - `data::SystemData`: SystemData
+  - `component::InfrastructureSystemsComponent`: will store the time series reference
+  - `time_series::TimeSeriesData`: Any object of subtype TimeSeriesData
 
 Throws ArgumentError if the component is not stored in the system.
-
 """
 function add_time_series!(
     data::SystemData,
@@ -167,9 +170,10 @@ end
 Add the same time series data to multiple components.
 
 # Arguments
-- `data::SystemData`: SystemData
-- `components`: iterable of components that will store the same time series reference
-- `time_series::TimeSeriesData`: Any object of subtype TimeSeriesData
+
+  - `data::SystemData`: SystemData
+  - `components`: iterable of components that will store the same time series reference
+  - `time_series::TimeSeriesData`: Any object of subtype TimeSeriesData
 
 This is significantly more efficent than calling `add_time_series!` for each component
 individually with the same data because in this case, only one time series array is stored.
@@ -261,9 +265,10 @@ end
 Return a time series from TimeSeriesFileMetadata.
 
 # Arguments
-- `cache::TimeSeriesParsingCache`: cached data
-- `ts_file_metadata::TimeSeriesFileMetadata`: metadata
-- `resolution::{Nothing, Dates.Period}`: skip any time_series that don't match this resolution
+
+  - `cache::TimeSeriesParsingCache`: cached data
+  - `ts_file_metadata::TimeSeriesFileMetadata`: metadata
+  - `resolution::{Nothing, Dates.Period}`: skip any time_series that don't match this resolution
 """
 function make_time_series!(
     cache::TimeSeriesParsingCache,
@@ -378,8 +383,9 @@ end
 Removes all time series of a particular type from a System.
 
 # Arguments
-- `data::SystemData`: system
-- `type::Type{<:TimeSeriesData}`: Type of time series objects to remove.
+
+  - `data::SystemData`: system
+  - `type::Type{<:TimeSeriesData}`: Type of time series objects to remove.
 """
 function remove_time_series!(data::SystemData, ::Type{T}) where {T <: TimeSeriesData}
     for component in iterate_components_with_time_series(data)
@@ -408,10 +414,11 @@ because it reads time series data from media.
 Call `collect` on the result to get an array.
 
 # Arguments
-- `data::SystemData`: system
-- `filter_func = nothing`: Only return time_series for which this returns true.
-- `type = nothing`: Only return time_series with this type.
-- `name = nothing`: Only return time_series matching this value.
+
+  - `data::SystemData`: system
+  - `filter_func = nothing`: Only return time_series for which this returns true.
+  - `type = nothing`: Only return time_series with this type.
+  - `name = nothing`: Only return time_series matching this value.
 """
 function get_time_series_multiple(
     data::SystemData,

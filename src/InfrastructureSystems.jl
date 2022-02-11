@@ -35,11 +35,13 @@ abstract type InfrastructureSystemsType end
 Base type for structs that are stored in a system.
 
 Required interface functions for subtypes:
-- get_name()
-- get_internal()
+
+  - get_name()
+  - get_internal()
 
 Optional interface functions:
-- get_time_series_container()
+
+  - get_time_series_container()
 
 Subtypes may contain time series.
 """

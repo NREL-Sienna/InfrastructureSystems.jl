@@ -1,11 +1,15 @@
-"""Wraps the data read from the text files with time series"""
+"""
+Wraps the data read from the text files with time series
+"""
 struct RawTimeSeries
     initial_time::Dates.DateTime
     data::Dict
     length::Int
 end
 
-"""Describes how to construct time_series from raw time series data files."""
+"""
+Describes how to construct time_series from raw time series data files.
+"""
 mutable struct TimeSeriesFileMetadata
     "User description of simulation"
     simulation::AbstractString
@@ -65,7 +69,9 @@ function TimeSeriesFileMetadata(;
     )
 end
 
-"""Reads time_series metadata and fixes relative paths to the data files."""
+"""
+Reads time_series metadata and fixes relative paths to the data files.
+"""
 function read_time_series_file_metadata(file_path::AbstractString)
     if endswith(file_path, ".json")
         metadata = open(file_path) do io

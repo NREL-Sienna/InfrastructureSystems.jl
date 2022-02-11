@@ -203,7 +203,7 @@ type then the names of components across all subtypes of T must be unique.
 See [`get_components_by_name`](@ref) for abstract types with non-unique names across subtypes.
 
 Throws ArgumentError if T is not a concrete type and there is more than one component with
-    requested name
+requested name
 """
 function get_component(
     ::Type{T},
@@ -266,11 +266,12 @@ Returns an iterator of components. T can be concrete or abstract.
 Call collect on the result if an array is desired.
 
 # Arguments
-- `T`: component type
-- `components::Components`: Components of the sytem
-- `filter_func::Union{Nothing, Function} = nothing`: Optional function that accepts a component
-   of type T and returns a Bool. Apply this function to each component and only return components
-   where the result is true.
+
+  - `T`: component type
+  - `components::Components`: Components of the sytem
+  - `filter_func::Union{Nothing, Function} = nothing`: Optional function that accepts a component
+    of type T and returns a Bool. Apply this function to each component and only return components
+    where the result is true.
 
 See also: [`iterate_components`](@ref)
 """
@@ -310,6 +311,7 @@ end
 Iterates over all components.
 
 # Examples
+
 ```Julia
 for component in iterate_components(obj)
     @show component

@@ -13,11 +13,11 @@ creating a dictionary by iterating over the entire list.
 Each V should have a K member.
 
 # Arguments
-- `K`: type of the dictionary keys
-- `V`: type of the dictionary values
-- `iter`: any object implementing the Iterator interface
-- `getter::Function`: method to call on V to get its K
 
+  - `K`: type of the dictionary keys
+  - `V`: type of the dictionary values
+  - `iter`: any object implementing the Iterator interface
+  - `getter::Function`: method to call on V to get its K
 """
 function LazyDictFromIterator(
     ::Type{K},
@@ -67,14 +67,18 @@ function Base.get(container::LazyDictFromIterator, key::K) where {K}
     @assert false
 end
 
-"""Reset the iterator for cases where underlying arrays have changed."""
+"""
+Reset the iterator for cases where underlying arrays have changed.
+"""
 function reset_iterator(container::LazyDictFromIterator)
     @debug "reset_iterator"
     container.state = nothing
     return
 end
 
-"""Replace the iterator, maintaining the cached dict."""
+"""
+Replace the iterator, maintaining the cached dict.
+"""
 function replace_iterator(container::LazyDictFromIterator, iter)
     @debug "replace_iterator"
     container.state = nothing

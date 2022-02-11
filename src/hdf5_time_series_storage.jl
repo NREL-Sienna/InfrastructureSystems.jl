@@ -30,13 +30,14 @@ end
 Constructs Hdf5TimeSeriesStorage.
 
 # Arguments
-- `create_file::Bool`: create new file
-- `filename=nothing`: if nothing, create a temp file, else use this name.
-- `directory=nothing`: if set and filename is nothing, create a temp file in this
-   directory. Use tempdir() if not set. This should be set if the time series data is larger
-   than the tmp filesystem can hold.
-- `read_only = false`: If true, don't allow changes to the file. Allows simultaneous read
-   access.
+
+  - `create_file::Bool`: create new file
+  - `filename=nothing`: if nothing, create a temp file, else use this name.
+  - `directory=nothing`: if set and filename is nothing, create a temp file in this
+    directory. Use tempdir() if not set. This should be set if the time series data is larger
+    than the tmp filesystem can hold.
+  - `read_only = false`: If true, don't allow changes to the file. Allows simultaneous read
+    access.
 """
 function Hdf5TimeSeriesStorage(
     create_file::Bool;
@@ -112,8 +113,9 @@ Copy the time series data to a new file. This should get called when the system 
 undergoing a deepcopy.
 
 # Arguments
-- `storage::Hdf5TimeSeriesStorage`: storage instance
-- `directory::String`: If nothing, use tempdir
+
+  - `storage::Hdf5TimeSeriesStorage`: storage instance
+  - `directory::String`: If nothing, use tempdir
 """
 function copy_to_new_file!(storage::Hdf5TimeSeriesStorage, directory=nothing)
     if directory === nothing

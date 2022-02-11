@@ -182,6 +182,7 @@ end
 Tracks counts of all log events by level.
 
 # Examples
+
 ```Julia
 LogEventTracker()
 LogEventTracker((Logging.Info, Logging.Warn, Logging.Error))
@@ -207,18 +208,20 @@ Please contact the package developers if you need this functionality.
 ensure that all events get flushed.
 
 # Arguments
-- `console::Bool=true`: create console logger
-- `console_stream::IOStream=stderr`: stream for console logger
-- `console_level::Logging.LogLevel=Logging.Error`: level for console messages
-- `progress::Bool=true`: enable progress logger
-- `file::Bool=true`: create file logger
-- `filename::Union{Nothing, String}=log.txt`: log file
-- `file_level::Logging.LogLevel=Logging.Info`: level for file messages
-- `file_mode::String=w+`: mode used when opening log file
-- `tracker::Union{LogEventTracker, Nothing}=LogEventTracker()`: optionally track log events
-- `set_global::Bool=true`: set the created logger as the global logger
+
+  - `console::Bool=true`: create console logger
+  - `console_stream::IOStream=stderr`: stream for console logger
+  - `console_level::Logging.LogLevel=Logging.Error`: level for console messages
+  - `progress::Bool=true`: enable progress logger
+  - `file::Bool=true`: create file logger
+  - `filename::Union{Nothing, String}=log.txt`: log file
+  - `file_level::Logging.LogLevel=Logging.Info`: level for file messages
+  - `file_mode::String=w+`: mode used when opening log file
+  - `tracker::Union{LogEventTracker, Nothing}=LogEventTracker()`: optionally track log events
+  - `set_global::Bool=true`: set the created logger as the global logger
 
 # Example
+
 ```Julia
 logger = configure_logging(filename="mylog.txt")
 @info "hello world"
@@ -344,6 +347,7 @@ Base.close(logger::FileLogger) = close(logger.logger.stream)
 Opens a file logger using Logging.SimpleLogger.
 
 # Example
+
 ```Julia
 open_file_logger("log.txt", Logging.Info) do logger
     global_logger(logger)
@@ -450,6 +454,7 @@ Redirects log events to multiple loggers. The primary use case is to allow loggi
 both a file and the console. Secondarily, it can track the counts of all log messages.
 
 # Example
+
 ```Julia
 MultiLogger([TerminalLogger(stderr), SimpleLogger(stream)], LogEventTracker())
 ```
@@ -465,6 +470,7 @@ end
 Creates a MultiLogger with no event tracking.
 
 # Example
+
 ```Julia
 MultiLogger([TerminalLogger(stderr), SimpleLogger(stream)])
 ```

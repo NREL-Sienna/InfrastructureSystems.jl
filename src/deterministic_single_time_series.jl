@@ -10,11 +10,12 @@
 A deterministic forecast for a particular data field in a Component that wraps a SingleTimeSeries.
 
 # Arguments
-- `single_time_series::SingleTimeSeries`: wrapped SingleTimeSeries object
-- `initial_timestamp::Dates.DateTime`: time series availability time
-- `interval::Dates.Period`: time step between forecast windows
-- `count::Int`: number of forecast windows
-- `horizon::Int`: length of this time series
+
+  - `single_time_series::SingleTimeSeries`: wrapped SingleTimeSeries object
+  - `initial_timestamp::Dates.DateTime`: time series availability time
+  - `interval::Dates.Period`: time step between forecast windows
+  - `count::Int`: number of forecast windows
+  - `horizon::Int`: length of this time series
 """
 mutable struct DeterministicSingleTimeSeries <: AbstractDeterministic
     "wrapped SingleTimeSeries object"
@@ -46,28 +47,48 @@ function DeterministicSingleTimeSeries(;
 end
 
 get_name(value::DeterministicSingleTimeSeries) = get_name(value.single_time_series)
-"""Get [`DeterministicSingleTimeSeries`](@ref) `single_time_series`."""
+"""
+Get [`DeterministicSingleTimeSeries`](@ref) `single_time_series`.
+"""
 get_single_time_series(value::DeterministicSingleTimeSeries) = value.single_time_series
-"""Get [`DeterministicSingleTimeSeries`](@ref) `initial_timestamp`."""
+"""
+Get [`DeterministicSingleTimeSeries`](@ref) `initial_timestamp`.
+"""
 get_initial_timestamp(value::DeterministicSingleTimeSeries) = value.initial_timestamp
-"""Get [`DeterministicSingleTimeSeries`](@ref) `interval`."""
+"""
+Get [`DeterministicSingleTimeSeries`](@ref) `interval`.
+"""
 get_interval(value::DeterministicSingleTimeSeries) = value.interval
-"""Get [`DeterministicSingleTimeSeries`](@ref) `count`."""
+"""
+Get [`DeterministicSingleTimeSeries`](@ref) `count`.
+"""
 get_count(value::DeterministicSingleTimeSeries) = value.count
-"""Get [`DeterministicSingleTimeSeries`](@ref) `horizon`."""
+"""
+Get [`DeterministicSingleTimeSeries`](@ref) `horizon`.
+"""
 get_horizon(value::DeterministicSingleTimeSeries) = value.horizon
 
-"""Set [`DeterministicSingleTimeSeries`](@ref) `single_time_series`."""
+"""
+Set [`DeterministicSingleTimeSeries`](@ref) `single_time_series`.
+"""
 set_single_time_series!(value::DeterministicSingleTimeSeries, val) =
     value.single_time_series = val
-"""Set [`DeterministicSingleTimeSeries`](@ref) `initial_timestamp`."""
+"""
+Set [`DeterministicSingleTimeSeries`](@ref) `initial_timestamp`.
+"""
 set_initial_timestamp!(value::DeterministicSingleTimeSeries, val) =
     value.initial_timestamp = val
-"""Set [`DeterministicSingleTimeSeries`](@ref) `interval`."""
+"""
+Set [`DeterministicSingleTimeSeries`](@ref) `interval`.
+"""
 set_interval!(value::DeterministicSingleTimeSeries, val) = value.interval = val
-"""Set [`DeterministicSingleTimeSeries`](@ref) `count`."""
+"""
+Set [`DeterministicSingleTimeSeries`](@ref) `count`.
+"""
 set_count!(value::DeterministicSingleTimeSeries, val) = value.count = val
-"""Set [`DeterministicSingleTimeSeries`](@ref) `horizon`."""
+"""
+Set [`DeterministicSingleTimeSeries`](@ref) `horizon`.
+"""
 set_horizon!(value::DeterministicSingleTimeSeries, val) = value.horizon = val
 
 eltype_data(ts::DeterministicSingleTimeSeries) = eltype_data(ts.single_time_series)

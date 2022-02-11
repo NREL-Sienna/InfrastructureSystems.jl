@@ -15,13 +15,14 @@
 A Discrete Scenario Based time series for a particular data field in a Component.
 
 # Arguments
-- `name::String`: user-defined name
-- `resolution::Dates.Period`: forecast resolution
-- `scenario_count::Int64`: Number of scenarios
-- `data::Union{SortedDict{Dates.DateTime, Matrix{CONSTANT}}, SortedDict{Dates.DateTime, Matrix{POLYNOMIAL}}, SortedDict{Dates.DateTime, Matrix{PWL}}}`: timestamp - scalingfactor
-- `scaling_factor_multiplier::Union{Nothing, Function}`: Applicable when the time series
-  data are scaling factors. Called on the associated component to convert the values.
-- `internal::InfrastructureSystemsInternal`
+
+  - `name::String`: user-defined name
+  - `resolution::Dates.Period`: forecast resolution
+  - `scenario_count::Int64`: Number of scenarios
+  - `data::Union{SortedDict{Dates.DateTime, Matrix{CONSTANT}}, SortedDict{Dates.DateTime, Matrix{POLYNOMIAL}}, SortedDict{Dates.DateTime, Matrix{PWL}}}`: timestamp - scalingfactor
+  - `scaling_factor_multiplier::Union{Nothing, Function}`: Applicable when the time series
+    data are scaling factors. Called on the associated component to convert the values.
+  - `internal::InfrastructureSystemsInternal`
 """
 mutable struct Scenarios <: Forecast
     "user-defined name"
@@ -65,14 +66,15 @@ end
 Construct Scenarios from a SortedDict of Arrays.
 
 # Arguments
-- `name::AbstractString`: user-defined name
-- `input_data::AbstractDict{Dates.DateTime, Matrix{Float64}}`: time series data.
-- `resolution::Dates.Period`: The resolution of the forecast in Dates.Period`
-- `normalization_factor::NormalizationFactor = 1.0`: optional normalization factor to apply
-  to each data entry
-- `scaling_factor_multiplier::Union{Nothing, Function} = nothing`: If the data are scaling
-  factors then this function will be called on the component and applied to the data when
-  [`get_time_series_array`](@ref) is called.
+
+  - `name::AbstractString`: user-defined name
+  - `input_data::AbstractDict{Dates.DateTime, Matrix{Float64}}`: time series data.
+  - `resolution::Dates.Period`: The resolution of the forecast in Dates.Period`
+  - `normalization_factor::NormalizationFactor = 1.0`: optional normalization factor to apply
+    to each data entry
+  - `scaling_factor_multiplier::Union{Nothing, Function} = nothing`: If the data are scaling
+    factors then this function will be called on the component and applied to the data when
+    [`get_time_series_array`](@ref) is called.
 """
 function Scenarios(
     name::AbstractString,
@@ -98,15 +100,16 @@ end
 Construct Scenarios from a Dict of TimeArrays.
 
 # Arguments
-- `name::AbstractString`: user-defined name
-- `input_data::AbstractDict{Dates.DateTime, TimeSeries.TimeArray}`: time series data.
-- `normalization_factor::NormalizationFactor = 1.0`: optional normalization factor to apply
-  to each data entry
-- `scaling_factor_multiplier::Union{Nothing, Function} = nothing`: If the data are scaling
-  factors then this function will be called on the component and applied to the data when
-  [`get_time_series_array`](@ref) is called.
-- `timestamp = :timestamp`: If the values are DataFrames is passed then this must be the column name that
-  contains timestamps.
+
+  - `name::AbstractString`: user-defined name
+  - `input_data::AbstractDict{Dates.DateTime, TimeSeries.TimeArray}`: time series data.
+  - `normalization_factor::NormalizationFactor = 1.0`: optional normalization factor to apply
+    to each data entry
+  - `scaling_factor_multiplier::Union{Nothing, Function} = nothing`: If the data are scaling
+    factors then this function will be called on the component and applied to the data when
+    [`get_time_series_array`](@ref) is called.
+  - `timestamp = :timestamp`: If the values are DataFrames is passed then this must be the column name that
+    contains timestamps.
 """
 function Scenarios(
     name::AbstractString,
@@ -183,31 +186,55 @@ function get_horizon(forecast::Scenarios)
     return size(first(values(get_data(forecast))))[1]
 end
 
-"""Get [`Scenarios`](@ref) `name`."""
+"""
+Get [`Scenarios`](@ref) `name`.
+"""
 get_name(value::Scenarios) = value.name
-"""Get [`Scenarios`](@ref) `resolution`."""
+"""
+Get [`Scenarios`](@ref) `resolution`.
+"""
 get_resolution(value::Scenarios) = value.resolution
-"""Get [`Scenarios`](@ref) `scenario_count`."""
+"""
+Get [`Scenarios`](@ref) `scenario_count`.
+"""
 get_scenario_count(value::Scenarios) = value.scenario_count
-"""Get [`Scenarios`](@ref) `data`."""
+"""
+Get [`Scenarios`](@ref) `data`.
+"""
 get_data(value::Scenarios) = value.data
-"""Get [`Scenarios`](@ref) `scaling_factor_multiplier`."""
+"""
+Get [`Scenarios`](@ref) `scaling_factor_multiplier`.
+"""
 get_scaling_factor_multiplier(value::Scenarios) = value.scaling_factor_multiplier
-"""Get [`Scenarios`](@ref) `internal`."""
+"""
+Get [`Scenarios`](@ref) `internal`.
+"""
 get_internal(value::Scenarios) = value.internal
 
-"""Set [`Scenarios`](@ref) `name`."""
+"""
+Set [`Scenarios`](@ref) `name`.
+"""
 set_name!(value::Scenarios, val) = value.name = val
-"""Set [`Scenarios`](@ref) `resolution`."""
+"""
+Set [`Scenarios`](@ref) `resolution`.
+"""
 set_resolution!(value::Scenarios, val) = value.resolution = val
-"""Set [`Scenarios`](@ref) `scenario_count`."""
+"""
+Set [`Scenarios`](@ref) `scenario_count`.
+"""
 set_scenario_count!(value::Scenarios, val) = value.scenario_count = val
-"""Set [`Scenarios`](@ref) `data`."""
+"""
+Set [`Scenarios`](@ref) `data`.
+"""
 set_data!(value::Scenarios, val) = value.data = val
-"""Set [`Scenarios`](@ref) `scaling_factor_multiplier`."""
+"""
+Set [`Scenarios`](@ref) `scaling_factor_multiplier`.
+"""
 set_scaling_factor_multiplier!(value::Scenarios, val) =
     value.scaling_factor_multiplier = val
-"""Set [`Scenarios`](@ref) `internal`."""
+"""
+Set [`Scenarios`](@ref) `internal`.
+"""
 set_internal!(value::Scenarios, val) = value.internal = val
 
 eltype_data(forecast::Scenarios) = eltype_data_common(forecast)

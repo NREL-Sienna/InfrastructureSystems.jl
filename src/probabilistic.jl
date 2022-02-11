@@ -15,13 +15,14 @@
 A Probabilistic forecast for a particular data field in a Component.
 
 # Arguments
-- `name::String`: user-defined name
-- `resolution::Dates.Period`: forecast resolution
-- `percentiles::Vector{Float64}`: Percentiles for the probabilistic forecast
-- `data::Union{SortedDict{Dates.DateTime, Matrix{CONSTANT}}, SortedDict{Dates.DateTime, Matrix{POLYNOMIAL}}, SortedDict{Dates.DateTime, Matrix{PWL}}}`: timestamp - scalingfactor
-- `scaling_factor_multiplier::Union{Nothing, Function}`: Applicable when the time series
-  data are scaling factors. Called on the associated component to convert the values.
-- `internal::InfrastructureSystemsInternal`
+
+  - `name::String`: user-defined name
+  - `resolution::Dates.Period`: forecast resolution
+  - `percentiles::Vector{Float64}`: Percentiles for the probabilistic forecast
+  - `data::Union{SortedDict{Dates.DateTime, Matrix{CONSTANT}}, SortedDict{Dates.DateTime, Matrix{POLYNOMIAL}}, SortedDict{Dates.DateTime, Matrix{PWL}}}`: timestamp - scalingfactor
+  - `scaling_factor_multiplier::Union{Nothing, Function}`: Applicable when the time series
+    data are scaling factors. Called on the associated component to convert the values.
+  - `internal::InfrastructureSystemsInternal`
 """
 mutable struct Probabilistic <: Forecast
     "user-defined name"
@@ -74,15 +75,16 @@ end
 Construct Probabilistic from a SortedDict of Arrays.
 
 # Arguments
-- `name::AbstractString`: user-defined name
-- `input_data::AbstractDict{Dates.DateTime, Matrix{Float64}}`: time series data.
-- `percentiles`: Percentiles represented in the probabilistic forecast
-- `resolution::Dates.Period`: The resolution of the forecast in Dates.Period`
-- `normalization_factor::NormalizationFactor = 1.0`: optional normalization factor to apply
-  to each data entry
-- `scaling_factor_multiplier::Union{Nothing, Function} = nothing`: If the data are scaling
-  factors then this function will be called on the component and applied to the data when
-  [`get_time_series_array`](@ref) is called.
+
+  - `name::AbstractString`: user-defined name
+  - `input_data::AbstractDict{Dates.DateTime, Matrix{Float64}}`: time series data.
+  - `percentiles`: Percentiles represented in the probabilistic forecast
+  - `resolution::Dates.Period`: The resolution of the forecast in Dates.Period`
+  - `normalization_factor::NormalizationFactor = 1.0`: optional normalization factor to apply
+    to each data entry
+  - `scaling_factor_multiplier::Union{Nothing, Function} = nothing`: If the data are scaling
+    factors then this function will be called on the component and applied to the data when
+    [`get_time_series_array`](@ref) is called.
 """
 function Probabilistic(
     name::AbstractString,
@@ -107,16 +109,17 @@ end
 Construct Probabilistic from a Dict of TimeArrays.
 
 # Arguments
-- `name::AbstractString`: user-defined name
-- `input_data::AbstractDict{Dates.DateTime, TimeSeries.TimeArray}`: time series data.
-- `percentiles`: Percentiles represented in the probabilistic forecast
-- `normalization_factor::NormalizationFactor = 1.0`: optional normalization factor to apply
-  to each data entry
-- `scaling_factor_multiplier::Union{Nothing, Function} = nothing`: If the data are scaling
-  factors then this function will be called on the component and applied to the data when
-  [`get_time_series_array`](@ref) is called.
-- `timestamp = :timestamp`: If the values are DataFrames is passed then this must be the column name that
-  contains timestamps.
+
+  - `name::AbstractString`: user-defined name
+  - `input_data::AbstractDict{Dates.DateTime, TimeSeries.TimeArray}`: time series data.
+  - `percentiles`: Percentiles represented in the probabilistic forecast
+  - `normalization_factor::NormalizationFactor = 1.0`: optional normalization factor to apply
+    to each data entry
+  - `scaling_factor_multiplier::Union{Nothing, Function} = nothing`: If the data are scaling
+    factors then this function will be called on the component and applied to the data when
+    [`get_time_series_array`](@ref) is called.
+  - `timestamp = :timestamp`: If the values are DataFrames is passed then this must be the column name that
+    contains timestamps.
 """
 function Probabilistic(
     name::AbstractString,
@@ -214,31 +217,55 @@ convert_data(
     },
 ) = data
 
-"""Get [`Probabilistic`](@ref) `name`."""
+"""
+Get [`Probabilistic`](@ref) `name`.
+"""
 get_name(value::Probabilistic) = value.name
-"""Get [`Probabilistic`](@ref) `resolution`."""
+"""
+Get [`Probabilistic`](@ref) `resolution`.
+"""
 get_resolution(value::Probabilistic) = value.resolution
-"""Get [`Probabilistic`](@ref) `percentiles`."""
+"""
+Get [`Probabilistic`](@ref) `percentiles`.
+"""
 get_percentiles(value::Probabilistic) = value.percentiles
-"""Get [`Probabilistic`](@ref) `data`."""
+"""
+Get [`Probabilistic`](@ref) `data`.
+"""
 get_data(value::Probabilistic) = value.data
-"""Get [`Probabilistic`](@ref) `scaling_factor_multiplier`."""
+"""
+Get [`Probabilistic`](@ref) `scaling_factor_multiplier`.
+"""
 get_scaling_factor_multiplier(value::Probabilistic) = value.scaling_factor_multiplier
-"""Get [`Probabilistic`](@ref) `internal`."""
+"""
+Get [`Probabilistic`](@ref) `internal`.
+"""
 get_internal(value::Probabilistic) = value.internal
 
-"""Set [`Probabilistic`](@ref) `name`."""
+"""
+Set [`Probabilistic`](@ref) `name`.
+"""
 set_name!(value::Probabilistic, val) = value.name = val
-"""Set [`Probabilistic`](@ref) `resolution`."""
+"""
+Set [`Probabilistic`](@ref) `resolution`.
+"""
 set_resolution!(value::Probabilistic, val) = value.resolution = val
-"""Set [`Probabilistic`](@ref) `percentiles`."""
+"""
+Set [`Probabilistic`](@ref) `percentiles`.
+"""
 set_percentiles!(value::Probabilistic, val) = value.percentiles = val
-"""Set [`Probabilistic`](@ref) `data`."""
+"""
+Set [`Probabilistic`](@ref) `data`.
+"""
 set_data!(value::Probabilistic, val) = value.data = val
-"""Set [`Probabilistic`](@ref) `scaling_factor_multiplier`."""
+"""
+Set [`Probabilistic`](@ref) `scaling_factor_multiplier`.
+"""
 set_scaling_factor_multiplier!(value::Probabilistic, val) =
     value.scaling_factor_multiplier = val
-"""Set [`Probabilistic`](@ref) `internal`."""
+"""
+Set [`Probabilistic`](@ref) `internal`.
+"""
 set_internal!(value::Probabilistic, val) = value.internal = val
 
 function get_array_for_hdf(forecast::Probabilistic)

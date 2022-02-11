@@ -1,5 +1,7 @@
 
-"Thrown upon detection of user data that is not supported."
+"""
+Thrown upon detection of user data that is not supported.
+"""
 struct DataFormatError <: Exception
     msg::AbstractString
 end

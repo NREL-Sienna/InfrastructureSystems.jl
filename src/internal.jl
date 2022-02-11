@@ -20,7 +20,9 @@ function deserialize(::Type{SystemUnitsSettings}, data::Dict)
     return SystemUnitsSettings(data["base_value"], _UNIT_SYSTEM_MAP[data["unit_system"]])
 end
 
-"""Internal storage common to InfrastructureSystems types."""
+"""
+Internal storage common to InfrastructureSystems types.
+"""
 mutable struct InfrastructureSystemsInternal <: InfrastructureSystemsType
     uuid::Base.UUID
     units_info::Union{Nothing, UnitsData}

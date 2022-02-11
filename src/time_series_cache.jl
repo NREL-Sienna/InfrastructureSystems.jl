@@ -26,9 +26,9 @@ Reads from storage if the data is not already in cache.
 Timestamps must be read sequentially. Random access may be added in the future.
 
 # Arguments
-- `cache::StaticTimeSeriesCache`: cached instance
-- `timestamp::Dates.DateTime`: starting timestamp for the time series array
 
+  - `cache::StaticTimeSeriesCache`: cached instance
+  - `timestamp::Dates.DateTime`: starting timestamp for the time series array
 """
 function get_time_series_array!(cache::TimeSeriesCache, timestamp::Dates.DateTime)
     next_time = get_next_time(cache)
@@ -69,7 +69,8 @@ Call [`get_next_time`](@ref) to check the start time.
 Reads from storage if the data is not already in cache.
 
 # Arguments
-- `cache::StaticTimeSeriesCache`: cached instance
+
+  - `cache::StaticTimeSeriesCache`: cached instance
 """
 function get_next_time_series_array!(cache::TimeSeriesCache)
     next_time = get_next_time(cache)
@@ -185,14 +186,15 @@ Call Base.iterate or [`get_next_time_series_array!`](@ref) to retrieve data. Eac
 will return a TimeSeries.TimeArray covering one forecast window of length ``horizon``.
 
 # Arguments
-- `::Type{T}`: subtype of Forecast
-- `component::InfrastructureSystemsComponent`: component
-- `name::AbstractString`: forecast name
-- `start_time::Union{Nothing, Dates.DateTime} = nothing`: forecast start time
-- `horizon::Union{Nothing, Int} = nothing`: forecast horizon
-- `cache_size_bytes = TIME_SERIES_CACHE_SIZE_BYTES`: maximum size of data to keep in memory
-- `ignore_scaling_factors = false`: controls whether to ignore `scaling_factor_multiplier`
-  in the time series instance
+
+  - `::Type{T}`: subtype of Forecast
+  - `component::InfrastructureSystemsComponent`: component
+  - `name::AbstractString`: forecast name
+  - `start_time::Union{Nothing, Dates.DateTime} = nothing`: forecast start time
+  - `horizon::Union{Nothing, Int} = nothing`: forecast horizon
+  - `cache_size_bytes = TIME_SERIES_CACHE_SIZE_BYTES`: maximum size of data to keep in memory
+  - `ignore_scaling_factors = false`: controls whether to ignore `scaling_factor_multiplier`
+    in the time series instance
 """
 function ForecastCache(
     ::Type{T},
@@ -304,12 +306,13 @@ Call Base.iterate or [`get_time_series_array`](@ref) to retrieve data. Each iter
 return a TimeSeries.TimeArray of size 1.
 
 # Arguments
-- `::Type{T}`: subtype of StaticTimeSeries
-- `component::InfrastructureSystemsComponent`: component
-- `name::AbstractString`: time series name
-- `cache_size_bytes = TIME_SERIES_CACHE_SIZE_BYTES`: maximum size of data to keep in memory
-- `ignore_scaling_factors = false`: controls whether to ignore scaling_factor_multiplier
-  in the time series instance
+
+  - `::Type{T}`: subtype of StaticTimeSeries
+  - `component::InfrastructureSystemsComponent`: component
+  - `name::AbstractString`: time series name
+  - `cache_size_bytes = TIME_SERIES_CACHE_SIZE_BYTES`: maximum size of data to keep in memory
+  - `ignore_scaling_factors = false`: controls whether to ignore scaling_factor_multiplier
+    in the time series instance
 """
 function StaticTimeSeriesCache(
     ::Type{T},
