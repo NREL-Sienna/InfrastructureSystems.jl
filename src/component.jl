@@ -437,7 +437,7 @@ references.
 function copy_time_series!(
     dst::InfrastructureSystemsComponent,
     src::InfrastructureSystemsComponent;
-    name_mapping::Union{Nothing, Dict{String, String}}=nothing,
+    name_mapping::Union{Nothing, Dict{Tuple{String, String}, String}}=nothing,
     scaling_factor_multiplier_mapping::Union{Nothing, Dict{String, String}}=nothing,
 )
     storage = _get_time_series_storage(dst)
@@ -459,7 +459,7 @@ function copy_time_series!(
         name = get_name(ts_metadata)
         new_name = name
         if !isnothing(name_mapping)
-            new_name = get(name_mapping, name, nothing)
+            new_name = get(name_mapping, (get_name(src), name), nothing)
             if isnothing(new_name)
                 @debug "Skip copying ts_metadata" _group = LOG_GROUP_TIME_SERIES name
                 continue
