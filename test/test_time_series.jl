@@ -1068,7 +1068,7 @@ end
     component2 = IS.TestComponent("component2", 6)
     IS.add_component!(sys, component2)
     name2 = "val2"
-    name_mapping = Dict(name1 => name2)
+    name_mapping = Dict((IS.get_name(component), name1) => name2)
     IS.copy_time_series!(component2, component; name_mapping=name_mapping)
     time_series = IS.get_time_series(IS.SingleTimeSeries, component2, name2)
     @test time_series isa IS.SingleTimeSeries
@@ -1102,7 +1102,7 @@ end
     component2 = IS.TestComponent("component2", 6)
     IS.add_component!(sys, component2)
     name2b = "val2b"
-    name_mapping = Dict(name2a => name2b)
+    name_mapping = Dict((IS.get_name(component), name2a) => name2b)
     IS.copy_time_series!(component2, component; name_mapping=name_mapping)
     time_series = IS.get_time_series(IS.SingleTimeSeries, component2, name2b)
     @test time_series isa IS.SingleTimeSeries
