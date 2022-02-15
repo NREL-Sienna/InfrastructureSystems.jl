@@ -906,6 +906,56 @@ end
     @test length(collect(IS.get_time_series_multiple(sys, filter_func; name="val2"))) == 0
 end
 
+@testset "Test get_time_series_with_metadata_multiple" begin
+    sys = IS.SystemData()
+    name = "Component1"
+    component_val = 5
+    component = IS.TestComponent(name, component_val)
+    IS.add_component!(sys, component)
+    initial_time1 = Dates.DateTime("2020-01-01T00:00:00")
+    initial_time2 = Dates.DateTime("2020-01-02T00:00:00")
+
+    dates1 = collect(initial_time1:Dates.Hour(1):Dates.DateTime("2020-01-01T23:00:00"))
+    dates2 = collect(initial_time2:Dates.Hour(1):Dates.DateTime("2020-01-02T23:00:00"))
+    data1 = collect(1:24)
+    data2 = collect(25:48)
+    ta1 = TimeSeries.TimeArray(dates1, data1, [IS.get_name(component)])
+    ta2 = TimeSeries.TimeArray(dates2, data2, [IS.get_name(component)])
+    time_series1 =
+        IS.SingleTimeSeries(name="val", data=ta1, scaling_factor_multiplier=IS.get_val)
+    time_series2 =
+        IS.SingleTimeSeries(name="val2", data=ta2, scaling_factor_multiplier=IS.get_val)
+    IS.add_time_series!(sys, component, time_series1)
+    IS.add_time_series!(sys, component, time_series2)
+
+    @test length(collect(IS.get_time_series_with_metadata_multiple(component))) == 2
+
+    @test length(
+        collect(
+            IS.get_time_series_with_metadata_multiple(component; type=IS.SingleTimeSeries),
+        ),
+    ) == 2
+    @test length(
+        collect(
+            IS.get_time_series_with_metadata_multiple(component; type=IS.Probabilistic),
+        ),
+    ) == 0
+
+    @test length(
+        collect(IS.get_time_series_with_metadata_multiple(component; name="val")),
+    ) == 1
+    @test length(
+        collect(IS.get_time_series_with_metadata_multiple(component; name="bad_name")),
+    ) == 0
+
+    filter_func = x -> TimeSeries.values(IS.get_data(x))[12] == 12
+    @test length(
+        collect(
+            IS.get_time_series_with_metadata_multiple(component, filter_func; name="val2"),
+        ),
+    ) == 0
+end
+
 @testset "Test add_time_series from TimeArray" begin
     sys = IS.SystemData()
     name = "Component1"
