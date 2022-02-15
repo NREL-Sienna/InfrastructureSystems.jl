@@ -437,7 +437,7 @@ references.
 function copy_time_series!(
     dst::InfrastructureSystemsComponent,
     src::InfrastructureSystemsComponent;
-    name_mapping::Union{Nothing, Dict{String, String}}=nothing,
+    name_mapping::Union{Nothing, Dict{Tuple{String, String}, String}}=nothing,
     scaling_factor_multiplier_mapping::Union{Nothing, Dict{String, String}}=nothing,
 )
     storage = _get_time_series_storage(dst)
@@ -459,7 +459,7 @@ function copy_time_series!(
         name = get_name(ts_metadata)
         new_name = name
         if !isnothing(name_mapping)
-            new_name = get(name_mapping, name, nothing)
+            new_name = get(name_mapping, (get_name(src), name), nothing)
             if isnothing(new_name)
                 @debug "Skip copying ts_metadata" _group = LOG_GROUP_TIME_SERIES name
                 continue
@@ -619,6 +619,41 @@ function get_time_series_multiple(
     Channel() do channel
         for key in keys(container.data)
             put!(channel, container.data[key])
+        end
+    end
+end
+
+function get_time_series_with_metadata_multiple(
+    component::InfrastructureSystemsComponent,
+    filter_func=nothing;
+    type=nothing,
+    start_time=nothing,
+    name=nothing,
+)
+    container = get_time_series_container(component)
+    storage = _get_time_series_storage(component)
+
+    Channel() do channel
+        for key in keys(container.data)
+            ts_metadata = container.data[key]
+            ts_type = time_series_metadata_to_data(ts_metadata)
+            if !isnothing(type) && !(ts_type <: type)
+                continue
+            end
+            if !isnothing(name) && key.name != name
+                continue
+            end
+            ts = deserialize_time_series(
+                ts_type,
+                storage,
+                ts_metadata,
+                UnitRange(1, length(ts_metadata)),
+                UnitRange(1, get_count(ts_metadata)),
+            )
+            if !isnothing(filter_func) && !filter_func(ts)
+                continue
+            end
+            put!(channel, (ts, ts_metadata))
         end
     end
 end
