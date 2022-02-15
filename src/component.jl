@@ -623,6 +623,41 @@ function get_time_series_multiple(
     end
 end
 
+function get_time_series_with_metadata_multiple(
+    component::InfrastructureSystemsComponent,
+    filter_func=nothing;
+    type=nothing,
+    start_time=nothing,
+    name=nothing,
+)
+    container = get_time_series_container(component)
+    storage = _get_time_series_storage(component)
+
+    Channel() do channel
+        for key in keys(container.data)
+            ts_metadata = container.data[key]
+            ts_type = time_series_metadata_to_data(ts_metadata)
+            if !isnothing(type) && !(ts_type <: type)
+                continue
+            end
+            if !isnothing(name) && key.name != name
+                continue
+            end
+            ts = deserialize_time_series(
+                ts_type,
+                storage,
+                ts_metadata,
+                UnitRange(1, length(ts_metadata)),
+                UnitRange(1, get_count(ts_metadata)),
+            )
+            if !isnothing(filter_func) && !filter_func(ts)
+                continue
+            end
+            put!(channel, (ts, ts_metadata))
+        end
+    end
+end
+
 """
 Transform all instances of SingleTimeSeries to DeterministicSingleTimeSeries. Do nothing
 if the component does not contain any instances.
