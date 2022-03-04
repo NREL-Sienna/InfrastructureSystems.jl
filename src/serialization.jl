@@ -88,7 +88,7 @@ function add_serialization_metadata!(data::Dict, ::Type{T}) where {T}
         MODULE_KEY => string(parentmodule(T)),
     )
     if !isempty(T.parameters)
-        data[METADATA_KEY][PARAMETERS_KEY] = string.(T.parameters)
+        data[METADATA_KEY][PARAMETERS_KEY] = [string(nameof(x)) for x in T.parameters]
     end
 
     return
