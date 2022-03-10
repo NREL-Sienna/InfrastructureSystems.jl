@@ -39,7 +39,7 @@ function Base.show(io::IO, ::MIME"text/html", components::Components)
     println(io, "<h2>Components</h2>")
     println(io, "<p><b>Num components</b>: $num_components</p>")
     if num_components > 0
-        show_components_table(io, components, backend=:html)
+        show_components_table(io, components, backend=:html, standalone=false)
     end
 end
 
@@ -78,7 +78,7 @@ end
 function Base.show(io::IO, ::MIME"text/html", data::SystemData)
     show(io, MIME"text/html"(), data.components)
     println(io, "\n")
-    show_time_series_data(io, data, backend=:html)
+    show_time_series_data(io, data, backend=:html, standalone=false)
     show(io, data.time_series_params)
 end
 
