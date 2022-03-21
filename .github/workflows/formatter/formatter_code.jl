@@ -7,7 +7,6 @@ using JuliaFormatter
 main_paths = ["./src", "./test"]
 for main_path in main_paths
     for folder in readdir(main_path)
-        occursin("generated", folder) && continue
         @show folder_path = joinpath(main_path, folder)
         if isfile(folder_path)
             !occursin(".jl", folder_path) && continue

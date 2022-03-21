@@ -1,6 +1,9 @@
 #=
 This file is auto-generated. Do not edit.
 =#
+
+#! format: off
+
 """
     mutable struct ScenariosMetadata <: ForecastMetadata
         name::String
@@ -99,4 +102,3 @@ set_horizon!(value::ScenariosMetadata, val) = value.horizon = val
 set_scaling_factor_multiplier!(value::ScenariosMetadata, val) = value.scaling_factor_multiplier = val
 """Set [`ScenariosMetadata`](@ref) `internal`."""
 set_internal!(value::ScenariosMetadata, val) = value.internal = val
-

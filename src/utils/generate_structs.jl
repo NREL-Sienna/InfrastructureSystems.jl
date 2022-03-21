@@ -5,6 +5,9 @@ template = """
 #=
 This file is auto-generated. Do not edit.
 =#
+
+#! format: off
+
 \"\"\"
     mutable struct {{struct_name}}{{#parametric}}{T <: {{parametric}}}{{/parametric}} <: {{supertype}}
         {{#parameters}}

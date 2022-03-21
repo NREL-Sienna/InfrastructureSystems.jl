@@ -1,6 +1,9 @@
 #=
 This file is auto-generated. Do not edit.
 =#
+
+#! format: off
+
 """
     mutable struct ProbabilisticMetadata <: ForecastMetadata
         name::String
@@ -99,4 +102,3 @@ set_horizon!(value::ProbabilisticMetadata, val) = value.horizon = val
 set_scaling_factor_multiplier!(value::ProbabilisticMetadata, val) = value.scaling_factor_multiplier = val
 """Set [`ProbabilisticMetadata`](@ref) `internal`."""
 set_internal!(value::ProbabilisticMetadata, val) = value.internal = val
-
