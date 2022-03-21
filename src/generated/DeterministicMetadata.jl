@@ -1,6 +1,9 @@
 #=
 This file is auto-generated. Do not edit.
 =#
+
+#! format: off
+
 """
     mutable struct DeterministicMetadata <: ForecastMetadata
         name::String
@@ -99,4 +102,3 @@ set_time_series_type!(value::DeterministicMetadata, val) = value.time_series_typ
 set_scaling_factor_multiplier!(value::DeterministicMetadata, val) = value.scaling_factor_multiplier = val
 """Set [`DeterministicMetadata`](@ref) `internal`."""
 set_internal!(value::DeterministicMetadata, val) = value.internal = val
-
