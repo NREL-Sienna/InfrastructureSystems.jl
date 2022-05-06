@@ -77,6 +77,8 @@ end
 {{/custom_code}}
 """
 
+const REQUIRED_FIELDS = ("name", "internal")
+
 function read_json_data(filename::String)
     return open(filename) do io
         data = JSON3.read(io, Dict)
@@ -90,7 +92,12 @@ function read_json_data(filename::String)
     end
 end
 
-function generate_structs(directory, data::Vector; print_results=true)
+function generate_structs(
+    directory,
+    data::Vector;
+    print_results=true,
+    required_fields=REQUIRED_FIELDS,
+)
     struct_names = Vector{String}()
     unique_accessor_functions = Set{String}()
     unique_setter_functions = Set{String}()
@@ -101,6 +108,7 @@ function generate_structs(directory, data::Vector; print_results=true)
         setters = Vector{Dict}()
         item["has_null_values"] = true
         has_non_default_values = false
+        required = Set(required_fields)
 
         item["constructor_func"] = item["struct_name"]
         item["closing_constructor_text"] = ""
@@ -110,8 +118,7 @@ function generate_structs(directory, data::Vector; print_results=true)
         end
 
         parameters = Vector{Dict}()
-        for field in item["fields"]
-            param = field
+        for param in item["fields"]
             param["struct_name"] = item["struct_name"]
             if haskey(param, "valid_range")
                 if typeof(param["valid_range"]) == Dict{String, Any}
@@ -123,6 +130,9 @@ function generate_structs(directory, data::Vector; print_results=true)
                 end
             end
             push!(parameters, param)
+            if param["name"] in required
+                pop!(required, param["name"])
+            end
 
             # Allow accessor functions to be re-implemented from another module.
             # If this key is defined then the accessor function will not be exported.
@@ -159,7 +169,7 @@ function generate_structs(directory, data::Vector; print_results=true)
                     ),
                 )
             end
-            if field["name"] != "internal" && accessor_module == ""
+            if param["name"] != "internal" && accessor_module == ""
                 push!(unique_accessor_functions, accessor_name)
                 push!(unique_setter_functions, setter_name)
             end
@@ -186,6 +196,14 @@ function generate_structs(directory, data::Vector; print_results=true)
                     param["quotes"] = true
                 end
             end
+        end
+
+        if !isempty(required)
+            throw(
+                DataFormatError(
+                    "struct=$(item["struct_name"]) is missing required fields $required",
+                ),
+            )
         end
 
         item["parameters"] = parameters
