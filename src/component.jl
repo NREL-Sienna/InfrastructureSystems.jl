@@ -727,7 +727,7 @@ function get_single_time_series_transformed_parameters(
         end
     end
 
-    throw(ArgumentError("component $(get_name(component)) does not have SingleTimeSeries"))
+    return
 end
 
 function _get_single_time_series_transformed_parameters(

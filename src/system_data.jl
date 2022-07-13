@@ -517,6 +517,10 @@ function transform_single_time_series!(
                 horizon,
                 interval,
             )
+            if params === nothing
+                # This component doesn't have SingleTimeSeries.
+                continue
+            end
             # This will throw if there is another forecast type with conflicting parameters.
             check_params_compatibility(data.time_series_params, params)
         end
