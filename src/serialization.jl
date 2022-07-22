@@ -13,12 +13,13 @@ function to_json(
     obj::T,
     filename::AbstractString;
     force=false,
+    pretty=false,
 ) where {T <: InfrastructureSystemsType}
     if !force && isfile(filename)
         error("$file already exists. Set force=true to overwrite.")
     end
     result = open(filename, "w") do io
-        return to_json(io, obj)
+        return to_json(io, obj, pretty=pretty)
     end
 
     @info "Serialized $T to $filename"
@@ -28,8 +29,13 @@ end
 """
 Serializes a InfrastructureSystemsType to a JSON string.
 """
-function to_json(obj::T)::String where {T <: InfrastructureSystemsType}
+function to_json(obj::T) where {T <: InfrastructureSystemsType}
     return JSON3.write(serialize(obj))
+end
+
+function to_json(io::IO, obj::T; pretty=false) where {T <: InfrastructureSystemsType}
+    func = pretty ? JSON3.pretty : JSON3.write
+    return func(io, serialize(obj))
 end
 
 """
@@ -74,7 +80,9 @@ end
 
 function serialize_struct(val::T) where {T}
     @debug "serialize_struct" _group = LOG_GROUP_SERIALIZATION val T
-    data = Dict(string(name) => serialize(getfield(val, name)) for name in fieldnames(T))
+    data = Dict{String, Any}(
+        string(name) => serialize(getfield(val, name)) for name in fieldnames(T)
+    )
     add_serialization_metadata!(data, T)
     return data
 end

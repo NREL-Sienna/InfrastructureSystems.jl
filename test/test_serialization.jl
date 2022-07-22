@@ -93,3 +93,24 @@ end
     @test haskey(data, "julia_version")
     @test haskey(data, "package_info")
 end
+
+@testset "Test JSON string" begin
+    component = IS.TestComponent("Component1", 1)
+    text = IS.to_json(component)
+    IS.deserialize(IS.TestComponent, JSON3.read(text, Dict)) == component
+end
+
+@testset "Test pretty-print JSON IO" begin
+    component = IS.TestComponent("Component1", 2)
+    io = IOBuffer()
+    IS.to_json(io, component, pretty=false)
+    text = String(take!(io))
+    @test !occursin(" ", text)
+    IS.deserialize(IS.TestComponent, JSON3.read(text, Dict)) == component
+
+    io = IOBuffer()
+    IS.to_json(io, component, pretty=true)
+    text = String(take!(io))
+    @test occursin(" ", text)
+    IS.deserialize(IS.TestComponent, JSON3.read(text, Dict)) == component
+end
