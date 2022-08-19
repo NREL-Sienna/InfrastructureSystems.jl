@@ -165,9 +165,9 @@ function generate_structs(directory, data::Vector; print_results=true)
             end
 
             param["kwarg_value"] = ""
-            if haskey(param, "default")
+            if !isnothing(get(param, "default", nothing))
                 param["kwarg_value"] = "=" * param["default"]
-            elseif haskey(param, "internal_default")
+            elseif !isnothing(get(param, "internal_default", nothing))
                 param["kwarg_value"] = "=" * string(param["internal_default"])
                 has_internal = true
                 continue
@@ -176,10 +176,11 @@ function generate_structs(directory, data::Vector; print_results=true)
             end
 
             # This controls whether a demo constructor will be generated.
-            if !haskey(param, "null_value") && !haskey(param, "default")
+            if isnothing(get(param, "null_value", nothing)) &&
+               isnothing(get(param, "default", nothing))
                 item["has_null_values"] = false
             else
-                if !haskey(param, "null_value")
+                if isnothing(get(param, "null_value", nothing))
                     item["null_value"] = param["default"]
                 end
                 if param["data_type"] == "String"

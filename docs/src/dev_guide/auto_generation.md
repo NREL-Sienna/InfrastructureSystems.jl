@@ -15,7 +15,11 @@ reasons to consider using this approach:
 
 ## Instructions
 
- 1. Create the JSON descriptor file. Follow the
+Refer to the docstrings for `generate_struct` and `generate_structs` and generate the files from the REPL.
+
+Or
+
+ 1. Create or modify the JSON descriptor file. Follow the
     [PowerSystems.jl](https://github.com/NREL-SIIP/PowerSystems.jl/blob/master/src/descriptors/power_system_structs.json)
     example.
  2. Run the generation script, passing your descriptor file and an output
