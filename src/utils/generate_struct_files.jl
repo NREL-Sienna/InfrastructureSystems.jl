@@ -224,7 +224,7 @@ function generate_struct_files(definitions; filename=nothing, output_directory=n
     end
 
     open(filename, "w") do io
-        JSON3.pretty(io, data)
+        JSON3.pretty(io, data, JSON3.AlignmentContext(indent=2))
     end
 
     @info "Added $(length(definitions)) structs to $filename"
@@ -234,16 +234,5 @@ function generate_struct_files(definitions; filename=nothing, output_directory=n
     if !isempty(to_remove)
         text = join(new_names, ",")
         @warn "Removed duplicate entries in $filename: $text. Please ensure that this is expected."
-    end
-
-    cmds = ["jq . $filename > tmp", "mv tmp $filename"]
-    @warn """JSON3.pretty did not use ideal indentation in $filename.
-          This will be improved in a future release.
-          For now, please correct the formatting prior to making a PR.
-          One solution is to install the 'jq' utility from https://stedolan.github.io/jq/download/
-          and then run these commands:"""
-
-    for cmd in cmds
-        println("$cmd")
     end
 end
