@@ -2,21 +2,22 @@
 """
 Wrapper around Iterators.Flatten to provide total length.
 """
-struct FlattenIteratorWrapper{T}
-    element_type::Type{T}
-    iter::Iterators.Flatten
+struct FlattenIteratorWrapper{T,I}
+    iter::Iterators.Flatten{I}
     length::Int
 end
 
-function FlattenIteratorWrapper(element_type::Type{T}, vals) where {T}
+function FlattenIteratorWrapper(::Type{T}, vals::I) where {T,I}
     len = isempty(vals) ? 0 : sum((length(x) for x in vals))
-    return FlattenIteratorWrapper(T, Iterators.Flatten(vals), len)
+    return FlattenIteratorWrapper{T,I}(Iterators.Flatten(vals), len)
 end
 
-Base.iterate(iter::FlattenIteratorWrapper) = Base.iterate(iter.iter)
-Base.iterate(iter::FlattenIteratorWrapper, state) = Base.iterate(iter.iter, state)
-Base.eltype(iter::FlattenIteratorWrapper) = iter.element_type
-
-function Base.length(iter::FlattenIteratorWrapper)
-    return iter.length
+Base.@propagate_inbounds function Base.iterate(
+    iter::FlattenIteratorWrapper{T,I},
+    state=()
+) where {T,I}
+    Base.iterate(iter.iter, state)
 end
+
+Base.eltype(::FlattenIteratorWrapper{T,I}) where {T,I} = T
+Base.length(iter::FlattenIteratorWrapper) = iter.length
