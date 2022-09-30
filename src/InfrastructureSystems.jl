@@ -10,6 +10,7 @@ import Logging
 import Random
 import Pkg
 import PrettyTables
+import StructTypes
 import TerminalLoggers: TerminalLogger, ProgressLevel
 import TimeSeries
 import TOML
@@ -78,6 +79,7 @@ include("common.jl")
 include("utils/assert_op.jl")
 include("utils/recorder_events.jl")
 include("utils/flatten_iterator_wrapper.jl")
+include("utils/generate_struct_files.jl")
 include("utils/generate_structs.jl")
 include("utils/lazy_dict_from_iterator.jl")
 include("utils/logging.jl")
