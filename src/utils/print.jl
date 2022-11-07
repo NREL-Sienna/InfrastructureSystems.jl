@@ -30,7 +30,7 @@ function Base.show(io::IO, ::MIME"text/plain", components::Components)
     println(io, "Num components: $num_components")
     if num_components > 0
         println(io)
-        show_components_table(io, components, backend=:auto)
+        show_components_table(io, components, backend=Val(:auto))
     end
 end
 
@@ -39,7 +39,7 @@ function Base.show(io::IO, ::MIME"text/html", components::Components)
     println(io, "<h2>Components</h2>")
     println(io, "<p><b>Num components</b>: $num_components</p>")
     if num_components > 0
-        show_components_table(io, components, backend=:html, standalone=false)
+        show_components_table(io, components, backend=Val(:html), standalone=false)
     end
 end
 
@@ -71,14 +71,14 @@ end
 function Base.show(io::IO, ::MIME"text/plain", data::SystemData)
     show(io, MIME"text/plain"(), data.components)
     println(io, "\n")
-    show_time_series_data(io, data, backend=:auto)
+    show_time_series_data(io, data, backend=Val(:auto))
     show(io, data.time_series_params)
 end
 
 function Base.show(io::IO, ::MIME"text/html", data::SystemData)
     show(io, MIME"text/html"(), data.components)
     println(io, "\n")
-    show_time_series_data(io, data, backend=:html, standalone=false)
+    show_time_series_data(io, data, backend=Val(:html), standalone=false)
     show(io, data.time_series_params)
 end
 
