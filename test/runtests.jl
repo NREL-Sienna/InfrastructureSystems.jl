@@ -5,6 +5,7 @@ import TerminalLoggers: TerminalLogger
 import TimeSeries
 import UUIDs
 import JSON3
+import HDF5
 using DataStructures: SortedDict
 using DataFrames
 using Random

@@ -88,8 +88,7 @@ function serialize(storage::TimeSeriesStorage, file_path::AbstractString)
             return
         end
 
-        # The data is currently in a temp file, so we can just make a copy.
-        copy_file(get_file_path(storage), file_path)
+        copy_h5_file(get_file_path(storage), file_path)
     elseif storage isa InMemoryTimeSeriesStorage
         convert_to_hdf5(storage, file_path)
     else
