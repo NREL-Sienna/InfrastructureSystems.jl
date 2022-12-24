@@ -85,7 +85,7 @@ function from_file(
         parent = isnothing(directory) ? tempdir() : directory
         file_path, io = mktemp(parent)
         close(io)
-        copy_file(filename, file_path)
+        copy_h5_file(filename, file_path)
     end
 
     storage = Hdf5TimeSeriesStorage(false; filename=file_path, read_only=read_only)
@@ -126,8 +126,22 @@ function copy_to_new_file!(storage::Hdf5TimeSeriesStorage, directory=nothing)
     # Any open buffers will need to be flushed.
     filename, io = mktemp(directory)
     close(io)
-    copy_file(get_file_path(storage), filename)
+    copy_h5_file(get_file_path(storage), filename)
     storage.file_path = filename
+    return
+end
+
+"""
+Copies an HDF5 file to a new file. This should be used instead of a system call to copy
+because it won't copy unused space that results from deleting datasets.
+"""
+function copy_h5_file(src::AbstractString, dst::AbstractString)
+    HDF5.h5open(dst, "w") do fw
+        HDF5.h5open(src, "r") do fr
+            HDF5.copy_object(fr[HDF5_TS_ROOT_PATH], fw, HDF5_TS_ROOT_PATH)
+        end
+    end
+
     return
 end
 
@@ -158,30 +172,29 @@ function serialize_time_series!(
     HDF5.h5open(storage.file_path, "r+") do file
         root = _get_root(storage, file)
         if !haskey(root, uuid)
-            HDF5.create_group(root, uuid)
-            path = root[uuid]
+            group = HDF5.create_group(root, uuid)
             # Create a group to store component references as attributes.
             # Use this instead of this time series' group or the dataset so that
             # the only attributes are component references.
-            component_refs = HDF5.create_group(path, COMPONENT_REFERENCES_KEY)
+            component_refs = HDF5.create_group(group, COMPONENT_REFERENCES_KEY)
             data = get_array_for_hdf(ts)
             settings = storage.compression
             if settings.enabled
                 if settings.type == CompressionTypes.BLOSC
-                    path["data", blosc=settings.level] = data
+                    group["data", blosc=settings.level] = data
                 elseif settings.type == CompressionTypes.DEFLATE
                     if settings.shuffle
-                        path["data", shuffle=(), deflate=settings.level] = data
+                        group["data", shuffle=(), deflate=settings.level] = data
                     else
-                        path["data", deflate=settings.level] = data
+                        group["data", deflate=settings.level] = data
                     end
                 else
                     error("not implemented for type=$(settings.type)")
                 end
             else
-                path["data"] = data
+                group["data"] = data
             end
-            _write_time_series_attributes!(storage, ts, path)
+            _write_time_series_attributes!(storage, ts, group)
             @debug "Create new time series entry." _group = LOG_GROUP_TIME_SERIES uuid component_uuid name
         else
             component_refs = root[uuid][COMPONENT_REFERENCES_KEY]
@@ -318,10 +331,6 @@ function iterate_time_series(storage::Hdf5TimeSeriesStorage)
         HDF5.h5open(storage.file_path, "r") do file
             root = _get_root(storage, file)
             for uuid_group in root
-                uuid_path = HDF5.name(uuid_group)
-                uuid_str = uuid_path[(findlast("/", uuid_path).start + 1):end]
-                uuid = UUIDs.UUID(uuid_str)
-
                 data = uuid_group["data"][:]
                 attributes = Dict()
                 for name in keys(HDF5.attributes(uuid_group))

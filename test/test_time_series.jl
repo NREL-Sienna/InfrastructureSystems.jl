@@ -2083,6 +2083,67 @@ end
     @test data_input == first(values((fdata2)))
 end
 
+@testset "Test copy_h5_file" begin
+    function compare_attributes(src, dst)
+        src_keys = collect(keys(HDF5.attributes(src)))
+        dst_keys = collect(keys(HDF5.attributes(dst)))
+        @test !isempty(src_keys)
+        @test dst_keys == src_keys
+        for name in src_keys
+            @test HDF5.read(HDF5.attributes(dst)[name]) ==
+                  HDF5.read(HDF5.attributes(src)[name])
+        end
+    end
+
+    for compression_enabled in (true, false)
+        compression = IS.CompressionSettings(enabled=compression_enabled)
+        sys = IS.SystemData(time_series_in_memory=false, compression=compression)
+        @test sys.time_series_storage.compression.enabled == compression_enabled
+        name = "Component1"
+        name = "val"
+        component = IS.TestComponent(name, 5)
+        IS.add_component!(sys, component)
+
+        initial_timestamp = Dates.DateTime("2020-01-01T00:00:00")
+        horizon = 24
+        resolution = Dates.Hour(1)
+        data_input = rand(horizon)
+        data = SortedDict(initial_timestamp => data_input)
+        for i in 1:2
+            time_series = IS.Deterministic(name="name_$i", resolution=resolution, data=data)
+            IS.add_time_series!(sys, component, time_series)
+        end
+        old_file = IS.get_file_path(sys.time_series_storage)
+        new_file, io = mktemp()
+        close(io)
+        IS.copy_h5_file(old_file, new_file)
+
+        HDF5.h5open(old_file, "r") do fo
+            old_uuids = collect(keys(fo[IS.HDF5_TS_ROOT_PATH]))
+            @test length(old_uuids) == 2
+            HDF5.h5open(new_file, "r") do fn
+                compare_attributes(fo[IS.HDF5_TS_ROOT_PATH], fn[IS.HDF5_TS_ROOT_PATH])
+                new_uuids = collect(keys(fn[IS.HDF5_TS_ROOT_PATH]))
+                @test length(new_uuids) == 2
+                @test old_uuids == new_uuids
+                for uuid in new_uuids
+                    compare_attributes(
+                        fo[IS.HDF5_TS_ROOT_PATH][uuid],
+                        fn[IS.HDF5_TS_ROOT_PATH][uuid],
+                    )
+                    compare_attributes(
+                        fo[IS.HDF5_TS_ROOT_PATH][uuid][IS.COMPONENT_REFERENCES_KEY],
+                        fn[IS.HDF5_TS_ROOT_PATH][uuid][IS.COMPONENT_REFERENCES_KEY],
+                    )
+                    old_data = fo[IS.HDF5_TS_ROOT_PATH][uuid]["data"][:, :]
+                    new_data = fn[IS.HDF5_TS_ROOT_PATH][uuid]["data"][:, :]
+                    @test old_data == new_data
+                end
+            end
+        end
+    end
+end
+
 @testset "Test assign_new_uuid! for component with time series" begin
     for in_memory in (true, false)
         sys = IS.SystemData(time_series_in_memory=in_memory)
