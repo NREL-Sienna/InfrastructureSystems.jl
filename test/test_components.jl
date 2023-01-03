@@ -96,13 +96,31 @@ end
     components = IS.get_components(
         IS.InfrastructureSystemsComponent,
         container,
+    )
+    @test length(components) == 1
+    components = IS.get_components(
+        IS.InfrastructureSystemsComponent,
+        container,
         x -> (IS.get_val(x) < 5),
     )
     @test length(components) == 0
+    components = IS.get_components(
+        IS.InfrastructureSystemsComponent,
+        container,
+    )
+    @test length(components) == 1
+    components = IS.get_components(
+        IS.InfrastructureSystemsComponent,
+        container,
+        x -> (IS.get_val(x) == 5),
+    )
+    @test length(components) == 1
 
     # by concrete type
     components = IS.get_components(IS.TestComponent, container, x -> (IS.get_val(x) < 5))
     @test length(components) == 0
+    components = IS.get_components(IS.TestComponent, container, x -> (IS.get_val(x) == 5))
+    @test length(components) == 1
 end
 
 @testset "Test get_component" begin
