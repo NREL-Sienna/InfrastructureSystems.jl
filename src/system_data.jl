@@ -711,11 +711,7 @@ function get_component(data::SystemData, uuid::Base.UUID)
     return nothing
 end
 
-function get_components(
-    filter_func::Function,
-    ::Type{T},
-    data::SystemData,
-) where {T}
+function get_components(filter_func::Function, ::Type{T}, data::SystemData) where {T}
     return get_components(T, data.components, filter_func)
 end
 

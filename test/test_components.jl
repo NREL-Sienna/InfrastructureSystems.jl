@@ -93,10 +93,7 @@ end
     @test length(components) == 1
 
     # by abstract type with filter_func
-    components = IS.get_components(
-        IS.InfrastructureSystemsComponent,
-        container,
-    )
+    components = IS.get_components(IS.InfrastructureSystemsComponent, container)
     @test length(components) == 1
     components = IS.get_components(
         IS.InfrastructureSystemsComponent,
@@ -104,10 +101,7 @@ end
         x -> (IS.get_val(x) < 5),
     )
     @test length(components) == 0
-    components = IS.get_components(
-        IS.InfrastructureSystemsComponent,
-        container,
-    )
+    components = IS.get_components(IS.InfrastructureSystemsComponent, container)
     @test length(components) == 1
     components = IS.get_components(
         IS.InfrastructureSystemsComponent,
