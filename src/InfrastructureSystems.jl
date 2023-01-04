@@ -14,7 +14,7 @@ import StructTypes
 import TerminalLoggers: TerminalLogger, ProgressLevel
 import TimeSeries
 import TOML
-using DataStructures: SortedDict
+using DataStructures: OrderedDict, SortedDict
 
 using DocStringExtensions
 

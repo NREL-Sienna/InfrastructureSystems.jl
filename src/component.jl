@@ -529,6 +529,25 @@ function get_num_time_series(component::InfrastructureSystemsComponent)
     return (static_ts_count, forecast_count)
 end
 
+function get_num_time_series_by_type(component::InfrastructureSystemsComponent)
+    counts = Dict{String, Int}()
+    container = get_time_series_container(component)
+    if isnothing(container)
+        return counts
+    end
+
+    for metadata in values(container.data)
+        type = string(nameof(time_series_metadata_to_data(metadata)))
+        if haskey(counts, type)
+            counts[type] += 1
+        else
+            counts[type] = 1
+        end
+    end
+
+    return counts
+end
+
 function get_time_series(
     component::InfrastructureSystemsComponent,
     time_series::TimeSeriesData,

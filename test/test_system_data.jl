@@ -222,3 +222,28 @@ end
     component = IS.get_component(IS.TestComponent, data, "component_3")
     IS.check_component(data, component)
 end
+
+@testset "Test component and time series counts" begin
+    data = IS.SystemData()
+    initial_time = Dates.DateTime("2020-09-01")
+    resolution = Dates.Hour(1)
+    ta = TimeSeries.TimeArray(range(initial_time; length=24, step=resolution), ones(24))
+    ts = IS.SingleTimeSeries(data=ta, name="test")
+
+    for i in 1:5
+        name = "component_$(i)"
+        component = IS.TestComponent(name, 3)
+        IS.add_component!(data, component)
+        IS.add_time_series!(data, component, ts)
+    end
+
+    c_counts = IS.get_component_counts_by_type(data)
+    @test length(c_counts) == 1
+    @test c_counts[1]["type"] == "TestComponent"
+    @test c_counts[1]["count"] == 5
+
+    ts_counts = IS.get_time_series_counts_by_type(data)
+    @test length(ts_counts) == 1
+    @test ts_counts[1]["type"] == "SingleTimeSeries"
+    @test ts_counts[1]["count"] == 5
+end
