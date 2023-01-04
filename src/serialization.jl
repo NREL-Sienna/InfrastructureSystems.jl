@@ -46,10 +46,12 @@ function to_json(
     indent=2,
 ) where {T <: InfrastructureSystemsType}
     if pretty
-        JSON3.pretty(io, obj, JSON3.AlignmentContext(indent=indent))
+        res = JSON3.pretty(io, obj, JSON3.AlignmentContext(indent=indent))
     else
-        JSON3.write(io, obj)
+        res = JSON3.write(io, obj)
     end
+
+    return res
 end
 
 """
