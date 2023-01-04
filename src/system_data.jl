@@ -779,3 +779,31 @@ get_compression_settings(data::SystemData) =
     get_compression_settings(data.time_series_storage)
 
 set_name!(data::SystemData, component, name) = set_name!(data.components, component, name)
+
+function get_component_counts_by_type(data::SystemData)
+    counts = Dict{String, Int}()
+    for (component_type, components) in data.components.data
+        counts[string(nameof(component_type))] = length(components)
+    end
+
+    return [
+        OrderedDict("type" => x, "count" => counts[x]) for x in sort(collect(keys(counts)))
+    ]
+end
+
+function get_time_series_counts_by_type(data::SystemData)
+    counts = Dict{String, Int}()
+    for component in iterate_components_with_time_series(data)
+        for (type, count) in get_num_time_series_by_type(component)
+            if haskey(counts, type)
+                counts[type] += count
+            else
+                counts[type] = count
+            end
+        end
+    end
+
+    return [
+        OrderedDict("type" => x, "count" => counts[x]) for x in sort(collect(keys(counts)))
+    ]
+end

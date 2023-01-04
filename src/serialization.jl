@@ -29,13 +29,30 @@ end
 """
 Serializes a InfrastructureSystemsType to a JSON string.
 """
-function to_json(obj::T) where {T <: InfrastructureSystemsType}
-    return JSON3.write(serialize(obj))
+function to_json(obj::T; pretty=false, indent=2) where {T <: InfrastructureSystemsType}
+    if pretty
+        io = IOBuffer()
+        JSON3.pretty(io, serialize(obj), JSON3.AlignmentContext(indent=indent))
+        return take!(io)
+    else
+        return JSON3.write(serialize(obj))
+    end
 end
 
-function to_json(io::IO, obj::T; pretty=false) where {T <: InfrastructureSystemsType}
-    func = pretty ? JSON3.pretty : JSON3.write
-    return func(io, serialize(obj))
+function to_json(
+    io::IO,
+    obj::T;
+    pretty=false,
+    indent=2,
+) where {T <: InfrastructureSystemsType}
+    data = serialize(obj)
+    if pretty
+        res = JSON3.pretty(io, data, JSON3.AlignmentContext(indent=indent))
+    else
+        res = JSON3.write(io, data)
+    end
+
+    return res
 end
 
 """
