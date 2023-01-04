@@ -12,6 +12,9 @@
     components = IS.get_components(IS.TestComponent, data)
     @test length(components) == 1
 
+    @test length(IS.get_components(x -> (IS.get_val(x) != 5), IS.TestComponent, data)) == 0
+    @test length(IS.get_components(x -> (IS.get_val(x) == 5), IS.TestComponent, data)) == 1
+
     i = 0
     for component in IS.iterate_components(data)
         i += 1
