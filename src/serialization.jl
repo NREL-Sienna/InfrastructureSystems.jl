@@ -45,10 +45,11 @@ function to_json(
     pretty=false,
     indent=2,
 ) where {T <: InfrastructureSystemsType}
+    data = serialize(obj)
     if pretty
-        res = JSON3.pretty(io, obj, JSON3.AlignmentContext(indent=indent))
+        res = JSON3.pretty(io, data, JSON3.AlignmentContext(indent=indent))
     else
-        res = JSON3.write(io, obj)
+        res = JSON3.write(io, data)
     end
 
     return res
