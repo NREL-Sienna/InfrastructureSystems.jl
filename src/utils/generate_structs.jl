@@ -85,7 +85,7 @@ function read_json_data(filename::String)
         elseif data isa Dict && haskey(data, "auto_generated_structs")
             return data["auto_generated_structs"]
         else
-            throw(DataFormatError("{filename} has invalid format"))
+            throw(DataFormatError("$filename has invalid format"))
         end
     end
 end
