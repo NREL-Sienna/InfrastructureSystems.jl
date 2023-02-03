@@ -159,7 +159,7 @@ function get_time_series(
     end
 
     metadata_type = time_series_data_to_metadata(T)
-    ts_metadata = get_time_series(metadata_type, component, name)
+    ts_metadata = get_time_series_metadata(metadata_type, component, name)
     start_time = _check_start_time(start_time, ts_metadata)
     rows = _get_rows(start_time, len, ts_metadata)
     columns = _get_columns(start_time, count, ts_metadata)
@@ -167,12 +167,22 @@ function get_time_series(
     return deserialize_time_series(T, storage, ts_metadata, rows, columns)
 end
 
-function get_time_series(
+function get_time_series_uuid(
+    ::Type{T},
+    component::InfrastructureSystemsComponent,
+    name::AbstractString,
+) where {T <: TimeSeriesData}
+    metadata_type = time_series_data_to_metadata(T)
+    metadata = get_time_series_metadata(metadata_type, component, name)
+    return get_time_series_uuid(metadata)
+end
+
+function get_time_series_metadata(
     ::Type{T},
     component::InfrastructureSystemsComponent,
     name::AbstractString,
 ) where {T <: TimeSeriesMetadata}
-    return get_time_series(T, get_time_series_container(component), name)
+    return get_time_series_metadata(T, get_time_series_container(component), name)
 end
 
 """

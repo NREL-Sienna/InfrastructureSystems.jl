@@ -82,7 +82,7 @@ function clear_time_series!(container::TimeSeriesContainer)
     return
 end
 
-function get_time_series(
+function get_time_series_metadata(
     ::Type{T},
     container::TimeSeriesContainer,
     name::AbstractString,

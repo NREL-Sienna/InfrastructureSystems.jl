@@ -238,7 +238,7 @@ function remove_time_series!(
     name::String,
 ) where {T <: TimeSeriesData}
     type = time_series_data_to_metadata(T)
-    time_series = get_time_series(type, component, name)
+    time_series = get_time_series_metadata(type, component, name)
     uuid = get_time_series_uuid(time_series)
     if remove_time_series_metadata!(component, type, name)
         remove_time_series!(data.time_series_storage, uuid, get_uuid(component), name)
