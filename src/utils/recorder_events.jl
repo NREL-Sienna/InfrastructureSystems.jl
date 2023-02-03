@@ -194,13 +194,14 @@ for accepted kwargs.
   - `filter_func::Union{Nothing, Function} = nothing`: Optional function that accepts an event
     of type T and returns a Bool. Apply this function to each event and only return events
     where the result is true.
+  - `exclude_columns = Set{String}()`: Column names to exclude from the table
   - `kwargs`: Passed to PrettyTables
 
 # Examples
 
 ```Julia
 show_recorder_events(TestEvent, test_recorder.log)
-show_recorder_events(TestEvent, test_recorder.log; x -> x.val2 > 2)
+show_recorder_events(TestEvent, test_recorder.log, x -> x.val2 > 2)
 ```
 """
 function show_recorder_events(
@@ -232,6 +233,7 @@ end
 function show_recorder_events(
     io::IO,
     events::Vector{T};
+    exclude_columns=Set{String}(),
     kwargs...,
 ) where {T <: AbstractRecorderEvent}
     if isempty(events)
@@ -239,7 +241,7 @@ function show_recorder_events(
         return
     end
 
-    header = ["timestamp", "name"]
+    header = [x for x in ("timestamp", "name") if !(x in exclude_columns)]
     for (fieldname, fieldtype) in zip(fieldnames(T), fieldtypes(T))
         if !(fieldtype <: RecorderEventCommon)
             push!(header, string(fieldname))
@@ -248,11 +250,17 @@ function show_recorder_events(
 
     data = Array{Any, 2}(undef, length(events), length(header))
     for (i, event) in enumerate(events)
-        data[i, 1] = get_timestamp(event)
-        data[i, 2] = get_name(event)
-        col_index = 3
+        col_index = 1
+        if !("timestamp" in exclude_columns)
+            data[i, col_index] = get_timestamp(event)
+            col_index += 1
+        end
+        if !("name" in exclude_columns)
+            data[i, col_index] = get_name(event)
+            col_index += 1
+        end
         for (fieldname, fieldtype) in zip(fieldnames(T), fieldtypes(T))
-            if !(fieldtype <: RecorderEventCommon)
+            if !(fieldtype <: RecorderEventCommon) && !(fieldname in exclude_columns)
                 data[i, col_index] = getfield(event, fieldname)
                 col_index += 1
             end
