@@ -206,7 +206,7 @@ function ForecastCache(
     ignore_scaling_factors=false,
 ) where {T <: Forecast}
     metadata_type = time_series_data_to_metadata(T)
-    ts_metadata = get_time_series(metadata_type, component, name)
+    ts_metadata = get_time_series_metadata(metadata_type, component, name)
     initial_timestamp = get_initial_timestamp(ts_metadata)
     if start_time === nothing
         start_time = initial_timestamp
@@ -323,7 +323,7 @@ function StaticTimeSeriesCache(
     ignore_scaling_factors=false,
 ) where {T <: StaticTimeSeries}
     metadata_type = time_series_data_to_metadata(T)
-    ts_metadata = get_time_series(metadata_type, component, name)
+    ts_metadata = get_time_series_metadata(metadata_type, component, name)
     initial_timestamp = get_initial_timestamp(ts_metadata)
     if start_time === nothing
         start_time = initial_timestamp

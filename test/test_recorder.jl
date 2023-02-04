@@ -78,3 +78,34 @@ end
         isfile(filename) && rm(filename)
     end
 end
+
+@testset "Test show_recorder_events exclude_columns" begin
+    filename = "test.log"
+    try
+        IS.register_recorder!(:test)
+        for i in 1:5
+            IS.@record :test InfrastructureSystems.TestEvent("a", i, 2.0)
+            IS.@record :test InfrastructureSystems.TestEvent2(3)
+        end
+        IS.unregister_recorder!(:test)
+        @test isfile(filename)
+
+        buf1 = IOBuffer()
+        IS.show_recorder_events(buf1, InfrastructureSystems.TestEvent, filename)
+        text = String(take!(buf1))
+        @test occursin("timestamp", text)
+
+        buf2 = IOBuffer()
+        IS.show_recorder_events(
+            buf2,
+            InfrastructureSystems.TestEvent,
+            filename,
+            exclude_columns=Set("timestamp"),
+        )
+        text = String(take!(buf1))
+        @test !occursin("timestamp", text)
+    finally
+        IS.unregister_recorder!(:test)
+        isfile(filename) && rm(filename)
+    end
+end
