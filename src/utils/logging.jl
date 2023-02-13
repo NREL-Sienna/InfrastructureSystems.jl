@@ -108,46 +108,18 @@ function _is_level_valid(tracker::LogEventTracker, level::Logging.LogLevel)
     return level in keys(tracker.events)
 end
 
-struct LoggingConfiguration
-    console::Bool
-    console_stream::IO
-    console_level::Base.LogLevel
-    progress::Bool
-    file::Bool
-    filename::Union{Nothing, String}
-    file_level::Base.LogLevel
-    file_mode::String
-    tracker::Union{Nothing, LogEventTracker}
-    set_global::Bool
-    group_levels::Dict{Symbol, Base.LogLevel}
-end
-
-function LoggingConfiguration(;
-    console=true,
-    console_stream=stderr,
-    console_level=Logging.Error,
-    progress=true,
-    file=true,
-    filename="log.txt",
-    file_level=Logging.Info,
-    file_mode="w+",
-    tracker=nothing,
-    set_global=true,
-    group_levels=Dict{Symbol, Base.LogLevel}(),
-)
-    return LoggingConfiguration(
-        console,
-        console_stream,
-        console_level,
-        progress,
-        file,
-        filename,
-        file_level,
-        file_mode,
-        tracker,
-        set_global,
-        group_levels,
-    )
+Base.@kwdef struct LoggingConfiguration
+    console::Bool = true
+    console_stream::IO = stderr
+    console_level::Base.LogLevel = Logging.Error
+    progress::Bool = true
+    file::Bool = true
+    filename::Union{Nothing, String} = "log.txt"
+    file_level::Base.LogLevel = Logging.Info
+    file_mode::String = "w+"
+    tracker::Union{Nothing, LogEventTracker} = nothing
+    set_global::Bool = true
+    group_levels::Dict{Symbol, Base.LogLevel} = Dict()
 end
 
 function LoggingConfiguration(config_filename)
