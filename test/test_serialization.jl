@@ -114,3 +114,23 @@ end
     @test occursin(" ", text)
     IS.deserialize(IS.TestComponent, JSON3.read(text, Dict)) == component
 end
+
+@testset "Test ext serialization" begin
+    @test IS.is_ext_valid_for_serialization(nothing)
+    @test IS.is_ext_valid_for_serialization(1)
+    @test IS.is_ext_valid_for_serialization("test")
+    @test IS.is_ext_valid_for_serialization([1, 2, 3])
+    @test IS.is_ext_valid_for_serialization(Dict("a" => 1, "b" => 2, "c" => 3))
+
+    struct MyType
+        func::Function
+    end
+
+    @test(
+        @test_logs(
+            (:error, r"only basic types are allowed"),
+            match_mode = :any,
+            !IS.is_ext_valid_for_serialization(MyType(println))
+        )
+    )
+end

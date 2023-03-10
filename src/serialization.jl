@@ -271,3 +271,26 @@ function serialize_julia_info()
     data["package_info"] = String(take!(io))
     return data
 end
+
+"""
+Perform a test to see if JSON3 can convert this value so that the code can give the user a
+a comprehensible corrective action.
+"""
+function is_ext_valid_for_serialization(value)
+    isnothing(value) && return true
+    is_valid = true
+    try
+        JSON3.write(value)
+    catch
+        is_valid = false
+    end
+
+    if !is_valid
+        @error "Failed to serialize an 'ext' value. Please ensure that the " *
+               "contents follow the rules provided in the documentation. Generally, only " *
+               "basic types are allowed - strings and numbers and arrays, dictionaries, and " *
+               "structs of those." value
+    end
+
+    return is_valid
+end

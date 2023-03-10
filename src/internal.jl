@@ -94,6 +94,14 @@ function serialize(internal::InfrastructureSystemsInternal)
         else
             val = serialize(val)
         end
+        if field == :ext
+            if !is_ext_valid_for_serialization(val)
+                error(
+                    "system or component with uuid=$(internal.uuid) has a value in ext " *
+                    "that cannot be serialized",
+                )
+            end
+        end
         data[string(field)] = val
     end
 
