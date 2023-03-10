@@ -287,9 +287,9 @@ function is_ext_valid_for_serialization(value)
 
     if !is_valid
         @error "Failed to serialize an 'ext' value. Please ensure that the " *
-            "contents follow the rules provided in the documentation. Generally, only " *
-            "basic types are allowed - strings and numbers and arrays, dictionaries, and " *
-            "structs of those." value
+               "contents follow the rules provided in the documentation. Generally, only " *
+               "basic types are allowed - strings and numbers and arrays, dictionaries, and " *
+               "structs of those." value
     end
 
     return is_valid
