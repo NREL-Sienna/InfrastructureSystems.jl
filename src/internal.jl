@@ -98,7 +98,7 @@ function serialize(internal::InfrastructureSystemsInternal)
             if !is_ext_valid_for_serialization(val)
                 error(
                     "system or component with uuid=$(internal.uuid) has a value in ext " *
-                    "that cannot be serialized"
+                    "that cannot be serialized",
                 )
             end
         end
