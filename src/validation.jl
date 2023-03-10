@@ -62,11 +62,8 @@ function get_field_descriptor(struct_descriptor::Dict, fieldname::AbstractString
         end
     end
 
-    throw(
-        DataFormatError(
-            "field $fieldname does not exist in $(struct_descriptor["struct_name"]) validation config",
-        ),
-    )
+    @warn "field $fieldname does not exist in $(struct_descriptor["struct_name"]) validation config"
+    return
 end
 
 function validate_fields(
@@ -91,7 +88,7 @@ function validate_fields(
             end
         else
             field_descriptor = get_field_descriptor(struct_descriptor, string(field_name))
-            if !haskey(field_descriptor, "valid_range")
+            if isnothing(field_descriptor) || !haskey(field_descriptor, "valid_range")
                 continue
             end
             valid_range = field_descriptor["valid_range"]
