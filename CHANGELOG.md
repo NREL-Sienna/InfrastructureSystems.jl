@@ -2,14 +2,14 @@
 
 ## 1.0.1 Announcement
 
-After 1.0.0 release, the manual Changelog will no longer be maintained. Please refer to the [releases page](https://github.com/NREL-SIIP/InfrastructureSystems.jl/releases) to follow up with the changes. 
+After 1.0.0 release, the manual Changelog will no longer be maintained. Please refer to the [releases page](https://github.com/NREL-Sienna/InfrastructureSystems.jl/releases) to follow up with the changes.
 
 ## 1.0.0
 
 - Separate TimeSeriesData in Forecast and StaticTimeSeries
 - Add documentation
-- Remove PWL cost function 
-- Add Support for composed Arrays in forecasts 
+- Remove PWL cost function
+- Add Support for composed Arrays in forecasts
 - Update API for Deterministic, Probabilistic, Scenarios
 - refactor forecast methods to time_series methods
 
@@ -17,7 +17,7 @@ After 1.0.0 release, the manual Changelog will no longer be maintained. Please r
 
 - Change implementation of file copy
 
-## 0.15.4 
+## 0.15.4
 
 - Bump TimeSeries
 - Add basic documentation
@@ -50,7 +50,7 @@ After 1.0.0 release, the manual Changelog will no longer be maintained. Please r
 ## 0.13.0
 
 - Remove container for last component
-- Allow for periods in serialization 
+- Allow for periods in serialization
 - Remove unused tuple to dict conversion
 
 ## 0.12.1
@@ -72,7 +72,7 @@ After 1.0.0 release, the manual Changelog will no longer be maintained. Please r
 
 ## 0.10.1
 
-- Bug fix with serialization of shared time series data 
+- Bug fix with serialization of shared time series data
 
 ## 0.10.0
 
