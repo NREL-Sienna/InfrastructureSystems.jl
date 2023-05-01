@@ -13,5 +13,4 @@ Contributions to the development and enahancement of PowerSystems is welcome. Pl
 
 ## License
 
-InfrastructureSystems is released under a BSD [license](https://github.com/NREL-Sienna/InfrastructureSystems.jl/blob/master/LICENSE). PowerSystems has been developed as part of the Scalable Integrated Infrastructure Planning (SIIP)
-initiative at the U.S. Department of Energy's National Renewable Energy Laboratory ([NREL](https://www.nrel.gov/))
+InfrastructureSystems is released under a BSD [license](https://github.com/NREL-Sienna/InfrastructureSystems.jl/blob/master/LICENSE). PowerSystems has been developed as part of the Scalable Integrated Infrastructure Planning (SIIP) initiative at the U.S. Department of Energy's National Renewable Energy Laboratory ([NREL](https://www.nrel.gov/))
