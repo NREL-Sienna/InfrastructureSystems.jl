@@ -52,7 +52,7 @@ makedocs(
 )
 
 deploydocs(
-    repo = "github.com/NREL-SIIP/InfrastructureSystems.jl.git",
+    repo = "github.com/NREL-Sienna/InfrastructureSystems.jl.git",
     target = "build",
     branch = "gh-pages",
     devbranch = "master",

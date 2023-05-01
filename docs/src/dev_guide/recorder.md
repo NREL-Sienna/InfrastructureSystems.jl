@@ -4,7 +4,7 @@
 that get recorded in one or more files. They can be filtered and displayed in
 tabular form.
 
-The primary use is to store information that can help debug problems and it is largely used in [PowerSimulations.jl](https://github.com/NREL-SIIP/PowerSimulations.jl). For
+The primary use is to store information that can help debug problems and it is largely used in [PowerSimulations.jl](https://github.com/NREL-Sienna/PowerSimulations.jl). For
 example, you may want to store all state transitions in a simulation or every
 update of a variable.  If a problem occurs you can then display filtered tables
 of that data to figure out what went wrong.
@@ -16,7 +16,7 @@ of that data to figure out what went wrong.
     `RecorderEventCommon` in each struct.
 
  2. Call [`InfrastructureSystems.register_recorder!`](@ref) with arguments `recorder-name` for each recorder object you want to create.
-    
+
       + Depending on how often your code create events you may want to make this
         conditional. You may only need it for debug runs.
       + PowerSimulations creates one recorder for simulation step and stage

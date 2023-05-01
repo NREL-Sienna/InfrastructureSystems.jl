@@ -16,7 +16,7 @@
   - Follow [Julia guidelines for docstrings](https://docs.julialang.org/en/v1/manual/documentation/index.html).
   - Follow [JuMP coding standards](http://www.juliaopt.org/JuMP.jl/dev/style),
     including its deviations from the Julia style guide.  In particular, note its policies on
-    
+
       + [whitespace](http://www.juliaopt.org/JuMP.jl/dev/style/#Whitespace-1)
       + [return statements](http://www.juliaopt.org/JuMP.jl/dev/style/#Return-statements-1)
       + [variable names](http://www.juliaopt.org/JuMP.jl/dev/style/#Use-of-underscores-within-names-1).
@@ -31,7 +31,7 @@
 ## Module
 
   - When writing a module locate all the exports in the main module file.
-  - Please include a copy of [this .gitignore file](https://github.com/NREL-SIIP/InfrastructureSystems.jl/blob/master/.gitignore)
+  - Please include a copy of [this .gitignore file](https://github.com/NREL-Sienna/InfrastructureSystems.jl/blob/master/.gitignore)
 
 ## Comments
 
@@ -42,7 +42,7 @@
   - Use complete sentences and proper grammar.
   - Include a space in between the "#" and the first word of the comment.
   - Use these tags in comments to describe known work:
-    
+
       + TODO:  tasks that need to be done
       + FIXME:  code that needs refactoring
       + BUG:  known bug that exists. Should include a bug ID and tracking system.

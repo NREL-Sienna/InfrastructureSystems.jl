@@ -20,7 +20,7 @@ Refer to the docstrings for `generate_struct` and `generate_structs` and generat
 Or
 
  1. Create or modify the JSON descriptor file. Follow the
-    [PowerSystems.jl](https://github.com/NREL-SIIP/PowerSystems.jl/blob/master/src/descriptors/power_system_structs.json)
+    [PowerSystems.jl](https://github.com/NREL-Sienna/PowerSystems.jl/blob/master/src/descriptors/power_system_structs.json)
     example.
  2. Run the generation script, passing your descriptor file and an output
     directory.
@@ -52,7 +52,7 @@ Optional fields for each struct member:
   - `exclude_setter`: Do not generate a setter function for this field.
   - `internal_default`: Set to true for non-user-facing fields like `InfrastructureSystemsInternal` that have default values.
   - `needs_conversion`: Set to true if the getter and setter function needs to apply unit conversion. The type must implement
-    
+
       + `get_value(::InfrastructureSystemsComponent, ::Type)` and
       + `set_value(::InfrastructureSystemsComponent, ::Type)`
         for this combination of component type and member type.
