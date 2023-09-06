@@ -573,10 +573,11 @@ function prepare_for_serialization!(data::SystemData, filename::AbstractString; 
         mkpath(directory)
     end
 
+    sys_base = _get_system_basename(filename)
     files = [
         filename,
-        joinpath(directory, TIME_SERIES_STORAGE_FILE),
-        joinpath(directory, VALIDATION_DESCRIPTOR_FILE),
+        joinpath(directory, _get_secondary_basename(sys_base, TIME_SERIES_STORAGE_FILE)),
+        joinpath(directory, _get_secondary_basename(sys_base, VALIDATION_DESCRIPTOR_FILE)),
     ]
     for file in files
         if !force && isfile(file)
@@ -586,7 +587,7 @@ function prepare_for_serialization!(data::SystemData, filename::AbstractString; 
 
     ext = get_ext(data.internal)
     ext["serialization_directory"] = directory
-    ext["basename"] = splitext(basename(filename))[1]
+    ext["basename"] = _get_system_basename(filename)
     return
 end
 
@@ -611,14 +612,14 @@ function serialize(data::SystemData)
         json_data["time_series_in_memory"] =
             data.time_series_storage isa InMemoryTimeSeriesStorage
     else
-        time_series_base_name = base * "_" * TIME_SERIES_STORAGE_FILE
+        time_series_base_name = _get_secondary_basename(base, TIME_SERIES_STORAGE_FILE)
         time_series_storage_file = joinpath(directory, time_series_base_name)
         serialize(data.time_series_storage, time_series_storage_file)
         json_data["time_series_storage_file"] = time_series_base_name
         json_data["time_series_storage_type"] = string(typeof(data.time_series_storage))
     end
 
-    descriptor_base_name = base * "_" * VALIDATION_DESCRIPTOR_FILE
+    descriptor_base_name = _get_secondary_basename(base, VALIDATION_DESCRIPTOR_FILE)
     descriptor_file = joinpath(directory, descriptor_base_name)
     descriptors = Dict("struct_validation_descriptors" => data.validation_descriptors)
     text = JSON3.write(descriptors)
@@ -807,3 +808,6 @@ function get_time_series_counts_by_type(data::SystemData)
         OrderedDict("type" => x, "count" => counts[x]) for x in sort(collect(keys(counts)))
     ]
 end
+
+_get_system_basename(system_file) = splitext(basename(system_file))[1]
+_get_secondary_basename(system_basename, name) = system_basename * "_" * name
