@@ -1,24 +1,10 @@
 #=
 Code Copied from https://github.com/tkoolen/TypeSortedCollections.jl and modified given that
-the original repo is no longer maintained
+the original repo is no longer maintained. The original broadcasting code was removed given this
+dicussion https://discourse.julialang.org/t/broadcasting-in-0-7/12346/1
 =#
 
 const TupleOfVectors = Tuple{Vararg{Vector{T} where T}}
-
-import Base.Broadcast: Broadcasted, BroadcastStyle, broadcastable, axes, instantiate
-struct TypeSortedStyle <: Broadcast.BroadcastStyle end
-BroadcastStyle(::Type{<:TypeSortedCollection}) = TypeSortedStyle()
-BroadcastStyle(::TypeSortedStyle, ::Broadcast.DefaultArrayStyle{1}) = TypeSortedStyle()
-BroadcastStyle(::TypeSortedStyle, ::Broadcast.DefaultArrayStyle{0}) = TypeSortedStyle()
-broadcastable(x::TypeSortedCollection) = x
-axes(tsc::TypeSortedCollection) = nothing
-instantiate(bc::Broadcasted{TypeSortedStyle}) = bc
-@inline Base.copyto!(dest::AbstractArray, bc::Broadcasted{TypeSortedStyle}) = _copy!(dest, bc)
-@inline Base.copyto!(dest::TypeSortedCollection, bc::Broadcasted) = _copy!(dest, bc)
-@inline function _copy!(dest, bc::Broadcasted)
-    flat = Broadcast.flatten(bc)
-    _broadcast!(flat.f, dest, flat.args...)
-end
 
 struct TypeSortedCollection{D<:TupleOfVectors, N}
     data::D
@@ -265,31 +251,5 @@ end
         anymissing = false
         $expr
         anymissing ? missing : true
-    end
-end
-
-## broadcast!
-@generated function _broadcast!(f::F, dest::D, A, Bs...) where {F, D}
-    T = first_tsc_type(dest, A, Bs...)
-    N = num_types(T)
-    expr = Expr(:block)
-    for i = 1 : N
-        vali = Val(i)
-        push!(expr.args, quote
-            let inds = leading_tsc.indices[$i]
-                @boundscheck indices_match($vali, inds, A, Bs...) || indices_match_fail()
-                @inbounds for j in LinearIndices(inds)
-                    vecindex = inds[j]
-                    _setindex!($vali, j, vecindex, dest, f(_getindex_all($vali, j, vecindex, A, Bs...)...))
-                end
-            end
-        end)
-    end
-    quote
-        Base.@_inline_meta
-        leading_tsc = first_tsc(dest, A, Bs...)
-        @boundscheck lengths_match(dest, A, Bs...) || lengths_match_fail()
-        $expr
-        dest
     end
 end
