@@ -22,6 +22,7 @@ Container for system components and time series data
 mutable struct SystemData <: InfrastructureSystemsType
     components::Components
     masked_components::Components
+    infos::Infos
     time_series_params::TimeSeriesParameters
     time_series_storage::TimeSeriesStorage
     validation_descriptors::Vector
@@ -63,12 +64,14 @@ function SystemData(;
         compression=compression,
     )
     components = Components(ts_storage, validation_descriptors)
+    infos = Infors(ts_storage)
     masked_components = Components(ts_storage, validation_descriptors)
     return SystemData(
         components,
         masked_components,
         TimeSeriesParameters(),
         ts_storage,
+        infos,
         validation_descriptors,
         InfrastructureSystemsInternal(),
     )
