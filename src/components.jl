@@ -1,7 +1,7 @@
 
 const ComponentsByType = Dict{DataType, Dict{String, <:InfrastructureSystemsComponent}}
 
-struct Components
+struct Components <: InfrastructureSystemsContainer
     data::ComponentsByType
     time_series_storage::TimeSeriesStorage
     validation_descriptors::Vector
@@ -13,11 +13,6 @@ function Components(time_series_storage::TimeSeriesStorage, validation_descripto
     end
 
     return Components(ComponentsByType(), time_series_storage, validation_descriptors)
-end
-
-function serialize(components::Components)
-    # time_series_storage and validation_descriptors are serialized elsewhere.
-    return [serialize(x) for y in values(components.data) for x in values(y)]
 end
 
 function _add_component!(
@@ -90,15 +85,6 @@ function check_component(components::Components, comp::InfrastructureSystemsComp
 
     if !validate_struct(comp)
         throw(InvalidValue("$(summary(comp)) is invalid"))
-    end
-end
-
-"""
-Removes all components from the system.
-"""
-function clear_components!(components::Components)
-    for type_ in collect(keys(components.data))
-        remove_components!(type_, components)
     end
 end
 
@@ -321,39 +307,15 @@ end
 See also: [`get_components`](@ref)
 """
 function iterate_components(components::Components)
-    Channel() do channel
-        for comp_dict in values(components.data)
-            for component in values(comp_dict)
-                put!(channel, component)
-            end
-        end
-    end
+    iterate_container(components)
 end
 
 function iterate_components_with_time_series(components::Components)
-    Channel() do channel
-        for comp_dict in values(components.data)
-            for component in values(comp_dict)
-                if has_time_series(component)
-                    put!(channel, component)
-                end
-            end
-        end
-    end
+    iterate_container_with_time_series(components)
 end
 
 function get_num_components(components::Components)
-    count = 0
-    for components in values(components.data)
-        count += length(components)
-    end
-    return count
-end
-
-function clear_time_series!(components::Components)
-    for component in iterate_components_with_time_series(components)
-        clear_time_series!(component)
-    end
+    iterate_num_members(components)
 end
 
 function is_attached(
