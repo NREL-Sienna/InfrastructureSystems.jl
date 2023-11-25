@@ -28,6 +28,7 @@ YAML = "ddb6d928-2868-570f-bddf-ab3f9cf99eb6"
 
 [compat]
 CSV = "0.9, 0.10"
+Dates = "1"
 DataFrames = "~1.6"
 DataStructures = "~0.18"
 DocStringExtensions = "0.8, 0.9"
