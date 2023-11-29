@@ -868,3 +868,46 @@ function assign_new_uuid!(component::InfrastructureSystemsComponent)
     set_uuid!(get_internal(component), new_uuid)
     return
 end
+
+"""
+Attaches an info to a component
+"""
+function attach_info!(
+    component::InfrastructureSystemsComponent,
+    info::T,
+) where {T <: InfrastructureSystemsInfo}
+    component_uuid = get_uuid(component)
+
+    if component_uuid ∈ info.components_uuid
+        throw(
+            ArgumentError(
+                "Info type $T with UUID $(get_uuid(info)) already attached to component $(get_name(component))",
+            ),
+        )
+    end
+
+    push!(component_uuid, info.components_uuid)
+    infos_container = get_infos_container(component)
+
+    if !haskey(infos_container, T)
+        infos_container[T] = Set{T}()
+    end
+    push!(infos_container[T], info)
+    @debug "Info type $T with UUID $(get_uuid(info)) stored in component $(get_name(component))"
+    return
+end
+
+"""
+Return true if the component has infos.
+"""
+function has_infos(component::InfrastructureSystemsComponent)
+    container = get_infos_container(component)
+    return !isempty(container)
+end
+
+function clear_infos!(component::InfrastructureSystemsComponent)
+    container = get_infos_container(component)
+    empty!(container)
+    @debug "Cleared infos in $(get_name(component))."
+    return
+end

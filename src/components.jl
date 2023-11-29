@@ -86,6 +86,16 @@ function check_component(components::Components, comp::InfrastructureSystemsComp
     if !validate_struct(comp)
         throw(InvalidValue("$(summary(comp)) is invalid"))
     end
+    return
+end
+
+"""
+Removes all components from the system.
+"""
+function clear_components!(components::Components)
+    for type_ in collect(keys(components.data))
+        remove_components!(type_, components)
+    end
 end
 
 """
@@ -315,7 +325,7 @@ function iterate_components_with_time_series(components::Components)
 end
 
 function get_num_components(components::Components)
-    iterate_num_members(components)
+    return get_num_members(components)
 end
 
 function is_attached(
@@ -350,6 +360,7 @@ function set_name!(
     set_name_internal!(component, name)
     components.data[T][name] = component
     @debug "Changed the name of component $(summary(component))" _group = LOG_GROUP_SYSTEM
+    return
 end
 
 function compare_values(x::Components, y::Components; compare_uuids=false)

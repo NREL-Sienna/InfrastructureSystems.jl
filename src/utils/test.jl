@@ -3,6 +3,7 @@ mutable struct TestComponent <: InfrastructureSystemsComponent
     name::String
     val::Int
     time_series_container::TimeSeriesContainer
+    infos_container::InfosContainer
     internal::InfrastructureSystemsInternal
 end
 
@@ -10,11 +11,12 @@ mutable struct AdditionalTestComponent <: InfrastructureSystemsComponent
     name::String
     val::Int
     time_series_container::TimeSeriesContainer
+    infos_container::InfosContainer
     internal::InfrastructureSystemsInternal
 end
 
 function TestComponent(name, val)
-    return TestComponent(name, val, TimeSeriesContainer(), InfrastructureSystemsInternal())
+    return TestComponent(name, val, TimeSeriesContainer(), InfosContainer(), InfrastructureSystemsInternal())
 end
 
 function AdditionalTestComponent(name, val)
@@ -22,6 +24,7 @@ function AdditionalTestComponent(name, val)
         name,
         val,
         TimeSeriesContainer(),
+        InfosContainer(),
         InfrastructureSystemsInternal(),
     )
 end
@@ -44,6 +47,7 @@ function deserialize(::Type{TestComponent}, data::Dict)
         data["name"],
         data["val"],
         deserialize(TimeSeriesContainer, data["time_series_container"]),
+        InfosContainer(),
         deserialize(InfrastructureSystemsInternal, data["internal"]),
     )
 end
