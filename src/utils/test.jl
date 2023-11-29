@@ -16,7 +16,13 @@ mutable struct AdditionalTestComponent <: InfrastructureSystemsComponent
 end
 
 function TestComponent(name, val)
-    return TestComponent(name, val, TimeSeriesContainer(), InfosContainer(), InfrastructureSystemsInternal())
+    return TestComponent(
+        name,
+        val,
+        TimeSeriesContainer(),
+        InfosContainer(),
+        InfrastructureSystemsInternal(),
+    )
 end
 
 function AdditionalTestComponent(name, val)

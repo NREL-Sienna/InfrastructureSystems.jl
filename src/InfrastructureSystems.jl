@@ -67,7 +67,8 @@ Optional interface functions:
   - get_uuid()
 
 Subtypes may contain time series. Which requires
-- get_time_series_container()
+
+  - get_time_series_container()
 """
 abstract type InfrastructureSystemsInfo <: InfrastructureSystemsType end
 
