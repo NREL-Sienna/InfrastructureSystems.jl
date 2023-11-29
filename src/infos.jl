@@ -6,6 +6,8 @@ struct Infos <: InfrastructureSystemsContainer
     time_series_storage::TimeSeriesStorage
 end
 
+get_display_string(::Infos) = "Infos"
+
 function Infos(time_series_storage::TimeSeriesStorage)
     return Infos(InfosByType(), time_series_storage)
 end
@@ -17,11 +19,11 @@ function add_info!(
     kwargs...,
 ) where {T <: InfrastructureSystemsInfo, U <: InfrastructureSystemsComponent}
     attach_info!(component, info)
-    add_info!(infos, info; kwargs...)
+    _add_info!(infos, info; kwargs...)
     return
 end
 
-function add_info!(
+function _add_info!(
     infos::Infos,
     info::T;
     allow_existing_time_series=false,
@@ -31,10 +33,19 @@ function add_info!(
     end
 
     info_uuid = get_uuid(info)
+    if isempty(get_components_uuid(info))
+        throw(
+            ArgumentError(
+                "Info type $T with UUID $info_uuid is not attached to any component",
+            ),
+        )
+    end
+
     if !haskey(infos.data, T)
         infos.data[T] = Dict{UUIDs.UUID, T}()
     elseif haskey(infos.data[T], info_uuid)
-        throw(ArgumentError("Info type $T with UUID $info_uuid already stored"))
+        @debug "Info type $T with UUID $info_uuid already stored"
+        return
     end
 
     if !allow_existing_time_series && has_time_series(info)
@@ -53,7 +64,7 @@ function has_info(
     ::Type{T},
     infos::Infos,
     component::U,
-) where {T <: InfrastructureSystemsComponent, U <: InfrastructureSystemsComponent}
+) where {T <: InfrastructureSystemsInfo, U <: InfrastructureSystemsComponent}
     !isconcretetype(T) && return !isempty(get_components_by_name(T, components, name))
     !haskey(components.data, T) && return false
     return haskey(components.data[T], name)
@@ -83,4 +94,75 @@ Returns the total number of stored infos
 """
 function get_num_infos(infos::Infos)
     return get_num_members(infos)
+end
+
+"""
+Removes all infos from the system.
+"""
+function clear_infos!(infos::Infos)
+    for type_ in collect(keys(infos.data))
+        remove_infos!(type_, infos)
+    end
+end
+
+"""
+Remove all infos of type T.
+
+Throws ArgumentError if the type is not stored.
+"""
+function remove_infos!(::Type{T}, infos::Infos) where {T <: InfrastructureSystemsInfo}
+    if !haskey(infos.data, T)
+        throw(ArgumentError("info type $T is not stored"))
+    end
+
+    _infos = pop!(infos.data, T)
+    for info in values(_infos)
+        prepare_for_removal!(info)
+    end
+
+    @debug "Removed all infos of type $T" _group = LOG_GROUP_SYSTEM T
+    return values(_infos)
+end
+
+"""
+Returns an iterator of infos. T can be concrete or abstract.
+Call collect on the result if an array is desired.
+
+# Arguments
+
+  - `T`: info type
+  - `infos::Infos`: Infos in the system
+  - `filter_func::Union{Nothing, Function} = nothing`: Optional function that accepts a component
+    of type T and returns a Bool. Apply this function to each component and only return components
+    where the result is true.
+"""
+function get_infos(
+    ::Type{T},
+    infos::Infos,
+    filter_func::Union{Nothing, Function}=nothing,
+) where {T <: InfrastructureSystemsInfo}
+    if isconcretetype(T)
+        _infos = get(infos.data, T, nothing)
+        if !isnothing(filter_func) && !isnothing(_infos)
+            _filter_func = x -> filter_func(x.second)
+            _infos = values(filter(_filter_func, _infos))
+        end
+        if isnothing(_infos)
+            iter = FlattenIteratorWrapper(T, Vector{Base.ValueIterator}([]))
+        else
+            iter = FlattenIteratorWrapper(T, Vector{Base.ValueIterator}([values(_infos)]))
+        end
+    else
+        types = [x for x in keys(infos.data) if x <: T]
+        if isnothing(filter_func)
+            _infos = [values(infos.data[x]) for x in types]
+        else
+            _filter_func = x -> filter_func(x.second)
+            _infos = [values(filter(_filter_func, infos.data[x])) for x in types]
+        end
+        iter = FlattenIteratorWrapper(T, _infos)
+    end
+
+    @assert_op eltype(iter) == T
+    return iter
 end
