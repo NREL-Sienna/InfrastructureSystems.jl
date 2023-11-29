@@ -46,6 +46,7 @@ function clear_time_series!(component::InfrastructureSystemsComponent)
         @debug "Cleared time_series in $(get_name(component))." _group =
             LOG_GROUP_TIME_SERIES
     end
+    return
 end
 
 function _get_columns(start_time, count, ts_metadata::ForecastMetadata)
@@ -585,6 +586,7 @@ function prepare_for_removal!(component::InfrastructureSystemsComponent)
     set_time_series_storage!(component, nothing)
     clear_time_series!(component)
     @debug "cleared all time series data from" _group = LOG_GROUP_SYSTEM get_name(component)
+    return
 end
 
 """
@@ -802,6 +804,7 @@ function clear_time_series_storage!(component::InfrastructureSystemsComponent)
             end
         end
     end
+    return
 end
 
 function set_time_series_storage!(
@@ -812,6 +815,7 @@ function set_time_series_storage!(
     if !isnothing(container)
         set_time_series_storage!(container, storage)
     end
+    return
 end
 
 function _get_time_series_storage(component::InfrastructureSystemsComponent)
@@ -907,7 +911,30 @@ end
 
 function clear_infos!(component::InfrastructureSystemsComponent)
     container = get_infos_container(component)
+    for info_set in values(container)
+        for i in info_set
+            delete!(get_components_uuid(i), get_uuid(component))
+        end
+    end
     empty!(container)
     @debug "Cleared infos in $(get_name(component))."
+    return
+end
+
+function remove_info!(
+    component::InfrastructureSystemsComponent,
+    info::T,
+) where {T <: InfrastructureSystemsInfo}
+    container = get_infos_container(component)
+    if !haskey(container, T)
+        throw(
+            ArgumentError("info type $T is not stored in component $(get_name(component))"),
+        )
+    end
+    delete!(get_components_uuid(info), get_uuid(component))
+    delete!(container[T], info)
+    if isempty(container[T])
+        pop!(container, T)
+    end
     return
 end
