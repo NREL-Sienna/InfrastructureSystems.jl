@@ -42,4 +42,5 @@ function clear_time_series!(container::InfrastructureSystemsContainer)
     for member in iterate_components_with_time_series(container)
         clear_time_series!(member)
     end
+    return
 end

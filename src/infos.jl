@@ -1,4 +1,5 @@
-const InfosByType = Dict{DataType, Dict{UUIDs.UUID, <: InfrastructureSystemsInfo}}
+const InfosContainer = Dict{DataType, Set{<:InfrastructureSystemsInfo}}
+const InfosByType = Dict{DataType, Dict{UUIDs.UUID, <:InfrastructureSystemsInfo}}
 
 struct Infos <: InfrastructureSystemsContainer
     data::InfosByType
@@ -13,20 +14,26 @@ function add_info!(
     infos::Infos,
     info::T,
     component::U;
+    kwargs...,
+) where {T <: InfrastructureSystemsInfo, U <: InfrastructureSystemsComponent}
+    attach_info!(component, info)
+    add_info!(infos, info; kwargs...)
+    return
+end
+
+function add_info!(
+    infos::Infos,
+    info::T;
     allow_existing_time_series=false,
-) where {T <: InfrastructureSystemsInfo,
-        U <: InfrastructureSystemsComponent}
+) where {T <: InfrastructureSystemsInfo}
     if !isconcretetype(T)
         throw(ArgumentError("add_info! only accepts concrete types"))
     end
 
-    component_uuid = get_uuid(component)
-
     if !haskey(infos.data, T)
         components.data[T] = Dict{UUIDs.UUID, T}()
-    elseif haskey(components.data[T], component_uuid)
-        component_name = get_name(component)
-        throw(ArgumentError("$(component_name) already has stored info type $T"))
+    elseif haskey(components.data[T], get_uuid(info))
+        throw(ArgumentError("Info type $T with UUID $(get_uuid(info)) already stored"))
     end
 
     if !allow_existing_time_series && has_time_series(info)
@@ -39,14 +46,13 @@ function add_info!(
 end
 
 """
-Check to see if a component exists.
+Check to see if info exists.
 """
 function has_info(
     ::Type{T},
     infos::Infos,
     component::U,
-) where {T <: InfrastructureSystemsComponent,
-         U <: InfrastructureSystemsComponent}
+) where {T <: InfrastructureSystemsComponent, U <: InfrastructureSystemsComponent}
     !isconcretetype(T) && return !isempty(get_components_by_name(T, components, name))
     !haskey(components.data, T) && return false
     return haskey(components.data[T], name)

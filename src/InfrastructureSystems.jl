@@ -63,8 +63,11 @@ Required interface functions for subtypes:
 Optional interface functions:
 
   - get_time_series_container()
+  - get_components_uuid()
+  - get_uuid()
 
-Subtypes may contain time series.
+Subtypes may contain time series. Which requires
+- get_time_series_container()
 """
 abstract type InfrastructureSystemsInfo <: InfrastructureSystemsType end
 
@@ -107,6 +110,7 @@ include("forecasts.jl")
 include("static_time_series.jl")
 include("time_series_container.jl")
 include("time_series_parser.jl")
+include("containers.jl")
 include("infos.jl")
 include("components.jl")
 include("geographic_info.jl")
