@@ -886,7 +886,7 @@ function attach_info!(
         )
     end
 
-    push!(component_uuid, info.components_uuid)
+    push!(info.components_uuid, component_uuid)
     infos_container = get_infos_container(component)
 
     if !haskey(infos_container, T)
