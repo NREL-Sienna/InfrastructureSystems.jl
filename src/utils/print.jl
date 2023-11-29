@@ -3,13 +3,13 @@ const MAX_SHOW_COMPONENTS = 10
 const MAX_SHOW_FORECASTS = 10
 const MAX_SHOW_FORECAST_INITIAL_TIMES = 1
 
-function Base.summary(components::Components)
-    return "$(typeof(components)): $(get_num_components(components))"
+function Base.summary(container::InfrastructureSystemsContainer)
+    return "$(typeof(container)): $(get_num_members(container))"
 end
 
-function Base.show(io::IO, components::Components)
+function Base.show(io::IO, container::InfrastructureSystemsContainer)
     i = 1
-    for component in iterate_components(components)
+    for component in iterate_container(container)
         if i <= MAX_SHOW_COMPONENTS
             show(io, component)
             println(io)
@@ -19,18 +19,18 @@ function Base.show(io::IO, components::Components)
 
     if i > MAX_SHOW_COMPONENTS
         num = i - MAX_SHOW_COMPONENTS
-        println(io, "\n***Omitted $num components***\n")
+        println(io, "\n***Omitted $num $(get_display_string(container))***\n")
     end
 end
 
-function Base.show(io::IO, ::MIME"text/plain", components::Components)
-    num_components = get_num_components(components)
-    println(io, "Components")
+function Base.show(io::IO, ::MIME"text/plain", container::InfrastructureSystemsContainer)
+    num_components = get_num_components(container)
+    println(io, "$(get_display_string(container))")
     println(io, "==========")
     println(io, "Num components: $num_components")
     if num_components > 0
         println(io)
-        show_components_table(io, components, backend=Val(:auto))
+        show_components_table(io, container, backend=Val(:auto))
     end
 end
 
