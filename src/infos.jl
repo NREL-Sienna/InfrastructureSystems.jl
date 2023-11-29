@@ -30,10 +30,11 @@ function add_info!(
         throw(ArgumentError("add_info! only accepts concrete types"))
     end
 
+    info_uuid = get_uuid(info)
     if !haskey(infos.data, T)
-        components.data[T] = Dict{UUIDs.UUID, T}()
-    elseif haskey(components.data[T], get_uuid(info))
-        throw(ArgumentError("Info type $T with UUID $(get_uuid(info)) already stored"))
+        infos.data[T] = Dict{UUIDs.UUID, T}()
+    elseif haskey(infos.data[T], info_uuid)
+        throw(ArgumentError("Info type $T with UUID $info_uuid already stored"))
     end
 
     if !allow_existing_time_series && has_time_series(info)
@@ -41,7 +42,7 @@ function add_info!(
     end
 
     set_time_series_storage!(info, infos.time_series_storage)
-    infos.data[T][component_uuid] = info
+    infos.data[T][info_uuid] = info
     return
 end
 
@@ -56,4 +57,30 @@ function has_info(
     !isconcretetype(T) && return !isempty(get_components_by_name(T, components, name))
     !haskey(components.data, T) && return false
     return haskey(components.data[T], name)
+end
+
+"""
+Iterates over all infos.
+
+# Examples
+
+```Julia
+for info in iterate_infos(obj)
+    @show info
+end
+```
+"""
+function iterate_infos(infos::Infos)
+    iterate_container(infos)
+end
+
+function iterate_infos_with_time_series(infos::Infos)
+    iterate_container_with_time_series(infos)
+end
+
+"""
+Returns the total number of stored infos
+"""
+function get_num_infos(infos::Infos)
+    return get_num_members(infos)
 end
