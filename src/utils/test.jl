@@ -32,6 +32,8 @@ end
 get_internal(component::TestComponent) = component.internal
 get_internal(component::AdditionalTestComponent) = component.internal
 get_val(component::TestComponent) = component.val
+get_infos_container(component::TestComponent) = component.infos_container
+get_infos_container(component::AdditionalTestComponent) = component.infos_container
 
 function get_time_series_container(component::TestComponent)
     return component.time_series_container
