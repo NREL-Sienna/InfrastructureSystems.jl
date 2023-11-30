@@ -2,11 +2,11 @@
     container = IS.Infos(IS.InMemoryTimeSeriesStorage())
     geo_info = IS.InfrastructureSystemsGeo()
     component = IS.TestComponent("component1", 5)
-    IS.add_info!(container, geo_info, component)
+    IS.add_info!(container, component, geo_info)
     @test length(container.data) == 1
     @test length(container.data[IS.InfrastructureSystemsGeo]) == 1
     @test IS.get_num_infos(container) == 1
-    @test_throws ArgumentError IS.add_info!(container, geo_info, component)
+    @test_throws ArgumentError IS.add_info!(container, component, geo_info)
 
     container = IS.Infos(IS.InMemoryTimeSeriesStorage())
     geo_info = IS.InfrastructureSystemsGeo()
@@ -17,7 +17,7 @@ end
     container = IS.Infos(IS.InMemoryTimeSeriesStorage())
     geo_info = IS.InfrastructureSystemsGeo()
     component = IS.TestComponent("component1", 5)
-    IS.add_info!(container, geo_info, component)
+    IS.add_info!(container, component, geo_info)
     @test IS.get_num_infos(container) == 1
 
     IS.clear_infos!(component)
@@ -31,7 +31,7 @@ end
     container = IS.Infos(IS.InMemoryTimeSeriesStorage())
     geo_info = IS.InfrastructureSystemsGeo()
     component = IS.TestComponent("component1", 5)
-    IS.add_info!(container, geo_info, component)
+    IS.add_info!(container, component, geo_info)
     @test IS.get_num_infos(container) == 1
 
     IS.remove_info!(component, geo_info)
@@ -43,7 +43,7 @@ end
     container = IS.Infos(IS.InMemoryTimeSeriesStorage())
     geo_info = IS.InfrastructureSystemsGeo()
     component = IS.TestComponent("component1", 5)
-    IS.add_info!(container, geo_info, component)
+    IS.add_info!(container, component, geo_info)
 
     i = 0
     for component in IS.iterate_infos(container)
@@ -56,7 +56,7 @@ end
     container = IS.Infos(IS.InMemoryTimeSeriesStorage())
     geo_info = IS.InfrastructureSystemsGeo()
     component = IS.TestComponent("component1", 5)
-    IS.add_info!(container, geo_info, component)
+    IS.add_info!(container, component, geo_info)
     summary(devnull, container)
 end
 
@@ -64,7 +64,7 @@ end
     container = IS.Infos(IS.InMemoryTimeSeriesStorage())
     geo_info = IS.InfrastructureSystemsGeo()
     component = IS.TestComponent("component1", 5)
-    IS.add_info!(container, geo_info, component)
+    IS.add_info!(container, component, geo_info)
     data = IS.serialize(container)
     @test data isa Vector
     @test !isempty(data)

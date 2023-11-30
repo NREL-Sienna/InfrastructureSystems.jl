@@ -14,8 +14,8 @@ end
 
 function add_info!(
     infos::Infos,
-    info::T,
-    component::U;
+    component::U,
+    info::T;
     kwargs...,
 ) where {T <: InfrastructureSystemsInfo, U <: InfrastructureSystemsComponent}
     attach_info!(component, info)
@@ -62,12 +62,15 @@ Check to see if info exists.
 """
 function has_info(
     ::Type{T},
-    infos::Infos,
     component::U,
 ) where {T <: InfrastructureSystemsInfo, U <: InfrastructureSystemsComponent}
-    !isconcretetype(T) && return !isempty(get_components_by_name(T, components, name))
-    !haskey(components.data, T) && return false
-    return haskey(components.data[T], name)
+    if !isconcretetype(T)
+        infos = [v for v in values(get_infos_container(component)) if !isempty(v)]
+        return !isempty(infos)
+    end
+    infos = get_infos_container(component)
+    !haskey(infos, T) && return false
+    return !isempty(infos[T])
 end
 
 """
@@ -103,6 +106,19 @@ function clear_infos!(infos::Infos)
     for type_ in collect(keys(infos.data))
         remove_infos!(type_, infos)
     end
+end
+
+function remove_info!(infos::Infos, info::T) where {T <: InfrastructureSystemsInfo}
+    if !isempty(get_components_uuid(info))
+        throw(
+            ArgumentError(
+                "Info type $T with uuid $(get_uuid(info)) still attached to devices $(get_components_uuid(info))",
+            ),
+        )
+    end
+
+    pop!(infos.data[T], get_uuid(info))
+    return
 end
 
 """

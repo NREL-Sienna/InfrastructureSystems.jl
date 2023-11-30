@@ -815,3 +815,45 @@ end
 
 _get_system_basename(system_file) = splitext(basename(system_file))[1]
 _get_secondary_basename(system_basename, name) = system_basename * "_" * name
+
+add_info!(data::SystemData, component, info; kwargs...) =
+    add_info!(data.infos, component, info; kwargs...)
+
+function get_infos(
+    filter_func::Function,
+    ::Type{T},
+    data::SystemData,
+) where {T <: InfrastructureSystemsInfo}
+    return get_infos(T, data.infos, filter_func)
+end
+
+function get_infos(::Type{T}, data::SystemData) where {T <: InfrastructureSystemsInfo}
+    return get_infos(T, data.infos)
+end
+
+function iterate_infos(data::SystemData)
+    return iterate_infos(data.infos)
+end
+
+function remove_info!(data::SystemData, info::T) where {T <: InfrastructureSystemsInfo}
+    current_components_uuid = deepcopy(get_components_uuid(info))
+    for c_uuid in current_components_uuid
+        component = get_component(data, c_uuid)
+        delete!(get_infos_container(component), info)
+        delete!(get_components_uuid(info), get_uuid(component))
+    end
+
+    return remove_info!(data.infos, info)
+end
+
+function remove_infos!(::Type{T}, data::SystemData) where {T <: InfrastructureSystemsInfo}
+    infos = get_infos(T, data.infos)
+    for info in infos
+        for c_uuid in get_components_uuid(info)
+            comp = get_component(data, c_uuid)
+            delete!(get_infos_container(comp), info)
+        end
+        empty!(get_components_uuid(info))
+    end
+    return remove_infos!(T, data.infos)
+end

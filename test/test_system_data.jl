@@ -247,3 +247,52 @@ end
     @test ts_counts[1]["type"] == "SingleTimeSeries"
     @test ts_counts[1]["count"] == 5
 end
+
+@testset "Test component and infos" begin
+    data = IS.SystemData()
+    initial_time = Dates.DateTime("2020-09-01")
+    resolution = Dates.Hour(1)
+    ta = TimeSeries.TimeArray(range(initial_time; length=24, step=resolution), ones(24))
+    ts = IS.SingleTimeSeries(data=ta, name="test")
+
+    for i in 1:5
+        name = "component_$(i)"
+        component = IS.TestComponent(name, 3)
+        IS.add_component!(data, component)
+        IS.add_time_series!(data, component, ts)
+        geo_info = IS.InfrastructureSystemsGeo()
+        IS.add_info!(data, component, geo_info)
+    end
+
+    for c in IS.get_components(IS.TestComponent, data)
+        @test IS.has_info(IS.InfrastructureSystemsGeo, c)
+    end
+
+    @test length(IS.get_infos(IS.InfrastructureSystemsGeo, data)) == 5
+
+    i = 0
+    for component in IS.iterate_infos(data)
+        i += 1
+    end
+    @test i == 5
+
+    infos = IS.get_infos(IS.InfrastructureSystemsGeo, data)
+    io = IOBuffer()
+    show(io, "text/plain", infos)
+    output = String(take!(io))
+    expected = "InfrastructureSystemsGeo: $i"
+    @test occursin(expected, output)
+
+    info_removed = collect(infos)[1]
+    IS.remove_info!(data, info_removed)
+
+    infos = IS.get_infos(IS.InfrastructureSystemsGeo, data)
+    @test length(infos) == 4
+    @test IS.get_uuid(info_removed) ∉ IS.get_uuid.(infos)
+
+    IS.remove_infos!(IS.InfrastructureSystemsGeo, data)
+    infos = IS.get_infos(IS.InfrastructureSystemsGeo, data)
+    @test length(infos) == 0
+
+    @test_throws ArgumentError IS.remove_infos!(IS.InfrastructureSystemsGeo, data)
+end
