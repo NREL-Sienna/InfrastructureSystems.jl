@@ -37,7 +37,7 @@ function set_time_series_storage!(
     storage::Union{Nothing, TimeSeriesStorage},
 )
     container = get_time_series_container(info)
-    if !isnothing(info)
+    if !isnothing(container)
         set_time_series_storage!(container, storage)
     end
     return

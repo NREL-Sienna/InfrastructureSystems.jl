@@ -69,9 +69,9 @@ function SystemData(;
     return SystemData(
         components,
         masked_components,
+        infos,
         TimeSeriesParameters(),
         ts_storage,
-        infos,
         validation_descriptors,
         InfrastructureSystemsInternal(),
     )
@@ -88,6 +88,7 @@ function SystemData(
     return SystemData(
         components,
         masked_components,
+        Infos(time_series_storage),
         time_series_params,
         time_series_storage,
         validation_descriptors,
