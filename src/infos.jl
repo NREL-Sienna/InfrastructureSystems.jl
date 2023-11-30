@@ -14,10 +14,10 @@ end
 
 function add_info!(
     infos::Infos,
-    component::U,
-    info::T;
-    kwargs...,
-) where {T <: InfrastructureSystemsInfo, U <: InfrastructureSystemsComponent}
+    component::InfrastructureSystemsComponent,
+    info::InfrastructureSystemsInfo;
+    kwargs...
+)
     attach_info!(component, info)
     _add_info!(infos, info; kwargs...)
     return
