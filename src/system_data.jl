@@ -64,7 +64,7 @@ function SystemData(;
         compression=compression,
     )
     components = Components(ts_storage, validation_descriptors)
-    infos = Infors(ts_storage)
+    infos = Infos(ts_storage)
     masked_components = Components(ts_storage, validation_descriptors)
     return SystemData(
         components,
