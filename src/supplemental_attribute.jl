@@ -1,23 +1,12 @@
 """
 Return true if the info has time series data.
 """
-function has_time_series(info::InfrastructureSystemsInfo)
+function has_time_series(info::InfrastructureSystemsSupplementalAttribute)
     container = get_time_series_container(info)
     return !isnothing(container) && !isempty(container)
 end
 
-function set_time_series_storage!(
-    component::InfrastructureSystemsInfo,
-    storage::Union{Nothing, TimeSeriesStorage},
-)
-    container = get_time_series_container(component)
-    if !isnothing(container)
-        set_time_series_storage!(container, storage)
-    end
-    return
-end
-
-function clear_time_series_storage!(info::InfrastructureSystemsInfo)
+function clear_time_series_storage!(info::InfrastructureSystemsSupplementalAttribute)
     storage = _get_time_series_storage(info)
     if !isnothing(storage)
         # In the case of Deterministic and DeterministicSingleTimeSeries the UUIDs
@@ -33,7 +22,7 @@ function clear_time_series_storage!(info::InfrastructureSystemsInfo)
 end
 
 function set_time_series_storage!(
-    info::InfrastructureSystemsInfo,
+    info::InfrastructureSystemsSupplementalAttribute,
     storage::Union{Nothing, TimeSeriesStorage},
 )
     container = get_time_series_container(info)
@@ -46,7 +35,9 @@ end
 """
 This function must be called when a component is removed from a system.
 """
-function prepare_for_removal!(info::T) where {T <: InfrastructureSystemsInfo}
+function prepare_for_removal!(
+    info::T,
+) where {T <: InfrastructureSystemsSupplementalAttribute}
     if !isempty(get_components_uuid(info))
         throw(
             ArgumentError(
@@ -64,7 +55,7 @@ function prepare_for_removal!(info::T) where {T <: InfrastructureSystemsInfo}
     return
 end
 
-function _get_time_series_storage(info::InfrastructureSystemsInfo)
+function _get_time_series_storage(info::InfrastructureSystemsSupplementalAttribute)
     container = get_time_series_container(info)
     if isnothing(container)
         return nothing
@@ -73,7 +64,7 @@ function _get_time_series_storage(info::InfrastructureSystemsInfo)
     return container.time_series_storage
 end
 
-function clear_time_series!(info::T) where {T <: InfrastructureSystemsInfo}
+function clear_time_series!(info::T) where {T <: InfrastructureSystemsSupplementalAttribute}
     container = get_time_series_container(info)
     if !isnothing(container)
         clear_time_series!(container)

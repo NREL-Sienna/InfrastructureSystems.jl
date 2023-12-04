@@ -22,7 +22,7 @@ Container for system components and time series data
 mutable struct SystemData <: InfrastructureSystemsType
     components::Components
     masked_components::Components
-    infos::Infos
+    infos::SupplementalAttributes
     time_series_params::TimeSeriesParameters
     time_series_storage::TimeSeriesStorage
     validation_descriptors::Vector
@@ -64,7 +64,7 @@ function SystemData(;
         compression=compression,
     )
     components = Components(ts_storage, validation_descriptors)
-    infos = Infos(ts_storage)
+    infos = SupplementalAttributes(ts_storage)
     masked_components = Components(ts_storage, validation_descriptors)
     return SystemData(
         components,
@@ -88,7 +88,7 @@ function SystemData(
     return SystemData(
         components,
         masked_components,
-        Infos(time_series_storage),
+        SupplementalAttributes(time_series_storage),
         time_series_params,
         time_series_storage,
         validation_descriptors,
@@ -171,6 +171,35 @@ function add_time_series!(
 end
 
 """
+Add time series data to a component.
+
+# Arguments
+
+  - `data::SystemData`: SystemData
+  - `component::InfrastructureSystemsComponent`: will store the time series reference
+  - `time_series::TimeSeriesData`: Any object of subtype TimeSeriesData
+
+Throws ArgumentError if the component is not stored in the system.
+"""
+function add_time_series!(
+    data::SystemData,
+    component::InfrastructureSystemsSupplementalAttribute,
+    time_series::TimeSeriesData;
+    skip_if_present=false,
+)
+    metadata_type = time_series_data_to_metadata(typeof(time_series))
+    ts_metadata = metadata_type(time_series)
+    _attach_time_series_and_serialize!(
+        data,
+        component,
+        ts_metadata,
+        time_series;
+        skip_if_present=skip_if_present,
+    )
+    return
+end
+
+"""
 Add the same time series data to multiple components.
 
 # Arguments
@@ -190,33 +219,6 @@ function add_time_series!(data::SystemData, components, time_series::TimeSeriesD
     for component in components
         _attach_time_series_and_serialize!(data, component, ts_metadata, time_series)
     end
-end
-
-function _attach_time_series_and_serialize!(
-    data::SystemData,
-    component::InfrastructureSystemsComponent,
-    ts_metadata::T,
-    ts::TimeSeriesData;
-    skip_if_present=false,
-) where {T <: TimeSeriesMetadata}
-    _validate_component(data, component)
-    check_add_time_series(data.time_series_params, ts)
-    check_read_only(data.time_series_storage)
-    if has_time_series(component, T, get_name(ts))
-        skip_if_present && return
-        throw(ArgumentError("time_series $(typeof(ts)) $(get_name(ts)) is already stored"))
-    end
-
-    serialize_time_series!(
-        data.time_series_storage,
-        get_uuid(component),
-        get_name(ts_metadata),
-        ts,
-    )
-    add_time_series!(component, ts_metadata, skip_if_present=skip_if_present)
-    # Order is important. Set this last in case exceptions are thrown at previous steps.
-    set_parameters!(data.time_series_params, ts)
-    return
 end
 
 function add_time_series_from_file_metadata_internal!(
@@ -816,42 +818,51 @@ end
 _get_system_basename(system_file) = splitext(basename(system_file))[1]
 _get_secondary_basename(system_basename, name) = system_basename * "_" * name
 
-add_info!(data::SystemData, component, info; kwargs...) =
-    add_info!(data.infos, component, info; kwargs...)
+add_supplemental_attribute!(data::SystemData, component, info; kwargs...) =
+    add_supplemental_attribute!(data.infos, component, info; kwargs...)
 
-function get_infos(
+function get_supplemental_attributes(
     filter_func::Function,
     ::Type{T},
     data::SystemData,
-) where {T <: InfrastructureSystemsInfo}
-    return get_infos(T, data.infos, filter_func)
+) where {T <: InfrastructureSystemsSupplementalAttribute}
+    return get_supplemental_attributes(T, data.infos, filter_func)
 end
 
-function get_infos(::Type{T}, data::SystemData) where {T <: InfrastructureSystemsInfo}
-    return get_infos(T, data.infos)
+function get_supplemental_attributes(
+    ::Type{T},
+    data::SystemData,
+) where {T <: InfrastructureSystemsSupplementalAttribute}
+    return get_supplemental_attributes(T, data.infos)
 end
 
 function iterate_infos(data::SystemData)
     return iterate_infos(data.infos)
 end
 
-function remove_info!(data::SystemData, info::T) where {T <: InfrastructureSystemsInfo}
+function remove_supplemental_attribute!(
+    data::SystemData,
+    info::T,
+) where {T <: InfrastructureSystemsSupplementalAttribute}
     current_components_uuid = deepcopy(get_components_uuid(info))
     for c_uuid in current_components_uuid
         component = get_component(data, c_uuid)
-        delete!(get_infos_container(component), info)
+        delete!(get_supplemental_attributes_container(component), info)
         delete!(get_components_uuid(info), get_uuid(component))
     end
 
-    return remove_info!(data.infos, info)
+    return remove_supplemental_attribute!(data.infos, info)
 end
 
-function remove_infos!(::Type{T}, data::SystemData) where {T <: InfrastructureSystemsInfo}
-    infos = get_infos(T, data.infos)
+function remove_infos!(
+    ::Type{T},
+    data::SystemData,
+) where {T <: InfrastructureSystemsSupplementalAttribute}
+    infos = get_supplemental_attributes(T, data.infos)
     for info in infos
         for c_uuid in get_components_uuid(info)
             comp = get_component(data, c_uuid)
-            delete!(get_infos_container(comp), info)
+            delete!(get_supplemental_attributes_container(comp), info)
         end
         empty!(get_components_uuid(info))
     end

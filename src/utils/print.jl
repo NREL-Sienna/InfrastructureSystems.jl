@@ -24,7 +24,7 @@ function Base.show(io::IO, container::InfrastructureSystemsContainer)
 end
 
 function Base.show(io::IO, ::MIME"text/plain", container::InfrastructureSystemsContainer)
-    num_components = get_num_components(container)
+    num_components = get_num_members(container)
     println(io, "$(get_display_string(container))")
     println(io, "==========")
     println(io, "Num components: $num_components")

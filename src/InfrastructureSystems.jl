@@ -54,7 +54,7 @@ Base type for auxillary structs. These should not be stored in a system.
 abstract type DeviceParameter <: InfrastructureSystemsType end
 
 """
-Base type for structs that store infos
+Base type for structs that store suplemental attributess
 
 Required interface functions for subtypes:
 
@@ -70,7 +70,7 @@ Subtypes may contain time series. Which requires
 
   - get_time_series_container()
 """
-abstract type InfrastructureSystemsInfo <: InfrastructureSystemsType end
+abstract type InfrastructureSystemsSupplementalAttribute <: InfrastructureSystemsType end
 
 """
 Return the internal time_series storage container or nothing, if the type doesn't store
@@ -111,11 +111,12 @@ include("forecasts.jl")
 include("static_time_series.jl")
 include("time_series_container.jl")
 include("time_series_parser.jl")
+include("time_series_interface.jl")
 include("containers.jl")
-include("info.jl")
-include("infos.jl")
+include("supplemental_attribute.jl")
+include("supplemental_attributes.jl")
 include("components.jl")
-include("geographic_info.jl")
+include("geographic_supplemental_attribute.jl")
 include("generated/includes.jl")
 include("single_time_series.jl")
 include("deterministic_single_time_series.jl")

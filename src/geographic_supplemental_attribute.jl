@@ -9,7 +9,7 @@ Required interface functions for subtypes:
 
 Subtypes may contain time series, if no time series container is implemented return nothing
 """
-struct InfrastructureSystemsGeo <: InfrastructureSystemsInfo
+struct InfrastructureSystemsGeo <: InfrastructureSystemsSupplementalAttribute
     geo_json::Dict{String, Any}
     components_uuid::Set{UUIDs.UUID}
     internal::InfrastructureSystemsInternal
