@@ -304,7 +304,7 @@ function attach_supplemental_attribute!(
 ) where {T <: InfrastructureSystemsSupplementalAttribute}
     component_uuid = get_uuid(component)
 
-    if component_uuid ∈ get_components_uuid(attribute)
+    if component_uuid ∈ get_components_uuids(attribute)
         throw(
             ArgumentError(
                 "SupplementalAttribute type $T with UUID $(get_uuid(info)) already attached to component $(summary(component))",
@@ -312,7 +312,7 @@ function attach_supplemental_attribute!(
         )
     end
 
-    push!(get_components_uuid(attribute), component_uuid)
+    push!(get_components_uuids(attribute), component_uuid)
     attribute_container = get_supplemental_attributes_container(component)
 
     if !haskey(attribute_container, T)
@@ -335,7 +335,7 @@ function clear_supplemental_attributes!(component::InfrastructureSystemsComponen
     container = get_supplemental_attributes_container(component)
     for attribute_set in values(container)
         for i in attribute_set
-            delete!(get_components_uuid(i), get_uuid(component))
+            delete!(get_components_uuids(i), get_uuid(component))
         end
     end
     empty!(container)
@@ -350,10 +350,12 @@ function remove_supplemental_attribute!(
     container = get_supplemental_attributes_container(component)
     if !haskey(container, T)
         throw(
-            ArgumentError("supplemental attribute type $T is not stored in component $(get_name(component))"),
+            ArgumentError(
+                "supplemental attribute type $T is not stored in component $(get_name(component))",
+            ),
         )
     end
-    delete!(get_components_uuid(attribute), get_uuid(component))
+    delete!(get_components_uuids(attribute), get_uuid(component))
     delete!(container[T], info)
     if isempty(container[T])
         pop!(container, T)

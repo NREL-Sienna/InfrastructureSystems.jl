@@ -33,12 +33,12 @@ function set_time_series_storage!(
 end
 
 """
-This function must be called when a component is removed from a system.
+This function must be called when an attribute is removed from a system.
 """
 function prepare_for_removal!(
     info::T,
 ) where {T <: InfrastructureSystemsSupplementalAttribute}
-    if !isempty(get_components_uuid(info))
+    if !isempty(get_components_uuids(info))
         throw(
             ArgumentError(
                 "info type $T with uuid $(get_uuid(info)) still attached to a component",
@@ -51,7 +51,7 @@ function prepare_for_removal!(
     clear_time_series_storage!(info)
     set_time_series_storage!(info, nothing)
     clear_time_series!(info)
-    @debug "cleared all time series data from" _group = LOG_GROUP_SYSTEM get_name(component)
+    @debug "cleared all time series data from" _group = LOG_GROUP_SYSTEM get_uuid(attribute)
     return
 end
 

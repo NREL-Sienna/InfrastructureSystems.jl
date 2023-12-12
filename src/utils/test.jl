@@ -38,7 +38,8 @@ end
 get_internal(component::TestComponent) = component.internal
 get_internal(component::AdditionalTestComponent) = component.internal
 get_val(component::TestComponent) = component.val
-get_supplemental_attributes_container(component::TestComponent) = component.attributes_container
+get_supplemental_attributes_container(component::TestComponent) =
+    component.attributes_container
 get_supplemental_attributes_container(component::AdditionalTestComponent) =
     component.attributes_container
 

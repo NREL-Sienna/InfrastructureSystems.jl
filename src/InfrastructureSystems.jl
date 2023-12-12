@@ -64,7 +64,7 @@ Required interface functions for subtypes:
 Optional interface functions:
 
   - get_time_series_container()
-  - get_components_uuid()
+  - get_components_uuids()
   - get_uuid()
 
 Subtypes may contain time series. Which requires

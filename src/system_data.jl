@@ -844,11 +844,11 @@ function remove_supplemental_attribute!(
     data::SystemData,
     info::T,
 ) where {T <: InfrastructureSystemsSupplementalAttribute}
-    current_components_uuid = deepcopy(get_components_uuid(info))
+    current_components_uuid = collect(get_components_uuids(info))
     for c_uuid in current_components_uuid
         component = get_component(data, c_uuid)
         delete!(get_supplemental_attributes_container(component), info)
-        delete!(get_components_uuid(info), get_uuid(component))
+        delete!(get_components_uuids(info), get_uuid(component))
     end
 
     return remove_supplemental_attribute!(data.attributes, info)
@@ -860,11 +860,11 @@ function remove_attributes!(
 ) where {T <: InfrastructureSystemsSupplementalAttribute}
     attributes = get_supplemental_attributes(T, data.attributes)
     for info in attributes
-        for c_uuid in get_components_uuid(info)
+        for c_uuid in get_components_uuids(info)
             comp = get_component(data, c_uuid)
             delete!(get_supplemental_attributes_container(comp), info)
         end
-        empty!(get_components_uuid(info))
+        empty!(get_components_uuids(info))
     end
     return remove_attributes!(T, data.attributes)
 end

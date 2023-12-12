@@ -35,7 +35,7 @@ function _add_supplemental_attribute!(
     end
 
     supplemental_attribute_uuid = get_uuid(supplemental_attribute)
-    if isempty(get_components_uuid(supplemental_attribute))
+    if isempty(get_components_uuids(supplemental_attribute))
         throw(
             ArgumentError(
                 "SupplementalAttribute type $T with UUID $supplemental_attribute_uuid is not attached to any component",
@@ -129,10 +129,10 @@ function remove_supplemental_attribute!(
     supplemental_attributes::SupplementalAttributes,
     supplemental_attribute::T,
 ) where {T <: InfrastructureSystemsSupplementalAttribute}
-    if !isempty(get_components_uuid(supplemental_attribute))
+    if !isempty(get_components_uuids(supplemental_attribute))
         throw(
             ArgumentError(
-                "SupplementalAttribute type $T with uuid $(get_uuid(supplemental_attribute)) still attached to devices $(get_components_uuid(supplemental_attribute))",
+                "SupplementalAttribute type $T with uuid $(get_uuid(supplemental_attribute)) still attached to devices $(get_components_uuids(supplemental_attribute))",
             ),
         )
     end

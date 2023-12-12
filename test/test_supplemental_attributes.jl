@@ -28,7 +28,7 @@ end
     @test IS.get_num_supplemental_attributes(container) == 1
 
     IS.clear_supplemental_attributes!(component)
-    @test isempty(IS.get_components_uuid(geo_supplemental_attribute))
+    @test isempty(IS.get_components_uuids(geo_supplemental_attribute))
     IS.clear_supplemental_attributes!(container)
     supplemental_attributes =
         IS.get_supplemental_attributes(IS.InfrastructureSystemsGeo, container)
@@ -44,7 +44,7 @@ end
 
     IS.remove_supplemental_attribute!(component, geo_supplemental_attribute)
     @test isempty(IS.get_supplemental_attributes_container(component))
-    @test isempty(IS.get_components_uuid(geo_supplemental_attribute))
+    @test isempty(IS.get_components_uuids(geo_supplemental_attribute))
 end
 
 @testset "Test iterate_SupplementalAttributes" begin
