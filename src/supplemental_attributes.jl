@@ -71,17 +71,15 @@ Check to see if supplemental_attribute exists.
 """
 function has_supplemental_attribute(
     ::Type{T},
-    component::U,
-) where {
-    T <: InfrastructureSystemsSupplementalAttribute,
-    U <: InfrastructureSystemsComponent,
-}
+    component::InfrastructureSystemsComponent,
+) where {T <: InfrastructureSystemsSupplementalAttribute}
+    supplemental_attributes = get_supplemental_attributes_container(component)
     if !isconcretetype(T)
-        supplemental_attributes = [
-            v for
-            v in values(get_supplemental_attributes_container(component)) if !isempty(v)
-        ]
-        return !isempty(supplemental_attributes)
+        for (k, v) in supplemental_attributes
+            if !isempty(v) && k <: T
+                return true
+            end
+        end
     end
     supplemental_attributes = get_supplemental_attributes_container(component)
     !haskey(supplemental_attributes, T) && return false
@@ -120,8 +118,8 @@ end
 Removes all supplemental_attributes from the system.
 """
 function clear_supplemental_attributes!(supplemental_attributes::SupplementalAttributes)
-    for type_ in collect(keys(supplemental_attributes.data))
-        remove_supplemental_attributes!(type_, supplemental_attributes)
+    for type in collect(keys(supplemental_attributes.data))
+        remove_supplemental_attributes!(type, supplemental_attributes)
     end
 end
 
