@@ -304,15 +304,15 @@ function attach_supplemental_attribute!(
 ) where {T <: InfrastructureSystemsSupplementalAttribute}
     component_uuid = get_uuid(component)
 
-    if component_uuid ∈ attribute.components_uuid
+    if component_uuid ∈ get_components_uuid(attribute)
         throw(
             ArgumentError(
-                "SupplementalAttribute type $T with UUID $(get_uuid(info)) already attached to component $(get_name(component))",
+                "SupplementalAttribute type $T with UUID $(get_uuid(info)) already attached to component $(summary(component))",
             ),
         )
     end
 
-    push!(attribute.components_uuid, component_uuid)
+    push!(get_components_uuid(attribute), component_uuid)
     attribute_container = get_supplemental_attributes_container(component)
 
     if !haskey(attribute_container, T)

@@ -43,6 +43,7 @@ Required interface functions for subtypes:
 Optional interface functions:
 
   - get_time_series_container()
+  - get_supplemental_attributes_container()
 
 Subtypes may contain time series.
 """
