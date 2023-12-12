@@ -296,7 +296,7 @@ function assign_new_uuid!(component::InfrastructureSystemsComponent)
 end
 
 """
-Attaches an info to a component
+Attach an attribute to a component.
 """
 function attach_supplemental_attribute!(
     component::InfrastructureSystemsComponent,
