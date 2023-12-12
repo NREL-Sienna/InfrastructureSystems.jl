@@ -1,7 +1,7 @@
 function attach_component!(
-    attribute::InfrastructureSystemsSupplementalAttribute,
+    attribute::T,
     component::InfrastructureSystemsComponent,
-)
+) where {T <: InfrastructureSystemsSupplementalAttribute}
     component_uuid = get_uuid(component)
 
     if component_uuid ∈ get_components_uuids(attribute)

@@ -160,7 +160,8 @@ function add_time_series!(
 )
     metadata_type = time_series_data_to_metadata(typeof(time_series))
     ts_metadata = metadata_type(time_series)
-    _attach_time_series_and_serialize!(
+    _validate_component(data, component)
+    attach_time_series_and_serialize!(
         data,
         component,
         ts_metadata,
@@ -189,7 +190,7 @@ function add_time_series!(
 )
     metadata_type = time_series_data_to_metadata(typeof(time_series))
     ts_metadata = metadata_type(time_series)
-    _attach_time_series_and_serialize!(
+    attach_time_series_and_serialize!(
         data,
         component,
         ts_metadata,
@@ -217,7 +218,7 @@ function add_time_series!(data::SystemData, components, time_series::TimeSeriesD
     metadata_type = time_series_data_to_metadata(typeof(time_series))
     ts_metadata = metadata_type(time_series)
     for component in components
-        _attach_time_series_and_serialize!(data, component, ts_metadata, time_series)
+        attach_time_series_and_serialize!(data, component, ts_metadata, time_series)
     end
 end
 
@@ -836,8 +837,8 @@ function get_supplemental_attributes(
     return get_supplemental_attributes(T, data.attributes)
 end
 
-function iterate_attributes(data::SystemData)
-    return iterate_attributes(data.attributes)
+function iterate_supplemental_attributes(data::SystemData)
+    return iterate_supplemental_attributes(data.attributes)
 end
 
 function remove_supplemental_attribute!(
@@ -854,7 +855,7 @@ function remove_supplemental_attribute!(
     return remove_supplemental_attribute!(data.attributes, info)
 end
 
-function remove_attributes!(
+function remove_supplemental_attributes!(
     ::Type{T},
     data::SystemData,
 ) where {T <: InfrastructureSystemsSupplementalAttribute}
@@ -866,5 +867,5 @@ function remove_attributes!(
         end
         empty!(get_components_uuids(info))
     end
-    return remove_attributes!(T, data.attributes)
+    return remove_supplemental_attributes!(T, data.attributes)
 end

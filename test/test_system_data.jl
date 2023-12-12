@@ -265,13 +265,13 @@ end
     end
 
     for c in IS.get_components(IS.TestComponent, data)
-        @test IS.has_info(IS.GeographicInfo, c)
+        @test IS.has_supplemental_attributes(IS.GeographicInfo, c)
     end
 
     @test length(IS.get_supplemental_attributes(IS.GeographicInfo, data)) == 5
 
     i = 0
-    for component in IS.iterate_attributes(data)
+    for component in IS.iterate_supplemental_attributes(data)
         i += 1
     end
     @test i == 5
@@ -290,7 +290,7 @@ end
     @test length(attributes) == 4
     @test IS.get_uuid(attribute_removed) ∉ IS.get_uuid.(attributes)
 
-    IS.remove_attributes!(IS.GeographicInfo, data)
+    IS.remove_supplemental_attributes!(IS.GeographicInfo, data)
     attributes = IS.get_supplemental_attributes(IS.GeographicInfo, data)
     @test length(attributes) == 0
 

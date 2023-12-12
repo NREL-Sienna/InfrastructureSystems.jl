@@ -6,14 +6,14 @@ function add_time_series!(
     time_series::TimeSeriesMetadata;
     skip_if_present=false,
 ) where {T <: SUPPORTED_TIME_SERIES_TYPES}
-    component_name = get_name(component)
+    component_id = get_uuid(component)
     container = get_time_series_container(component)
     if isnothing(container)
         throw(ArgumentError("type $T does not support storing time series"))
     end
 
     add_time_series!(container, time_series, skip_if_present=skip_if_present)
-    @debug "Added $time_series to $(typeof(component)) $(component_name) " *
+    @debug "Added $time_series to $(typeof(component)) $(component_id) " *
            "num_time_series=$(length(get_time_series_container(component).data))." _group =
         LOG_GROUP_TIME_SERIES
 end
@@ -577,4 +577,30 @@ function get_time_series_uuids(component::SUPPORTED_TIME_SERIES_TYPES)
         (get_time_series_uuid(container.data[key]), key.name) for
         key in get_time_series_keys(component)
     ]
+end
+
+function attach_time_series_and_serialize!(
+    data::SystemData,
+    component::SUPPORTED_TIME_SERIES_TYPES,
+    ts_metadata::T,
+    ts::TimeSeriesData;
+    skip_if_present=false,
+) where {T <: TimeSeriesMetadata}
+    check_add_time_series(data.time_series_params, ts)
+    check_read_only(data.time_series_storage)
+    if has_time_series(component, T, get_name(ts))
+        skip_if_present && return
+        throw(ArgumentError("time_series $(typeof(ts)) $(get_name(ts)) is already stored"))
+    end
+
+    serialize_time_series!(
+        data.time_series_storage,
+        get_uuid(component),
+        get_name(ts_metadata),
+        ts,
+    )
+    add_time_series!(component, ts_metadata, skip_if_present=skip_if_present)
+    # Order is important. Set this last in case exceptions are thrown at previous steps.
+    set_parameters!(data.time_series_params, ts)
+    return
 end

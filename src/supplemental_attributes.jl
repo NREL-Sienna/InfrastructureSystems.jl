@@ -78,7 +78,7 @@ end
 """
 Check to see if supplemental_attribute exists.
 """
-function has_supplemental_attribute(
+function has_supplemental_attributes(
     ::Type{T},
     component::InfrastructureSystemsComponent,
 ) where {T <: InfrastructureSystemsSupplementalAttribute}
