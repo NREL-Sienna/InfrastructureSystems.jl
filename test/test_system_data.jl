@@ -260,15 +260,15 @@ end
         component = IS.TestComponent(name, 3)
         IS.add_component!(data, component)
         IS.add_time_series!(data, component, ts)
-        geo_info = IS.InfrastructureSystemsGeo()
+        geo_info = IS.GeographicInfo()
         IS.add_supplemental_attribute!(data, component, geo_info)
     end
 
     for c in IS.get_components(IS.TestComponent, data)
-        @test IS.has_info(IS.InfrastructureSystemsGeo, c)
+        @test IS.has_info(IS.GeographicInfo, c)
     end
 
-    @test length(IS.get_supplemental_attributes(IS.InfrastructureSystemsGeo, data)) == 5
+    @test length(IS.get_supplemental_attributes(IS.GeographicInfo, data)) == 5
 
     i = 0
     for component in IS.iterate_attributes(data)
@@ -276,23 +276,23 @@ end
     end
     @test i == 5
 
-    attributes = IS.get_supplemental_attributes(IS.InfrastructureSystemsGeo, data)
+    attributes = IS.get_supplemental_attributes(IS.GeographicInfo, data)
     io = IOBuffer()
     show(io, "text/plain", attributes)
     output = String(take!(io))
-    expected = "InfrastructureSystemsGeo: $i"
+    expected = "GeographicInfo: $i"
     @test occursin(expected, output)
 
     attribute_removed = collect(attributes)[1]
     IS.remove_supplemental_attribute!(data, attribute_removed)
 
-    attributes = IS.get_supplemental_attributes(IS.InfrastructureSystemsGeo, data)
+    attributes = IS.get_supplemental_attributes(IS.GeographicInfo, data)
     @test length(attributes) == 4
     @test IS.get_uuid(attribute_removed) ∉ IS.get_uuid.(attributes)
 
-    IS.remove_attributes!(IS.InfrastructureSystemsGeo, data)
-    attributes = IS.get_supplemental_attributes(IS.InfrastructureSystemsGeo, data)
+    IS.remove_attributes!(IS.GeographicInfo, data)
+    attributes = IS.get_supplemental_attributes(IS.GeographicInfo, data)
     @test length(attributes) == 0
 
-    @test_throws ArgumentError IS.remove_attributes!(IS.InfrastructureSystemsGeo, data)
+    @test_throws ArgumentError IS.remove_attributes!(IS.GeographicInfo, data)
 end

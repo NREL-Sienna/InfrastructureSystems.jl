@@ -1,10 +1,10 @@
 @testset "Test add_supplemental_attribute" begin
     container = IS.SupplementalAttributes(IS.InMemoryTimeSeriesStorage())
-    geo_supplemental_attribute = IS.InfrastructureSystemsGeo()
+    geo_supplemental_attribute = IS.GeographicInfo()
     component = IS.TestComponent("component1", 5)
     IS.add_supplemental_attribute!(container, component, geo_supplemental_attribute)
     @test length(container.data) == 1
-    @test length(container.data[IS.InfrastructureSystemsGeo]) == 1
+    @test length(container.data[IS.GeographicInfo]) == 1
     @test IS.get_num_supplemental_attributes(container) == 1
     @test_throws ArgumentError IS.add_supplemental_attribute!(
         container,
@@ -13,7 +13,7 @@
     )
 
     container = IS.SupplementalAttributes(IS.InMemoryTimeSeriesStorage())
-    geo_supplemental_attribute = IS.InfrastructureSystemsGeo()
+    geo_supplemental_attribute = IS.GeographicInfo()
     @test_throws ArgumentError IS._add_supplemental_attribute!(
         container,
         geo_supplemental_attribute,
@@ -22,7 +22,7 @@ end
 
 @testset "Test clear_supplemental_attributes" begin
     container = IS.SupplementalAttributes(IS.InMemoryTimeSeriesStorage())
-    geo_supplemental_attribute = IS.InfrastructureSystemsGeo()
+    geo_supplemental_attribute = IS.GeographicInfo()
     component = IS.TestComponent("component1", 5)
     IS.add_supplemental_attribute!(container, component, geo_supplemental_attribute)
     @test IS.get_num_supplemental_attributes(container) == 1
@@ -31,13 +31,13 @@ end
     @test isempty(IS.get_components_uuids(geo_supplemental_attribute))
     IS.clear_supplemental_attributes!(container)
     supplemental_attributes =
-        IS.get_supplemental_attributes(IS.InfrastructureSystemsGeo, container)
+        IS.get_supplemental_attributes(IS.GeographicInfo, container)
     @test length(supplemental_attributes) == 0
 end
 
 @testset "Test remove_supplemental_attribute" begin
     container = IS.SupplementalAttributes(IS.InMemoryTimeSeriesStorage())
-    geo_supplemental_attribute = IS.InfrastructureSystemsGeo()
+    geo_supplemental_attribute = IS.GeographicInfo()
     component = IS.TestComponent("component1", 5)
     IS.add_supplemental_attribute!(container, component, geo_supplemental_attribute)
     @test IS.get_num_supplemental_attributes(container) == 1
@@ -49,7 +49,7 @@ end
 
 @testset "Test iterate_SupplementalAttributes" begin
     container = IS.SupplementalAttributes(IS.InMemoryTimeSeriesStorage())
-    geo_supplemental_attribute = IS.InfrastructureSystemsGeo()
+    geo_supplemental_attribute = IS.GeographicInfo()
     component = IS.TestComponent("component1", 5)
     IS.add_supplemental_attribute!(container, component, geo_supplemental_attribute)
 
@@ -62,7 +62,7 @@ end
 
 @testset "Summarize SupplementalAttributes" begin
     container = IS.SupplementalAttributes(IS.InMemoryTimeSeriesStorage())
-    geo_supplemental_attribute = IS.InfrastructureSystemsGeo()
+    geo_supplemental_attribute = IS.GeographicInfo()
     component = IS.TestComponent("component1", 5)
     IS.add_supplemental_attribute!(container, component, geo_supplemental_attribute)
     summary(devnull, container)
@@ -70,7 +70,7 @@ end
 
 @testset "Test supplemental_attributes serialization" begin
     container = IS.SupplementalAttributes(IS.InMemoryTimeSeriesStorage())
-    geo_supplemental_attribute = IS.InfrastructureSystemsGeo()
+    geo_supplemental_attribute = IS.GeographicInfo()
     component = IS.TestComponent("component1", 5)
     IS.add_supplemental_attribute!(container, component, geo_supplemental_attribute)
     data = IS.serialize(container)
@@ -90,7 +90,7 @@ end
         name = "component_$(i)"
         component = IS.TestComponent(name, 5)
         IS.add_component!(data, component)
-        geo_supplemental_attribute = IS.InfrastructureSystemsGeo()
+        geo_supplemental_attribute = IS.GeographicInfo()
         IS.add_supplemental_attribute!(data, component, geo_supplemental_attribute)
         IS.add_time_series!(data, geo_supplemental_attribute, ts)
     end
