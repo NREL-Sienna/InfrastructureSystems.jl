@@ -54,7 +54,7 @@ Base type for auxillary structs. These should not be stored in a system.
 abstract type DeviceParameter <: InfrastructureSystemsType end
 
 """
-Base type for structs that store suplemental attributess
+Base type for structs that store supplemental attributes
 
 Required interface functions for subtypes:
 
