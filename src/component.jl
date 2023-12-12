@@ -355,8 +355,25 @@ function remove_supplemental_attribute!(
             ),
         )
     end
+    detach_component!(attribute, component)
+    detach_supplemental_attribute!(component, attribute)
+    return
+end
+
+function detach_component!(attribute::InfrastructureSystemsSupplementalAttribute,
+    component::InfrastructureSystemsComponent)
     delete!(get_components_uuids(attribute), get_uuid(component))
-    delete!(container[T], info)
+    return
+end
+
+function detach_supplemental_attribute!(component::InfrastructureSystemsComponent,
+    attribute::T,
+) where {T <: InfrastructureSystemsSupplementalAttribute}
+    container = get_supplemental_attributes_container(component)
+    if !haskey(container, T)
+        throw(ArgumentError("Attribute of type $T is not stored in component $(summary(component))"))
+    end
+    delete!(container[T], attribute)
     if isempty(container[T])
         pop!(container, T)
     end
