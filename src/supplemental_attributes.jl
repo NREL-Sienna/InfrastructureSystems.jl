@@ -20,8 +20,13 @@ function add_supplemental_attribute!(
     supplemental_attribute::InfrastructureSystemsSupplementalAttribute;
     kwargs...,
 )
-    attach_supplemental_attribute!(component, supplemental_attribute)
-    _add_supplemental_attribute!(supplemental_attributes, supplemental_attribute; kwargs...)
+    try
+        attach_supplemental_attribute!(component, supplemental_attribute)
+        _add_supplemental_attribute!(supplemental_attributes, supplemental_attribute; kwargs...)
+    catch e
+        remove_supplemental_attribute!(component, supplemental_attribute)
+        rethrow(e)
+    end
     return
 end
 
