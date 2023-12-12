@@ -30,8 +30,7 @@ end
     IS.clear_supplemental_attributes!(component)
     @test isempty(IS.get_components_uuids(geo_supplemental_attribute))
     IS.clear_supplemental_attributes!(container)
-    supplemental_attributes =
-        IS.get_supplemental_attributes(IS.GeographicInfo, container)
+    supplemental_attributes = IS.get_supplemental_attributes(IS.GeographicInfo, container)
     @test length(supplemental_attributes) == 0
 end
 

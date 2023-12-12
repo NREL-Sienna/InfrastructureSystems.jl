@@ -19,11 +19,7 @@ function GeographicInfo(;
     geo_json::Dict{String, Any}=Dict{String, Any}(),
     components_uuids::Set{UUIDs.UUID}=Set{UUIDs.UUID}(),
 )
-    return GeographicInfo(
-        geo_json,
-        components_uuid,
-        InfrastructureSystemsInternal(),
-    )
+    return GeographicInfo(geo_json, components_uuid, InfrastructureSystemsInternal())
 end
 
 get_geo_json(geo::GeographicInfo) = geo.geo_json
