@@ -302,17 +302,7 @@ function attach_supplemental_attribute!(
     component::InfrastructureSystemsComponent,
     attribute::T,
 ) where {T <: InfrastructureSystemsSupplementalAttribute}
-    component_uuid = get_uuid(component)
-
-    if component_uuid ∈ get_components_uuids(attribute)
-        throw(
-            ArgumentError(
-                "SupplementalAttribute type $T with UUID $(get_uuid(info)) already attached to component $(summary(component))",
-            ),
-        )
-    end
-
-    push!(get_components_uuids(attribute), component_uuid)
+    attach_component!(attribute, component)
     attribute_container = get_supplemental_attributes_container(component)
 
     if !haskey(attribute_container, T)
@@ -357,14 +347,6 @@ function remove_supplemental_attribute!(
     end
     detach_component!(attribute, component)
     detach_supplemental_attribute!(component, attribute)
-    return
-end
-
-function detach_component!(
-    attribute::InfrastructureSystemsSupplementalAttribute,
-    component::InfrastructureSystemsComponent,
-)
-    delete!(get_components_uuids(attribute), get_uuid(component))
     return
 end
 
