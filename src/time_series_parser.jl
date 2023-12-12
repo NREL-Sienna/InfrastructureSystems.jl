@@ -288,7 +288,7 @@ function make_time_array(raw::RawTimeSeries, component_name, resolution)
 end
 
 struct TimeSeriesParsingCache
-    time_series_infos::Vector{TimeSeriesParsedInfo}
+    time_series_attributes::Vector{TimeSeriesParsedInfo}
     data_files::Dict{String, RawTimeSeries}
 end
 

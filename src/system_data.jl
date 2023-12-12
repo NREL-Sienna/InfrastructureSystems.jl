@@ -22,7 +22,7 @@ Container for system components and time series data
 mutable struct SystemData <: InfrastructureSystemsType
     components::Components
     masked_components::Components
-    infos::SupplementalAttributes
+    attributes::SupplementalAttributes
     time_series_params::TimeSeriesParameters
     time_series_storage::TimeSeriesStorage
     validation_descriptors::Vector
@@ -64,12 +64,12 @@ function SystemData(;
         compression=compression,
     )
     components = Components(ts_storage, validation_descriptors)
-    infos = SupplementalAttributes(ts_storage)
+    attributes = SupplementalAttributes(ts_storage)
     masked_components = Components(ts_storage, validation_descriptors)
     return SystemData(
         components,
         masked_components,
-        infos,
+        attributes,
         TimeSeriesParameters(),
         ts_storage,
         validation_descriptors,
@@ -819,25 +819,25 @@ _get_system_basename(system_file) = splitext(basename(system_file))[1]
 _get_secondary_basename(system_basename, name) = system_basename * "_" * name
 
 add_supplemental_attribute!(data::SystemData, component, info; kwargs...) =
-    add_supplemental_attribute!(data.infos, component, info; kwargs...)
+    add_supplemental_attribute!(data.attributes, component, info; kwargs...)
 
 function get_supplemental_attributes(
     filter_func::Function,
     ::Type{T},
     data::SystemData,
 ) where {T <: InfrastructureSystemsSupplementalAttribute}
-    return get_supplemental_attributes(T, data.infos, filter_func)
+    return get_supplemental_attributes(T, data.attributes, filter_func)
 end
 
 function get_supplemental_attributes(
     ::Type{T},
     data::SystemData,
 ) where {T <: InfrastructureSystemsSupplementalAttribute}
-    return get_supplemental_attributes(T, data.infos)
+    return get_supplemental_attributes(T, data.attributes)
 end
 
-function iterate_infos(data::SystemData)
-    return iterate_infos(data.infos)
+function iterate_attributes(data::SystemData)
+    return iterate_attributes(data.attributes)
 end
 
 function remove_supplemental_attribute!(
@@ -851,20 +851,20 @@ function remove_supplemental_attribute!(
         delete!(get_components_uuid(info), get_uuid(component))
     end
 
-    return remove_supplemental_attribute!(data.infos, info)
+    return remove_supplemental_attribute!(data.attributes, info)
 end
 
-function remove_infos!(
+function remove_attributes!(
     ::Type{T},
     data::SystemData,
 ) where {T <: InfrastructureSystemsSupplementalAttribute}
-    infos = get_supplemental_attributes(T, data.infos)
-    for info in infos
+    attributes = get_supplemental_attributes(T, data.attributes)
+    for info in attributes
         for c_uuid in get_components_uuid(info)
             comp = get_component(data, c_uuid)
             delete!(get_supplemental_attributes_container(comp), info)
         end
         empty!(get_components_uuid(info))
     end
-    return remove_infos!(T, data.infos)
+    return remove_attributes!(T, data.attributes)
 end

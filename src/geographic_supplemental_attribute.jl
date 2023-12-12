@@ -1,5 +1,5 @@
 """
-Base type for structs that store infos
+Base type for structs that store attributes
 
 Required interface functions for subtypes:
 

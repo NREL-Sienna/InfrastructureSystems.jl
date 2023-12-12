@@ -300,11 +300,11 @@ Attach an attribute to a component.
 """
 function attach_supplemental_attribute!(
     component::InfrastructureSystemsComponent,
-    info::T,
+    attribute::T,
 ) where {T <: InfrastructureSystemsSupplementalAttribute}
     component_uuid = get_uuid(component)
 
-    if component_uuid ∈ info.components_uuid
+    if component_uuid ∈ attribute.components_uuid
         throw(
             ArgumentError(
                 "SupplementalAttribute type $T with UUID $(get_uuid(info)) already attached to component $(get_name(component))",
@@ -312,19 +312,19 @@ function attach_supplemental_attribute!(
         )
     end
 
-    push!(info.components_uuid, component_uuid)
-    infos_container = get_supplemental_attributes_container(component)
+    push!(attribute.components_uuid, component_uuid)
+    attribute_container = get_supplemental_attributes_container(component)
 
-    if !haskey(infos_container, T)
-        infos_container[T] = Set{T}()
+    if !haskey(attribute_container, T)
+        attribute_container[T] = Set{T}()
     end
-    push!(infos_container[T], info)
-    @debug "SupplementalAttribute type $T with UUID $(get_uuid(info)) stored in component $(get_name(component))"
+    push!(attribute_container[T], attribute)
+    @debug "SupplementalAttribute type $T with UUID $(get_uuid(attribute)) stored in component $(get_name(component))"
     return
 end
 
 """
-Return true if the component has infos.
+Return true if the component has attributes.
 """
 function has_supplemental_attributes(component::InfrastructureSystemsComponent)
     container = get_supplemental_attributes_container(component)
@@ -333,27 +333,27 @@ end
 
 function clear_supplemental_attributes!(component::InfrastructureSystemsComponent)
     container = get_supplemental_attributes_container(component)
-    for info_set in values(container)
-        for i in info_set
+    for attribute_set in values(container)
+        for i in attribute_set
             delete!(get_components_uuid(i), get_uuid(component))
         end
     end
     empty!(container)
-    @debug "Cleared infos in $(get_name(component))."
+    @debug "Cleared attributes in $(get_name(component))."
     return
 end
 
 function remove_supplemental_attribute!(
     component::InfrastructureSystemsComponent,
-    info::T,
+    attribute::T,
 ) where {T <: InfrastructureSystemsSupplementalAttribute}
     container = get_supplemental_attributes_container(component)
     if !haskey(container, T)
         throw(
-            ArgumentError("info type $T is not stored in component $(get_name(component))"),
+            ArgumentError("supplemental attribute type $T is not stored in component $(get_name(component))"),
         )
     end
-    delete!(get_components_uuid(info), get_uuid(component))
+    delete!(get_components_uuid(attribute), get_uuid(component))
     delete!(container[T], info)
     if isempty(container[T])
         pop!(container, T)

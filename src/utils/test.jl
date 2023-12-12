@@ -3,7 +3,7 @@ mutable struct TestComponent <: InfrastructureSystemsComponent
     name::String
     val::Int
     time_series_container::TimeSeriesContainer
-    infos_container::SupplementalAttributesContainer
+    attributes_container::SupplementalAttributesContainer
     internal::InfrastructureSystemsInternal
 end
 
@@ -11,7 +11,7 @@ mutable struct AdditionalTestComponent <: InfrastructureSystemsComponent
     name::String
     val::Int
     time_series_container::TimeSeriesContainer
-    infos_container::SupplementalAttributesContainer
+    attributes_container::SupplementalAttributesContainer
     internal::InfrastructureSystemsInternal
 end
 
@@ -38,9 +38,9 @@ end
 get_internal(component::TestComponent) = component.internal
 get_internal(component::AdditionalTestComponent) = component.internal
 get_val(component::TestComponent) = component.val
-get_supplemental_attributes_container(component::TestComponent) = component.infos_container
+get_supplemental_attributes_container(component::TestComponent) = component.attributes_container
 get_supplemental_attributes_container(component::AdditionalTestComponent) =
-    component.infos_container
+    component.attributes_container
 
 function get_time_series_container(component::TestComponent)
     return component.time_series_container

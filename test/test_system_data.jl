@@ -248,7 +248,7 @@ end
     @test ts_counts[1]["count"] == 5
 end
 
-@testset "Test component and infos" begin
+@testset "Test component and attributes" begin
     data = IS.SystemData()
     initial_time = Dates.DateTime("2020-09-01")
     resolution = Dates.Hour(1)
@@ -271,28 +271,28 @@ end
     @test length(IS.get_supplemental_attributes(IS.InfrastructureSystemsGeo, data)) == 5
 
     i = 0
-    for component in IS.iterate_infos(data)
+    for component in IS.iterate_attributes(data)
         i += 1
     end
     @test i == 5
 
-    infos = IS.get_supplemental_attributes(IS.InfrastructureSystemsGeo, data)
+    attributes = IS.get_supplemental_attributes(IS.InfrastructureSystemsGeo, data)
     io = IOBuffer()
-    show(io, "text/plain", infos)
+    show(io, "text/plain", attributes)
     output = String(take!(io))
     expected = "InfrastructureSystemsGeo: $i"
     @test occursin(expected, output)
 
-    info_removed = collect(infos)[1]
-    IS.remove_supplemental_attribute!(data, info_removed)
+    attribute_removed = collect(attributes)[1]
+    IS.remove_supplemental_attribute!(data, attribute_removed)
 
-    infos = IS.get_supplemental_attributes(IS.InfrastructureSystemsGeo, data)
-    @test length(infos) == 4
-    @test IS.get_uuid(info_removed) ∉ IS.get_uuid.(infos)
+    attributes = IS.get_supplemental_attributes(IS.InfrastructureSystemsGeo, data)
+    @test length(attributes) == 4
+    @test IS.get_uuid(attribute_removed) ∉ IS.get_uuid.(attributes)
 
-    IS.remove_infos!(IS.InfrastructureSystemsGeo, data)
-    infos = IS.get_supplemental_attributes(IS.InfrastructureSystemsGeo, data)
-    @test length(infos) == 0
+    IS.remove_attributes!(IS.InfrastructureSystemsGeo, data)
+    attributes = IS.get_supplemental_attributes(IS.InfrastructureSystemsGeo, data)
+    @test length(attributes) == 0
 
-    @test_throws ArgumentError IS.remove_infos!(IS.InfrastructureSystemsGeo, data)
+    @test_throws ArgumentError IS.remove_attributes!(IS.InfrastructureSystemsGeo, data)
 end
