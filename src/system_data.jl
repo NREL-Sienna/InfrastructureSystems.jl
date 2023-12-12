@@ -171,7 +171,7 @@ function add_time_series!(
 end
 
 """
-Add time series data to a component.
+Add time series data to an attribute.
 
 # Arguments
 
