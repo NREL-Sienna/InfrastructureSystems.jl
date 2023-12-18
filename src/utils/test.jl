@@ -97,3 +97,23 @@ function runtests(args...)
         empty!(ARGS)
     end
 end
+
+struct TestSupplemental <: InfrastructureSystemsSupplementalAttribute
+    value::Float64
+    component_uuids::Set{UUIDs.UUID}
+    internal::InfrastructureSystemsInternal
+    time_series_container::TimeSeriesContainer
+end
+
+function TestSupplemental(;
+    value::Float64 = 0.0,
+    component_uuids::Set{UUIDs.UUID}=Set{UUIDs.UUID}(),
+)
+    return TestSupplemental(value, component_uuids, InfrastructureSystemsInternal(), TimeSeriesContainer())
+end
+
+get_value(attr::TestSupplemental) = attr.attr_json
+get_internal(attr::TestSupplemental) = attr.internal
+get_uuid(attr::TestSupplemental) = get_uuid(get_internal(attr))
+get_component_uuids(attr::TestSupplemental) = attr.component_uuids
+get_time_series_container(attr::TestSupplemental) = attr.time_series_container
