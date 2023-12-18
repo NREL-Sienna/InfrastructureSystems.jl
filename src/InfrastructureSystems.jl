@@ -64,7 +64,7 @@ Required interface functions for subtypes:
 Optional interface functions:
 
   - get_time_series_container()
-  - get_components_uuids()
+  - get_component_uuids()
   - get_uuid()
 
 Subtypes may contain time series. Which requires
@@ -83,7 +83,7 @@ function get_time_series_container(value::InfrastructureSystemsComponent)
     return nothing
 end
 
-set_time_series_container!(value::InfrastructureSystemsComponent) = nothing
+set_time_series_container!(value::InfrastructureSystemsComponent, _) = nothing
 
 get_name(value::InfrastructureSystemsComponent) = value.name
 

@@ -4,7 +4,7 @@ function attach_component!(
 ) where {T <: InfrastructureSystemsSupplementalAttribute}
     component_uuid = get_uuid(component)
 
-    if component_uuid ∈ get_components_uuids(attribute)
+    if component_uuid ∈ get_component_uuids(attribute)
         throw(
             ArgumentError(
                 "SupplementalAttribute type $T with UUID $(get_uuid(attribute)) already attached to component $(summary(component))",
@@ -12,7 +12,7 @@ function attach_component!(
         )
     end
 
-    push!(get_components_uuids(attribute), component_uuid)
+    push!(get_component_uuids(attribute), component_uuid)
     return
 end
 
@@ -20,7 +20,7 @@ function detach_component!(
     attribute::InfrastructureSystemsSupplementalAttribute,
     component::InfrastructureSystemsComponent,
 )
-    delete!(get_components_uuids(attribute), get_uuid(component))
+    delete!(get_component_uuids(attribute), get_uuid(component))
     return
 end
 
@@ -64,7 +64,7 @@ This function must be called when an attribute is removed from a system.
 function prepare_for_removal!(
     attribute::T,
 ) where {T <: InfrastructureSystemsSupplementalAttribute}
-    if !isempty(get_components_uuids(attribute))
+    if !isempty(get_component_uuids(attribute))
         throw(
             ArgumentError(
                 "attribute type $T with uuid $(get_uuid(attribute)) still attached to a component",

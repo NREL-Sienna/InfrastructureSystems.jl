@@ -44,7 +44,7 @@ function _add_supplemental_attribute!(
     end
 
     supplemental_attribute_uuid = get_uuid(supplemental_attribute)
-    if isempty(get_components_uuids(supplemental_attribute))
+    if isempty(get_component_uuids(supplemental_attribute))
         throw(
             ArgumentError(
                 "SupplementalAttribute type $T with UUID $supplemental_attribute_uuid is not attached to any component",
@@ -55,7 +55,8 @@ function _add_supplemental_attribute!(
     if !haskey(supplemental_attributes.data, T)
         supplemental_attributes.data[T] = Dict{UUIDs.UUID, T}()
     elseif haskey(supplemental_attributes.data[T], supplemental_attribute_uuid)
-        @debug "SupplementalAttribute type $T with UUID $supplemental_attribute_uuid already stored"
+        @debug "SupplementalAttribute type $T with UUID $supplemental_attribute_uuid already stored" _group =
+            LOG_GROUP_SYSTEM
         return
     end
 
@@ -136,10 +137,10 @@ function remove_supplemental_attribute!(
     supplemental_attributes::SupplementalAttributes,
     supplemental_attribute::T,
 ) where {T <: InfrastructureSystemsSupplementalAttribute}
-    if !isempty(get_components_uuids(supplemental_attribute))
+    if !isempty(get_component_uuids(supplemental_attribute))
         throw(
             ArgumentError(
-                "SupplementalAttribute type $T with uuid $(get_uuid(supplemental_attribute)) still attached to devices $(get_components_uuids(supplemental_attribute))",
+                "SupplementalAttribute type $T with uuid $(get_uuid(supplemental_attribute)) still attached to devices $(get_component_uuids(supplemental_attribute))",
             ),
         )
     end
@@ -170,6 +171,7 @@ function remove_supplemental_attributes!(
     return values(_supplemental_attributes)
 end
 
+# TODO: This function could be merged with the getter for components if no additional functionality is needed
 """
 Returns an iterator of supplemental_attributes. T can be concrete or abstract.
 Call collect on the result if an array is desired.

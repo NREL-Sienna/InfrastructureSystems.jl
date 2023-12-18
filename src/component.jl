@@ -309,7 +309,8 @@ function attach_supplemental_attribute!(
         attribute_container[T] = Set{T}()
     end
     push!(attribute_container[T], attribute)
-    @debug "SupplementalAttribute type $T with UUID $(get_uuid(attribute)) stored in component $(get_name(component))"
+    @debug "SupplementalAttribute type $T with UUID $(get_uuid(attribute)) stored in component $(summary(component))" _group =
+        LOG_GROUP_SYSTEM
     return
 end
 
@@ -325,11 +326,11 @@ function clear_supplemental_attributes!(component::InfrastructureSystemsComponen
     container = get_supplemental_attributes_container(component)
     for attribute_set in values(container)
         for i in attribute_set
-            delete!(get_components_uuids(i), get_uuid(component))
+            delete!(get_component_uuids(i), get_uuid(component))
         end
     end
     empty!(container)
-    @debug "Cleared attributes in $(get_name(component))."
+    @debug "Cleared attributes in $(summary(component))."
     return
 end
 
@@ -341,7 +342,7 @@ function remove_supplemental_attribute!(
     if !haskey(container, T)
         throw(
             ArgumentError(
-                "supplemental attribute type $T is not stored in component $(get_name(component))",
+                "SupplementalAttribute type $T is not stored in component $(summary(component))",
             ),
         )
     end
@@ -358,7 +359,7 @@ function detach_supplemental_attribute!(
     if !haskey(container, T)
         throw(
             ArgumentError(
-                "Attribute of type $T is not stored in component $(summary(component))",
+                "SupplementalAttribute of type $T is not stored in component $(summary(component))",
             ),
         )
     end
