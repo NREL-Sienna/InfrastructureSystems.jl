@@ -28,10 +28,10 @@ Call `collect` on the result to get an array.
 """
 function get_time_series_multiple(
     component::InfrastructureSystemsComponent,
-    filter_func=nothing;
-    type=nothing,
-    start_time=nothing,
-    name=nothing,
+    filter_func = nothing;
+    type = nothing,
+    start_time = nothing,
+    name = nothing,
 )
     container = get_time_series_container(component)
     storage = _get_time_series_storage(component)
@@ -78,10 +78,10 @@ end
 
 function get_time_series_with_metadata_multiple(
     component::InfrastructureSystemsComponent,
-    filter_func=nothing;
-    type=nothing,
-    start_time=nothing,
-    name=nothing,
+    filter_func = nothing;
+    type = nothing,
+    start_time = nothing,
+    name = nothing,
 )
     container = get_time_series_container(component)
     storage = _get_time_series_storage(component)
@@ -136,17 +136,17 @@ function transform_single_time_series_internal!(
                 params.forecast_params.interval,
             )
             check_params_compatibility(params, _params)
-            new_metadata = DeterministicMetadata(
-                name=get_name(ts_metadata),
-                resolution=params.resolution,
-                initial_timestamp=params.forecast_params.initial_timestamp,
-                interval=params.forecast_params.interval,
-                count=params.forecast_params.count,
-                time_series_uuid=get_time_series_uuid(ts_metadata),
-                horizon=params.forecast_params.horizon,
-                time_series_type=DeterministicSingleTimeSeries,
-                scaling_factor_multiplier=get_scaling_factor_multiplier(ts_metadata),
-                internal=get_internal(ts_metadata),
+            new_metadata = DeterministicMetadata(;
+                name = get_name(ts_metadata),
+                resolution = params.resolution,
+                initial_timestamp = params.forecast_params.initial_timestamp,
+                interval = params.forecast_params.interval,
+                count = params.forecast_params.count,
+                time_series_uuid = get_time_series_uuid(ts_metadata),
+                horizon = params.forecast_params.horizon,
+                time_series_type = DeterministicSingleTimeSeries,
+                scaling_factor_multiplier = get_scaling_factor_multiplier(ts_metadata),
+                internal = get_internal(ts_metadata),
             )
             push!(metadata_to_add, new_metadata)
         end
@@ -252,9 +252,9 @@ end
 function get_time_series_by_key(
     key::TimeSeriesKey,
     component::InfrastructureSystemsComponent;
-    start_time::Union{Nothing, Dates.DateTime}=nothing,
-    len::Union{Nothing, Int}=nothing,
-    count::Union{Nothing, Int}=nothing,
+    start_time::Union{Nothing, Dates.DateTime} = nothing,
+    len::Union{Nothing, Int} = nothing,
+    count::Union{Nothing, Int} = nothing,
 )
     container = get_time_series_container(component)
     ts_metadata = container.data[key]
@@ -262,10 +262,10 @@ function get_time_series_by_key(
     return get_time_series(
         ts_type,
         component,
-        key.name,
-        start_time=start_time,
-        len=len,
-        count=count,
+        key.name;
+        start_time = start_time,
+        len = len,
+        count = count,
     )
 end
 
@@ -302,7 +302,6 @@ function attach_supplemental_attribute!(
     component::InfrastructureSystemsComponent,
     attribute::T,
 ) where {T <: InfrastructureSystemsSupplementalAttribute}
-    attach_component!(attribute, component)
     attribute_container = get_supplemental_attributes_container(component)
 
     if !haskey(attribute_container, T)
@@ -326,28 +325,11 @@ function clear_supplemental_attributes!(component::InfrastructureSystemsComponen
     container = get_supplemental_attributes_container(component)
     for attribute_set in values(container)
         for i in attribute_set
-            delete!(get_component_uuids(i), get_uuid(component))
+            detach_supplemental_attribute!(component, i)
         end
     end
     empty!(container)
     @debug "Cleared attributes in $(summary(component))."
-    return
-end
-
-function remove_supplemental_attribute!(
-    component::InfrastructureSystemsComponent,
-    attribute::T,
-) where {T <: InfrastructureSystemsSupplementalAttribute}
-    container = get_supplemental_attributes_container(component)
-    if !haskey(container, T)
-        throw(
-            ArgumentError(
-                "SupplementalAttribute type $T is not stored in component $(summary(component))",
-            ),
-        )
-    end
-    detach_component!(attribute, component)
-    detach_supplemental_attribute!(component, attribute)
     return
 end
 

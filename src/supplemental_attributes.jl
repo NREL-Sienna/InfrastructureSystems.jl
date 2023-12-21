@@ -21,14 +21,16 @@ function add_supplemental_attribute!(
     kwargs...,
 )
     try
-        attach_supplemental_attribute!(component, supplemental_attribute)
+        attach_component!(attribute, component)
+        attach_supplemental_attribute!(component, attribute)
         _add_supplemental_attribute!(
             supplemental_attributes,
             supplemental_attribute;
             kwargs...,
         )
     catch e
-        remove_supplemental_attribute!(component, supplemental_attribute)
+        detach_component!(attribute, component)
+        detach_supplemental_attribute!(component, attribute)
         rethrow(e)
     end
     return
@@ -37,7 +39,7 @@ end
 function _add_supplemental_attribute!(
     supplemental_attributes::SupplementalAttributes,
     supplemental_attribute::T;
-    allow_existing_time_series=false,
+    allow_existing_time_series = false,
 ) where {T <: InfrastructureSystemsSupplementalAttribute}
     if !isconcretetype(T)
         throw(ArgumentError("add_supplemental_attribute! only accepts concrete types"))
@@ -187,7 +189,7 @@ Call collect on the result if an array is desired.
 function get_supplemental_attributes(
     ::Type{T},
     supplemental_attributes::SupplementalAttributes,
-    filter_func::Union{Nothing, Function}=nothing,
+    filter_func::Union{Nothing, Function} = nothing,
 ) where {T <: InfrastructureSystemsSupplementalAttribute}
     if isconcretetype(T)
         _supplemental_attributes = get(supplemental_attributes.data, T, nothing)
@@ -212,7 +214,8 @@ function get_supplemental_attributes(
         else
             _filter_func = x -> filter_func(x.second)
             _supplemental_attributes = [
-                values(filter(_filter_func, supplemental_attributes.data[x])) for x in types
+                values(filter(_filter_func, supplemental_attributes.data[x])) for
+                x in types
             ]
         end
         iter = FlattenIteratorWrapper(T, _supplemental_attributes)
