@@ -1,13 +1,5 @@
 """
-Base type for structs that store attributes
-
-Required interface functions for subtypes:
-
-  - get_internal()
-  - get_component_uuids()
-  - get_time_series_container()
-
-Subtypes may contain time series, if no time series container is implemented return nothing
+Attribute to store Geographic Information about the system components
 """
 struct GeographicInfo <: InfrastructureSystemsSupplementalAttribute
     geo_json::Dict{String, Any}
@@ -16,8 +8,8 @@ struct GeographicInfo <: InfrastructureSystemsSupplementalAttribute
 end
 
 function GeographicInfo(;
-    geo_json::Dict{String, Any}=Dict{String, Any}(),
-    component_uuids::Set{UUIDs.UUID}=Set{UUIDs.UUID}(),
+    geo_json::Dict{String, Any} = Dict{String, Any}(),
+    component_uuids::Set{UUIDs.UUID} = Set{UUIDs.UUID}(),
 )
     return GeographicInfo(geo_json, component_uuids, InfrastructureSystemsInternal())
 end
@@ -27,5 +19,3 @@ get_internal(geo::GeographicInfo) = geo.internal
 get_uuid(geo::GeographicInfo) = get_uuid(get_internal(geo))
 get_time_series_container(::GeographicInfo) = nothing
 get_component_uuids(geo::GeographicInfo) = geo.component_uuids
-
-set_time_series_container!(geo::GeographicInfo, _) = nothing
