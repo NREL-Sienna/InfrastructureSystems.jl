@@ -864,12 +864,13 @@ function remove_supplemental_attributes!(
     data::SystemData,
 ) where {T <: InfrastructureSystemsSupplementalAttribute}
     attributes = get_supplemental_attributes(T, data.attributes)
-    for info in attributes
-        for c_uuid in get_component_uuids(info)
-            comp = get_component(data, c_uuid)
-            delete!(get_supplemental_attributes_container(comp), info)
+    for attribute in attributes
+        for c_uuid in get_component_uuids(attribute)
+            component = get_component(data, c_uuid)
+            detach_component!(attribute, component)
+            detach_supplemental_attribute!(component, attribute)
         end
         empty!(get_component_uuids(info))
     end
-    return remove_supplemental_attributes!(T, data.attributes)
+    return
 end
