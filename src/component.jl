@@ -324,9 +324,9 @@ end
 function clear_supplemental_attributes!(component::InfrastructureSystemsComponent)
     container = get_supplemental_attributes_container(component)
     for attribute_set in values(container)
-        for i in attribute_set
-            detach_component!(i, component)
-            detach_supplemental_attribute!(component, i)
+        for attribute in attribute_set
+            detach_component!(attribute, component)
+            detach_supplemental_attribute!(component, attribute)
         end
     end
     empty!(container)

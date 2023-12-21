@@ -41,7 +41,8 @@ end
     IS.add_supplemental_attribute!(container, component, geo_supplemental_attribute)
     @test IS.get_num_supplemental_attributes(container) == 1
 
-    IS.remove_supplemental_attribute!(component, geo_supplemental_attribute)
+    IS.detach_component!(geo_supplemental_attribute, component)
+    IS.detach_supplemental_attribute!(component, geo_supplemental_attribute)
     @test isempty(IS.get_supplemental_attributes_container(component))
     @test isempty(IS.get_component_uuids(geo_supplemental_attribute))
 end
@@ -82,8 +83,8 @@ end
     data = IS.SystemData()
     initial_time = Dates.DateTime("2020-09-01")
     resolution = Dates.Hour(1)
-    ta = TimeSeries.TimeArray(range(initial_time; length=24, step=resolution), ones(24))
-    ts = IS.SingleTimeSeries(data=ta, name="test")
+    ta = TimeSeries.TimeArray(range(initial_time; length = 24, step = resolution), ones(24))
+    ts = IS.SingleTimeSeries(; data = ta, name = "test")
 
     for i in 1:3
         name = "component_$(i)"
@@ -99,6 +100,4 @@ end
         ts_ = IS.get_time_series(IS.SingleTimeSeries, attribute, "test")
         @test IS.get_initial_timestamp(ts_) == initial_time
     end
-
-
 end

@@ -21,16 +21,16 @@ function add_supplemental_attribute!(
     kwargs...,
 )
     try
-        attach_component!(attribute, component)
-        attach_supplemental_attribute!(component, attribute)
+        attach_component!(supplemental_attribute, component)
+        attach_supplemental_attribute!(component, supplemental_attribute)
         _add_supplemental_attribute!(
             supplemental_attributes,
             supplemental_attribute;
             kwargs...,
         )
     catch e
-        detach_component!(attribute, component)
-        detach_supplemental_attribute!(component, attribute)
+        detach_component!(supplemental_attribute, component)
+        detach_supplemental_attribute!(component, supplemental_attribute)
         rethrow(e)
     end
     return
@@ -148,6 +148,9 @@ function remove_supplemental_attribute!(
     end
 
     pop!(supplemental_attributes.data[T], get_uuid(supplemental_attribute))
+    if isempty(supplemental_attributes.data[T])
+        pop!(supplemental_attributes.data, T)
+    end
     return
 end
 
