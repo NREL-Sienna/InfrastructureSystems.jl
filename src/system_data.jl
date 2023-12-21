@@ -847,16 +847,28 @@ end
 
 function remove_supplemental_attribute!(
     data::SystemData,
-    attribute::T,
-) where {T <: InfrastructureSystemsSupplementalAttribute}
-    current_components_uuid = collect(get_component_uuids(info))
+    component::InfrastructureSystemsComponent,
+    attribute::InfrastructureSystemsSupplementalAttribute,
+)
+    detach_component!(attribute, component)
+    detach_supplemental_attribute!(component, attribute)
+    clear_time_series_storage!(attribute)
+    remove_supplemental_attribute!(data.attributes, attribute)
+    return
+end
+
+function remove_supplemental_attribute!(
+    data::SystemData,
+    attribute::InfrastructureSystemsSupplementalAttribute,
+)
+    current_components_uuid = collect(get_component_uuids(attribute))
     for c_uuid in current_components_uuid
         component = get_component(data, c_uuid)
         detach_component!(attribute, component)
         detach_supplemental_attribute!(component, attribute)
     end
-
-    return remove_supplemental_attribute!(data.attributes, info)
+    clear_time_series_storage!(attribute)
+    return remove_supplemental_attribute!(data.attributes, attribute)
 end
 
 function remove_supplemental_attributes!(
@@ -870,7 +882,8 @@ function remove_supplemental_attributes!(
             detach_component!(attribute, component)
             detach_supplemental_attribute!(component, attribute)
         end
-        empty!(get_component_uuids(info))
+        remove_supplemental_attribute!(data.attributes, attribute)
+        clear_time_series_storage!(attribute)
     end
     return
 end
