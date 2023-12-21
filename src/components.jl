@@ -9,7 +9,10 @@ end
 
 get_display_string(::Components) = "components"
 
-function Components(time_series_storage::TimeSeriesStorage, validation_descriptors=nothing)
+function Components(
+    time_series_storage::TimeSeriesStorage,
+    validation_descriptors = nothing,
+)
     if isnothing(validation_descriptors)
         validation_descriptors = Vector()
     end
@@ -20,8 +23,8 @@ end
 function _add_component!(
     components::Components,
     component::T;
-    skip_validation=false,
-    allow_existing_time_series=false,
+    skip_validation = false,
+    allow_existing_time_series = false,
 ) where {T <: InfrastructureSystemsComponent}
     component_name = get_name(component)
     if !isconcretetype(T)
@@ -130,13 +133,13 @@ Throws ArgumentError if the component is not stored.
 function remove_component!(
     components::Components,
     component::T;
-    remove_time_series=true,
+    remove_time_series = true,
 ) where {T <: InfrastructureSystemsComponent}
     return _remove_component!(
         T,
         components,
-        get_name(component),
-        remove_time_series=remove_time_series,
+        get_name(component);
+        remove_time_series = remove_time_series,
     )
 end
 
@@ -149,16 +152,16 @@ function remove_component!(
     ::Type{T},
     components::Components,
     name::AbstractString;
-    remove_time_series=true,
+    remove_time_series = true,
 ) where {T <: InfrastructureSystemsComponent}
-    return _remove_component!(T, components, name, remove_time_series=remove_time_series)
+    return _remove_component!(T, components, name; remove_time_series = remove_time_series)
 end
 
 function _remove_component!(
     ::Type{T},
     components::Components,
     name::AbstractString;
-    remove_time_series=true,
+    remove_time_series = true,
 ) where {T <: InfrastructureSystemsComponent}
     if !haskey(components.data, T)
         throw(ArgumentError("component $T is not stored"))
@@ -276,7 +279,7 @@ See also: [`iterate_components`](@ref)
 function get_components(
     ::Type{T},
     components::Components,
-    filter_func::Union{Nothing, Function}=nothing,
+    filter_func::Union{Nothing, Function} = nothing,
 ) where {T <: InfrastructureSystemsComponent}
     if isconcretetype(T)
         _components = get(components.data, T, nothing)
@@ -365,14 +368,14 @@ function set_name!(
     return
 end
 
-function compare_values(x::Components, y::Components; compare_uuids=false)
+function compare_values(x::Components, y::Components; compare_uuids = false)
     match = true
     for name in fieldnames(Components)
         # This gets validated in SystemData.
         name == :time_series_storage && continue
         val_x = getfield(x, name)
         val_y = getfield(y, name)
-        if !compare_values(val_x, val_y, compare_uuids=compare_uuids)
+        if !compare_values(val_x, val_y; compare_uuids = compare_uuids)
             @error "Components field = $name does not match" val_x val_y
             match = false
         end
