@@ -30,9 +30,9 @@ end
 function SingleTimeSeries(;
     name,
     data,
-    scaling_factor_multiplier=nothing,
-    normalization_factor=1.0,
-    internal=InfrastructureSystemsInternal(),
+    scaling_factor_multiplier = nothing,
+    normalization_factor = 1.0,
+    internal = InfrastructureSystemsInternal(),
 )
     data = handle_normalization_factor(data, normalization_factor)
     return SingleTimeSeries(
@@ -73,24 +73,24 @@ Construct SingleTimeSeries from a TimeArray or DataFrame.
 function SingleTimeSeries(
     name::AbstractString,
     data::Union{TimeSeries.TimeArray, DataFrames.DataFrame};
-    normalization_factor::NormalizationFactor=1.0,
-    scaling_factor_multiplier::Union{Nothing, Function}=nothing,
-    timestamp=:timestamp,
+    normalization_factor::NormalizationFactor = 1.0,
+    scaling_factor_multiplier::Union{Nothing, Function} = nothing,
+    timestamp = :timestamp,
 )
     if data isa DataFrames.DataFrame
-        ta = TimeSeries.TimeArray(data; timestamp=timestamp)
+        ta = TimeSeries.TimeArray(data; timestamp = timestamp)
     elseif data isa TimeSeries.TimeArray
         ta = data
     else
         error("fatal: $(typeof(data))")
     end
 
-    return SingleTimeSeries(
-        name=name,
-        data=ta,
-        scaling_factor_multiplier=scaling_factor_multiplier,
-        normalization_factor=normalization_factor,
-        internal=InfrastructureSystemsInternal(),
+    return SingleTimeSeries(;
+        name = name,
+        data = ta,
+        scaling_factor_multiplier = scaling_factor_multiplier,
+        normalization_factor = normalization_factor,
+        internal = InfrastructureSystemsInternal(),
     )
 end
 
@@ -115,17 +115,17 @@ function SingleTimeSeries(
     filename::AbstractString,
     component::InfrastructureSystemsComponent,
     resolution::Dates.Period;
-    normalization_factor::NormalizationFactor=1.0,
-    scaling_factor_multiplier::Union{Nothing, Function}=nothing,
+    normalization_factor::NormalizationFactor = 1.0,
+    scaling_factor_multiplier::Union{Nothing, Function} = nothing,
 )
     component_name = get_name(component)
     raw = read_time_series(SingleTimeSeries, filename, component_name)
     ta = make_time_array(raw, component_name, resolution)
-    return SingleTimeSeries(
-        name=name,
-        data=ta,
-        normalization_factor=normalization_factor,
-        scaling_factor_multiplier=scaling_factor_multiplier,
+    return SingleTimeSeries(;
+        name = name,
+        data = ta,
+        normalization_factor = normalization_factor,
+        scaling_factor_multiplier = scaling_factor_multiplier,
     )
 end
 
@@ -143,7 +143,7 @@ function SingleTimeSeries(
         initial_time:resolution:(initial_time + resolution * (time_steps - 1)),
         ones(time_steps),
     )
-    return SingleTimeSeries(; name=name, data=data)
+    return SingleTimeSeries(; name = name, data = data)
 end
 
 function SingleTimeSeries(time_series::Vector{SingleTimeSeries})
@@ -153,10 +153,10 @@ function SingleTimeSeries(time_series::Vector{SingleTimeSeries})
     data = collect(Iterators.flatten((TimeSeries.values(get_data(x)) for x in time_series)))
     ta = TimeSeries.TimeArray(timestamps, data)
 
-    time_series = SingleTimeSeries(
-        name=get_name(time_series[1]),
-        data=ta,
-        scaling_factor_multiplier=time_series[1].scaling_factor_multiplier,
+    time_series = SingleTimeSeries(;
+        name = get_name(time_series[1]),
+        data = ta,
+        scaling_factor_multiplier = time_series[1].scaling_factor_multiplier,
     )
     @debug "concatenated time_series" LOG_GROUP_TIME_SERIES time_series
     return time_series
@@ -185,11 +185,11 @@ end
 
 function SingleTimeSeries(info::TimeSeriesParsedInfo)
     data = make_time_array(info)
-    return SingleTimeSeries(
-        name=info.name,
-        data=data,
-        normalization_factor=info.normalization_factor,
-        scaling_factor_multiplier=info.scaling_factor_multiplier,
+    return SingleTimeSeries(;
+        name = info.name,
+        data = data,
+        normalization_factor = info.normalization_factor,
+        scaling_factor_multiplier = info.scaling_factor_multiplier,
     )
 end
 
@@ -257,7 +257,7 @@ Base.lastindex(time_series::SingleTimeSeries, d) = lastindex(get_data(time_serie
 
 Base.eachindex(time_series::SingleTimeSeries) = eachindex(get_data(time_series))
 
-Base.iterate(time_series::SingleTimeSeries, n=1) = iterate(get_data(time_series), n)
+Base.iterate(time_series::SingleTimeSeries, n = 1) = iterate(get_data(time_series), n)
 
 """
 Refer to TimeSeries.when(). Underlying data is copied.
@@ -270,9 +270,9 @@ end
 Return a time_series truncated starting with timestamp.
 """
 function from(time_series::SingleTimeSeries, timestamp)
-    return SingleTimeSeries(
-        name=get_name(time_series),
-        data=TimeSeries.from(get_data(time_series), timestamp),
+    return SingleTimeSeries(;
+        name = get_name(time_series),
+        data = TimeSeries.from(get_data(time_series), timestamp),
     )
 end
 
@@ -280,9 +280,9 @@ end
 Return a time_series truncated after timestamp.
 """
 function to(time_series::SingleTimeSeries, timestamp)
-    return SingleTimeSeries(
-        name=get_name(time_series),
-        data=TimeSeries.to(get_data(time_series), timestamp),
+    return SingleTimeSeries(;
+        name = get_name(time_series),
+        data = TimeSeries.to(get_data(time_series), timestamp),
     )
 end
 
@@ -334,7 +334,7 @@ get_columns(::Type{<:TimeSeriesMetadata}, ta::TimeSeries.TimeArray) = nothing
 function make_time_array(
     time_series::SingleTimeSeries,
     start_time::Dates.DateTime;
-    len::Union{Nothing, Int}=nothing,
+    len::Union{Nothing, Int} = nothing,
 )
     ta = get_data(time_series)
     first_time = first(TimeSeries.timestamp(ta))
@@ -349,13 +349,13 @@ function make_time_array(
 end
 
 function SingleTimeSeriesMetadata(ts_metadata::DeterministicMetadata)
-    return SingleTimeSeriesMetadata(
-        name=get_name(ts_metadata),
-        resolution=get_resolution(ts_metadata),
-        initial_timestamp=get_initial_timestamp(ts_metadata),
-        time_series_uuid=get_time_series_uuid(ts_metadata),
-        length=get_count(ts_metadata) * get_horizon(ts_metadata),
-        scaling_factor_multiplier=get_scaling_factor_multiplier(ts_metadata),
-        internal=get_internal(ts_metadata),
+    return SingleTimeSeriesMetadata(;
+        name = get_name(ts_metadata),
+        resolution = get_resolution(ts_metadata),
+        initial_timestamp = get_initial_timestamp(ts_metadata),
+        time_series_uuid = get_time_series_uuid(ts_metadata),
+        length = get_count(ts_metadata) * get_horizon(ts_metadata),
+        scaling_factor_multiplier = get_scaling_factor_multiplier(ts_metadata),
+        internal = get_internal(ts_metadata),
     )
 end

@@ -19,7 +19,7 @@ TEST_MSG = "test log message"
         IS.LogEvent("file", 14, :id, TEST_MSG, Logging.Error),
     )
 
-    for i in range(1, length=2)
+    for i in range(1; length = 2)
         for event in events
             increment_count!(tracker, event, false)
         end
@@ -60,7 +60,7 @@ end
     )
 
     with_logger(logger) do
-        for i in range(1, length=2)
+        for i in range(1; length = 2)
             @debug TEST_MSG
             @info TEST_MSG
             @warn TEST_MSG
@@ -82,10 +82,10 @@ end
     # Verify logging to a file.
     logfile = "testlog.txt"
     logger = IS.configure_logging(;
-        file=true,
-        filename=logfile,
-        file_level=Logging.Info,
-        set_global=false,
+        file = true,
+        filename = logfile,
+        file_level = Logging.Info,
+        set_global = false,
     )
     with_logger(logger) do
         @info TEST_MSG
@@ -103,12 +103,12 @@ end
 
     # Verify logging with no file.
     logger = IS.configure_logging(;
-        console=true,
-        file=false,
-        console_stream=devnull,
-        filename=nothing,
-        file_level=Logging.Info,
-        set_global=false,
+        console = true,
+        file = false,
+        console_stream = devnull,
+        filename = nothing,
+        file_level = Logging.Info,
+        set_global = false,
     )
     with_logger(logger) do
         @error TEST_MSG
@@ -122,13 +122,13 @@ end
 
     # Verify disabling of tracker.
     logger = IS.configure_logging(;
-        console=true,
-        file=false,
-        console_stream=devnull,
-        filename=logfile,
-        file_level=Logging.Info,
-        set_global=false,
-        tracker=nothing,
+        console = true,
+        file = false,
+        console_stream = devnull,
+        filename = logfile,
+        file_level = Logging.Info,
+        set_global = false,
+        tracker = nothing,
     )
     with_logger(logger) do
         @error TEST_MSG
@@ -138,13 +138,13 @@ end
     # Verify setting of global logger
     orig_logger = global_logger()
     logger = IS.configure_logging(;
-        console=true,
-        file=false,
-        console_stream=devnull,
-        filename=logfile,
-        file_level=Logging.Info,
-        set_global=true,
-        tracker=nothing,
+        console = true,
+        file = false,
+        console_stream = devnull,
+        filename = logfile,
+        file_level = Logging.Info,
+        set_global = true,
+        tracker = nothing,
     )
     @error TEST_MSG
     @test orig_logger != global_logger()
@@ -196,7 +196,7 @@ end
     try
         redirect_stdout(devnull) do
             IS.make_logging_config_file(filename)
-            return IS.make_logging_config_file(filename, force=true)
+            return IS.make_logging_config_file(filename; force = true)
         end
         @test IS.LoggingConfiguration(filename) isa IS.LoggingConfiguration
     finally
@@ -305,12 +305,12 @@ end
 
 @testset "Test progress logger" begin
     io = IOBuffer()
-    logger = IS.configure_logging(
-        console_stream=io,
-        console=false,
-        file=false,
-        progress=true,
-        set_global=false,
+    logger = IS.configure_logging(;
+        console_stream = io,
+        console = false,
+        file = false,
+        progress = true,
+        set_global = false,
     )
     with_logger(logger) do
         @progress for i in 1:5
@@ -324,8 +324,8 @@ end
 
 @testset "Test bad input" begin
     @test_throws ErrorException IS.configure_logging(
-        console=false,
-        file=false,
-        progress=false,
+        console = false,
+        file = false,
+        progress = false,
     )
 end

@@ -107,9 +107,14 @@ end
 
 function TestSupplemental(;
     value::Float64 = 0.0,
-    component_uuids::Set{UUIDs.UUID}=Set{UUIDs.UUID}(),
+    component_uuids::Set{UUIDs.UUID} = Set{UUIDs.UUID}(),
 )
-    return TestSupplemental(value, component_uuids, InfrastructureSystemsInternal(), TimeSeriesContainer())
+    return TestSupplemental(
+        value,
+        component_uuids,
+        InfrastructureSystemsInternal(),
+        TimeSeriesContainer(),
+    )
 end
 
 get_value(attr::TestSupplemental) = attr.attr_json

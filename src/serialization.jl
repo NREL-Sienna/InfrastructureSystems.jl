@@ -12,14 +12,14 @@ Serializes a InfrastructureSystemsType to a JSON file.
 function to_json(
     obj::T,
     filename::AbstractString;
-    force=false,
-    pretty=false,
+    force = false,
+    pretty = false,
 ) where {T <: InfrastructureSystemsType}
     if !force && isfile(filename)
         error("$file already exists. Set force=true to overwrite.")
     end
     result = open(filename, "w") do io
-        return to_json(io, obj, pretty=pretty)
+        return to_json(io, obj; pretty = pretty)
     end
 
     @info "Serialized $T to $filename"
@@ -29,10 +29,10 @@ end
 """
 Serializes a InfrastructureSystemsType to a JSON string.
 """
-function to_json(obj::T; pretty=false, indent=2) where {T <: InfrastructureSystemsType}
+function to_json(obj::T; pretty = false, indent = 2) where {T <: InfrastructureSystemsType}
     if pretty
         io = IOBuffer()
-        JSON3.pretty(io, serialize(obj), JSON3.AlignmentContext(indent=indent))
+        JSON3.pretty(io, serialize(obj), JSON3.AlignmentContext(; indent = indent))
         return take!(io)
     else
         return JSON3.write(serialize(obj))
@@ -42,12 +42,12 @@ end
 function to_json(
     io::IO,
     obj::T;
-    pretty=false,
-    indent=2,
+    pretty = false,
+    indent = 2,
 ) where {T <: InfrastructureSystemsType}
     data = serialize(obj)
     if pretty
-        res = JSON3.pretty(io, data, JSON3.AlignmentContext(indent=indent))
+        res = JSON3.pretty(io, data, JSON3.AlignmentContext(; indent = indent))
     else
         res = JSON3.write(io, data)
     end
@@ -267,7 +267,7 @@ deserialize(::Type{Vector{Symbol}}, data::Vector) = Symbol.(data)
 function serialize_julia_info()
     data = Dict{String, Any}("julia_version" => string(VERSION))
     io = IOBuffer()
-    Pkg.status(io=io, mode=Pkg.PKGMODE_MANIFEST)
+    Pkg.status(; io = io, mode = Pkg.PKGMODE_MANIFEST)
     data["package_info"] = String(take!(io))
     return data
 end

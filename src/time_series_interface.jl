@@ -1,18 +1,18 @@
-const SUPPORTED_TIME_SERIES_TYPES =
+const SupportedTimeSeriesTypes =
     Union{InfrastructureSystemsComponent, InfrastructureSystemsSupplementalAttribute}
 
 function add_time_series!(
     component::T,
     time_series::TimeSeriesMetadata;
-    skip_if_present=false,
-) where {T <: SUPPORTED_TIME_SERIES_TYPES}
+    skip_if_present = false,
+) where {T <: SupportedTimeSeriesTypes}
     component_id = get_uuid(component)
     container = get_time_series_container(component)
     if isnothing(container)
         throw(ArgumentError("type $T does not support storing time series"))
     end
 
-    add_time_series!(container, time_series, skip_if_present=skip_if_present)
+    add_time_series!(container, time_series; skip_if_present = skip_if_present)
     @debug "Added $time_series to $(typeof(component)) $(component_id) " *
            "num_time_series=$(length(get_time_series_container(component).data))." _group =
         LOG_GROUP_TIME_SERIES
@@ -23,7 +23,7 @@ Removes the metadata for a time_series.
 If this returns true then the caller must also remove the actual time series data.
 """
 function remove_time_series_metadata!(
-    component::SUPPORTED_TIME_SERIES_TYPES,
+    component::SupportedTimeSeriesTypes,
     ::Type{T},
     name::AbstractString,
 ) where {T <: TimeSeriesMetadata}
@@ -42,7 +42,7 @@ function remove_time_series_metadata!(
     return true
 end
 
-function clear_time_series!(component::SUPPORTED_TIME_SERIES_TYPES)
+function clear_time_series!(component::SupportedTimeSeriesTypes)
     container = get_time_series_container(component)
     if !isnothing(container)
         clear_time_series!(container)
@@ -140,7 +140,7 @@ Return a time series corresponding to the given parameters.
 # Arguments
 
   - `::Type{T}`: Concrete subtype of TimeSeriesData to return
-  - `component::SUPPORTED_TIME_SERIES_TYPES`: Component containing the time series
+  - `component::SupportedTimeSeriesTypes`: Component containing the time series
   - `name::AbstractString`: name of time series
   - `start_time::Union{Nothing, Dates.DateTime} = nothing`: If nothing, use the
     `initial_timestamp` of the time series. If T is a subtype of Forecast then `start_time`
@@ -152,11 +152,11 @@ Return a time series corresponding to the given parameters.
 """
 function get_time_series(
     ::Type{T},
-    component::SUPPORTED_TIME_SERIES_TYPES,
+    component::SupportedTimeSeriesTypes,
     name::AbstractString;
-    start_time::Union{Nothing, Dates.DateTime}=nothing,
-    len::Union{Nothing, Int}=nothing,
-    count::Union{Nothing, Int}=nothing,
+    start_time::Union{Nothing, Dates.DateTime} = nothing,
+    len::Union{Nothing, Int} = nothing,
+    count::Union{Nothing, Int} = nothing,
 ) where {T <: TimeSeriesData}
     if !has_time_series(component)
         throw(ArgumentError("no forecasts are stored in $component"))
@@ -173,7 +173,7 @@ end
 
 function get_time_series_uuid(
     ::Type{T},
-    component::SUPPORTED_TIME_SERIES_TYPES,
+    component::SupportedTimeSeriesTypes,
     name::AbstractString,
 ) where {T <: TimeSeriesData}
     metadata_type = time_series_data_to_metadata(T)
@@ -183,7 +183,7 @@ end
 
 function get_time_series_metadata(
     ::Type{T},
-    component::SUPPORTED_TIME_SERIES_TYPES,
+    component::SupportedTimeSeriesTypes,
     name::AbstractString,
 ) where {T <: TimeSeriesMetadata}
     return get_time_series_metadata(T, get_time_series_container(component), name)
@@ -197,13 +197,13 @@ the component and applied to the data unless ignore_scaling_factors is true.
 """
 function get_time_series_array(
     ::Type{T},
-    component::SUPPORTED_TIME_SERIES_TYPES,
+    component::SupportedTimeSeriesTypes,
     name::AbstractString;
-    start_time::Union{Nothing, Dates.DateTime}=nothing,
-    len::Union{Nothing, Int}=nothing,
-    ignore_scaling_factors=false,
+    start_time::Union{Nothing, Dates.DateTime} = nothing,
+    len::Union{Nothing, Int} = nothing,
+    ignore_scaling_factors = false,
 ) where {T <: TimeSeriesData}
-    ts = get_time_series(T, component, name; start_time=start_time, len=len, count=1)
+    ts = get_time_series(T, component, name; start_time = start_time, len = len, count = 1)
     if start_time === nothing
         start_time = get_initial_timestamp(ts)
     end
@@ -212,8 +212,8 @@ function get_time_series_array(
         component,
         ts,
         start_time;
-        len=len,
-        ignore_scaling_factors=ignore_scaling_factors,
+        len = len,
+        ignore_scaling_factors = ignore_scaling_factors,
     )
 end
 
@@ -226,11 +226,11 @@ the component and applied to the data unless ignore_scaling_factors is true.
 See also [`ForecastCache`](@ref).
 """
 function get_time_series_array(
-    component::SUPPORTED_TIME_SERIES_TYPES,
+    component::SupportedTimeSeriesTypes,
     forecast::Forecast,
     start_time::Dates.DateTime;
-    len=nothing,
-    ignore_scaling_factors=false,
+    len = nothing,
+    ignore_scaling_factors = false,
 )
     return _make_time_array(component, forecast, start_time, len, ignore_scaling_factors)
 end
@@ -244,11 +244,11 @@ the component and applied to the data unless ignore_scaling_factors is true.
 See also [`StaticTimeSeriesCache`](@ref).
 """
 function get_time_series_array(
-    component::SUPPORTED_TIME_SERIES_TYPES,
+    component::SupportedTimeSeriesTypes,
     time_series::StaticTimeSeries,
-    start_time::Union{Nothing, Dates.DateTime}=nothing;
-    len::Union{Nothing, Int}=nothing,
-    ignore_scaling_factors=false,
+    start_time::Union{Nothing, Dates.DateTime} = nothing;
+    len::Union{Nothing, Int} = nothing,
+    ignore_scaling_factors = false,
 )
     if start_time === nothing
         start_time = get_initial_timestamp(time_series)
@@ -266,13 +266,13 @@ Return a vector of timestamps from storage for the given time series parameters.
 """
 function get_time_series_timestamps(
     ::Type{T},
-    component::SUPPORTED_TIME_SERIES_TYPES,
+    component::SupportedTimeSeriesTypes,
     name::AbstractString;
-    start_time::Union{Nothing, Dates.DateTime}=nothing,
-    len::Union{Nothing, Int}=nothing,
+    start_time::Union{Nothing, Dates.DateTime} = nothing,
+    len::Union{Nothing, Int} = nothing,
 ) where {T <: TimeSeriesData}
     return TimeSeries.timestamp(
-        get_time_series_array(T, component, name; start_time=start_time, len=len),
+        get_time_series_array(T, component, name; start_time = start_time, len = len),
     )
 end
 
@@ -280,13 +280,13 @@ end
 Return a vector of timestamps from a cached Forecast instance.
 """
 function get_time_series_timestamps(
-    component::SUPPORTED_TIME_SERIES_TYPES,
+    component::SupportedTimeSeriesTypes,
     forecast::Forecast,
-    start_time::Union{Nothing, Dates.DateTime}=nothing;
-    len::Union{Nothing, Int}=nothing,
+    start_time::Union{Nothing, Dates.DateTime} = nothing;
+    len::Union{Nothing, Int} = nothing,
 )
     return TimeSeries.timestamp(
-        get_time_series_array(component, forecast, start_time; len=len),
+        get_time_series_array(component, forecast, start_time; len = len),
     )
 end
 
@@ -294,13 +294,13 @@ end
 Return a vector of timestamps from a cached StaticTimeSeries instance.
 """
 function get_time_series_timestamps(
-    component::SUPPORTED_TIME_SERIES_TYPES,
+    component::SupportedTimeSeriesTypes,
     time_series::StaticTimeSeries,
-    start_time::Union{Nothing, Dates.DateTime}=nothing;
-    len::Union{Nothing, Int}=nothing,
+    start_time::Union{Nothing, Dates.DateTime} = nothing;
+    len::Union{Nothing, Int} = nothing,
 )
     return TimeSeries.timestamp(
-        get_time_series_array(component, time_series, start_time; len=len),
+        get_time_series_array(component, time_series, start_time; len = len),
     )
 end
 
@@ -312,20 +312,20 @@ that accepts a cached TimeSeriesData instance.
 """
 function get_time_series_values(
     ::Type{T},
-    component::SUPPORTED_TIME_SERIES_TYPES,
+    component::SupportedTimeSeriesTypes,
     name::AbstractString;
-    start_time::Union{Nothing, Dates.DateTime}=nothing,
-    len::Union{Nothing, Int}=nothing,
-    ignore_scaling_factors=false,
+    start_time::Union{Nothing, Dates.DateTime} = nothing,
+    len::Union{Nothing, Int} = nothing,
+    ignore_scaling_factors = false,
 ) where {T <: TimeSeriesData}
     return TimeSeries.values(
         get_time_series_array(
             T,
             component,
             name;
-            start_time=start_time,
-            len=len,
-            ignore_scaling_factors=ignore_scaling_factors,
+            start_time = start_time,
+            len = len,
+            ignore_scaling_factors = ignore_scaling_factors,
         ),
     )
 end
@@ -334,19 +334,19 @@ end
 Return an Array of values for one forecast window from a cached Forecast instance.
 """
 function get_time_series_values(
-    component::SUPPORTED_TIME_SERIES_TYPES,
+    component::SupportedTimeSeriesTypes,
     forecast::Forecast,
     start_time::Dates.DateTime;
-    len::Union{Nothing, Int}=nothing,
-    ignore_scaling_factors=false,
+    len::Union{Nothing, Int} = nothing,
+    ignore_scaling_factors = false,
 )
     return TimeSeries.values(
         get_time_series_array(
             component,
             forecast,
             start_time;
-            len=len,
-            ignore_scaling_factors=ignore_scaling_factors,
+            len = len,
+            ignore_scaling_factors = ignore_scaling_factors,
         ),
     )
 end
@@ -356,25 +356,25 @@ Return an Array of values from a cached StaticTimeSeries instance for the reques
 series parameters.
 """
 function get_time_series_values(
-    component::SUPPORTED_TIME_SERIES_TYPES,
+    component::SupportedTimeSeriesTypes,
     time_series::StaticTimeSeries,
-    start_time::Union{Nothing, Dates.DateTime}=nothing;
-    len::Union{Nothing, Int}=nothing,
-    ignore_scaling_factors=false,
+    start_time::Union{Nothing, Dates.DateTime} = nothing;
+    len::Union{Nothing, Int} = nothing,
+    ignore_scaling_factors = false,
 )
     return TimeSeries.values(
         get_time_series_array(
             component,
             time_series,
             start_time;
-            len=len,
-            ignore_scaling_factors=ignore_scaling_factors,
+            len = len,
+            ignore_scaling_factors = ignore_scaling_factors,
         ),
     )
 end
 
 function _make_time_array(component, time_series, start_time, len, ignore_scaling_factors)
-    ta = make_time_array(time_series, start_time; len=len)
+    ta = make_time_array(time_series, start_time; len = len)
     if ignore_scaling_factors
         return ta
     end
@@ -390,7 +390,7 @@ end
 """
 Return true if the component has time series data.
 """
-function has_time_series(component::SUPPORTED_TIME_SERIES_TYPES)
+function has_time_series(component::SupportedTimeSeriesTypes)
     container = get_time_series_container(component)
     return !isnothing(container) && !isempty(container)
 end
@@ -399,7 +399,7 @@ end
 Return true if the component has time series data of type T.
 """
 function has_time_series(
-    component::SUPPORTED_TIME_SERIES_TYPES,
+    component::SupportedTimeSeriesTypes,
     ::Type{T},
 ) where {T <: TimeSeriesData}
     container = get_time_series_container(component)
@@ -421,7 +421,7 @@ function has_time_series(
 end
 
 function has_time_series(
-    component::SUPPORTED_TIME_SERIES_TYPES,
+    component::SupportedTimeSeriesTypes,
     type::Type{<:TimeSeriesMetadata},
     name::AbstractString,
 )
@@ -436,8 +436,8 @@ references.
 
 # Arguments
 
-  - `dst::SUPPORTED_TIME_SERIES_TYPES`: Destination component
-  - `src::SUPPORTED_TIME_SERIES_TYPES`: Source component
+  - `dst::SupportedTimeSeriesTypes`: Destination component
+  - `src::SupportedTimeSeriesTypes`: Source component
   - `name_mapping::Dict = nothing`: Optionally map src names to different dst names.
     If provided and src has a time_series with a name not present in name_mapping, that
     time_series will not copied. If name_mapping is nothing then all time_series will be
@@ -449,10 +449,10 @@ references.
     src's multipliers.
 """
 function copy_time_series!(
-    dst::SUPPORTED_TIME_SERIES_TYPES,
-    src::SUPPORTED_TIME_SERIES_TYPES;
-    name_mapping::Union{Nothing, Dict{Tuple{String, String}, String}}=nothing,
-    scaling_factor_multiplier_mapping::Union{Nothing, Dict{String, String}}=nothing,
+    dst::SupportedTimeSeriesTypes,
+    src::SupportedTimeSeriesTypes;
+    name_mapping::Union{Nothing, Dict{Tuple{String, String}, String}} = nothing,
+    scaling_factor_multiplier_mapping::Union{Nothing, Dict{String, String}} = nothing,
 )
     storage = _get_time_series_storage(dst)
     if isnothing(storage)
@@ -504,17 +504,17 @@ function copy_time_series!(
     end
 end
 
-function get_time_series_keys(component::SUPPORTED_TIME_SERIES_TYPES)
+function get_time_series_keys(component::SupportedTimeSeriesTypes)
     return keys(get_time_series_container(component).data)
 end
 
-function list_time_series_metadata(component::SUPPORTED_TIME_SERIES_TYPES)
+function list_time_series_metadata(component::SupportedTimeSeriesTypes)
     return collect(values(get_time_series_container(component).data))
 end
 
 function get_time_series_names(
     ::Type{T},
-    component::SUPPORTED_TIME_SERIES_TYPES,
+    component::SupportedTimeSeriesTypes,
 ) where {T <: TimeSeriesData}
     return get_time_series_names(
         time_series_data_to_metadata(T),
@@ -522,7 +522,7 @@ function get_time_series_names(
     )
 end
 
-function get_num_time_series(component::SUPPORTED_TIME_SERIES_TYPES)
+function get_num_time_series(component::SupportedTimeSeriesTypes)
     container = get_time_series_container(component)
     if isnothing(container)
         return (0, 0)
@@ -543,7 +543,7 @@ function get_num_time_series(component::SUPPORTED_TIME_SERIES_TYPES)
     return (static_ts_count, forecast_count)
 end
 
-function get_num_time_series_by_type(component::SUPPORTED_TIME_SERIES_TYPES)
+function get_num_time_series_by_type(component::SupportedTimeSeriesTypes)
     counts = Dict{String, Int}()
     container = get_time_series_container(component)
     if isnothing(container)
@@ -563,14 +563,14 @@ function get_num_time_series_by_type(component::SUPPORTED_TIME_SERIES_TYPES)
 end
 
 function get_time_series(
-    component::SUPPORTED_TIME_SERIES_TYPES,
+    component::SupportedTimeSeriesTypes,
     time_series::TimeSeriesData,
 )
     storage = _get_time_series_storage(component)
     return get_time_series(storage, get_time_series_uuid(time_series))
 end
 
-function get_time_series_uuids(component::SUPPORTED_TIME_SERIES_TYPES)
+function get_time_series_uuids(component::SupportedTimeSeriesTypes)
     container = get_time_series_container(component)
 
     return [
@@ -581,10 +581,10 @@ end
 
 function attach_time_series_and_serialize!(
     data::SystemData,
-    component::SUPPORTED_TIME_SERIES_TYPES,
+    component::SupportedTimeSeriesTypes,
     ts_metadata::T,
     ts::TimeSeriesData;
-    skip_if_present=false,
+    skip_if_present = false,
 ) where {T <: TimeSeriesMetadata}
     check_add_time_series(data.time_series_params, ts)
     check_read_only(data.time_series_storage)
@@ -599,7 +599,7 @@ function attach_time_series_and_serialize!(
         get_name(ts_metadata),
         ts,
     )
-    add_time_series!(component, ts_metadata, skip_if_present=skip_if_present)
+    add_time_series!(component, ts_metadata; skip_if_present = skip_if_present)
     # Order is important. Set this last in case exceptions are thrown at previous steps.
     set_parameters!(data.time_series_params, ts)
     return

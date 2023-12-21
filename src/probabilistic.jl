@@ -47,9 +47,9 @@ function Probabilistic(;
     resolution,
     percentiles,
     data,
-    scaling_factor_multiplier=nothing,
-    normalization_factor=1.0,
-    internal=InfrastructureSystemsInternal(),
+    scaling_factor_multiplier = nothing,
+    normalization_factor = 1.0,
+    internal = InfrastructureSystemsInternal(),
 )
     data = handle_normalization_factor(convert_data(data), normalization_factor)
     quantile_count = size(first(values(data)))[2]
@@ -91,17 +91,17 @@ function Probabilistic(
     input_data::AbstractDict,
     percentiles::Vector,
     resolution::Dates.Period;
-    normalization_factor::NormalizationFactor=1.0,
-    scaling_factor_multiplier::Union{Nothing, Function}=nothing,
+    normalization_factor::NormalizationFactor = 1.0,
+    scaling_factor_multiplier::Union{Nothing, Function} = nothing,
 )
-    return Probabilistic(
-        name=name,
-        data=input_data,
-        percentiles=percentiles,
-        resolution=resolution,
-        scaling_factor_multiplier=scaling_factor_multiplier,
-        normalization_factor=normalization_factor,
-        internal=InfrastructureSystemsInternal(),
+    return Probabilistic(;
+        name = name,
+        data = input_data,
+        percentiles = percentiles,
+        resolution = resolution,
+        scaling_factor_multiplier = scaling_factor_multiplier,
+        normalization_factor = normalization_factor,
+        internal = InfrastructureSystemsInternal(),
     )
 end
 
@@ -125,8 +125,8 @@ function Probabilistic(
     name::AbstractString,
     input_data::AbstractDict{Dates.DateTime, <:TimeSeries.TimeArray},
     percentiles::Vector{Float64};
-    normalization_factor::NormalizationFactor=1.0,
-    scaling_factor_multiplier::Union{Nothing, Function}=nothing,
+    normalization_factor::NormalizationFactor = 1.0,
+    scaling_factor_multiplier::Union{Nothing, Function} = nothing,
 )
     data = SortedDict{Dates.DateTime, Matrix{Float64}}()
     resolution =
@@ -136,13 +136,13 @@ function Probabilistic(
         data[k] = TimeSeries.values(v)
     end
 
-    return Probabilistic(
-        name=name,
-        data=data,
-        percentiles=percentiles,
-        resolution=resolution,
-        normalization_factor=normalization_factor,
-        scaling_factor_multiplier=scaling_factor_multiplier,
+    return Probabilistic(;
+        name = name,
+        data = data,
+        percentiles = percentiles,
+        resolution = resolution,
+        normalization_factor = normalization_factor,
+        scaling_factor_multiplier = scaling_factor_multiplier,
     )
 end
 
@@ -154,38 +154,38 @@ function Probabilistic(
     series_data::RawTimeSeries,
     percentiles::Vector,
     resolution::Dates.Period;
-    normalization_factor::NormalizationFactor=1.0,
-    scaling_factor_multiplier::Union{Nothing, Function}=nothing,
+    normalization_factor::NormalizationFactor = 1.0,
+    scaling_factor_multiplier::Union{Nothing, Function} = nothing,
 )
-    return Probabilistic(
-        name=name,
-        data=series_data.data,
-        percentiles=percentiles,
-        resolution=resolution,
-        normalization_factor=normalization_factor,
-        scaling_factor_multiplier=scaling_factor_multiplier,
+    return Probabilistic(;
+        name = name,
+        data = series_data.data,
+        percentiles = percentiles,
+        resolution = resolution,
+        normalization_factor = normalization_factor,
+        scaling_factor_multiplier = scaling_factor_multiplier,
     )
 end
 
 function Probabilistic(ts_metadata::ProbabilisticMetadata, data::SortedDict)
-    return Probabilistic(
-        name=get_name(ts_metadata),
-        percentiles=get_percentiles(ts_metadata),
-        resolution=get_resolution(ts_metadata),
-        data=data,
-        scaling_factor_multiplier=get_scaling_factor_multiplier(ts_metadata),
-        internal=InfrastructureSystemsInternal(get_time_series_uuid(ts_metadata)),
+    return Probabilistic(;
+        name = get_name(ts_metadata),
+        percentiles = get_percentiles(ts_metadata),
+        resolution = get_resolution(ts_metadata),
+        data = data,
+        scaling_factor_multiplier = get_scaling_factor_multiplier(ts_metadata),
+        internal = InfrastructureSystemsInternal(get_time_series_uuid(ts_metadata)),
     )
 end
 
 function Probabilistic(info::TimeSeriesParsedInfo)
-    return Probabilistic(
-        name=info.name,
-        data=info.data,
-        percentiles=info.percentiles,
-        resolution=info.resolution,
-        normalization_factor=info.normalization_factor,
-        scaling_factor_multiplier=info.scaling_factor_multiplier,
+    return Probabilistic(;
+        name = info.name,
+        data = info.data,
+        percentiles = info.percentiles,
+        resolution = info.resolution,
+        normalization_factor = info.normalization_factor,
+        scaling_factor_multiplier = info.scaling_factor_multiplier,
     )
 end
 
@@ -290,6 +290,6 @@ get_count(forecast::Probabilistic) = get_count_common(forecast)
 get_initial_times(forecast::Probabilistic) = get_initial_times_common(forecast)
 get_initial_timestamp(forecast::Probabilistic) = get_initial_timestamp_common(forecast)
 get_interval(forecast::Probabilistic) = get_interval_common(forecast)
-get_window(f::Probabilistic, initial_time::Dates.DateTime; len=nothing) =
-    get_window_common(f, initial_time; len=len)
+get_window(f::Probabilistic, initial_time::Dates.DateTime; len = nothing) =
+    get_window_common(f, initial_time; len = len)
 iterate_windows(forecast::Probabilistic) = iterate_windows_common(forecast)

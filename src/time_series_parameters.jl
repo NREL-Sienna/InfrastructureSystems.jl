@@ -10,10 +10,10 @@ mutable struct ForecastParameters <: InfrastructureSystemsType
 end
 
 function ForecastParameters(;
-    horizon=UNINITIALIZED_LENGTH,
-    initial_timestamp=UNINITIALIZED_DATETIME,
-    interval=UNINITIALIZED_PERIOD,
-    count=UNINITIALIZED_LENGTH,
+    horizon = UNINITIALIZED_LENGTH,
+    initial_timestamp = UNINITIALIZED_DATETIME,
+    interval = UNINITIALIZED_PERIOD,
+    count = UNINITIALIZED_LENGTH,
 )
     return ForecastParameters(horizon, initial_timestamp, interval, count)
 end
@@ -87,22 +87,22 @@ mutable struct TimeSeriesParameters <: InfrastructureSystemsType
 end
 
 function TimeSeriesParameters(;
-    resolution=UNINITIALIZED_PERIOD,
-    forecast_params=ForecastParameters(),
+    resolution = UNINITIALIZED_PERIOD,
+    forecast_params = ForecastParameters(),
 )
     return TimeSeriesParameters(resolution, forecast_params)
 end
 
 function TimeSeriesParameters(ts::StaticTimeSeries)
-    return TimeSeriesParameters(resolution=get_resolution(ts))
+    return TimeSeriesParameters(; resolution = get_resolution(ts))
 end
 
 function TimeSeriesParameters(ts::Forecast)
-    forecast_params = ForecastParameters(
-        count=get_count(ts),
-        horizon=get_horizon(ts),
-        initial_timestamp=get_initial_timestamp(ts),
-        interval=get_interval(ts),
+    forecast_params = ForecastParameters(;
+        count = get_count(ts),
+        horizon = get_horizon(ts),
+        initial_timestamp = get_initial_timestamp(ts),
+        interval = get_interval(ts),
     )
     return TimeSeriesParameters(get_resolution(ts), forecast_params)
 end
@@ -131,11 +131,11 @@ function TimeSeriesParameters(
             Dates.Millisecond(last_initial_time - initial_timestamp) /
             Dates.Millisecond(interval) + 1
     end
-    fparams = ForecastParameters(
-        horizon=horizon,
-        initial_timestamp=initial_timestamp,
-        interval=interval,
-        count=count,
+    fparams = ForecastParameters(;
+        horizon = horizon,
+        initial_timestamp = initial_timestamp,
+        interval = interval,
+        count = count,
     )
     return TimeSeriesParameters(resolution, fparams)
 end

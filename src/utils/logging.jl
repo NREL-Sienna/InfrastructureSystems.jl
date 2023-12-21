@@ -61,11 +61,11 @@ Returns a summary of log event counts by level.
 function report_log_summary(tracker::LogEventTracker)
     text = "\nLog message summary:\n"
     # Order by criticality.
-    for level in sort!(collect(keys(tracker.events)), rev=true)
+    for level in sort!(collect(keys(tracker.events)); rev = true)
         num_events = length(tracker.events[level])
         text *= "\n$num_events $level events:\n"
         for event in
-            sort!(collect(get_log_events(tracker, level)), by=x -> x.count, rev=true)
+            sort!(collect(get_log_events(tracker, level)); by = x -> x.count, rev = true)
             text *= "  count=$(event.count) at $(event.file):$(event.line)\n"
             text *= "    example message=\"$(event.message)\"\n"
             if event.suppressed > 0
@@ -144,8 +144,8 @@ function LoggingConfiguration(config_filename)
     return LoggingConfiguration(; Dict(Symbol(k) => v for (k, v) in config)...)
 end
 
-function make_logging_config_file(filename="logging_config.toml"; force=false)
-    cp(SIIP_LOGGING_CONFIG_FILENAME, filename, force=force)
+function make_logging_config_file(filename = "logging_config.toml"; force = false)
+    cp(SIIP_LOGGING_CONFIG_FILENAME, filename; force = force)
     println("Created $filename")
     return
 end
@@ -160,7 +160,7 @@ LogEventTracker()
 LogEventTracker((Logging.Info, Logging.Warn, Logging.Error))
 ```
 """
-function LogEventTracker(levels=(Logging.Info, Logging.Warn, Logging.Error))
+function LogEventTracker(levels = (Logging.Info, Logging.Warn, Logging.Error))
     return LogEventTracker(Dict(l => Dict{Symbol, LogEvent}() for l in levels))
 end
 
@@ -201,28 +201,28 @@ logger = configure_logging(filename="mylog.txt")
 ```
 """
 function configure_logging(;
-    console=true,
-    console_stream=stderr,
-    console_level=Logging.Error,
-    progress=true,
-    file=true,
-    filename="log.txt",
-    file_level=Logging.Info,
-    file_mode="w+",
-    tracker=LogEventTracker(),
-    set_global=true,
+    console = true,
+    console_stream = stderr,
+    console_level = Logging.Error,
+    progress = true,
+    file = true,
+    filename = "log.txt",
+    file_level = Logging.Info,
+    file_mode = "w+",
+    tracker = LogEventTracker(),
+    set_global = true,
 )
-    config = LoggingConfiguration(
-        console=console,
-        console_stream=console_stream,
-        console_level=console_level,
-        progress=progress,
-        file=file,
-        filename=filename,
-        file_level=file_level,
-        file_mode=file_mode,
-        tracker=tracker,
-        set_global=set_global,
+    config = LoggingConfiguration(;
+        console = console,
+        console_stream = console_stream,
+        console_level = console_level,
+        progress = progress,
+        file = file,
+        filename = filename,
+        file_level = file_level,
+        file_mode = file_mode,
+        tracker = tracker,
+        set_global = set_global,
     )
     return configure_logging(config)
 end
@@ -288,7 +288,7 @@ function Logging.handle_message(
     id,
     file,
     line;
-    maxlog=nothing,
+    maxlog = nothing,
     kwargs...,
 )
     return Logging.handle_message(
@@ -300,7 +300,7 @@ function Logging.handle_message(
         id,
         file,
         line;
-        maxlog=maxlog,
+        maxlog = maxlog,
         kwargs...,
     )
 end
@@ -327,7 +327,12 @@ open_file_logger("log.txt", Logging.Info) do logger
 end
 ```
 """
-function open_file_logger(func::Function, filename::String, level=Logging.Info, mode="w+")
+function open_file_logger(
+    func::Function,
+    filename::String,
+    level = Logging.Info,
+    mode = "w+",
+)
     stream = open(filename, mode)
     try
         logger = FileLogger(stream, level)
@@ -511,8 +516,8 @@ function Logging.handle_message(
     id,
     file,
     line;
-    maxlog=nothing,
-    _suppression_period=nothing,
+    maxlog = nothing,
+    _suppression_period = nothing,
     kwargs...,
 )
     suppressed, num_suppressed =
@@ -539,7 +544,7 @@ function Logging.handle_message(
                         id,
                         file,
                         line;
-                        maxlog=maxlog,
+                        maxlog = maxlog,
                         kwargs...,
                     )
                 end

@@ -9,21 +9,21 @@ end
     output_directory = mktempdir()
     descriptor_file = joinpath(output_directory, "structs.json")
     cp(orig_descriptor_file, descriptor_file)
-    new_struct = IS.StructDefinition(
-        struct_name="MyComponent",
-        docstring="Custom component",
-        supertype="InfrastructureSystemsComponent",
-        fields=[
-            IS.StructField(name="val1", data_type=Float64),
-            IS.StructField(name="val2", data_type=Int),
-            IS.StructField(name="val3", data_type=String),
+    new_struct = IS.StructDefinition(;
+        struct_name = "MyComponent",
+        docstring = "Custom component",
+        supertype = "InfrastructureSystemsComponent",
+        fields = [
+            IS.StructField(; name = "val1", data_type = Float64),
+            IS.StructField(; name = "val2", data_type = Int),
+            IS.StructField(; name = "val3", data_type = String),
         ],
     )
     redirect_stdout(devnull) do
         IS.generate_struct_file(
-            new_struct,
-            filename=descriptor_file,
-            output_directory=output_directory,
+            new_struct;
+            filename = descriptor_file,
+            output_directory = output_directory,
         )
     end
     data = open(descriptor_file, "r") do io
@@ -36,18 +36,24 @@ end
 
 @testset "Test StructField errors" begin
     @test_throws ErrorException IS.StructDefinition(
-        struct_name="MyStruct",
-        fields=[IS.StructField(name="val", data_type=Float64, valid_range="invalid_field")],
+        struct_name = "MyStruct",
+        fields = [
+            IS.StructField(;
+                name = "val",
+                data_type = Float64,
+                valid_range = "invalid_field",
+            ),
+        ],
     )
     @test_throws ErrorException IS.StructField(
-        name="val",
-        data_type=Float64,
-        valid_range=Dict("min" => 0, "invalid" => 100),
+        name = "val",
+        data_type = Float64,
+        valid_range = Dict("min" => 0, "invalid" => 100),
     )
     @test_throws ErrorException IS.StructField(
-        name="val",
-        data_type=Float64,
-        valid_range=Dict("min" => 0, "max" => 100),
-        validation_action="invalid",
+        name = "val",
+        data_type = Float64,
+        valid_range = Dict("min" => 0, "max" => 100),
+        validation_action = "invalid",
     )
 end

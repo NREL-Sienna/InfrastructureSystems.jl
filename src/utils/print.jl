@@ -30,7 +30,7 @@ function Base.show(io::IO, ::MIME"text/plain", container::InfrastructureSystemsC
     println(io, "Num components: $num_components")
     if num_components > 0
         println(io)
-        show_components_table(io, container, backend=Val(:auto))
+        show_components_table(io, container; backend = Val(:auto))
     end
 end
 
@@ -39,7 +39,7 @@ function Base.show(io::IO, ::MIME"text/html", components::Components)
     println(io, "<h2>Components</h2>")
     println(io, "<p><b>Num components</b>: $num_components</p>")
     if num_components > 0
-        show_components_table(io, components, backend=Val(:html), standalone=false)
+        show_components_table(io, components; backend = Val(:html), standalone = false)
     end
 end
 
@@ -71,14 +71,14 @@ end
 function Base.show(io::IO, ::MIME"text/plain", data::SystemData)
     show(io, MIME"text/plain"(), data.components)
     println(io, "\n")
-    show_time_series_data(io, data, backend=Val(:auto))
+    show_time_series_data(io, data; backend = Val(:auto))
     show(io, data.time_series_params)
 end
 
 function Base.show(io::IO, ::MIME"text/html", data::SystemData)
     show(io, MIME"text/html"(), data.components)
     println(io, "\n")
-    show_time_series_data(io, data, backend=Val(:html), standalone=false)
+    show_time_series_data(io, data; backend = Val(:html), standalone = false)
     show(io, data.time_series_params)
 end
 
@@ -113,9 +113,9 @@ function show_time_series_data(io::IO, data::SystemData; kwargs...)
     PrettyTables.pretty_table(
         io,
         table;
-        header=header,
-        title="Time Series Summary",
-        alignment=:l,
+        header = header,
+        title = "Time Series Summary",
+        alignment = :l,
         kwargs...,
     )
     return
@@ -202,7 +202,7 @@ function show_components_table(io::IO, components::Components; kwargs...)
     data = Array{Any, 2}(undef, length(components.data), length(header))
 
     type_names = [(strip_module_name(string(x)), x) for x in keys(components.data)]
-    sort!(type_names, by=x -> x[1])
+    sort!(type_names; by = x -> x[1])
     for (i, (type_name, type)) in enumerate(type_names)
         vals = components.data[type]
         has_sts = false
@@ -224,7 +224,7 @@ function show_components_table(io::IO, components::Components; kwargs...)
         data[i, 4] = has_forecasts
     end
 
-    PrettyTables.pretty_table(io, data; header=header, alignment=:l, kwargs...)
+    PrettyTables.pretty_table(io, data; header = header, alignment = :l, kwargs...)
     return
 end
 
@@ -232,7 +232,7 @@ function show_components(
     io::IO,
     components::Components,
     component_type::Type{<:InfrastructureSystemsComponent},
-    additional_columns::Union{Dict, Vector}=[];
+    additional_columns::Union{Dict, Vector} = [];
     kwargs...,
 )
     if !isconcretetype(component_type)
@@ -293,7 +293,14 @@ function show_components(
         end
     end
 
-    PrettyTables.pretty_table(io, data; header=header, title=title, alignment=:l, kwargs...)
+    PrettyTables.pretty_table(
+        io,
+        data;
+        header = header,
+        title = title,
+        alignment = :l,
+        kwargs...,
+    )
     return
 end
 

@@ -45,14 +45,14 @@ Construct a StructField for code auto-generation purposes.
 function StructField(;
     name,
     data_type,
-    default=nothing,
-    comment="",
-    needs_conversion=false,
-    exclude_setter=false,
-    valid_range=nothing,
-    validation_action=nothing,
-    null_value=nothing,
-    internal_default=nothing,
+    default = nothing,
+    comment = "",
+    needs_conversion = false,
+    exclude_setter = false,
+    valid_range = nothing,
+    validation_action = nothing,
+    null_value = nothing,
+    internal_default = nothing,
 )
     if !isnothing(valid_range) && valid_range isa Dict
         diff = setdiff(keys(valid_range), ("min", "max"))
@@ -111,9 +111,9 @@ Construct a StructDefinition for code auto-generation purposes.
 function StructDefinition(;
     struct_name,
     fields,
-    supertype=nothing,
-    docstring="",
-    is_component=true,
+    supertype = nothing,
+    docstring = "",
+    is_component = true,
 )
     if supertype isa DataType
         supertype = string(DataType)
@@ -123,12 +123,12 @@ function StructDefinition(;
         if !any(x -> endswith(x.data_type, "InfrastructureSystemsInternal"), fields)
             push!(
                 fields,
-                StructField(
-                    name="internal",
-                    data_type="InfrastructureSystemsInternal",
-                    comment="Internal reference, do not modify.",
-                    internal_default="InfrastructureSystemsInternal()",
-                    exclude_setter=true,
+                StructField(;
+                    name = "internal",
+                    data_type = "InfrastructureSystemsInternal",
+                    comment = "Internal reference, do not modify.",
+                    internal_default = "InfrastructureSystemsInternal()",
+                    exclude_setter = true,
                 ),
             )
             @info "Added InfrastructureSystemsInternal to component struct $struct_name."
@@ -166,13 +166,13 @@ Refer to `StructDefinition` and `StructField` for descriptions of the available 
 """
 function generate_struct_file(
     definition::StructDefinition;
-    filename=nothing,
-    output_directory=nothing,
+    filename = nothing,
+    output_directory = nothing,
 )
     generate_struct_files(
-        [definition],
-        filename=filename,
-        output_directory=output_directory,
+        [definition];
+        filename = filename,
+        output_directory = output_directory,
     )
 end
 
@@ -190,7 +190,7 @@ Refer to `StructDefinition` and `StructField` for descriptions of the available 
   - `output_directory::AbstractString`: Generate the files in this directory. Defaults to
     `src/generated`
 """
-function generate_struct_files(definitions; filename=nothing, output_directory=nothing)
+function generate_struct_files(definitions; filename = nothing, output_directory = nothing)
     if isnothing(filename)
         filename = joinpath(
             dirname(Base.find_package("InfrastructureSystems")),
@@ -224,7 +224,7 @@ function generate_struct_files(definitions; filename=nothing, output_directory=n
     end
 
     open(filename, "w") do io
-        JSON3.pretty(io, data, JSON3.AlignmentContext(indent=2))
+        JSON3.pretty(io, data, JSON3.AlignmentContext(; indent = 2))
     end
 
     @info "Added $(length(definitions)) structs to $filename"
