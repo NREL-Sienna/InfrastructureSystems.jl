@@ -104,7 +104,7 @@ get_resolution(val::DeterministicSingleTimeSeries) = get_resolution(val.single_t
 function get_window(
     forecast::DeterministicSingleTimeSeries,
     initial_time::Dates.DateTime;
-    len::Union{Nothing, Int}=nothing,
+    len::Union{Nothing, Int} = nothing,
 )
     tdiff = Dates.Millisecond(initial_time - forecast.initial_timestamp)
     interval_ms = Dates.Millisecond(forecast.interval)
@@ -134,7 +134,7 @@ function iterate_windows(forecast::DeterministicSingleTimeSeries)
     end
 
     initial_times =
-        range(forecast.initial_timestamp; step=forecast.interval, length=forecast.count)
+        range(forecast.initial_timestamp; step = forecast.interval, length = forecast.count)
     return (get_window(forecast, it) for it in initial_times)
 end
 

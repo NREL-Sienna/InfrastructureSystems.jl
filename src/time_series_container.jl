@@ -49,7 +49,7 @@ end
 function add_time_series!(
     container::TimeSeriesContainer,
     ts_metadata::T;
-    skip_if_present=false,
+    skip_if_present = false,
 ) where {T <: TimeSeriesMetadata}
     key = TimeSeriesKey(T, get_name(ts_metadata))
     if haskey(container.data, key)

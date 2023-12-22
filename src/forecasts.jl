@@ -61,8 +61,8 @@ end
 """
 Return the forecast window corresponsing to interval index.
 """
-function get_window(forecast::Forecast, index::Int; len=nothing)
-    return get_window(forecast, index_to_initial_time(forecast, index); len=len)
+function get_window(forecast::Forecast, index::Int; len = nothing)
+    return get_window(forecast, index_to_initial_time(forecast, index); len = len)
 end
 
 function iterate_windows_common(forecast)
@@ -82,17 +82,17 @@ Return a TimeSeries.TimeArray for one forecast window.
 function make_time_array(
     forecast::Forecast,
     start_time::Dates.DateTime;
-    len::Union{Nothing, Int}=nothing,
+    len::Union{Nothing, Int} = nothing,
 )
-    return get_window(forecast, start_time; len=len)
+    return get_window(forecast, start_time; len = len)
 end
 
-function make_timestamps(forecast::Forecast, initial_time::Dates.DateTime, len=nothing)
+function make_timestamps(forecast::Forecast, initial_time::Dates.DateTime, len = nothing)
     if len === nothing
         len = get_horizon(forecast)
     end
 
-    return range(initial_time; length=len, step=get_resolution(forecast))
+    return range(initial_time; length = len, step = get_resolution(forecast))
 end
 
 # This method requires that the forecast type implement a `get_data` method like
@@ -118,7 +118,7 @@ end
 function get_window_common(
     forecast,
     initial_time::Dates.DateTime;
-    len::Union{Nothing, Int}=nothing,
+    len::Union{Nothing, Int} = nothing,
 )
     horizon = get_horizon(forecast)
     if len === nothing

@@ -41,10 +41,10 @@ Constructs Hdf5TimeSeriesStorage.
 """
 function Hdf5TimeSeriesStorage(
     create_file::Bool;
-    filename=nothing,
-    directory=nothing,
-    read_only=false,
-    compression=CompressionSettings(),
+    filename = nothing,
+    directory = nothing,
+    read_only = false,
+    compression = CompressionSettings(),
 )
     if create_file
         if isnothing(filename)
@@ -72,8 +72,8 @@ Constructs Hdf5TimeSeriesStorage from an existing file.
 function from_file(
     ::Type{Hdf5TimeSeriesStorage},
     filename::AbstractString;
-    read_only=false,
-    directory=nothing,
+    read_only = false,
+    directory = nothing,
 )
     if !isfile(filename)
         error("time series storage $filename does not exist")
@@ -88,7 +88,7 @@ function from_file(
         copy_h5_file(filename, file_path)
     end
 
-    storage = Hdf5TimeSeriesStorage(false; filename=file_path, read_only=read_only)
+    storage = Hdf5TimeSeriesStorage(false; filename = file_path, read_only = read_only)
     if !read_only
         version = read_data_format_version(storage)
         if version == "1.0.0"
@@ -117,7 +117,7 @@ undergoing a deepcopy.
   - `storage::Hdf5TimeSeriesStorage`: storage instance
   - `directory::String`: If nothing, use tempdir
 """
-function copy_to_new_file!(storage::Hdf5TimeSeriesStorage, directory=nothing)
+function copy_to_new_file!(storage::Hdf5TimeSeriesStorage, directory = nothing)
     if directory === nothing
         directory = tempdir()
     end
@@ -181,12 +181,12 @@ function serialize_time_series!(
             settings = storage.compression
             if settings.enabled
                 if settings.type == CompressionTypes.BLOSC
-                    group["data", blosc=settings.level] = data
+                    group["data", blosc = settings.level] = data
                 elseif settings.type == CompressionTypes.DEFLATE
                     if settings.shuffle
-                        group["data", shuffle=(), deflate=settings.level] = data
+                        group["data", shuffle = (), deflate = settings.level] = data
                     else
-                        group["data", deflate=settings.level] = data
+                        group["data", deflate = settings.level] = data
                     end
                 else
                     error("not implemented for type=$(settings.type)")
@@ -402,8 +402,8 @@ function deserialize_time_series(
             TimeSeries.TimeArray(
                 range(
                     attributes["start_time"];
-                    length=length(rows),
-                    step=attributes["resolution"],
+                    length = length(rows),
+                    step = attributes["resolution"],
                 ),
                 data,
             ),
@@ -459,7 +459,8 @@ function get_hdf_array(
         data[start_time] = dataset[rows, columns.start]
     else
         data_read = dataset[rows, columns]
-        for (i, it) in enumerate(range(start_time; length=length(columns), step=interval))
+        for (i, it) in
+            enumerate(range(start_time; length = length(columns), step = interval))
             data[it] = @view data_read[1:length(rows), i]
         end
     end
@@ -481,7 +482,8 @@ function get_hdf_array(
         data[start_time] = retransform_hdf_array(dataset[rows, columns.start, :], type)
     else
         data_read = retransform_hdf_array(dataset[rows, columns, :], type)
-        for (i, it) in enumerate(range(start_time; length=length(columns), step=interval))
+        for (i, it) in
+            enumerate(range(start_time; length = length(columns), step = interval))
             data[it] = @view data_read[1:length(rows), i]
         end
     end
@@ -503,7 +505,8 @@ function get_hdf_array(
         data[start_time] = retransform_hdf_array(dataset[rows, columns.start, :, :], type)
     else
         data_read = retransform_hdf_array(dataset[rows, columns, :, :], type)
-        for (i, it) in enumerate(range(start_time; length=length(columns), step=interval))
+        for (i, it) in
+            enumerate(range(start_time; length = length(columns), step = interval))
             data[it] = @view data_read[1:length(rows), i]
         end
     end
@@ -622,7 +625,7 @@ function deserialize_time_series(
                 [3, 2, 1],
             )
             for (i, it) in enumerate(
-                range(start_time; length=length(columns), step=attributes["interval"]),
+                range(start_time; length = length(columns), step = attributes["interval"]),
             )
                 data[it] = @view data_read[i, 1:length(rows), 1:total_percentiles]
             end
@@ -661,7 +664,7 @@ function deserialize_time_series(
             data_read =
                 PermutedDimsArray(path["data"][1:total_scenarios, rows, columns], [3, 2, 1])
             for (i, it) in enumerate(
-                range(start_time; length=length(columns), step=attributes["interval"]),
+                range(start_time; length = length(columns), step = attributes["interval"]),
             )
                 data[it] = @view data_read[i, 1:length(rows), 1:total_scenarios]
             end
@@ -735,11 +738,11 @@ end
 function _deserialize_compression_settings!(storage::Hdf5TimeSeriesStorage)
     HDF5.h5open(storage.file_path, "r+") do file
         root = _get_root(storage, file)
-        storage.compression = CompressionSettings(
-            enabled=HDF5.read(HDF5.attributes(root)["compression_enabled"]),
-            type=CompressionTypes(HDF5.read(HDF5.attributes(root)["compression_type"])),
-            level=HDF5.read(HDF5.attributes(root)["compression_level"]),
-            shuffle=HDF5.read(HDF5.attributes(root)["compression_shuffle"]),
+        storage.compression = CompressionSettings(;
+            enabled = HDF5.read(HDF5.attributes(root)["compression_enabled"]),
+            type = CompressionTypes(HDF5.read(HDF5.attributes(root)["compression_type"])),
+            level = HDF5.read(HDF5.attributes(root)["compression_level"]),
+            shuffle = HDF5.read(HDF5.attributes(root)["compression_shuffle"]),
         )
         return
     end
@@ -768,10 +771,10 @@ is_read_only(storage::Hdf5TimeSeriesStorage) = storage.read_only
 function compare_values(
     x::Hdf5TimeSeriesStorage,
     y::Hdf5TimeSeriesStorage;
-    compare_uuids=false,
+    compare_uuids = false,
 )
-    item_x = sort!(collect(iterate_time_series(x)), by=z -> z[1])
-    item_y = sort!(collect(iterate_time_series(y)), by=z -> z[1])
+    item_x = sort!(collect(iterate_time_series(x)); by = z -> z[1])
+    item_y = sort!(collect(iterate_time_series(y)); by = z -> z[1])
     if length(item_x) != length(item_y)
         @error "lengths don't match" length(item_x) length(item_y)
         return false

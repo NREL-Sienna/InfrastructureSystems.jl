@@ -62,8 +62,8 @@ end
     data = IS.SystemData()
     initial_time = Dates.DateTime("2020-09-01")
     resolution = Dates.Hour(1)
-    ta = TimeSeries.TimeArray(range(initial_time; length=24, step=resolution), ones(24))
-    ts = IS.SingleTimeSeries(data=ta, name="test")
+    ta = TimeSeries.TimeArray(range(initial_time; length = 24, step = resolution), ones(24))
+    ts = IS.SingleTimeSeries(; data = ta, name = "test")
 
     for i in 1:3
         name = "component_$(i)"
@@ -88,7 +88,8 @@ end
     @test IS.is_attached(component, data.masked_components)
 
     # This needs to return time series for masked components.
-    @test length(collect(IS.get_time_series_multiple(data, type=IS.SingleTimeSeries))) == 3
+    @test length(collect(IS.get_time_series_multiple(data; type = IS.SingleTimeSeries))) ==
+          3
 end
 
 @testset "Test compare_values" begin
@@ -99,7 +100,7 @@ end
         @test_logs(
             (:error, r"not match"),
             match_mode = :any,
-            !IS.compare_values(component1, component2, compare_uuids=true)
+            !IS.compare_values(component1, component2; compare_uuids = true)
         )
     )
     component2.name = "b"
@@ -107,7 +108,7 @@ end
         @test_logs(
             (:error, r"not match"),
             match_mode = :any,
-            !IS.compare_values(component1, component2, compare_uuids=false)
+            !IS.compare_values(component1, component2; compare_uuids = false)
         )
     )
 
@@ -138,11 +139,11 @@ end
 end
 
 @testset "Test compression settings" begin
-    none = IS.CompressionSettings(enabled=false)
+    none = IS.CompressionSettings(; enabled = false)
     @test IS.get_compression_settings(IS.SystemData()) == none
-    @test IS.get_compression_settings(IS.SystemData(time_series_in_memory=true)) == none
-    settings = IS.CompressionSettings(enabled=true, type=IS.CompressionTypes.DEFLATE)
-    @test IS.get_compression_settings(IS.SystemData(compression=settings)) == settings
+    @test IS.get_compression_settings(IS.SystemData(; time_series_in_memory = true)) == none
+    settings = IS.CompressionSettings(; enabled = true, type = IS.CompressionTypes.DEFLATE)
+    @test IS.get_compression_settings(IS.SystemData(; compression = settings)) == settings
 end
 
 @testset "Test single time series consistency" begin
@@ -150,8 +151,11 @@ end
     initial_time = Dates.DateTime("2020-09-01")
     resolution = Dates.Hour(1)
     len = 24
-    ta = TimeSeries.TimeArray(range(initial_time; length=len, step=resolution), ones(len))
-    ts = IS.SingleTimeSeries(data=ta, name="test")
+    ta = TimeSeries.TimeArray(
+        range(initial_time; length = len, step = resolution),
+        ones(len),
+    )
+    ts = IS.SingleTimeSeries(; data = ta, name = "test")
 
     for i in 1:2
         name = "component_$(i)"
@@ -173,8 +177,8 @@ end
 
     for i in 1:2
         it = initial_time + resolution * i
-        ta = TimeSeries.TimeArray(range(it; length=len, step=resolution), ones(len))
-        ts = IS.SingleTimeSeries(data=ta, name="test")
+        ta = TimeSeries.TimeArray(range(it; length = len, step = resolution), ones(len))
+        ts = IS.SingleTimeSeries(; data = ta, name = "test")
         name = "component_$(i)"
         component = IS.TestComponent(name, 5)
         IS.add_component!(data, component)
@@ -193,10 +197,10 @@ end
     for i in 1:2
         len += i
         ta = TimeSeries.TimeArray(
-            range(initial_time; length=len, step=resolution),
+            range(initial_time; length = len, step = resolution),
             ones(len),
         )
-        ts = IS.SingleTimeSeries(data=ta, name="test")
+        ts = IS.SingleTimeSeries(; data = ta, name = "test")
         name = "component_$(i)"
         component = IS.TestComponent(name, 5)
         IS.add_component!(data, component)
@@ -227,8 +231,8 @@ end
     data = IS.SystemData()
     initial_time = Dates.DateTime("2020-09-01")
     resolution = Dates.Hour(1)
-    ta = TimeSeries.TimeArray(range(initial_time; length=24, step=resolution), ones(24))
-    ts = IS.SingleTimeSeries(data=ta, name="test")
+    ta = TimeSeries.TimeArray(range(initial_time; length = 24, step = resolution), ones(24))
+    ts = IS.SingleTimeSeries(; data = ta, name = "test")
 
     for i in 1:5
         name = "component_$(i)"
@@ -246,4 +250,51 @@ end
     @test length(ts_counts) == 1
     @test ts_counts[1]["type"] == "SingleTimeSeries"
     @test ts_counts[1]["count"] == 5
+end
+
+@testset "Test component and attributes" begin
+    data = IS.SystemData()
+    initial_time = Dates.DateTime("2020-09-01")
+    resolution = Dates.Hour(1)
+    ta = TimeSeries.TimeArray(range(initial_time; length = 24, step = resolution), ones(24))
+    ts = IS.SingleTimeSeries(; data = ta, name = "test")
+
+    for i in 1:5
+        name = "component_$(i)"
+        component = IS.TestComponent(name, 3)
+        IS.add_component!(data, component)
+        IS.add_time_series!(data, component, ts)
+        geo_info = IS.GeographicInfo()
+        IS.add_supplemental_attribute!(data, component, geo_info)
+    end
+
+    for c in IS.get_components(IS.TestComponent, data)
+        @test IS.has_supplemental_attributes(IS.GeographicInfo, c)
+    end
+
+    @test length(IS.get_supplemental_attributes(IS.GeographicInfo, data)) == 5
+
+    i = 0
+    for component in IS.iterate_supplemental_attributes(data)
+        i += 1
+    end
+    @test i == 5
+
+    attributes = IS.get_supplemental_attributes(IS.GeographicInfo, data)
+    io = IOBuffer()
+    show(io, "text/plain", attributes)
+    output = String(take!(io))
+    expected = "GeographicInfo: $i"
+    @test occursin(expected, output)
+
+    attribute_removed = collect(attributes)[1]
+    IS.remove_supplemental_attribute!(data, attribute_removed)
+
+    attributes = IS.get_supplemental_attributes(IS.GeographicInfo, data)
+    @test length(attributes) == 4
+    @test IS.get_uuid(attribute_removed) ∉ IS.get_uuid.(attributes)
+
+    IS.remove_supplemental_attributes!(IS.GeographicInfo, data)
+    attributes = IS.get_supplemental_attributes(IS.GeographicInfo, data)
+    @test length(attributes) == 0
 end

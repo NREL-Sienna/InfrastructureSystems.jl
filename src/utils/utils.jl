@@ -49,7 +49,7 @@ end
 """
 Returns an array of all super types of T.
 """
-function supertypes(::Type{T}, types=[]) where {T}
+function supertypes(::Type{T}, types = []) where {T}
     super = supertype(T)
     push!(types, super)
     if super == Any
@@ -122,26 +122,27 @@ Recursively compares struct values. Prints all mismatched values to stdout.
   - `y::T`: Second value
   - `compare_uuids::Bool = false`: Compare any UUID in the object or composed objects.
 """
-function compare_values(x::T, y::T; compare_uuids=false) where {T}
+function compare_values(x::T, y::T; compare_uuids = false) where {T}
     match = true
     fields = fieldnames(T)
     if isempty(fields)
         match = x == y
     else
         for field_name in fields
-            if T <: TimeSeriesContainer && field_name == :time_series_storage
+            if (T <: TimeSeriesContainer || T <: SupplementalAttributes) &&
+               field_name == :time_series_storage
                 # This gets validated at SystemData. Don't repeat for each component.
                 continue
             end
             val1 = getfield(x, field_name)
             val2 = getfield(y, field_name)
             if !isempty(fieldnames(typeof(val1)))
-                if !compare_values(val1, val2, compare_uuids=compare_uuids)
+                if !compare_values(val1, val2; compare_uuids = compare_uuids)
                     @error "values do not match" T field_name val1 val2
                     match = false
                 end
             elseif val1 isa AbstractArray
-                if !compare_values(val1, val2, compare_uuids=compare_uuids)
+                if !compare_values(val1, val2; compare_uuids = compare_uuids)
                     @error "values do not match" T field_name val1 val2
                     match = false
                 end
@@ -157,15 +158,15 @@ function compare_values(x::T, y::T; compare_uuids=false) where {T}
     return match
 end
 
-function compare_values(x::Vector{T}, y::Vector{T}; compare_uuids=false) where {T}
+function compare_values(x::Vector{T}, y::Vector{T}; compare_uuids = false) where {T}
     if length(x) != length(y)
         @error "lengths do not match" T length(x) length(y)
         return false
     end
 
     match = true
-    for i in range(1, length=length(x))
-        if !compare_values(x[i], y[i], compare_uuids=compare_uuids)
+    for i in range(1; length = length(x))
+        if !compare_values(x[i], y[i]; compare_uuids = compare_uuids)
             @error "values do not match" typeof(x[i]) i x[i] y[i]
             match = false
         end
@@ -174,7 +175,7 @@ function compare_values(x::Vector{T}, y::Vector{T}; compare_uuids=false) where {
     return match
 end
 
-function compare_values(x::Dict, y::Dict; compare_uuids=false)
+function compare_values(x::Dict, y::Dict; compare_uuids = false)
     keys_x = Set(keys(x))
     keys_y = Set(keys(y))
     if keys_x != keys_y
@@ -184,7 +185,7 @@ function compare_values(x::Dict, y::Dict; compare_uuids=false)
 
     match = true
     for key in keys_x
-        if !compare_values(x[key], y[key], compare_uuids=compare_uuids)
+        if !compare_values(x[key], y[key]; compare_uuids = compare_uuids)
             @error "values do not match" typeof(x[key]) key x[key] y[key]
             match = false
         end
@@ -193,8 +194,8 @@ function compare_values(x::Dict, y::Dict; compare_uuids=false)
     return match
 end
 
-compare_values(::Type{T}, ::Type{T}; compare_uuids=false) where {T} = true
-compare_values(::Type{T}, ::Type{U}; compare_uuids=false) where {T, U} = false
+compare_values(::Type{T}, ::Type{T}; compare_uuids = false) where {T} = true
+compare_values(::Type{T}, ::Type{U}; compare_uuids = false) where {T, U} = false
 
 # Copied from https://discourse.julialang.org/t/encapsulating-enum-access-via-dot-syntax/11785/10
 """
@@ -328,7 +329,7 @@ function forward(sender::Tuple{Type, Symbol}, receiver::Type, exclusions::Vector
     return code
 end
 
-macro forward(sender, receiver, exclusions=Symbol[])
+macro forward(sender, receiver, exclusions = Symbol[])
     out = quote
         list = InfrastructureSystems.forward($sender, $receiver, $exclusions)
         for line in list
@@ -379,8 +380,11 @@ end
 function get_module(module_name)
     # root_module cannot find InfrastructureSystems if it hasn't been installed by the
     # user (but has been installed as a dependency to another package).
-    return module_name == "InfrastructureSystems" ? InfrastructureSystems :
-           Base.root_module(Base.__toplevel__, Symbol(module_name))
+    return if module_name == "InfrastructureSystems"
+        InfrastructureSystems
+    else
+        Base.root_module(Base.__toplevel__, Symbol(module_name))
+    end
 end
 
 get_type_from_strings(module_name, type) = getfield(get_module(module_name), Symbol(type))
@@ -409,7 +413,7 @@ function get_initial_times(
         return [initial_timestamp]
     end
 
-    return range(initial_timestamp; length=count, step=interval)
+    return range(initial_timestamp; length = count, step = interval)
 end
 
 function get_total_period(

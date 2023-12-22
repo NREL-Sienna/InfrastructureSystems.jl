@@ -22,6 +22,7 @@ Container for system components and time series data
 mutable struct SystemData <: InfrastructureSystemsType
     components::Components
     masked_components::Components
+    attributes::SupplementalAttributes
     time_series_params::TimeSeriesParameters
     time_series_storage::TimeSeriesStorage
     validation_descriptors::Vector
@@ -42,10 +43,10 @@ Construct SystemData to store components and time series data.
   - `compression = CompressionSettings()`: Controls compression of time series data.
 """
 function SystemData(;
-    validation_descriptor_file=nothing,
-    time_series_in_memory=false,
-    time_series_directory=nothing,
-    compression=CompressionSettings(),
+    validation_descriptor_file = nothing,
+    time_series_in_memory = false,
+    time_series_directory = nothing,
+    compression = CompressionSettings(),
 )
     if isnothing(validation_descriptor_file)
         validation_descriptors = Vector()
@@ -58,15 +59,17 @@ function SystemData(;
     end
 
     ts_storage = make_time_series_storage(;
-        in_memory=time_series_in_memory,
-        directory=time_series_directory,
-        compression=compression,
+        in_memory = time_series_in_memory,
+        directory = time_series_directory,
+        compression = compression,
     )
     components = Components(ts_storage, validation_descriptors)
+    attributes = SupplementalAttributes(ts_storage)
     masked_components = Components(ts_storage, validation_descriptors)
     return SystemData(
         components,
         masked_components,
+        attributes,
         TimeSeriesParameters(),
         ts_storage,
         validation_descriptors,
@@ -85,6 +88,7 @@ function SystemData(
     return SystemData(
         components,
         masked_components,
+        SupplementalAttributes(time_series_storage),
         time_series_params,
         time_series_storage,
         validation_descriptors,
@@ -107,10 +111,10 @@ function add_time_series_from_file_metadata!(
     data::SystemData,
     ::Type{T},
     metadata_file::AbstractString;
-    resolution=nothing,
+    resolution = nothing,
 ) where {T <: InfrastructureSystemsComponent}
     metadata = read_time_series_file_metadata(metadata_file)
-    return add_time_series_from_file_metadata!(data, T, metadata; resolution=resolution)
+    return add_time_series_from_file_metadata!(data, T, metadata; resolution = resolution)
 end
 
 """
@@ -126,7 +130,7 @@ function add_time_series_from_file_metadata!(
     data::SystemData,
     ::Type{T},
     file_metadata::Vector{TimeSeriesFileMetadata};
-    resolution=nothing,
+    resolution = nothing,
 ) where {T <: InfrastructureSystemsComponent}
     cache = TimeSeriesParsingCache()
     for metadata in file_metadata
@@ -152,16 +156,46 @@ function add_time_series!(
     data::SystemData,
     component::InfrastructureSystemsComponent,
     time_series::TimeSeriesData;
-    skip_if_present=false,
+    skip_if_present = false,
 )
     metadata_type = time_series_data_to_metadata(typeof(time_series))
     ts_metadata = metadata_type(time_series)
-    _attach_time_series_and_serialize!(
+    _validate_component(data, component)
+    attach_time_series_and_serialize!(
         data,
         component,
         ts_metadata,
         time_series;
-        skip_if_present=skip_if_present,
+        skip_if_present = skip_if_present,
+    )
+    return
+end
+
+"""
+Add time series data to an attribute.
+
+# Arguments
+
+  - `data::SystemData`: SystemData
+  - `component::InfrastructureSystemsComponent`: will store the time series reference
+  - `time_series::TimeSeriesData`: Any object of subtype TimeSeriesData
+
+Throws ArgumentError if the component is not stored in the system.
+"""
+function add_time_series!(
+    data::SystemData,
+    component::InfrastructureSystemsSupplementalAttribute,
+    time_series::TimeSeriesData;
+    skip_if_present = false,
+)
+    metadata_type = time_series_data_to_metadata(typeof(time_series))
+    ts_metadata = metadata_type(time_series)
+    attach_time_series_and_serialize!(
+        data,
+        component,
+        ts_metadata,
+        time_series;
+        skip_if_present = skip_if_present,
     )
     return
 end
@@ -184,35 +218,8 @@ function add_time_series!(data::SystemData, components, time_series::TimeSeriesD
     metadata_type = time_series_data_to_metadata(typeof(time_series))
     ts_metadata = metadata_type(time_series)
     for component in components
-        _attach_time_series_and_serialize!(data, component, ts_metadata, time_series)
+        attach_time_series_and_serialize!(data, component, ts_metadata, time_series)
     end
-end
-
-function _attach_time_series_and_serialize!(
-    data::SystemData,
-    component::InfrastructureSystemsComponent,
-    ts_metadata::T,
-    ts::TimeSeriesData;
-    skip_if_present=false,
-) where {T <: TimeSeriesMetadata}
-    _validate_component(data, component)
-    check_add_time_series(data.time_series_params, ts)
-    check_read_only(data.time_series_storage)
-    if has_time_series(component, T, get_name(ts))
-        skip_if_present && return
-        throw(ArgumentError("time_series $(typeof(ts)) $(get_name(ts)) is already stored"))
-    end
-
-    serialize_time_series!(
-        data.time_series_storage,
-        get_uuid(component),
-        get_name(ts_metadata),
-        ts,
-    )
-    add_time_series!(component, ts_metadata, skip_if_present=skip_if_present)
-    # Order is important. Set this last in case exceptions are thrown at previous steps.
-    set_parameters!(data.time_series_params, ts)
-    return
 end
 
 function add_time_series_from_file_metadata_internal!(
@@ -316,7 +323,7 @@ function _validate_component(
     end
 end
 
-function compare_values(x::SystemData, y::SystemData; compare_uuids=false)
+function compare_values(x::SystemData, y::SystemData; compare_uuids = false)
     match = true
     for name in fieldnames(SystemData)
         val_x = getfield(x, name)
@@ -327,7 +334,7 @@ function compare_values(x::SystemData, y::SystemData; compare_uuids=false)
             # InMemoryTimeSeriesStorage
             continue
         end
-        if !compare_values(val_x, val_y, compare_uuids=compare_uuids)
+        if !compare_values(val_x, val_y; compare_uuids = compare_uuids)
             @error "SystemData field = $name does not match" getfield(x, name) getfield(
                 y,
                 name,
@@ -355,13 +362,13 @@ end
 Removes the component from the main container and adds it to the masked container.
 """
 function mask_component!(data::SystemData, component::InfrastructureSystemsComponent)
-    remove_component!(data.components, component, remove_time_series=false)
+    remove_component!(data.components, component; remove_time_series = false)
     set_time_series_storage!(component, nothing)
     return add_masked_component!(
         data,
-        component,
-        skip_validation=true,  # validation has already occurred
-        allow_existing_time_series=true,
+        component;
+        skip_validation = true,  # validation has already occurred
+        allow_existing_time_series = true,
     )
 end
 
@@ -422,14 +429,14 @@ Call `collect` on the result to get an array.
 """
 function get_time_series_multiple(
     data::SystemData,
-    filter_func=nothing;
-    type=nothing,
-    name=nothing,
+    filter_func = nothing;
+    type = nothing,
+    name = nothing,
 )
     Channel() do channel
         for component in iterate_components_with_time_series(data)
             for time_series in
-                get_time_series_multiple(component, filter_func; type=type, name=name)
+                get_time_series_multiple(component, filter_func; type = type, name = name)
                 put!(channel, time_series)
             end
         end
@@ -567,7 +574,11 @@ end
 Parent object should call this prior to serialization so that SystemData can store the
 appropriate path information for the time series data.
 """
-function prepare_for_serialization!(data::SystemData, filename::AbstractString; force=false)
+function prepare_for_serialization!(
+    data::SystemData,
+    filename::AbstractString;
+    force = false,
+)
     directory = dirname(filename)
     if !isdir(directory)
         mkpath(directory)
@@ -634,8 +645,8 @@ end
 function deserialize(
     ::Type{SystemData},
     raw::Dict;
-    time_series_read_only=false,
-    time_series_directory=nothing,
+    time_series_read_only = false,
+    time_series_directory = nothing,
 )
     @debug "deserialize" raw _group = LOG_GROUP_SERIALIZATION
     time_series_params = deserialize(TimeSeriesParameters, raw["time_series_params"])
@@ -660,14 +671,14 @@ function deserialize(
         time_series_storage = from_file(
             Hdf5TimeSeriesStorage,
             raw["time_series_storage_file"];
-            read_only=time_series_read_only,
-            directory=time_series_directory,
+            read_only = time_series_read_only,
+            directory = time_series_directory,
         )
     else
-        time_series_storage = make_time_series_storage(
-            in_memory=raw["time_series_compression_enabled"],
-            compression=CompressionSettings(enabled=raw["time_series_in_memory"]),
-            directory=time_series_directory,
+        time_series_storage = make_time_series_storage(;
+            in_memory = raw["time_series_compression_enabled"],
+            compression = CompressionSettings(; enabled = raw["time_series_in_memory"]),
+            directory = time_series_directory,
         )
     end
 
@@ -692,7 +703,7 @@ add_component!(data::SystemData, component; kwargs...) =
 add_masked_component!(data::SystemData, component; kwargs...) = add_component!(
     data.masked_components,
     component;
-    allow_existing_time_series=true,
+    allow_existing_time_series = true,
     kwargs...,
 )
 
@@ -720,7 +731,7 @@ end
 function get_components(
     ::Type{T},
     data::SystemData,
-    filter_func::Union{Nothing, Function}=nothing,
+    filter_func::Union{Nothing, Function} = nothing,
 ) where {T}
     return get_components(T, data.components, filter_func)
 end
@@ -731,7 +742,7 @@ get_components_by_name(::Type{T}, data::SystemData, args...) where {T} =
 function get_masked_components(
     ::Type{T},
     data::SystemData,
-    filter_func::Union{Nothing, Function}=nothing,
+    filter_func::Union{Nothing, Function} = nothing,
 ) where {T}
     return get_components(T, data.masked_components, filter_func)
 end
@@ -811,3 +822,68 @@ end
 
 _get_system_basename(system_file) = splitext(basename(system_file))[1]
 _get_secondary_basename(system_basename, name) = system_basename * "_" * name
+
+add_supplemental_attribute!(data::SystemData, component, info; kwargs...) =
+    add_supplemental_attribute!(data.attributes, component, info; kwargs...)
+
+function get_supplemental_attributes(
+    filter_func::Function,
+    ::Type{T},
+    data::SystemData,
+) where {T <: InfrastructureSystemsSupplementalAttribute}
+    return get_supplemental_attributes(T, data.attributes, filter_func)
+end
+
+function get_supplemental_attributes(
+    ::Type{T},
+    data::SystemData,
+) where {T <: InfrastructureSystemsSupplementalAttribute}
+    return get_supplemental_attributes(T, data.attributes)
+end
+
+function iterate_supplemental_attributes(data::SystemData)
+    return iterate_supplemental_attributes(data.attributes)
+end
+
+function remove_supplemental_attribute!(
+    data::SystemData,
+    component::InfrastructureSystemsComponent,
+    attribute::InfrastructureSystemsSupplementalAttribute,
+)
+    detach_component!(attribute, component)
+    detach_supplemental_attribute!(component, attribute)
+    clear_time_series_storage!(attribute)
+    remove_supplemental_attribute!(data.attributes, attribute)
+    return
+end
+
+function remove_supplemental_attribute!(
+    data::SystemData,
+    attribute::InfrastructureSystemsSupplementalAttribute,
+)
+    current_components_uuid = collect(get_component_uuids(attribute))
+    for c_uuid in current_components_uuid
+        component = get_component(data, c_uuid)
+        detach_component!(attribute, component)
+        detach_supplemental_attribute!(component, attribute)
+    end
+    clear_time_series_storage!(attribute)
+    return remove_supplemental_attribute!(data.attributes, attribute)
+end
+
+function remove_supplemental_attributes!(
+    ::Type{T},
+    data::SystemData,
+) where {T <: InfrastructureSystemsSupplementalAttribute}
+    attributes = get_supplemental_attributes(T, data.attributes)
+    for attribute in attributes
+        for c_uuid in get_component_uuids(attribute)
+            component = get_component(data, c_uuid)
+            detach_component!(attribute, component)
+            detach_supplemental_attribute!(component, attribute)
+        end
+        remove_supplemental_attribute!(data.attributes, attribute)
+        clear_time_series_storage!(attribute)
+    end
+    return
+end

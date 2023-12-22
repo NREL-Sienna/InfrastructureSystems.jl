@@ -15,7 +15,7 @@ Pass component_name when the file does not have the component name in a column h
 function read_time_series(
     ::Type{T},
     data_file::AbstractString,
-    component_name=nothing;
+    component_name = nothing;
     kwargs...,
 ) where {T <: TimeSeriesData}
     if !isfile(data_file)
@@ -175,7 +175,7 @@ function read_time_series(
     ::Type{T},
     ::Type{Deterministic},
     file::CSV.File,
-    component_name=nothing;
+    component_name = nothing;
     kwargs...,
 ) where {T <: TimeSeriesFormatDateTimeAsColumn}
     @debug "Read CSV data from $file." _group = LOG_GROUP_TIME_SERIES
@@ -202,7 +202,7 @@ function read_time_series(
     ::Type{T},
     ::Type{<:StaticTimeSeries},
     file::CSV.File,
-    component_name=nothing;
+    component_name = nothing;
     kwargs...,
 ) where {T <: Union{TimeSeriesFormatPeriodAsColumn, TimeSeriesFormatDateTimeAsColumn}}
     first_timestamp = get_timestamp(T, file, 1)
@@ -248,7 +248,7 @@ function read_time_series(
     ::Type{T},
     ::Type{<:StaticTimeSeries},
     file::CSV.File,
-    component_name=nothing;
+    component_name = nothing;
     kwargs...,
 ) where {T <: TimeSeriesFormatComponentsAsColumnsNoTime}
     first_timestamp = get(kwargs, :start_datetime, Dates.DateTime(Dates.today()))

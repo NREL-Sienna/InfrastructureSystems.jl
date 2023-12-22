@@ -1,13 +1,18 @@
 
 const ComponentsByType = Dict{DataType, Dict{String, <:InfrastructureSystemsComponent}}
 
-struct Components
+struct Components <: InfrastructureSystemsContainer
     data::ComponentsByType
     time_series_storage::TimeSeriesStorage
     validation_descriptors::Vector
 end
 
-function Components(time_series_storage::TimeSeriesStorage, validation_descriptors=nothing)
+get_display_string(::Components) = "components"
+
+function Components(
+    time_series_storage::TimeSeriesStorage,
+    validation_descriptors = nothing,
+)
     if isnothing(validation_descriptors)
         validation_descriptors = Vector()
     end
@@ -15,16 +20,11 @@ function Components(time_series_storage::TimeSeriesStorage, validation_descripto
     return Components(ComponentsByType(), time_series_storage, validation_descriptors)
 end
 
-function serialize(components::Components)
-    # time_series_storage and validation_descriptors are serialized elsewhere.
-    return [serialize(x) for y in values(components.data) for x in values(y)]
-end
-
 function _add_component!(
     components::Components,
     component::T;
-    skip_validation=false,
-    allow_existing_time_series=false,
+    skip_validation = false,
+    allow_existing_time_series = false,
 ) where {T <: InfrastructureSystemsComponent}
     component_name = get_name(component)
     if !isconcretetype(T)
@@ -91,6 +91,7 @@ function check_component(components::Components, comp::InfrastructureSystemsComp
     if !validate_struct(comp)
         throw(InvalidValue("$(summary(comp)) is invalid"))
     end
+    return
 end
 
 """
@@ -132,13 +133,13 @@ Throws ArgumentError if the component is not stored.
 function remove_component!(
     components::Components,
     component::T;
-    remove_time_series=true,
+    remove_time_series = true,
 ) where {T <: InfrastructureSystemsComponent}
     return _remove_component!(
         T,
         components,
-        get_name(component),
-        remove_time_series=remove_time_series,
+        get_name(component);
+        remove_time_series = remove_time_series,
     )
 end
 
@@ -151,16 +152,16 @@ function remove_component!(
     ::Type{T},
     components::Components,
     name::AbstractString;
-    remove_time_series=true,
+    remove_time_series = true,
 ) where {T <: InfrastructureSystemsComponent}
-    return _remove_component!(T, components, name, remove_time_series=remove_time_series)
+    return _remove_component!(T, components, name; remove_time_series = remove_time_series)
 end
 
 function _remove_component!(
     ::Type{T},
     components::Components,
     name::AbstractString;
-    remove_time_series=true,
+    remove_time_series = true,
 ) where {T <: InfrastructureSystemsComponent}
     if !haskey(components.data, T)
         throw(ArgumentError("component $T is not stored"))
@@ -268,7 +269,7 @@ Call collect on the result if an array is desired.
 # Arguments
 
   - `T`: component type
-  - `components::Components`: Components of the sytem
+  - `components::Components`: Components of the system
   - `filter_func::Union{Nothing, Function} = nothing`: Optional function that accepts a component
     of type T and returns a Bool. Apply this function to each component and only return components
     where the result is true.
@@ -278,7 +279,7 @@ See also: [`iterate_components`](@ref)
 function get_components(
     ::Type{T},
     components::Components,
-    filter_func::Union{Nothing, Function}=nothing,
+    filter_func::Union{Nothing, Function} = nothing,
 ) where {T <: InfrastructureSystemsComponent}
     if isconcretetype(T)
         _components = get(components.data, T, nothing)
@@ -321,39 +322,15 @@ end
 See also: [`get_components`](@ref)
 """
 function iterate_components(components::Components)
-    Channel() do channel
-        for comp_dict in values(components.data)
-            for component in values(comp_dict)
-                put!(channel, component)
-            end
-        end
-    end
+    iterate_container(components)
 end
 
 function iterate_components_with_time_series(components::Components)
-    Channel() do channel
-        for comp_dict in values(components.data)
-            for component in values(comp_dict)
-                if has_time_series(component)
-                    put!(channel, component)
-                end
-            end
-        end
-    end
+    iterate_container_with_time_series(components)
 end
 
 function get_num_components(components::Components)
-    count = 0
-    for components in values(components.data)
-        count += length(components)
-    end
-    return count
-end
-
-function clear_time_series!(components::Components)
-    for component in iterate_components_with_time_series(components)
-        clear_time_series!(component)
-    end
+    return get_num_members(components)
 end
 
 function is_attached(
@@ -388,16 +365,17 @@ function set_name!(
     set_name_internal!(component, name)
     components.data[T][name] = component
     @debug "Changed the name of component $(summary(component))" _group = LOG_GROUP_SYSTEM
+    return
 end
 
-function compare_values(x::Components, y::Components; compare_uuids=false)
+function compare_values(x::Components, y::Components; compare_uuids = false)
     match = true
     for name in fieldnames(Components)
         # This gets validated in SystemData.
         name == :time_series_storage && continue
         val_x = getfield(x, name)
         val_y = getfield(y, name)
-        if !compare_values(val_x, val_y, compare_uuids=compare_uuids)
+        if !compare_values(val_x, val_y; compare_uuids = compare_uuids)
             @error "Components field = $name does not match" val_x val_y
             match = false
         end

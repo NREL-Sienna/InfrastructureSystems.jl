@@ -43,6 +43,7 @@ Required interface functions for subtypes:
 Optional interface functions:
 
   - get_time_series_container()
+  - get_supplemental_attributes_container()
 
 Subtypes may contain time series.
 """
@@ -54,6 +55,25 @@ Base type for auxillary structs. These should not be stored in a system.
 abstract type DeviceParameter <: InfrastructureSystemsType end
 
 """
+Base type for structs that store supplemental attributes
+
+Required interface functions for subtypes:
+
+  - get_internal()
+
+Optional interface functions:
+
+  - get_time_series_container()
+  - get_component_uuids()
+  - get_uuid()
+
+Subtypes may contain time series. Which requires
+
+  - get_time_series_container()
+"""
+abstract type InfrastructureSystemsSupplementalAttribute <: InfrastructureSystemsType end
+
+"""
 Return the internal time_series storage container or nothing, if the type doesn't store
 time series.
 
@@ -63,7 +83,7 @@ function get_time_series_container(value::InfrastructureSystemsComponent)
     return nothing
 end
 
-set_time_series_container!(value::InfrastructureSystemsComponent) = nothing
+set_time_series_container!(value::InfrastructureSystemsComponent, _) = nothing
 
 get_name(value::InfrastructureSystemsComponent) = value.name
 
@@ -92,7 +112,11 @@ include("forecasts.jl")
 include("static_time_series.jl")
 include("time_series_container.jl")
 include("time_series_parser.jl")
+include("containers.jl")
+include("supplemental_attribute.jl")
+include("supplemental_attributes.jl")
 include("components.jl")
+include("geographic_supplemental_attribute.jl")
 include("generated/includes.jl")
 include("single_time_series.jl")
 include("deterministic_single_time_series.jl")
@@ -110,6 +134,7 @@ include("component.jl")
 include("results.jl")
 include("serialization.jl")
 include("system_data.jl")
+include("time_series_interface.jl")
 include("validation.jl")
 include("utils/print.jl")
 include("utils/test.jl")

@@ -99,8 +99,8 @@ end
         IS.show_recorder_events(
             buf2,
             InfrastructureSystems.TestEvent,
-            filename,
-            exclude_columns=Set("timestamp"),
+            filename;
+            exclude_columns = Set("timestamp"),
         )
         text = String(take!(buf1))
         @test !occursin("timestamp", text)

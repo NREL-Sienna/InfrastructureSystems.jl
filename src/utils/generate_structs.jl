@@ -90,7 +90,7 @@ function read_json_data(filename::String)
     end
 end
 
-function generate_structs(directory, data::Vector; print_results=true)
+function generate_structs(directory, data::Vector; print_results = true)
     struct_names = Vector{String}()
     unique_accessor_functions = Set{String}()
     unique_setter_functions = Set{String}()
@@ -232,7 +232,7 @@ end
 function generate_structs(
     input_file::AbstractString,
     output_directory::AbstractString;
-    print_results=true,
+    print_results = true,
 )
     # Include each generated file.
     if !isdir(output_directory)
@@ -240,7 +240,7 @@ function generate_structs(
     end
 
     data = read_json_data(input_file)
-    generate_structs(output_directory, data, print_results=print_results)
+    generate_structs(output_directory, data; print_results = print_results)
     return
 end
 
@@ -251,11 +251,11 @@ from descriptor_file.
 function test_generated_structs(descriptor_file, existing_dir)
     output_dir = "tmp-test-generated-structs"
     if isdir(output_dir)
-        rm(output_dir; recursive=true)
+        rm(output_dir; recursive = true)
     end
     mkdir(output_dir)
 
-    generate_structs(descriptor_file, output_dir; print_results=false)
+    generate_structs(descriptor_file, output_dir; print_results = false)
 
     matched = true
     for (file1, file2) in zip(readdir(output_dir), readdir(existing_dir))
@@ -275,6 +275,6 @@ function test_generated_structs(descriptor_file, existing_dir)
         end
     end
 
-    rm(output_dir; recursive=true)
+    rm(output_dir; recursive = true)
     return matched
 end

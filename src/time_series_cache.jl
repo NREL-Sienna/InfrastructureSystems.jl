@@ -2,7 +2,7 @@ const TIME_SERIES_CACHE_SIZE_BYTES = 1024 * 1024
 
 abstract type TimeSeriesCache end
 
-function Base.iterate(cache::TimeSeriesCache, state=nothing)
+function Base.iterate(cache::TimeSeriesCache, state = nothing)
     if state === nothing
         reset!(cache)
     end
@@ -52,8 +52,8 @@ function get_time_series_array!(cache::TimeSeriesCache, timestamp::Dates.DateTim
         _get_component(cache),
         _get_time_series(cache),
         next_time;
-        len=len,
-        ignore_scaling_factors=_get_ignore_scaling_factors(cache),
+        len = len,
+        ignore_scaling_factors = _get_ignore_scaling_factors(cache),
     )
     _increment_next_time!(cache, len)
     _decrement_iterations_remaining!(cache)
@@ -200,10 +200,10 @@ function ForecastCache(
     ::Type{T},
     component::InfrastructureSystemsComponent,
     name::AbstractString;
-    start_time::Union{Nothing, Dates.DateTime}=nothing,
-    horizon::Union{Nothing, Int}=nothing,
-    cache_size_bytes=TIME_SERIES_CACHE_SIZE_BYTES,
-    ignore_scaling_factors=false,
+    start_time::Union{Nothing, Dates.DateTime} = nothing,
+    horizon::Union{Nothing, Int} = nothing,
+    cache_size_bytes = TIME_SERIES_CACHE_SIZE_BYTES,
+    ignore_scaling_factors = false,
 ) where {T <: Forecast}
     metadata_type = time_series_data_to_metadata(T)
     ts_metadata = get_time_series_metadata(metadata_type, component, name)
@@ -220,10 +220,10 @@ function ForecastCache(
         T,
         component,
         name;
-        start_time=start_time,
-        len=get_horizon(ts_metadata),
+        start_time = start_time,
+        len = get_horizon(ts_metadata),
     )
-    vals = get_time_series_values(component, ts, start_time, len=get_horizon(ts_metadata))
+    vals = get_time_series_values(component, ts, start_time; len = get_horizon(ts_metadata))
     row_size = _get_row_size(vals)
 
     count = get_count(ts_metadata)
@@ -238,14 +238,14 @@ function ForecastCache(
     @debug "ForecastCache" _group = LOG_GROUP_TIME_SERIES row_size window_size in_memory_count
 
     return ForecastCache(
-        TimeSeriesCacheCommon(
-            ts=ts,
-            component=component,
-            name=name,
-            next_time=start_time,
-            len=count,
-            num_iterations=count,
-            ignore_scaling_factors=ignore_scaling_factors,
+        TimeSeriesCacheCommon(;
+            ts = ts,
+            component = component,
+            name = name,
+            next_time = start_time,
+            len = count,
+            num_iterations = count,
+            ignore_scaling_factors = ignore_scaling_factors,
         ),
         in_memory_count,
         horizon,
@@ -270,9 +270,9 @@ function _update!(cache::ForecastCache)
         _get_type(cache),
         _get_component(cache),
         _get_name(cache);
-        start_time=next_time,
-        len=len,
-        count=count,
+        start_time = next_time,
+        len = len,
+        count = count,
     )
     _set_length_available!(cache, len)
     _set_time_series!(cache, ts)
@@ -318,9 +318,9 @@ function StaticTimeSeriesCache(
     ::Type{T},
     component::InfrastructureSystemsComponent,
     name::AbstractString;
-    cache_size_bytes=TIME_SERIES_CACHE_SIZE_BYTES,
-    start_time::Union{Nothing, Dates.DateTime}=nothing,
-    ignore_scaling_factors=false,
+    cache_size_bytes = TIME_SERIES_CACHE_SIZE_BYTES,
+    start_time::Union{Nothing, Dates.DateTime} = nothing,
+    ignore_scaling_factors = false,
 ) where {T <: StaticTimeSeries}
     metadata_type = time_series_data_to_metadata(T)
     ts_metadata = get_time_series_metadata(metadata_type, component, name)
@@ -335,8 +335,8 @@ function StaticTimeSeriesCache(
     end
 
     # Get an instance to assess data size.
-    ts = get_time_series(T, component, name; start_time=start_time, len=1)
-    vals = get_time_series_values(component, ts, start_time, len=1)
+    ts = get_time_series(T, component, name; start_time = start_time, len = 1)
+    vals = get_time_series_values(component, ts, start_time; len = 1)
     row_size = _get_row_size(vals)
 
     if row_size > cache_size_bytes
@@ -347,14 +347,14 @@ function StaticTimeSeriesCache(
 
     @debug "StaticTimeSeriesCache" _group = LOG_GROUP_TIME_SERIES total_length in_memory_rows
     return StaticTimeSeriesCache(
-        TimeSeriesCacheCommon(
-            ts=ts,
-            component=component,
-            name=name,
-            next_time=start_time,
-            len=total_length,
-            num_iterations=total_length,
-            ignore_scaling_factors=ignore_scaling_factors,
+        TimeSeriesCacheCommon(;
+            ts = ts,
+            component = component,
+            name = name,
+            next_time = start_time,
+            len = total_length,
+            num_iterations = total_length,
+            ignore_scaling_factors = ignore_scaling_factors,
         ),
         in_memory_rows,
     )
@@ -374,8 +374,8 @@ function _update!(cache::StaticTimeSeriesCache)
         _get_type(cache),
         _get_component(cache),
         _get_name(cache);
-        start_time=next_time,
-        len=len,
+        start_time = next_time,
+        len = len,
     )
     _set_length_available!(cache, len)
     _set_time_series!(cache, ts)

@@ -3,6 +3,7 @@ mutable struct TestComponent <: InfrastructureSystemsComponent
     name::String
     val::Int
     time_series_container::TimeSeriesContainer
+    attributes_container::SupplementalAttributesContainer
     internal::InfrastructureSystemsInternal
 end
 
@@ -10,11 +11,18 @@ mutable struct AdditionalTestComponent <: InfrastructureSystemsComponent
     name::String
     val::Int
     time_series_container::TimeSeriesContainer
+    attributes_container::SupplementalAttributesContainer
     internal::InfrastructureSystemsInternal
 end
 
 function TestComponent(name, val)
-    return TestComponent(name, val, TimeSeriesContainer(), InfrastructureSystemsInternal())
+    return TestComponent(
+        name,
+        val,
+        TimeSeriesContainer(),
+        SupplementalAttributesContainer(),
+        InfrastructureSystemsInternal(),
+    )
 end
 
 function AdditionalTestComponent(name, val)
@@ -22,6 +30,7 @@ function AdditionalTestComponent(name, val)
         name,
         val,
         TimeSeriesContainer(),
+        SupplementalAttributesContainer(),
         InfrastructureSystemsInternal(),
     )
 end
@@ -29,6 +38,10 @@ end
 get_internal(component::TestComponent) = component.internal
 get_internal(component::AdditionalTestComponent) = component.internal
 get_val(component::TestComponent) = component.val
+get_supplemental_attributes_container(component::TestComponent) =
+    component.attributes_container
+get_supplemental_attributes_container(component::AdditionalTestComponent) =
+    component.attributes_container
 
 function get_time_series_container(component::TestComponent)
     return component.time_series_container
@@ -44,6 +57,7 @@ function deserialize(::Type{TestComponent}, data::Dict)
         data["name"],
         data["val"],
         deserialize(TimeSeriesContainer, data["time_series_container"]),
+        SupplementalAttributesContainer(),
         deserialize(InfrastructureSystemsInternal, data["internal"]),
     )
 end
@@ -83,3 +97,28 @@ function runtests(args...)
         empty!(ARGS)
     end
 end
+
+struct TestSupplemental <: InfrastructureSystemsSupplementalAttribute
+    value::Float64
+    component_uuids::Set{UUIDs.UUID}
+    internal::InfrastructureSystemsInternal
+    time_series_container::TimeSeriesContainer
+end
+
+function TestSupplemental(;
+    value::Float64 = 0.0,
+    component_uuids::Set{UUIDs.UUID} = Set{UUIDs.UUID}(),
+)
+    return TestSupplemental(
+        value,
+        component_uuids,
+        InfrastructureSystemsInternal(),
+        TimeSeriesContainer(),
+    )
+end
+
+get_value(attr::TestSupplemental) = attr.attr_json
+get_internal(attr::TestSupplemental) = attr.internal
+get_uuid(attr::TestSupplemental) = get_uuid(get_internal(attr))
+get_component_uuids(attr::TestSupplemental) = attr.component_uuids
+get_time_series_container(attr::TestSupplemental) = attr.time_series_container
