@@ -349,6 +349,12 @@ end
             IS.Deterministic(; data = fdata, name = "bystander", resolution = resolution)
         IS.add_time_series!(sys, component, bystander)
 
+        counts = IS.get_time_series_counts(sys)
+        @test counts.components_with_time_series == 1
+        @test counts.supplemental_attributes_with_time_series == 0
+        @test counts.static_time_series_count == 1
+        @test counts.forecast_count == 1
+
         # This interval is greater than the max possible.
         @test_throws IS.ConflictingInputsError IS.transform_single_time_series!(
             sys,
@@ -364,6 +370,12 @@ end
             interval,
         )
         verify_show(sys)
+
+        counts = IS.get_time_series_counts(sys)
+        @test counts.components_with_time_series == 1
+        @test counts.supplemental_attributes_with_time_series == 0
+        @test counts.static_time_series_count == 1
+        @test counts.forecast_count == 2
 
         # The original should still be readable.
         single_vals = IS.get_time_series_values(IS.SingleTimeSeries, component, name)

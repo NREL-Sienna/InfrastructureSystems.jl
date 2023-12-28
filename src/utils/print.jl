@@ -24,22 +24,25 @@ function Base.show(io::IO, container::InfrastructureSystemsContainer)
 end
 
 function Base.show(io::IO, ::MIME"text/plain", container::InfrastructureSystemsContainer)
-    num_components = get_num_members(container)
-    println(io, "$(get_display_string(container))")
-    println(io, "==========")
-    println(io, "Num components: $num_components")
-    if num_components > 0
+    num_members = get_num_members(container)
+    title = get_display_string(container)
+    member_str = get_member_string(container)
+    println(io, title)
+    println(io, "="^length(title))
+    println(io, "Num $member_str: $num_members")
+    if num_members > 0
         println(io)
-        show_components_table(io, container; backend = Val(:auto))
+        show_container_table(io, container; backend = Val(:auto))
     end
 end
 
-function Base.show(io::IO, ::MIME"text/html", components::Components)
-    num_components = get_num_components(components)
-    println(io, "<h2>Components</h2>")
-    println(io, "<p><b>Num components</b>: $num_components</p>")
-    if num_components > 0
-        show_components_table(io, components; backend = Val(:html), standalone = false)
+function Base.show(io::IO, ::MIME"text/html", container::InfrastructureSystemsContainer)
+    num_members = get_num_members(container)
+    member_str = get_member_string(container)
+    println(io, "<h2>Members</h2>")
+    println(io, "<p><b>Num $member_str</b>: $num_members</p>")
+    if num_members > 0
+        show_container_table(io, container; backend = Val(:html), standalone = false)
     end
 end
 
@@ -71,6 +74,8 @@ end
 function Base.show(io::IO, ::MIME"text/plain", data::SystemData)
     show(io, MIME"text/plain"(), data.components)
     println(io, "\n")
+    show(io, MIME"text/plain"(), data.attributes)
+    println(io, "\n")
     show_time_series_data(io, data; backend = Val(:auto))
     show(io, data.time_series_params)
 end
@@ -78,27 +83,31 @@ end
 function Base.show(io::IO, ::MIME"text/html", data::SystemData)
     show(io, MIME"text/html"(), data.components)
     println(io, "\n")
+    show(io, MIME"text/html"(), data.attributes)
+    println(io, "\n")
     show_time_series_data(io, data; backend = Val(:html), standalone = false)
     show(io, data.time_series_params)
 end
 
 function show_time_series_data(io::IO, data::SystemData; kwargs...)
-    component_count, ts_count, forecast_count = get_time_series_counts(data)
+    counts = get_time_series_counts(data)
+    if counts.static_time_series_count == 0 && counts.forecast_count == 0
+        return
+    end
+
     res = get_time_series_resolution(data)
     res = res <= Dates.Minute(1) ? Dates.Second(res) : Dates.Minute(res)
 
     header = ["Property", "Value"]
     table = [
-        "Components with time series data" string(component_count)
-        "Total StaticTimeSeries" string(ts_count)
-        "Total Forecasts" string(forecast_count)
+        "Components with time series data" string(counts.components_with_time_series)
+        "Supplemental attributes with time series data" string(counts.supplemental_attributes_with_time_series)
+        "Total StaticTimeSeries" string(counts.static_time_series_count)
+        "Total Forecasts" string(counts.forecast_count)
         "Resolution" string(res)
     ]
-    if component_count == 0
-        return
-    end
 
-    if forecast_count > 0
+    if counts.forecast_count > 0
         initial_times = get_forecast_initial_times(data)
         table2 = [
             "First initial time" string(first(initial_times))
@@ -137,7 +146,7 @@ end
 
 function Base.show(io::IO, ::MIME"text/plain", ist::InfrastructureSystemsComponent)
     print(io, summary(ist), ":")
-    for (name, field_type) in zip(fieldnames(typeof(ist)), fieldtypes(typeof(ist)))
+    for name in fieldnames(typeof(ist))
         obj = getfield(ist, name)
         if obj isa InfrastructureSystemsInternal
             continue
@@ -197,14 +206,14 @@ function _get_type_counts(it::FlattenIteratorWrapper)
     return data
 end
 
-function show_components_table(io::IO, components::Components; kwargs...)
+function show_container_table(io::IO, container::InfrastructureSystemsContainer; kwargs...)
     header = ["Type", "Count", "Has Static Time Series", "Has Forecasts"]
-    data = Array{Any, 2}(undef, length(components.data), length(header))
+    data = Array{Any, 2}(undef, length(container.data), length(header))
 
-    type_names = [(strip_module_name(string(x)), x) for x in keys(components.data)]
+    type_names = [(strip_module_name(string(x)), x) for x in keys(container.data)]
     sort!(type_names; by = x -> x[1])
     for (i, (type_name, type)) in enumerate(type_names)
-        vals = components.data[type]
+        vals = container.data[type]
         has_sts = false
         has_forecasts = false
         for val in values(vals)

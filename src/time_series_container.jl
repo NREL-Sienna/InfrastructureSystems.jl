@@ -132,3 +132,5 @@ function deserialize(::Type{TimeSeriesContainer}, data::Vector)
 
     return container
 end
+
+iterate_time_series_metadata(container::TimeSeriesContainer) = values(container.data)
