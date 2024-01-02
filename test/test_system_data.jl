@@ -54,6 +54,9 @@ end
     @test IS.get_name(component) == new_name
     @test IS.get_component(typeof(component), data, new_name) === component
 
+    IS.add_component!(data, IS.TestComponent("component2", 6))
+    @test_throws ArgumentError IS.set_name!(data, component, "component2")
+
     component2 = IS.TestComponent("unattached", 5)
     @test_throws ArgumentError IS.set_name!(data, component2, new_name)
 end
