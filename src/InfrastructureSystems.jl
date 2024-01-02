@@ -65,11 +65,15 @@ Optional interface functions:
 
   - get_time_series_container()
   - get_component_uuids()
+    Required if the struct does not include the field component_uuids.
   - get_uuid()
 
 Subtypes may contain time series. Which requires
 
   - get_time_series_container()
+
+All subtypes must include an instance of ComponentUUIDs in order to track
+components attached to each attribute.
 """
 abstract type InfrastructureSystemsSupplementalAttribute <: InfrastructureSystemsType end
 
@@ -113,8 +117,10 @@ include("static_time_series.jl")
 include("time_series_container.jl")
 include("time_series_parser.jl")
 include("containers.jl")
+include("component_uuids.jl")
 include("supplemental_attribute.jl")
 include("supplemental_attributes.jl")
+include("supplemental_attributes_container.jl")
 include("components.jl")
 include("geographic_supplemental_attribute.jl")
 include("generated/includes.jl")

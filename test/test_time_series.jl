@@ -2246,3 +2246,10 @@ end
         pop!(ENV, IS.TIME_SERIES_DIRECTORY_ENV_VAR)
     end
 end
+
+@testset "Test time series counts" begin
+    sys = create_system_data_shared_time_series(; time_series_in_memory = true)
+    counts = IS.get_time_series_counts(sys)
+    @test counts.static_time_series_count == 1
+    @test counts.components_with_time_series == 2
+end

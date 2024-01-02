@@ -1,13 +1,4 @@
-
 mutable struct TestComponent <: InfrastructureSystemsComponent
-    name::String
-    val::Int
-    time_series_container::TimeSeriesContainer
-    attributes_container::SupplementalAttributesContainer
-    internal::InfrastructureSystemsInternal
-end
-
-mutable struct AdditionalTestComponent <: InfrastructureSystemsComponent
     name::String
     val::Int
     time_series_container::TimeSeriesContainer
@@ -25,6 +16,14 @@ function TestComponent(name, val)
     )
 end
 
+mutable struct AdditionalTestComponent <: InfrastructureSystemsComponent
+    name::String
+    val::Int
+    time_series_container::TimeSeriesContainer
+    attributes_container::SupplementalAttributesContainer
+    internal::InfrastructureSystemsInternal
+end
+
 function AdditionalTestComponent(name, val)
     return AdditionalTestComponent(
         name,
@@ -33,6 +32,20 @@ function AdditionalTestComponent(name, val)
         SupplementalAttributesContainer(),
         InfrastructureSystemsInternal(),
     )
+end
+
+mutable struct SimpleTestComponent <: InfrastructureSystemsComponent
+    name::String
+    val::Int
+    internal::InfrastructureSystemsInternal
+end
+
+function SimpleTestComponent(name, val)
+    return SimpleTestComponent(name, val, InfrastructureSystemsInternal())
+end
+
+function SimpleTestComponent(; name, val, internal = InfrastructureSystemsInternal())
+    return SimpleTestComponent(name, val, internal)
 end
 
 get_internal(component::TestComponent) = component.internal
@@ -57,7 +70,7 @@ function deserialize(::Type{TestComponent}, data::Dict)
         data["name"],
         data["val"],
         deserialize(TimeSeriesContainer, data["time_series_container"]),
-        SupplementalAttributesContainer(),
+        data["attributes_container"],
         deserialize(InfrastructureSystemsInternal, data["internal"]),
     )
 end
@@ -100,20 +113,22 @@ end
 
 struct TestSupplemental <: InfrastructureSystemsSupplementalAttribute
     value::Float64
-    component_uuids::Set{UUIDs.UUID}
+    component_uuids::ComponentUUIDs
     internal::InfrastructureSystemsInternal
     time_series_container::TimeSeriesContainer
 end
 
 function TestSupplemental(;
-    value::Float64 = 0.0,
-    component_uuids::Set{UUIDs.UUID} = Set{UUIDs.UUID}(),
+    value::Float64,
+    component_uuids::ComponentUUIDs = ComponentUUIDs(),
+    time_series_container = TimeSeriesContainer(),
+    internal::InfrastructureSystemsInternal = InfrastructureSystemsInternal(),
 )
     return TestSupplemental(
         value,
         component_uuids,
-        InfrastructureSystemsInternal(),
-        TimeSeriesContainer(),
+        internal,
+        time_series_container,
     )
 end
 

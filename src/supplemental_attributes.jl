@@ -1,5 +1,3 @@
-const SupplementalAttributesContainer =
-    Dict{DataType, Set{<:InfrastructureSystemsSupplementalAttribute}}
 const SupplementalAttributesByType =
     Dict{DataType, Dict{UUIDs.UUID, <:InfrastructureSystemsSupplementalAttribute}}
 
@@ -226,4 +224,39 @@ function get_supplemental_attributes(
 
     @assert_op eltype(iter) == T
     return iter
+end
+
+function serialize(attributes::SupplementalAttributes)
+    data = Vector{Dict{String, Any}}()
+    for attribute_container in values(attributes.data)
+        for attribute in values(attribute_container)
+            push!(data, serialize(attribute))
+        end
+    end
+
+    return data
+end
+
+function deserialize(
+    ::Type{SupplementalAttributes},
+    data::Vector,
+    time_series_storage::TimeSeriesStorage,
+)
+    attributes = SupplementalAttributesByType()
+    for attr_dict in data
+        type = get_type_from_serialization_metadata(get_serialization_metadata(attr_dict))
+        if !haskey(attributes, type)
+            attributes[type] =
+                Dict{UUIDs.UUID, InfrastructureSystemsSupplementalAttribute}()
+        end
+        attr = deserialize(type, attr_dict)
+        uuid = get_uuid(attr)
+        if haskey(attributes[type], uuid)
+            error("Bug: duplicate UUID in attributes container: type=$type uuid=$uuid")
+        end
+        attributes[type][uuid] = attr
+        @debug "Deserialized $(summary(attr))" _group = LOG_GROUP_SERIALIZATION
+    end
+
+    return SupplementalAttributes(attributes, time_series_storage)
 end

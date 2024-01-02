@@ -1,5 +1,8 @@
-
-function create_system_data(; with_time_series = false, time_series_in_memory = false)
+function create_system_data(;
+    with_time_series = false,
+    time_series_in_memory = false,
+    with_supplemental_attributes = false,
+)
     data = IS.SystemData(; time_series_in_memory = time_series_in_memory)
 
     name = "Component1"
@@ -15,6 +18,11 @@ function create_system_data(; with_time_series = false, time_series_in_memory = 
         )
         time_series = get_all_time_series(data)
         IS.@assert_op length(time_series) > 0
+    end
+
+    if with_supplemental_attributes
+        geo_info = IS.GeographicInfo()
+        IS.add_supplemental_attribute!(data, component, geo_info)
     end
 
     return data

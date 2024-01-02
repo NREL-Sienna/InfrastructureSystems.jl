@@ -1,4 +1,3 @@
-
 function validate_serialization(sys::IS.SystemData; time_series_read_only = false)
     #path, io = mktemp()
     # For some reason files aren't getting deleted when written to /tmp. Using current dir.
@@ -92,31 +91,53 @@ end
     @test result
 end
 
-@testset "Test verion info" begin
+@testset "Test JSON serialization with supplemental attributes" begin
+    sys = IS.SystemData()
+    initial_time = Dates.DateTime("2020-09-01")
+    resolution = Dates.Hour(1)
+    ta = TimeSeries.TimeArray(range(initial_time; length = 24, step = resolution), ones(24))
+    ts = IS.SingleTimeSeries(; data = ta, name = "test")
+    geo = IS.GeographicInfo(; geo_json = Dict("x" => 1.0, "y" => 2.0))
+
+    for i in 1:2
+        name = "component_$(i)"
+        component = IS.TestComponent(name, 5)
+        IS.add_component!(sys, component)
+        attr = IS.TestSupplemental(; value = Float64(i))
+        IS.add_supplemental_attribute!(sys, component, attr)
+        IS.add_time_series!(sys, attr, ts)
+        IS.add_supplemental_attribute!(sys, component, geo)
+    end
+
+    _, result = validate_serialization(sys)
+    @test result
+end
+
+@testset "Test version info" begin
     data = IS.serialize_julia_info()
     @test haskey(data, "julia_version")
     @test haskey(data, "package_info")
 end
 
 @testset "Test JSON string" begin
-    component = IS.TestComponent("Component1", 1)
+    component = IS.SimpleTestComponent("Component1", 1)
     text = IS.to_json(component)
-    IS.deserialize(IS.TestComponent, JSON3.read(text, Dict)) == component
+    IS.deserialize(IS.SimpleTestComponent, JSON3.read(text, Dict)) == component
 end
 
 @testset "Test pretty-print JSON IO" begin
-    component = IS.TestComponent("Component1", 2)
+    component = IS.SimpleTestComponent("Component1", 2)
     io = IOBuffer()
     IS.to_json(io, component; pretty = false)
     text = String(take!(io))
     @test !occursin(" ", text)
-    IS.deserialize(IS.TestComponent, JSON3.read(text, Dict)) == component
+    IS.deserialize(IS.SimpleTestComponent, JSON3.read(text, Dict)) == component
 
     io = IOBuffer()
     IS.to_json(io, component; pretty = true)
     text = String(take!(io))
     @test occursin(" ", text)
-    IS.deserialize(IS.TestComponent, JSON3.read(text, Dict)) == component
+    IS.deserialize(IS.SimpleTestComponent, JSON3.read(text, Dict)) == component
 end
 
 @testset "Test ext serialization" begin

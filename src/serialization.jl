@@ -16,7 +16,7 @@ function to_json(
     pretty = false,
 ) where {T <: InfrastructureSystemsType}
     if !force && isfile(filename)
-        error("$file already exists. Set force=true to overwrite.")
+        error("$filename already exists. Set force=true to overwrite.")
     end
     result = open(filename, "w") do io
         return to_json(io, obj; pretty = pretty)
@@ -161,8 +161,7 @@ end
 
 function deserialize_struct(::Type{TimeSeriesKey}, data::Dict)
     vals = Dict{Symbol, Any}()
-    for (field_name, field_type) in
-        zip(fieldnames(TimeSeriesKey), fieldtypes(TimeSeriesKey))
+    for field_name in fieldnames(TimeSeriesKey)
         val = data[string(field_name)]
         if field_name == :time_series_type
             val = getfield(InfrastructureSystems, Symbol(strip_module_name(val)))
@@ -176,7 +175,10 @@ function deserialize_to_dict(::Type{T}, data::Dict) where {T}
     # Note: mostly duplicated in src/deterministic_metadata.jl
     vals = Dict{Symbol, Any}()
     for (field_name, field_type) in zip(fieldnames(T), fieldtypes(T))
-        val = data[string(field_name)]
+        name_str = string(field_name)
+        # Some types may not serialize optional fields.
+        !haskey(data, name_str) && continue
+        val = data[name_str]
         if val isa Dict && haskey(val, METADATA_KEY)
             metadata = get_serialization_metadata(val)
             if haskey(metadata, FUNCTION_KEY)
@@ -255,6 +257,7 @@ deserialize(::Type{Dates.DateTime}, val::AbstractString) = Dates.DateTime(val)
 
 serialize(uuid::Base.UUID) = Dict("value" => string(uuid))
 serialize(uuids::Vector{Base.UUID}) = serialize.(uuids)
+serialize(uuids::Set{Base.UUID}) = serialize.(uuids)
 deserialize(::Type{Base.UUID}, data::Dict) = Base.UUID(data["value"])
 
 serialize(value::Complex) = Dict("real" => real(value), "imag" => imag(value))
