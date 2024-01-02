@@ -8,7 +8,7 @@ struct SupplementalAttributes <: InfrastructureSystemsContainer
     time_series_storage::TimeSeriesStorage
 end
 
-get_display_string(::SupplementalAttributes) = "SupplementalAttributes"
+get_member_string(::SupplementalAttributes) = "supplemental attributes"
 
 function SupplementalAttributes(time_series_storage::TimeSeriesStorage)
     return SupplementalAttributes(SupplementalAttributesByType(), time_series_storage)

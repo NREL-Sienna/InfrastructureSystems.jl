@@ -386,6 +386,10 @@ function iterate_components_with_time_series(data::SystemData)
     ))
 end
 
+function iterate_supplemental_attributes_with_time_series(data::SystemData)
+    iterate_supplemental_attributes_with_time_series(data.attributes)
+end
+
 """
 Removes all time series of a particular type from a System.
 
@@ -403,13 +407,15 @@ function remove_time_series!(data::SystemData, ::Type{T}) where {T <: TimeSeries
         end
     end
     counts = get_time_series_counts(data)
-    if counts[3] == 0 # no more forecast objects
-        if counts[2] == 0 # no more static time series objects
+    if counts.forecast_count == 0
+        if counts.static_time_series_count == 0
             reset_info!(data.time_series_params)
         else
             reset_info!(data.time_series_params.forecast_params)
         end
     end
+
+    return
 end
 
 """
@@ -484,21 +490,59 @@ function check_time_series_consistency(data::SystemData, ::Type{SingleTimeSeries
     return first_initial_timestamp, first_len
 end
 
+struct TimeSeriesCounts
+    components_with_time_series::Int
+    supplemental_attributes_with_time_series::Int
+    static_time_series_count::Int
+    forecast_count::Int
+end
+
 """
-Return a tuple of counts of components with time series and total time series and forecasts.
+Build an instance of TimeSeriesCounts by scanning the system.
 """
 function get_time_series_counts(data::SystemData)
     component_count = 0
+    attribute_count = 0
     static_time_series_count = 0
     forecast_count = 0
-    for component in iterate_components_with_time_series(data)
-        component_count += 1
-        _ts_count, _forecast_count = get_num_time_series(component)
-        static_time_series_count += _ts_count
-        forecast_count += _forecast_count
+    # Note that the same time series UUID can exist in in multiple types, such as with
+    # SingleTimeSeries and DeterministicSingleTimeSeries.
+    uuids_by_type = Dict{DataType, Set{Base.UUID}}()
+
+    function update_time_series_counts(object)
+        for metadata in iterate_time_series_metadata(get_time_series_container(object))
+            ts_type = time_series_metadata_to_data(metadata)
+            if !haskey(uuids_by_type, ts_type)
+                uuids_by_type[ts_type] = Set{Base.UUID}()
+            end
+            uuid = get_time_series_uuid(metadata)
+            if !in(uuid, uuids_by_type[ts_type])
+                if ts_type <: StaticTimeSeries
+                    static_time_series_count += 1
+                elseif ts_type <: Forecast
+                    forecast_count += 1
+                end
+                push!(uuids_by_type[ts_type], uuid)
+            end
+        end
     end
 
-    return (component_count, static_time_series_count, forecast_count)
+    for component in iterate_components_with_time_series(data)
+        component_count += 1
+        update_time_series_counts(component)
+    end
+
+    for attr in iterate_supplemental_attributes_with_time_series(data)
+        attribute_count += 1
+        update_time_series_counts(attr)
+    end
+
+    return TimeSeriesCounts(
+        component_count,
+        attribute_count,
+        static_time_series_count,
+        forecast_count,
+    )
 end
 
 """

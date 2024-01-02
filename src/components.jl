@@ -7,7 +7,7 @@ struct Components <: InfrastructureSystemsContainer
     validation_descriptors::Vector
 end
 
-get_display_string(::Components) = "components"
+get_member_string(::Components) = "components"
 
 function Components(
     time_series_storage::TimeSeriesStorage,
