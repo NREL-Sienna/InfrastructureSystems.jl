@@ -2,15 +2,10 @@
 All components must include a field of this type in order to store supplemental attributes.
 """
 struct SupplementalAttributesContainer
-    data::Dict{DataType, Dict{Base.UUID, <:InfrastructureSystemsSupplementalAttribute}}
+    data::SupplementalAttributesByType
 end
 
-function SupplementalAttributesContainer(;
-    data = Dict{
-        DataType,
-        Dict{Base.UUID, <:InfrastructureSystemsSupplementalAttribute},
-    }(),
-)
+function SupplementalAttributesContainer(; data = SupplementalAttributesByType())
     return SupplementalAttributesContainer(data)
 end
 

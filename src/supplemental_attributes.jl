@@ -227,14 +227,7 @@ function get_supplemental_attributes(
 end
 
 function serialize(attributes::SupplementalAttributes)
-    data = Vector{Dict{String, Any}}()
-    for attribute_container in values(attributes.data)
-        for attribute in values(attribute_container)
-            push!(data, serialize(attribute))
-        end
-    end
-
-    return data
+    return [serialize(y) for x in values(attributes.data) for y in values(x)]
 end
 
 function deserialize(
