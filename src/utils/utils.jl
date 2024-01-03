@@ -194,6 +194,7 @@ function compare_values(x::Dict, y::Dict; compare_uuids = false)
     return match
 end
 
+compare_values(x::Float64, y::Int; compare_uuids = false) = x == Float64(y)
 compare_values(::Type{T}, ::Type{T}; compare_uuids = false) where {T} = true
 compare_values(::Type{T}, ::Type{U}; compare_uuids = false) where {T, U} = false
 

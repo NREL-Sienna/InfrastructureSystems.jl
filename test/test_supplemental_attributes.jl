@@ -90,7 +90,7 @@ end
         name = "component_$(i)"
         component = IS.TestComponent(name, 5)
         IS.add_component!(data, component)
-        supp_attribute = IS.TestSupplemental()
+        supp_attribute = IS.TestSupplemental(; value = Float64(i))
         IS.add_supplemental_attribute!(data, component, supp_attribute)
         IS.add_time_series!(data, supp_attribute, ts)
     end

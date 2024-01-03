@@ -305,9 +305,9 @@ function attach_supplemental_attribute!(
     attribute_container = get_supplemental_attributes_container(component)
 
     if !haskey(attribute_container, T)
-        attribute_container[T] = Set{T}()
+        attribute_container[T] = Dict{Base.UUID, T}()
     end
-    push!(attribute_container[T], attribute)
+    attribute_container[T][get_uuid(attribute)] = attribute
     @debug "SupplementalAttribute type $T with UUID $(get_uuid(attribute)) stored in component $(summary(component))" _group =
         LOG_GROUP_SYSTEM
     return
@@ -323,8 +323,8 @@ end
 
 function clear_supplemental_attributes!(component::InfrastructureSystemsComponent)
     container = get_supplemental_attributes_container(component)
-    for attribute_set in values(container)
-        for attribute in attribute_set
+    for attributes in values(container)
+        for attribute in collect(values(attributes))
             detach_component!(attribute, component)
             detach_supplemental_attribute!(component, attribute)
         end
@@ -346,7 +346,7 @@ function detach_supplemental_attribute!(
             ),
         )
     end
-    delete!(container[T], attribute)
+    delete!(container[T], get_uuid(attribute))
     if isempty(container[T])
         pop!(container, T)
     end

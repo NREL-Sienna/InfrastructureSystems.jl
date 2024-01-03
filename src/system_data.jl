@@ -81,6 +81,7 @@ function SystemData(
     time_series_params,
     validation_descriptors,
     time_series_storage,
+    attributes,
     internal,
 )
     components = Components(time_series_storage, validation_descriptors)
@@ -88,7 +89,7 @@ function SystemData(
     return SystemData(
         components,
         masked_components,
-        SupplementalAttributes(time_series_storage),
+        attributes,
         time_series_params,
         time_series_storage,
         validation_descriptors,
@@ -649,7 +650,8 @@ end
 function serialize(data::SystemData)
     @debug "serialize SystemData" _group = LOG_GROUP_SERIALIZATION
     json_data = Dict()
-    for field in (:components, :masked_components, :time_series_params, :internal)
+    for field in
+        (:components, :masked_components, :attributes, :time_series_params, :internal)
         json_data[string(field)] = serialize(getfield(data, field))
     end
 
@@ -726,14 +728,35 @@ function deserialize(
         )
     end
 
+    attributes = deserialize(SupplementalAttributes, raw["attributes"], time_series_storage)
     internal = deserialize(InfrastructureSystemsInternal, raw["internal"])
     @debug "deserialize" _group = LOG_GROUP_SERIALIZATION validation_descriptors time_series_storage internal
     sys = SystemData(
         time_series_params,
         validation_descriptors,
         time_series_storage,
+        attributes,
         internal,
     )
+    attributes_by_uuid = Dict{Base.UUID, InfrastructureSystemsSupplementalAttribute}()
+    for attr_dict in values(attributes.data)
+        for attr in values(attr_dict)
+            uuid = get_uuid(attr)
+            if haskey(attributes_by_uuid, uuid)
+                error("Bug: Found duplicate supplemental attribute UUID: $uuid")
+            end
+            attributes_by_uuid[uuid] = attr
+        end
+    end
+    for component in raw["components"]
+        if haskey(component, "attributes_container")
+            component["attributes_container"] = deserialize(
+                SupplementalAttributesContainer,
+                component["attributes_container"],
+                attributes_by_uuid,
+            )
+        end
+    end
     # Note: components need to be deserialized by the parent so that they can go through
     # the proper checks.
     return sys

@@ -3,15 +3,16 @@ Attribute to store Geographic Information about the system components
 """
 struct GeographicInfo <: InfrastructureSystemsSupplementalAttribute
     geo_json::Dict{String, Any}
-    component_uuids::Set{UUIDs.UUID}
+    component_uuids::ComponentUUIDs
     internal::InfrastructureSystemsInternal
 end
 
 function GeographicInfo(;
-    geo_json::Dict{String, Any} = Dict{String, Any}(),
-    component_uuids::Set{UUIDs.UUID} = Set{UUIDs.UUID}(),
+    geo_json::Dict{String, <:Any} = Dict{String, Any}(),
+    component_uuids::ComponentUUIDs = ComponentUUIDs(),
+    internal = InfrastructureSystemsInternal(),
 )
-    return GeographicInfo(geo_json, component_uuids, InfrastructureSystemsInternal())
+    return GeographicInfo(geo_json, component_uuids, internal)
 end
 
 get_geo_json(geo::GeographicInfo) = geo.geo_json
