@@ -350,6 +350,10 @@ function set_name!(
         throw(ArgumentError("$(summary(component)) is not attached to the system"))
     end
 
+    if haskey(components.data[T], name)
+        throw(ArgumentError("A component of type $T and name = $name is already stored"))
+    end
+
     old_name = get_name(component)
     _component = components.data[T][old_name]
 
