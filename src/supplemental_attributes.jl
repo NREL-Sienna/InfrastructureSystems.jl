@@ -77,26 +77,6 @@ function _add_supplemental_attribute!(
 end
 
 """
-Check to see if supplemental_attribute exists.
-"""
-function has_supplemental_attributes(
-    ::Type{T},
-    component::InfrastructureSystemsComponent,
-) where {T <: InfrastructureSystemsSupplementalAttribute}
-    supplemental_attributes = get_supplemental_attributes_container(component)
-    if !isconcretetype(T)
-        for (k, v) in supplemental_attributes
-            if !isempty(v) && k <: T
-                return true
-            end
-        end
-    end
-    supplemental_attributes = get_supplemental_attributes_container(component)
-    !haskey(supplemental_attributes, T) && return false
-    return !isempty(supplemental_attributes[T])
-end
-
-"""
 Iterates over all supplemental_attributes.
 
 # Examples
@@ -149,6 +129,7 @@ function remove_supplemental_attribute!(
     if isempty(supplemental_attributes.data[T])
         pop!(supplemental_attributes.data, T)
     end
+    clear_time_series_storage!(supplemental_attribute)
     return
 end
 
@@ -224,6 +205,17 @@ function get_supplemental_attributes(
 
     @assert_op eltype(iter) == T
     return iter
+end
+
+function get_supplemental_attribute(attributes::SupplementalAttributes, uuid::Base.UUID)
+    for attr_dict in values(attributes.data)
+        attribute = get(attr_dict, uuid, nothing)
+        if !isnothing(attribute)
+            return attribute
+        end
+    end
+
+    throw(ArgumentError("No attribute with UUID=$uuid is stored"))
 end
 
 function serialize(attributes::SupplementalAttributes)

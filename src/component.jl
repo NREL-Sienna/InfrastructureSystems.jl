@@ -307,14 +307,43 @@ function attach_supplemental_attribute!(
     if !haskey(attribute_container, T)
         attribute_container[T] = Dict{Base.UUID, T}()
     end
-    attribute_container[T][get_uuid(attribute)] = attribute
-    @debug "SupplementalAttribute type $T with UUID $(get_uuid(attribute)) stored in component $(summary(component))" _group =
+
+    uuid = get_uuid(attribute)
+    if haskey(attribute_container[T], uuid)
+        throw(
+            ArgumentError(
+                "Supplemental attribute $uuid is already attached to $(summary(component))",
+            ),
+        )
+    end
+    attribute_container[T][uuid] = attribute
+    @debug "SupplementalAttribute type $T with UUID $uuid) stored in component $(summary(component))" _group =
         LOG_GROUP_SYSTEM
     return
 end
 
 """
-Return true if the component has attributes.
+Return true if the component has supplemental attributes of the given type.
+"""
+function has_supplemental_attributes(
+    ::Type{T},
+    component::InfrastructureSystemsComponent,
+) where {T <: InfrastructureSystemsSupplementalAttribute}
+    supplemental_attributes = get_supplemental_attributes_container(component)
+    if !isconcretetype(T)
+        for (k, v) in supplemental_attributes
+            if !isempty(v) && k <: T
+                return true
+            end
+        end
+    end
+    supplemental_attributes = get_supplemental_attributes_container(component)
+    !haskey(supplemental_attributes, T) && return false
+    return !isempty(supplemental_attributes[T])
+end
+
+"""
+Return true if the component has supplemental attributes.
 """
 function has_supplemental_attributes(component::InfrastructureSystemsComponent)
     container = get_supplemental_attributes_container(component)

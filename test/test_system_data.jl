@@ -30,6 +30,7 @@
     IS.remove_component!(data, collect(components)[1])
     components = IS.get_components(IS.TestComponent, data)
     @test length(components) == 0
+    @test isempty(data.component_uuids)
 
     IS.add_component!(data, component)
     components = IS.get_components_by_name(IS.InfrastructureSystemsComponent, data, name)
@@ -228,6 +229,7 @@ end
     IS.check_components(data, IS.TestComponent)
     component = IS.get_component(IS.TestComponent, data, "component_3")
     IS.check_component(data, component)
+    @test component === IS.get_component(data, IS.get_uuid(component))
 end
 
 @testset "Test component and time series counts" begin
@@ -272,6 +274,7 @@ end
     end
 
     for c in IS.get_components(IS.TestComponent, data)
+        @test IS.has_supplemental_attributes(c)
         @test IS.has_supplemental_attributes(IS.GeographicInfo, c)
     end
 

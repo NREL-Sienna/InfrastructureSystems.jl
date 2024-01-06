@@ -47,6 +47,21 @@ end
     @test isempty(IS.get_component_uuids(geo_supplemental_attribute))
 end
 
+@testset "Test supplemental attribute attached to multiple components" begin
+    data = IS.SystemData()
+    geo_supplemental_attribute = IS.GeographicInfo()
+    component1 = IS.TestComponent("component1", 5)
+    component2 = IS.TestComponent("component2", 7)
+    IS.add_supplemental_attribute!(data, component1, geo_supplemental_attribute)
+    IS.add_supplemental_attribute!(data, component2, geo_supplemental_attribute)
+    @test IS.get_num_supplemental_attributes(data.attributes) == 1
+
+    IS.remove_supplemental_attribute!(data, component1, geo_supplemental_attribute)
+    @test IS.get_num_supplemental_attributes(data.attributes) == 1
+    IS.remove_supplemental_attribute!(data, component2, geo_supplemental_attribute)
+    @test IS.get_num_supplemental_attributes(data.attributes) == 0
+end
+
 @testset "Test iterate_SupplementalAttributes" begin
     container = IS.SupplementalAttributes(IS.InMemoryTimeSeriesStorage())
     geo_supplemental_attribute = IS.GeographicInfo()

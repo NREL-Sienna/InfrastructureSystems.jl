@@ -22,6 +22,8 @@ Container for system components and time series data
 mutable struct SystemData <: InfrastructureSystemsType
     components::Components
     masked_components::Components
+    "Contains all attached component UUIDs, regular and masked."
+    component_uuids::Dict{Base.UUID, <:InfrastructureSystemsComponent}
     attributes::SupplementalAttributes
     time_series_params::TimeSeriesParameters
     time_series_storage::TimeSeriesStorage
@@ -69,6 +71,7 @@ function SystemData(;
     return SystemData(
         components,
         masked_components,
+        Dict{Base.UUID, InfrastructureSystemsComponent}(),
         attributes,
         TimeSeriesParameters(),
         ts_storage,
@@ -89,6 +92,7 @@ function SystemData(
     return SystemData(
         components,
         masked_components,
+        Dict{Base.UUID, InfrastructureSystemsComponent}(),
         attributes,
         time_series_params,
         time_series_storage,
@@ -178,14 +182,14 @@ Add time series data to an attribute.
 # Arguments
 
   - `data::SystemData`: SystemData
-  - `component::InfrastructureSystemsComponent`: will store the time series reference
+  - `attribute::InfrastructureSystemsSupplementalAttribute`: will store the time series reference
   - `time_series::TimeSeriesData`: Any object of subtype TimeSeriesData
 
-Throws ArgumentError if the component is not stored in the system.
+Throws ArgumentError if the attribute is not stored in the system.
 """
 function add_time_series!(
     data::SystemData,
-    component::InfrastructureSystemsSupplementalAttribute,
+    attribute::InfrastructureSystemsSupplementalAttribute,
     time_series::TimeSeriesData;
     skip_if_present = false,
 )
@@ -193,7 +197,7 @@ function add_time_series!(
     ts_metadata = metadata_type(time_series)
     attach_time_series_and_serialize!(
         data,
-        component,
+        attribute,
         ts_metadata,
         time_series;
         skip_if_present = skip_if_present,
@@ -327,6 +331,11 @@ end
 function compare_values(x::SystemData, y::SystemData; compare_uuids = false)
     match = true
     for name in fieldnames(SystemData)
+        if name == :component_uuids
+            # These are not serialized. They get rebuilt when the parent package adds
+            # the components.
+            continue
+        end
         val_x = getfield(x, name)
         val_y = getfield(y, name)
         if name == :time_series_storage && typeof(val_x) != typeof(val_y)
@@ -348,15 +357,34 @@ function compare_values(x::SystemData, y::SystemData; compare_uuids = false)
 end
 
 function remove_component!(::Type{T}, data::SystemData, name) where {T}
-    return remove_component!(T, data.components, name)
+    component = remove_component!(T, data.components, name)
+    _handle_component_removal!(data, component)
+    return component
 end
 
 function remove_component!(data::SystemData, component)
-    return remove_component!(data.components, component)
+    component = remove_component!(data.components, component)
+    _handle_component_removal!(data, component)
+    return component
 end
 
 function remove_components!(::Type{T}, data::SystemData) where {T}
-    return remove_components!(T, data.components)
+    components = remove_components!(T, data.components)
+    for component in components
+        _handle_component_removal!(data, component)
+    end
+
+    return components
+end
+
+function _handle_component_removal!(data::SystemData, component)
+    uuid = get_uuid(component)
+    if !haskey(data.component_uuids, uuid)
+        error("Bug: component = $(summary(component)) did not have its uuid stored $uuid")
+    end
+
+    pop!(data.component_uuids, uuid)
+    return
 end
 
 """
@@ -491,6 +519,10 @@ function check_time_series_consistency(data::SystemData, ::Type{SingleTimeSeries
     return first_initial_timestamp, first_len
 end
 
+"""
+Provides counts of time series including attachments to components and supplemental
+attributes.
+"""
 struct TimeSeriesCounts
     components_with_time_series::Int
     supplemental_attributes_with_time_series::Int
@@ -764,15 +796,30 @@ end
 
 # Redirect functions to Components and TimeSeriesContainer
 
-add_component!(data::SystemData, component; kwargs...) =
+function add_component!(data::SystemData, component; kwargs...)
+    _check_duplicate_component_uuid(data, component)
     add_component!(data.components, component; kwargs...)
+    data.component_uuids[get_uuid(component)] = component
+    return
+end
 
-add_masked_component!(data::SystemData, component; kwargs...) = add_component!(
-    data.masked_components,
-    component;
-    allow_existing_time_series = true,
-    kwargs...,
-)
+function add_masked_component!(data::SystemData, component; kwargs...)
+    add_component!(
+        data.masked_components,
+        component;
+        allow_existing_time_series = true,
+        kwargs...,
+    )
+    data.component_uuids[get_uuid(component)] = component
+    return
+end
+
+function _check_duplicate_component_uuid(data::SystemData, component)
+    uuid = get_uuid(component)
+    if haskey(data.component_uuids, uuid)
+        throw(ArgumentError("Component $(summary(component)) uuid=$uuid is already stored"))
+    end
+end
 
 iterate_components(data::SystemData) = iterate_components(data.components)
 
@@ -780,14 +827,12 @@ get_component(::Type{T}, data::SystemData, args...) where {T} =
     get_component(T, data.components, args...)
 
 function get_component(data::SystemData, uuid::Base.UUID)
-    for component in get_components(InfrastructureSystemsComponent, data)
-        if get_uuid(component) == uuid
-            return component
-        end
+    component = get(data.component_uuids, uuid, nothing)
+    if isnothing(component)
+        throw(ArgumentError("No component with uuid = $uuid is stored."))
     end
 
-    @error "no component with UUID $uuid is stored"
-    return nothing
+    return component
 end
 
 function get_components(filter_func::Function, ::Type{T}, data::SystemData) where {T}
@@ -908,6 +953,10 @@ function get_supplemental_attributes(
     return get_supplemental_attributes(T, data.attributes)
 end
 
+function get_supplemental_attribute(data::SystemData, uuid::Base.UUID)
+    return get_supplemental_attributes(data.attributes, uuid)
+end
+
 function iterate_supplemental_attributes(data::SystemData)
     return iterate_supplemental_attributes(data.attributes)
 end
@@ -919,8 +968,9 @@ function remove_supplemental_attribute!(
 )
     detach_component!(attribute, component)
     detach_supplemental_attribute!(component, attribute)
-    clear_time_series_storage!(attribute)
-    remove_supplemental_attribute!(data.attributes, attribute)
+    if !is_attached_to_component(attribute)
+        remove_supplemental_attribute!(data.attributes, attribute)
+    end
     return
 end
 
@@ -934,7 +984,6 @@ function remove_supplemental_attribute!(
         detach_component!(attribute, component)
         detach_supplemental_attribute!(component, attribute)
     end
-    clear_time_series_storage!(attribute)
     return remove_supplemental_attribute!(data.attributes, attribute)
 end
 
@@ -950,7 +999,6 @@ function remove_supplemental_attributes!(
             detach_supplemental_attribute!(component, attribute)
         end
         remove_supplemental_attribute!(data.attributes, attribute)
-        clear_time_series_storage!(attribute)
     end
     return
 end

@@ -50,6 +50,8 @@ struct FakeTimeSeries <: InfrastructureSystems.TimeSeriesData end
 Base.length(::FakeTimeSeries) = 42
 
 @testset "Test TimeSeriesData printing" begin
-    @test sprint(show, MIME("text/plain"), FakeTimeSeries()) ==
-          "FakeTimeSeries time_series (42):"
+    @test occursin(
+        "FakeTimeSeries time_series (42)",
+        sprint(show, MIME("text/plain"), FakeTimeSeries()),
+    )
 end

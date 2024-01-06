@@ -25,6 +25,13 @@ function detach_component!(
 end
 
 """
+Return true if the attribute is attached to at least one component.
+"""
+function is_attached_to_component(attribute::InfrastructureSystemsSupplementalAttribute)
+    return !isempty(get_component_uuids(attribute))
+end
+
+"""
 Return true if the attribute has time series data.
 """
 function has_time_series(attribute::InfrastructureSystemsSupplementalAttribute)
