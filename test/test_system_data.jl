@@ -1,4 +1,3 @@
-
 @testset "Test components" begin
     data = IS.SystemData()
 
@@ -303,4 +302,95 @@ end
     IS.remove_supplemental_attributes!(IS.GeographicInfo, data)
     attributes = IS.get_supplemental_attributes(IS.GeographicInfo, data)
     @test length(attributes) == 0
+end
+
+@testset "Test retrieval of supplemental_attributes" begin
+    data = IS.SystemData()
+    geo_supplemental_attribute = IS.GeographicInfo()
+    attr1 = IS.TestSupplemental(; value = 1.0)
+    attr2 = IS.TestSupplemental(; value = 2.0)
+    component1 = IS.TestComponent("component1", 5)
+    component2 = IS.TestComponent("component2", 7)
+    IS.add_supplemental_attribute!(data, component1, geo_supplemental_attribute)
+    IS.add_supplemental_attribute!(data, component2, geo_supplemental_attribute)
+    IS.add_supplemental_attribute!(data, component1, attr1)
+    IS.add_supplemental_attribute!(data, component2, attr2)
+    @test IS.get_num_supplemental_attributes(data.attributes) == 3
+
+    # Test all permutations of abstract vs concrete, system vs component, filter vs not.
+    @test length(IS.get_supplemental_attributes(IS.SupplementalAttribute, data)) == 3
+    @test length(IS.get_supplemental_attributes(IS.SupplementalAttribute, component1)) == 2
+    @test length(IS.get_supplemental_attributes(IS.SupplementalAttribute, component2)) == 2
+    @test length(
+        IS.get_supplemental_attributes(
+            x -> x isa IS.TestSupplemental,
+            IS.SupplementalAttribute,
+            data,
+        ),
+    ) == 2
+    @test length(
+        IS.get_supplemental_attributes(
+            x -> x isa IS.TestSupplemental,
+            IS.SupplementalAttribute,
+            component1,
+        ),
+    ) == 1
+    @test length(
+        IS.get_supplemental_attributes(
+            x -> x isa IS.TestSupplemental,
+            IS.SupplementalAttribute,
+            component2,
+        ),
+    ) == 1
+    @test length(IS.get_supplemental_attributes(IS.TestSupplemental, data)) == 2
+    @test length(IS.get_supplemental_attributes(IS.GeographicInfo, data)) == 1
+    @test length(IS.get_supplemental_attributes(IS.GeographicInfo, component1)) == 1
+    @test length(IS.get_supplemental_attributes(IS.TestSupplemental, component1)) == 1
+    @test length(IS.get_supplemental_attributes(IS.TestSupplemental, component2)) == 1
+    @test length(
+        IS.get_supplemental_attributes(x -> x.value == 1.0, IS.TestSupplemental, data),
+    ) == 1
+    @test length(
+        IS.get_supplemental_attributes(x -> x.value == 2.0, IS.TestSupplemental, data),
+    ) == 1
+    @test length(
+        IS.get_supplemental_attributes(
+            x -> x.value == 1.0,
+            IS.TestSupplemental,
+            component1,
+        ),
+    ) == 1
+    @test length(
+        IS.get_supplemental_attributes(
+            x -> x.value == 2.0,
+            IS.TestSupplemental,
+            component1,
+        ),
+    ) == 0
+    @test length(
+        IS.get_supplemental_attributes(
+            x -> x.value == 1.0,
+            IS.TestSupplemental,
+            component2,
+        ),
+    ) == 0
+    @test length(
+        IS.get_supplemental_attributes(
+            x -> x.value == 2.0,
+            IS.TestSupplemental,
+            component2,
+        ),
+    ) == 1
+
+    uuid1 = IS.get_uuid(attr1)
+    uuid2 = IS.get_uuid(attr2)
+    uuid3 = IS.get_uuid(geo_supplemental_attribute)
+    @test IS.get_supplemental_attribute(data, uuid1) ===
+          IS.get_supplemental_attribute(component1, uuid1)
+    @test IS.get_supplemental_attribute(data, uuid2) ===
+          IS.get_supplemental_attribute(component2, uuid2)
+    @test IS.get_supplemental_attribute(data, uuid3) ===
+          IS.get_supplemental_attribute(component1, uuid3)
+    @test IS.get_supplemental_attribute(data, uuid3) ===
+          IS.get_supplemental_attribute(component2, uuid3)
 end

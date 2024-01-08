@@ -1,7 +1,7 @@
 """
 Attribute to store Geographic Information about the system components
 """
-struct GeographicInfo <: InfrastructureSystemsSupplementalAttribute
+struct GeographicInfo <: SupplementalAttribute
     geo_json::Dict{String, Any}
     component_uuids::ComponentUUIDs
     internal::InfrastructureSystemsInternal

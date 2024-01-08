@@ -301,7 +301,7 @@ Attach an attribute to a component.
 function attach_supplemental_attribute!(
     component::InfrastructureSystemsComponent,
     attribute::T,
-) where {T <: InfrastructureSystemsSupplementalAttribute}
+) where {T <: SupplementalAttribute}
     attribute_container = get_supplemental_attributes_container(component)
 
     if !haskey(attribute_container, T)
@@ -328,7 +328,7 @@ Return true if the component has supplemental attributes of the given type.
 function has_supplemental_attributes(
     ::Type{T},
     component::InfrastructureSystemsComponent,
-) where {T <: InfrastructureSystemsSupplementalAttribute}
+) where {T <: SupplementalAttribute}
     supplemental_attributes = get_supplemental_attributes_container(component)
     if !isconcretetype(T)
         for (k, v) in supplemental_attributes
@@ -366,7 +366,7 @@ end
 function detach_supplemental_attribute!(
     component::InfrastructureSystemsComponent,
     attribute::T,
-) where {T <: InfrastructureSystemsSupplementalAttribute}
+) where {T <: SupplementalAttribute}
     container = get_supplemental_attributes_container(component)
     if !haskey(container, T)
         throw(
@@ -380,4 +380,45 @@ function detach_supplemental_attribute!(
         pop!(container, T)
     end
     return
+end
+
+"""
+Returns an iterator of supplemental_attributes. T can be concrete or abstract.
+Call collect on the result if an array is desired.
+
+# Arguments
+
+  - `T`: supplemental_attribute type
+  - `supplemental_attributes::SupplementalAttributes`: SupplementalAttributes in the system
+  - `filter_func::Union{Nothing, Function} = nothing`: Optional function that accepts a component
+    of type T and returns a Bool. Apply this function to each component and only return components
+    where the result is true.
+"""
+function get_supplemental_attributes(
+    ::Type{T},
+    component::InfrastructureSystemsComponent,
+) where {T <: SupplementalAttribute}
+    return get_supplemental_attributes(T, get_supplemental_attributes_container(component))
+end
+
+function get_supplemental_attributes(
+    filter_func::Union{Nothing, Function},
+    ::Type{T},
+    component::InfrastructureSystemsComponent,
+) where {T <: SupplementalAttribute}
+    return get_supplemental_attributes(
+        T,
+        get_supplemental_attributes_container(component),
+        filter_func,
+    )
+end
+
+function get_supplemental_attribute(
+    component::InfrastructureSystemsComponent,
+    uuid::Base.UUID,
+)
+    return get_supplemental_attribute(
+        get_supplemental_attributes_container(component),
+        uuid,
+    )
 end

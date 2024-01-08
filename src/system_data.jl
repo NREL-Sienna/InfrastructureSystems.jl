@@ -182,14 +182,14 @@ Add time series data to an attribute.
 # Arguments
 
   - `data::SystemData`: SystemData
-  - `attribute::InfrastructureSystemsSupplementalAttribute`: will store the time series reference
+  - `attribute::SupplementalAttribute`: will store the time series reference
   - `time_series::TimeSeriesData`: Any object of subtype TimeSeriesData
 
 Throws ArgumentError if the attribute is not stored in the system.
 """
 function add_time_series!(
     data::SystemData,
-    attribute::InfrastructureSystemsSupplementalAttribute,
+    attribute::SupplementalAttribute,
     time_series::TimeSeriesData;
     skip_if_present = false,
 )
@@ -770,7 +770,7 @@ function deserialize(
         attributes,
         internal,
     )
-    attributes_by_uuid = Dict{Base.UUID, InfrastructureSystemsSupplementalAttribute}()
+    attributes_by_uuid = Dict{Base.UUID, SupplementalAttribute}()
     for attr_dict in values(attributes.data)
         for attr in values(attr_dict)
             uuid = get_uuid(attr)
@@ -780,11 +780,11 @@ function deserialize(
             attributes_by_uuid[uuid] = attr
         end
     end
-    for component in raw["components"]
-        if haskey(component, "attributes_container")
-            component["attributes_container"] = deserialize(
+    for component in Iterators.Flatten((raw["components"], raw["masked_components"]))
+        if haskey(component, "supplemental_attributes_container")
+            component["supplemental_attributes_container"] = deserialize(
                 SupplementalAttributesContainer,
-                component["attributes_container"],
+                component["supplemental_attributes_container"],
                 attributes_by_uuid,
             )
         end
@@ -942,19 +942,19 @@ function get_supplemental_attributes(
     filter_func::Function,
     ::Type{T},
     data::SystemData,
-) where {T <: InfrastructureSystemsSupplementalAttribute}
+) where {T <: SupplementalAttribute}
     return get_supplemental_attributes(T, data.attributes, filter_func)
 end
 
 function get_supplemental_attributes(
     ::Type{T},
     data::SystemData,
-) where {T <: InfrastructureSystemsSupplementalAttribute}
+) where {T <: SupplementalAttribute}
     return get_supplemental_attributes(T, data.attributes)
 end
 
 function get_supplemental_attribute(data::SystemData, uuid::Base.UUID)
-    return get_supplemental_attributes(data.attributes, uuid)
+    return get_supplemental_attribute(data.attributes, uuid)
 end
 
 function iterate_supplemental_attributes(data::SystemData)
@@ -964,7 +964,7 @@ end
 function remove_supplemental_attribute!(
     data::SystemData,
     component::InfrastructureSystemsComponent,
-    attribute::InfrastructureSystemsSupplementalAttribute,
+    attribute::SupplementalAttribute,
 )
     detach_component!(attribute, component)
     detach_supplemental_attribute!(component, attribute)
@@ -976,7 +976,7 @@ end
 
 function remove_supplemental_attribute!(
     data::SystemData,
-    attribute::InfrastructureSystemsSupplementalAttribute,
+    attribute::SupplementalAttribute,
 )
     current_components_uuid = collect(get_component_uuids(attribute))
     for c_uuid in current_components_uuid
@@ -990,7 +990,7 @@ end
 function remove_supplemental_attributes!(
     ::Type{T},
     data::SystemData,
-) where {T <: InfrastructureSystemsSupplementalAttribute}
+) where {T <: SupplementalAttribute}
     attributes = get_supplemental_attributes(T, data.attributes)
     for attribute in attributes
         for c_uuid in get_component_uuids(attribute)
