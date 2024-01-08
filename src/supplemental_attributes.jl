@@ -1,21 +1,18 @@
-const SupplementalAttributesByType =
-    Dict{DataType, Dict{UUIDs.UUID, <:InfrastructureSystemsSupplementalAttribute}}
-
 struct SupplementalAttributes <: InfrastructureSystemsContainer
-    data::SupplementalAttributesByType
+    data::SupplementalAttributesContainer
     time_series_storage::TimeSeriesStorage
 end
 
 get_member_string(::SupplementalAttributes) = "supplemental attributes"
 
 function SupplementalAttributes(time_series_storage::TimeSeriesStorage)
-    return SupplementalAttributes(SupplementalAttributesByType(), time_series_storage)
+    return SupplementalAttributes(SupplementalAttributesContainer(), time_series_storage)
 end
 
 function add_supplemental_attribute!(
     supplemental_attributes::SupplementalAttributes,
     component::InfrastructureSystemsComponent,
-    supplemental_attribute::InfrastructureSystemsSupplementalAttribute;
+    supplemental_attribute::SupplementalAttribute;
     kwargs...,
 )
     try
@@ -38,7 +35,7 @@ function _add_supplemental_attribute!(
     supplemental_attributes::SupplementalAttributes,
     supplemental_attribute::T;
     allow_existing_time_series = false,
-) where {T <: InfrastructureSystemsSupplementalAttribute}
+) where {T <: SupplementalAttribute}
     if !isconcretetype(T)
         throw(ArgumentError("add_supplemental_attribute! only accepts concrete types"))
     end
@@ -116,7 +113,7 @@ end
 function remove_supplemental_attribute!(
     supplemental_attributes::SupplementalAttributes,
     supplemental_attribute::T,
-) where {T <: InfrastructureSystemsSupplementalAttribute}
+) where {T <: SupplementalAttribute}
     if !isempty(get_component_uuids(supplemental_attribute))
         throw(
             ArgumentError(
@@ -141,7 +138,7 @@ Throws ArgumentError if the type is not stored.
 function remove_supplemental_attributes!(
     ::Type{T},
     supplemental_attributes::SupplementalAttributes,
-) where {T <: InfrastructureSystemsSupplementalAttribute}
+) where {T <: SupplementalAttribute}
     if !haskey(supplemental_attributes.data, T)
         throw(ArgumentError("supplemental_attribute type $T is not stored"))
     end
@@ -172,50 +169,12 @@ function get_supplemental_attributes(
     ::Type{T},
     supplemental_attributes::SupplementalAttributes,
     filter_func::Union{Nothing, Function} = nothing,
-) where {T <: InfrastructureSystemsSupplementalAttribute}
-    if isconcretetype(T)
-        _supplemental_attributes = get(supplemental_attributes.data, T, nothing)
-        if !isnothing(filter_func) && !isnothing(_supplemental_attributes)
-            _filter_func = x -> filter_func(x.second)
-            _supplemental_attributes =
-                values(filter(_filter_func, _supplemental_attributes))
-        end
-        if isnothing(_supplemental_attributes)
-            iter = FlattenIteratorWrapper(T, Vector{Base.ValueIterator}([]))
-        else
-            iter = FlattenIteratorWrapper(
-                T,
-                Vector{Base.ValueIterator}([values(_supplemental_attributes)]),
-            )
-        end
-    else
-        types = [x for x in keys(supplemental_attributes.data) if x <: T]
-        if isnothing(filter_func)
-            _supplemental_attributes =
-                [values(supplemental_attributes.data[x]) for x in types]
-        else
-            _filter_func = x -> filter_func(x.second)
-            _supplemental_attributes = [
-                values(filter(_filter_func, supplemental_attributes.data[x])) for
-                x in types
-            ]
-        end
-        iter = FlattenIteratorWrapper(T, _supplemental_attributes)
-    end
-
-    @assert_op eltype(iter) == T
-    return iter
+) where {T <: SupplementalAttribute}
+    return get_supplemental_attributes(T, supplemental_attributes.data, filter_func)
 end
 
 function get_supplemental_attribute(attributes::SupplementalAttributes, uuid::Base.UUID)
-    for attr_dict in values(attributes.data)
-        attribute = get(attr_dict, uuid, nothing)
-        if !isnothing(attribute)
-            return attribute
-        end
-    end
-
-    throw(ArgumentError("No attribute with UUID=$uuid is stored"))
+    return get_supplemental_attribute(attributes.data, uuid)
 end
 
 function serialize(attributes::SupplementalAttributes)
@@ -232,7 +191,7 @@ function deserialize(
         type = get_type_from_serialization_metadata(get_serialization_metadata(attr_dict))
         if !haskey(attributes, type)
             attributes[type] =
-                Dict{UUIDs.UUID, InfrastructureSystemsSupplementalAttribute}()
+                Dict{UUIDs.UUID, SupplementalAttribute}()
         end
         attr = deserialize(type, attr_dict)
         uuid = get_uuid(attr)
@@ -243,5 +202,8 @@ function deserialize(
         @debug "Deserialized $(summary(attr))" _group = LOG_GROUP_SERIALIZATION
     end
 
-    return SupplementalAttributes(attributes, time_series_storage)
+    return SupplementalAttributes(
+        SupplementalAttributesContainer(attributes),
+        time_series_storage,
+    )
 end

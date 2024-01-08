@@ -75,7 +75,7 @@ Subtypes may contain time series. Which requires
 All subtypes must include an instance of ComponentUUIDs in order to track
 components attached to each attribute.
 """
-abstract type InfrastructureSystemsSupplementalAttribute <: InfrastructureSystemsType end
+abstract type SupplementalAttribute <: InfrastructureSystemsType end
 
 """
 Return the internal time_series storage container or nothing, if the type doesn't store
@@ -119,9 +119,10 @@ include("time_series_parser.jl")
 include("containers.jl")
 include("component_uuids.jl")
 include("supplemental_attribute.jl")
-include("supplemental_attributes.jl")
 include("supplemental_attributes_container.jl")
+include("supplemental_attributes.jl")
 include("components.jl")
+include("iterators.jl")
 include("geographic_supplemental_attribute.jl")
 include("generated/includes.jl")
 include("single_time_series.jl")

@@ -1,5 +1,5 @@
 const SupportedTimeSeriesTypes =
-    Union{InfrastructureSystemsComponent, InfrastructureSystemsSupplementalAttribute}
+    Union{InfrastructureSystemsComponent, SupplementalAttribute}
 
 function add_time_series!(
     component::T,

@@ -1,7 +1,7 @@
 function attach_component!(
     attribute::T,
     component::InfrastructureSystemsComponent,
-) where {T <: InfrastructureSystemsSupplementalAttribute}
+) where {T <: SupplementalAttribute}
     component_uuid = get_uuid(component)
 
     if component_uuid ∈ get_component_uuids(attribute)
@@ -17,7 +17,7 @@ function attach_component!(
 end
 
 function detach_component!(
-    attribute::InfrastructureSystemsSupplementalAttribute,
+    attribute::SupplementalAttribute,
     component::InfrastructureSystemsComponent,
 )
     delete!(get_component_uuids(attribute), get_uuid(component))
@@ -27,19 +27,19 @@ end
 """
 Return true if the attribute is attached to at least one component.
 """
-function is_attached_to_component(attribute::InfrastructureSystemsSupplementalAttribute)
+function is_attached_to_component(attribute::SupplementalAttribute)
     return !isempty(get_component_uuids(attribute))
 end
 
 """
 Return true if the attribute has time series data.
 """
-function has_time_series(attribute::InfrastructureSystemsSupplementalAttribute)
+function has_time_series(attribute::SupplementalAttribute)
     container = get_time_series_container(attribute)
     return !isnothing(container) && !isempty(container)
 end
 
-function clear_time_series_storage!(attribute::InfrastructureSystemsSupplementalAttribute)
+function clear_time_series_storage!(attribute::SupplementalAttribute)
     storage = _get_time_series_storage(attribute)
     if !isnothing(storage)
         # In the case of Deterministic and DeterministicSingleTimeSeries the UUIDs
@@ -55,7 +55,7 @@ function clear_time_series_storage!(attribute::InfrastructureSystemsSupplemental
 end
 
 function set_time_series_storage!(
-    attribute::InfrastructureSystemsSupplementalAttribute,
+    attribute::SupplementalAttribute,
     storage::Union{Nothing, TimeSeriesStorage},
 )
     container = get_time_series_container(attribute)
@@ -70,7 +70,7 @@ This function must be called when an attribute is removed from a system.
 """
 function prepare_for_removal!(
     attribute::T,
-) where {T <: InfrastructureSystemsSupplementalAttribute}
+) where {T <: SupplementalAttribute}
     if !isempty(get_component_uuids(attribute))
         throw(
             ArgumentError(
@@ -88,7 +88,7 @@ function prepare_for_removal!(
     return
 end
 
-function _get_time_series_storage(attribute::InfrastructureSystemsSupplementalAttribute)
+function _get_time_series_storage(attribute::SupplementalAttribute)
     container = get_time_series_container(attribute)
     if isnothing(container)
         return nothing
@@ -99,7 +99,7 @@ end
 
 function clear_time_series!(
     attribute::T,
-) where {T <: InfrastructureSystemsSupplementalAttribute}
+) where {T <: SupplementalAttribute}
     container = get_time_series_container(attribute)
     if !isnothing(container)
         clear_time_series!(container)

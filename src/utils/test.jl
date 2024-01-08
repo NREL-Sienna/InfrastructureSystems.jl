@@ -2,7 +2,7 @@ mutable struct TestComponent <: InfrastructureSystemsComponent
     name::String
     val::Int
     time_series_container::TimeSeriesContainer
-    attributes_container::SupplementalAttributesContainer
+    supplemental_attributes_container::SupplementalAttributesContainer
     internal::InfrastructureSystemsInternal
 end
 
@@ -20,7 +20,7 @@ mutable struct AdditionalTestComponent <: InfrastructureSystemsComponent
     name::String
     val::Int
     time_series_container::TimeSeriesContainer
-    attributes_container::SupplementalAttributesContainer
+    supplemental_attributes_container::SupplementalAttributesContainer
     internal::InfrastructureSystemsInternal
 end
 
@@ -52,9 +52,9 @@ get_internal(component::TestComponent) = component.internal
 get_internal(component::AdditionalTestComponent) = component.internal
 get_val(component::TestComponent) = component.val
 get_supplemental_attributes_container(component::TestComponent) =
-    component.attributes_container
+    component.supplemental_attributes_container
 get_supplemental_attributes_container(component::AdditionalTestComponent) =
-    component.attributes_container
+    component.supplemental_attributes_container
 
 function get_time_series_container(component::TestComponent)
     return component.time_series_container
@@ -70,7 +70,7 @@ function deserialize(::Type{TestComponent}, data::Dict)
         data["name"],
         data["val"],
         deserialize(TimeSeriesContainer, data["time_series_container"]),
-        data["attributes_container"],
+        data["supplemental_attributes_container"],
         deserialize(InfrastructureSystemsInternal, data["internal"]),
     )
 end
@@ -111,7 +111,7 @@ function runtests(args...)
     end
 end
 
-struct TestSupplemental <: InfrastructureSystemsSupplementalAttribute
+struct TestSupplemental <: SupplementalAttribute
     value::Float64
     component_uuids::ComponentUUIDs
     internal::InfrastructureSystemsInternal

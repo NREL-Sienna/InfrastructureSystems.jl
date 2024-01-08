@@ -1,4 +1,3 @@
-
 const ComponentsByType = Dict{DataType, Dict{String, <:InfrastructureSystemsComponent}}
 
 struct Components <: InfrastructureSystemsContainer
@@ -281,31 +280,7 @@ function get_components(
     components::Components,
     filter_func::Union{Nothing, Function} = nothing,
 ) where {T <: InfrastructureSystemsComponent}
-    if isconcretetype(T)
-        _components = get(components.data, T, nothing)
-        if !isnothing(filter_func) && !isnothing(_components)
-            _filter_func = x -> filter_func(x.second)
-            _components = values(filter(_filter_func, _components))
-        end
-        if isnothing(_components)
-            iter = FlattenIteratorWrapper(T, Vector{Base.ValueIterator}([]))
-        else
-            iter =
-                FlattenIteratorWrapper(T, Vector{Base.ValueIterator}([values(_components)]))
-        end
-    else
-        types = [x for x in keys(components.data) if x <: T]
-        if isnothing(filter_func)
-            _components = [values(components.data[x]) for x in types]
-        else
-            _filter_func = x -> filter_func(x.second)
-            _components = [values(filter(_filter_func, components.data[x])) for x in types]
-        end
-        iter = FlattenIteratorWrapper(T, _components)
-    end
-
-    @assert_op eltype(iter) == T
-    return iter
+    return iterate_instances(T, components.data, filter_func)
 end
 
 """
