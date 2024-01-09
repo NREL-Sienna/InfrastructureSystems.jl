@@ -1,7 +1,7 @@
-@testset "Test assign_new_uuid" begin
+@testset "Test assign_new_uuid_internal" begin
     component = IS.TestComponent("component", 5)
     uuid1 = IS.get_uuid(component)
-    IS.assign_new_uuid!(component)
+    IS.assign_new_uuid_internal(component)
     @test uuid1 != IS.get_uuid(component)
 end
 
