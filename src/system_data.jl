@@ -866,6 +866,11 @@ end
 get_components_by_name(::Type{T}, data::SystemData, args...) where {T} =
     get_components_by_name(T, data.components, args...)
 
+function get_components(data::SystemData, attribute::SupplementalAttribute)
+    uuids = get_component_uuids(attribute)
+    return [get_component(data, x) for x in uuids]
+end
+
 function get_masked_components(
     ::Type{T},
     data::SystemData,
@@ -950,8 +955,13 @@ end
 _get_system_basename(system_file) = splitext(basename(system_file))[1]
 _get_secondary_basename(system_basename, name) = system_basename * "_" * name
 
-add_supplemental_attribute!(data::SystemData, component, info; kwargs...) =
-    add_supplemental_attribute!(data.attributes, component, info; kwargs...)
+function add_supplemental_attribute!(data::SystemData, component, info; kwargs...)
+    if isnothing(get_component(typeof(component), data, get_name(component)))
+        throw(ArgumentError("$(summary(component)) is not attached to the system"))
+    end
+
+    return add_supplemental_attribute!(data.attributes, component, info; kwargs...)
+end
 
 function get_supplemental_attributes(
     filter_func::Function,

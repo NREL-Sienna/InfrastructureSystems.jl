@@ -311,6 +311,15 @@ end
     attr2 = IS.TestSupplemental(; value = 2.0)
     component1 = IS.TestComponent("component1", 5)
     component2 = IS.TestComponent("component2", 7)
+
+    @test_throws ArgumentError IS.add_supplemental_attribute!(
+        data,
+        component1,
+        geo_supplemental_attribute,
+    )
+
+    IS.add_component!(data, component1)
+    IS.add_component!(data, component2)
     IS.add_supplemental_attribute!(data, component1, geo_supplemental_attribute)
     IS.add_supplemental_attribute!(data, component2, geo_supplemental_attribute)
     IS.add_supplemental_attribute!(data, component1, attr1)
@@ -393,4 +402,20 @@ end
           IS.get_supplemental_attribute(component1, uuid3)
     @test IS.get_supplemental_attribute(data, uuid3) ===
           IS.get_supplemental_attribute(component2, uuid3)
+end
+
+@testset "Test retrieval of components with a supplemental attribute" begin
+    data = IS.SystemData()
+    geo_supplemental_attribute = IS.GeographicInfo()
+    component1 = IS.TestComponent("component1", 5)
+    component2 = IS.TestComponent("component2", 7)
+    IS.add_component!(data, component1)
+    IS.add_component!(data, component2)
+    IS.add_supplemental_attribute!(data, component1, geo_supplemental_attribute)
+    IS.add_supplemental_attribute!(data, component2, geo_supplemental_attribute)
+    components = IS.get_components(data, geo_supplemental_attribute)
+    @test length(components) == 2
+    sort!(components; by = x -> x.name)
+    @test components[1] === component1
+    @test components[2] === component2
 end
