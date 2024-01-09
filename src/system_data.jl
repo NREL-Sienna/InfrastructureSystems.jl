@@ -955,12 +955,12 @@ end
 _get_system_basename(system_file) = splitext(basename(system_file))[1]
 _get_secondary_basename(system_basename, name) = system_basename * "_" * name
 
-function add_supplemental_attribute!(data::SystemData, component, info; kwargs...)
+function add_supplemental_attribute!(data::SystemData, component, attribute; kwargs...)
     if isnothing(get_component(typeof(component), data, get_name(component)))
         throw(ArgumentError("$(summary(component)) is not attached to the system"))
     end
 
-    return add_supplemental_attribute!(data.attributes, component, info; kwargs...)
+    return add_supplemental_attribute!(data.attributes, component, attribute; kwargs...)
 end
 
 function get_supplemental_attributes(
