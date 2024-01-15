@@ -52,6 +52,8 @@ end
     geo_supplemental_attribute = IS.GeographicInfo()
     component1 = IS.TestComponent("component1", 5)
     component2 = IS.TestComponent("component2", 7)
+    IS.add_component!(data, component1)
+    IS.add_component!(data, component2)
     IS.add_supplemental_attribute!(data, component1, geo_supplemental_attribute)
     IS.add_supplemental_attribute!(data, component2, geo_supplemental_attribute)
     @test IS.get_num_supplemental_attributes(data.attributes) == 1

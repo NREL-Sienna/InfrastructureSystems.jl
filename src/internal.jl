@@ -77,7 +77,7 @@ end
 """
 Assign a new UUID.
 """
-function assign_new_uuid!(obj::InfrastructureSystemsType)
+function assign_new_uuid_internal!(obj::InfrastructureSystemsType)
     get_internal(obj).uuid = make_uuid()
     return
 end

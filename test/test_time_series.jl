@@ -2203,7 +2203,7 @@ end
     end
 end
 
-@testset "Test assign_new_uuid! for component with time series" begin
+@testset "Test assign_new_uuid_internal! for component with time series" begin
     for in_memory in (true, false)
         sys = IS.SystemData(; time_series_in_memory = in_memory)
         name = "Component1"
@@ -2225,7 +2225,7 @@ end
               IS.SingleTimeSeries
 
         old_uuid = IS.get_uuid(component)
-        IS.assign_new_uuid!(component)
+        IS.assign_new_uuid_internal!(component)
         new_uuid = IS.get_uuid(component)
         @test old_uuid != new_uuid
 

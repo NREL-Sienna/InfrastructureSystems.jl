@@ -491,7 +491,7 @@ function copy_time_series!(
             @debug "Copy ts_metadata with" _group = LOG_GROUP_TIME_SERIES new_multiplier
         end
         new_time_series = deepcopy(ts_metadata)
-        assign_new_uuid!(new_time_series)
+        assign_new_uuid_internal!(new_time_series)
         set_name!(new_time_series, new_name)
         set_scaling_factor_multiplier!(new_time_series, new_multiplier)
         add_time_series!(dst, new_time_series)

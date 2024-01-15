@@ -390,8 +390,12 @@ end
 """
 Removes the component from the main container and adds it to the masked container.
 """
-function mask_component!(data::SystemData, component::InfrastructureSystemsComponent)
-    remove_component!(data.components, component; remove_time_series = false)
+function mask_component!(
+    data::SystemData,
+    component::InfrastructureSystemsComponent;
+    remove_time_series = false,
+)
+    remove_component!(data.components, component; remove_time_series = remove_time_series)
     set_time_series_storage!(component, nothing)
     return add_masked_component!(
         data,
@@ -835,6 +839,17 @@ function get_component(data::SystemData, uuid::Base.UUID)
     return component
 end
 
+function assign_new_uuid!(data::SystemData, component::InfrastructureSystemsComponent)
+    orig_uuid = get_uuid(component)
+    if isnothing(pop!(data.component_uuids, orig_uuid, nothing))
+        throw(ArgumentError("component with uuid = $orig_uuid is not stored."))
+    end
+
+    assign_new_uuid_internal!(component)
+    data.component_uuids[get_uuid(component)] = component
+    return
+end
+
 function get_components(filter_func::Function, ::Type{T}, data::SystemData) where {T}
     return get_components(T, data.components, filter_func)
 end
@@ -850,6 +865,11 @@ end
 
 get_components_by_name(::Type{T}, data::SystemData, args...) where {T} =
     get_components_by_name(T, data.components, args...)
+
+function get_components(data::SystemData, attribute::SupplementalAttribute)
+    uuids = get_component_uuids(attribute)
+    return [get_component(data, x) for x in uuids]
+end
 
 function get_masked_components(
     ::Type{T},
@@ -935,8 +955,13 @@ end
 _get_system_basename(system_file) = splitext(basename(system_file))[1]
 _get_secondary_basename(system_basename, name) = system_basename * "_" * name
 
-add_supplemental_attribute!(data::SystemData, component, info; kwargs...) =
-    add_supplemental_attribute!(data.attributes, component, info; kwargs...)
+function add_supplemental_attribute!(data::SystemData, component, attribute; kwargs...)
+    if isnothing(get_component(typeof(component), data, get_name(component)))
+        throw(ArgumentError("$(summary(component)) is not attached to the system"))
+    end
+
+    return add_supplemental_attribute!(data.attributes, component, attribute; kwargs...)
+end
 
 function get_supplemental_attributes(
     filter_func::Function,
