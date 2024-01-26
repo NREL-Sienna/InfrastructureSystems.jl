@@ -403,14 +403,14 @@ function get_supplemental_attributes(
 end
 
 function get_supplemental_attributes(
-    filter_func::Union{Nothing, Function},
+    filter_func::Function,
     ::Type{T},
     component::InfrastructureSystemsComponent,
 ) where {T <: SupplementalAttribute}
     return get_supplemental_attributes(
+        filter_func,
         T,
         get_supplemental_attributes_container(component),
-        filter_func,
     )
 end
 

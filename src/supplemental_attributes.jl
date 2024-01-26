@@ -166,11 +166,18 @@ Call collect on the result if an array is desired.
     where the result is true.
 """
 function get_supplemental_attributes(
+    filter_func::Function,
     ::Type{T},
     supplemental_attributes::SupplementalAttributes,
-    filter_func::Union{Nothing, Function} = nothing,
 ) where {T <: SupplementalAttribute}
-    return get_supplemental_attributes(T, supplemental_attributes.data, filter_func)
+    return get_supplemental_attributes(filter_func, T, supplemental_attributes.data)
+end
+
+function get_supplemental_attributes(
+    ::Type{T},
+    supplemental_attributes::SupplementalAttributes,
+) where {T <: SupplementalAttribute}
+    return get_supplemental_attributes(T, supplemental_attributes.data)
 end
 
 function get_supplemental_attribute(attributes::SupplementalAttributes, uuid::Base.UUID)
