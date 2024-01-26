@@ -3,7 +3,7 @@ console_level = "Info"
 console_stream = "stderr"
 file = true
 file_level = "Info"
-filename = "siip_log.txt"
+filename = "sienna_log.txt"
 file_mode = "w+"
 set_global = true
 

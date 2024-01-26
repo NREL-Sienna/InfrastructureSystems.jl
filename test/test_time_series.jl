@@ -1322,7 +1322,7 @@ end
     @test TimeSeries.timestamp(IS.get_data(fcast))[1] == start_time
 end
 
-@testset "Test time_series from" begin
+@testset "Test time_series to" begin
     data = create_system_data(; with_time_series = true)
     time_series = get_all_time_series(data)[1]
     for end_time in (
