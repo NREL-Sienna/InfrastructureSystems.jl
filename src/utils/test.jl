@@ -95,22 +95,6 @@ function TestEvent2(val::Int)
     return TestEvent2(RecorderEventCommon("TestEvent2"), val)
 end
 
-function runtests(args...)
-    test_prefix = "test_"
-    for arg in args
-        if !startswith(arg, test_prefix)
-            arg = test_prefix * arg
-        end
-        push!(ARGS, arg)
-    end
-
-    try
-        include("test/runtests.jl")
-    finally
-        empty!(ARGS)
-    end
-end
-
 struct TestSupplemental <: SupplementalAttribute
     value::Float64
     component_uuids::ComponentUUIDs

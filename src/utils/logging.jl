@@ -14,7 +14,7 @@ const LOG_GROUPS = (
     LOG_GROUP_SYSTEM,
     LOG_GROUP_TIME_SERIES,
 )
-const SIIP_LOGGING_CONFIG_FILENAME =
+const SIENNA_LOGGING_CONFIG_FILENAME =
     joinpath(dirname(pathof(InfrastructureSystems)), "utils", "logging_config.toml")
 
 const LOG_LEVELS = Dict(
@@ -145,7 +145,7 @@ function LoggingConfiguration(config_filename)
 end
 
 function make_logging_config_file(filename = "logging_config.toml"; force = false)
-    cp(SIIP_LOGGING_CONFIG_FILENAME, filename; force = force)
+    cp(SIENNA_LOGGING_CONFIG_FILENAME, filename; force = force)
     println("Created $filename")
     return
 end
