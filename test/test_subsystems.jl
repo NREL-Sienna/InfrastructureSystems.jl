@@ -40,6 +40,7 @@ end
     @test sort!(IS.get_name.(IS.get_subsystem_components(sys, "subsystem_2"))) ==
           ["component_2", "component_3"]
     @test IS.get_participating_subsystems(sys, components["component_1"]) == ["subsystem_1"]
+    @test_throws ArgumentError IS.add_subsystem!(sys, "subsystem_1")
 end
 
 @testset "Test get_components" begin
@@ -88,6 +89,12 @@ end
     sys = create_system_with_subsystems()
     component = IS.get_component(IS.TestComponent, sys, "component_1")
     @test_throws ArgumentError IS.add_component_to_subsystem!(sys, "invalid", component)
+end
+
+@testset "Test addition of duplicate component to subsystem" begin
+    sys = create_system_with_subsystems()
+    component = IS.get_component(IS.TestComponent, sys, "component_1")
+    @test_throws ArgumentError IS.add_component_to_subsystem!(sys, "subsystem_1", component)
 end
 
 @testset "Test addition of non-system component" begin

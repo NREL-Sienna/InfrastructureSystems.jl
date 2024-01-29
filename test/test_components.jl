@@ -137,6 +137,11 @@ end
     )
 end
 
+@testset "Test empty get_component" begin
+    container = IS.Components(IS.InMemoryTimeSeriesStorage())
+    @test isempty(collect(IS.get_components(IS.TestComponent, container)))
+end
+
 @testset "Test get_components_by_name" begin
     container = IS.Components(IS.InMemoryTimeSeriesStorage())
 
