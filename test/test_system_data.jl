@@ -70,7 +70,7 @@ end
 
     for i in 1:3
         name = "component_$(i)"
-        component = IS.TestComponent(name, 5)
+        component = IS.TestComponent(name, i)
         IS.add_component!(data, component)
         IS.add_time_series!(data, component, ts)
     end
@@ -82,6 +82,8 @@ end
     @test IS.get_masked_component(IS.TestComponent, data, "component_2") isa
           IS.TestComponent
     @test collect(IS.get_masked_components(IS.TestComponent, data)) == [component]
+    @test collect(IS.get_masked_components(x -> x.val == 2, IS.TestComponent, data)) ==
+          [component]
     @test IS.get_masked_components_by_name(
         IS.InfrastructureSystemsComponent,
         data,
@@ -418,4 +420,17 @@ end
     sort!(components; by = x -> x.name)
     @test components[1] === component1
     @test components[2] === component2
+end
+
+@testset "Test assign_new_uuid" begin
+    data = IS.SystemData()
+
+    name = "component1"
+    component = IS.TestComponent(name, 5)
+    IS.add_component!(data, component)
+    uuid1 = IS.get_uuid(component)
+    IS.assign_new_uuid!(data, component)
+    uuid2 = IS.get_uuid(component)
+    @test uuid1 != uuid2
+    @test IS.get_component(IS.TestComponent, data, name).name == name
 end

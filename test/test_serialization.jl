@@ -159,3 +159,31 @@ end
         )
     )
 end
+
+@testset "Test serialization of subsystems" begin
+    sys = IS.SystemData(; time_series_in_memory = true)
+
+    components = IS.TestComponent[]
+    for i in 1:4
+        name = "component_$i"
+        component = IS.TestComponent(name, i)
+        IS.add_component!(sys, component)
+        push!(components, component)
+    end
+
+    subsystems = String[]
+    for i in 1:2
+        name = "subsystem_$i"
+        IS.add_subsystem!(sys, name)
+        push!(subsystems, name)
+    end
+
+    IS.add_component_to_subsystem!(sys, subsystems[1], components[1])
+    IS.add_component_to_subsystem!(sys, subsystems[1], components[2])
+    IS.add_component_to_subsystem!(sys, subsystems[2], components[3])
+    IS.add_component_to_subsystem!(sys, subsystems[2], components[4])
+
+    sys2, result = validate_serialization(sys)
+    @test length(IS.get_subsystems(sys2)) == 2
+    @test IS.get_participating_subsystems(sys2, components[4]) == ["subsystem_2"]
+end

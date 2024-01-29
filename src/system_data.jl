@@ -24,6 +24,8 @@ mutable struct SystemData <: InfrastructureSystemsType
     masked_components::Components
     "Contains all attached component UUIDs, regular and masked."
     component_uuids::Dict{Base.UUID, <:InfrastructureSystemsComponent}
+    "User-defined subystems. Components can be regular or masked."
+    subsystems::Dict{String, Set{Base.UUID}}
     attributes::SupplementalAttributes
     time_series_params::TimeSeriesParameters
     time_series_storage::TimeSeriesStorage
@@ -72,6 +74,7 @@ function SystemData(;
         components,
         masked_components,
         Dict{Base.UUID, InfrastructureSystemsComponent}(),
+        Dict{String, Set{Base.UUID}}(),
         attributes,
         TimeSeriesParameters(),
         ts_storage,
@@ -84,6 +87,7 @@ function SystemData(
     time_series_params,
     validation_descriptors,
     time_series_storage,
+    subsystems,
     attributes,
     internal,
 )
@@ -93,6 +97,7 @@ function SystemData(
         components,
         masked_components,
         Dict{Base.UUID, InfrastructureSystemsComponent}(),
+        subsystems,
         attributes,
         time_series_params,
         time_series_storage,
@@ -384,6 +389,7 @@ function _handle_component_removal!(data::SystemData, component)
     end
 
     pop!(data.component_uuids, uuid)
+    remove_component_from_subsystems!(data, component)
     return
 end
 
@@ -687,7 +693,14 @@ function serialize(data::SystemData)
     @debug "serialize SystemData" _group = LOG_GROUP_SERIALIZATION
     json_data = Dict()
     for field in
-        (:components, :masked_components, :attributes, :time_series_params, :internal)
+        (
+        :components,
+        :masked_components,
+        :subsystems,
+        :attributes,
+        :time_series_params,
+        :internal,
+    )
         json_data[string(field)] = serialize(getfield(data, field))
     end
 
@@ -764,6 +777,7 @@ function deserialize(
         )
     end
 
+    subsystems = Dict(k => Set(Base.UUID.(v)) for (k, v) in raw["subsystems"])
     attributes = deserialize(SupplementalAttributes, raw["attributes"], time_series_storage)
     internal = deserialize(InfrastructureSystemsInternal, raw["internal"])
     @debug "deserialize" _group = LOG_GROUP_SERIALIZATION validation_descriptors time_series_storage internal
@@ -771,6 +785,7 @@ function deserialize(
         time_series_params,
         validation_descriptors,
         time_series_storage,
+        subsystems,
         attributes,
         internal,
     )
@@ -784,6 +799,8 @@ function deserialize(
             attributes_by_uuid[uuid] = attr
         end
     end
+
+    system_component_uuids = Set{Base.UUID}()
     for component in Iterators.Flatten((raw["components"], raw["masked_components"]))
         if haskey(component, "supplemental_attributes_container")
             component["supplemental_attributes_container"] = deserialize(
@@ -792,7 +809,16 @@ function deserialize(
                 attributes_by_uuid,
             )
         end
+        push!(system_component_uuids, UUIDs.UUID(component["internal"]["uuid"]["value"]))
     end
+
+    for (name, subsystem_component_uuids) in sys.subsystems
+        if !issubset(subsystem_component_uuids, system_component_uuids)
+            diff = setdiff(subsystem_component_uuids, system_component_uuids)
+            error("Subsystem $name has component UUIDs that are not in the system: $diff")
+        end
+    end
+
     # Note: components need to be deserialized by the parent so that they can go through
     # the proper checks.
     return sys
@@ -839,6 +865,10 @@ function get_component(data::SystemData, uuid::Base.UUID)
     return component
 end
 
+function has_component(data::SystemData, component::InfrastructureSystemsComponent)
+    return get_uuid(component) in keys(data.component_uuids)
+end
+
 function assign_new_uuid!(data::SystemData, component::InfrastructureSystemsComponent)
     orig_uuid = get_uuid(component)
     if isnothing(pop!(data.component_uuids, orig_uuid, nothing))
@@ -850,17 +880,23 @@ function assign_new_uuid!(data::SystemData, component::InfrastructureSystemsComp
     return
 end
 
-function get_components(filter_func::Function, ::Type{T}, data::SystemData) where {T}
-    return get_components(T, data.components, filter_func)
+function get_components(
+    filter_func::Function,
+    ::Type{T},
+    data::SystemData;
+    subsystem_name::Union{Nothing, AbstractString} = nothing,
+) where {T}
+    uuids = isnothing(subsystem_name) ? nothing : get_component_uuids(data, subsystem_name)
+    return get_components(filter_func, T, data.components; component_uuids = uuids)
 end
 
-# Keep this version to support PowerSystems 1.x.
 function get_components(
     ::Type{T},
-    data::SystemData,
-    filter_func::Union{Nothing, Function} = nothing,
+    data::SystemData;
+    subsystem_name::Union{Nothing, AbstractString} = nothing,
 ) where {T}
-    return get_components(T, data.components, filter_func)
+    uuids = isnothing(subsystem_name) ? nothing : get_component_uuids(data, subsystem_name)
+    return get_components(T, data.components; component_uuids = uuids)
 end
 
 get_components_by_name(::Type{T}, data::SystemData, args...) where {T} =
@@ -874,9 +910,16 @@ end
 function get_masked_components(
     ::Type{T},
     data::SystemData,
-    filter_func::Union{Nothing, Function} = nothing,
 ) where {T}
-    return get_components(T, data.masked_components, filter_func)
+    return get_components(T, data.masked_components)
+end
+
+function get_masked_components(
+    filter_func::Function,
+    ::Type{T},
+    data::SystemData,
+) where {T}
+    return get_components(filter_func, T, data.masked_components)
 end
 
 get_masked_components_by_name(::Type{T}, data::SystemData, args...) where {T} =
@@ -968,7 +1011,7 @@ function get_supplemental_attributes(
     ::Type{T},
     data::SystemData,
 ) where {T <: SupplementalAttribute}
-    return get_supplemental_attributes(T, data.attributes, filter_func)
+    return get_supplemental_attributes(filter_func, T, data.attributes)
 end
 
 function get_supplemental_attributes(

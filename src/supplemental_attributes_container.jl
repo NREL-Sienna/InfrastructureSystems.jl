@@ -27,9 +27,16 @@ Base.pop!(x::SupplementalAttributesContainer, key) = pop!(x.data, key)
 function get_supplemental_attributes(
     ::Type{T},
     container::SupplementalAttributesContainer,
-    filter_func::Union{Nothing, Function} = nothing,
 ) where {T <: SupplementalAttribute}
-    return iterate_instances(T, container.data, filter_func)
+    return iterate_instances(T, container.data, nothing)
+end
+
+function get_supplemental_attributes(
+    filter_func::Function,
+    ::Type{T},
+    container::SupplementalAttributesContainer,
+) where {T <: SupplementalAttribute}
+    return iterate_instances(filter_func, T, container.data, nothing)
 end
 
 function get_supplemental_attribute(
