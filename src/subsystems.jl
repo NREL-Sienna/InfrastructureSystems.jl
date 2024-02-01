@@ -79,7 +79,7 @@ Remove a component from a subsystem.
 
 Throws ArgumentError if the subsystem name or component is not stored.
 """
-function remove_subsystem_component!(
+function remove_component_from_subsystem!(
     data::SystemData,
     subsystem_name::AbstractString,
     component::InfrastructureSystemsComponent,

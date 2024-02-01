@@ -84,9 +84,13 @@ end
 @testset "Test removal of subsystem component" begin
     sys = create_system_with_subsystems()
     component = IS.get_component(IS.TestComponent, sys, "component_2")
-    IS.remove_subsystem_component!(sys, "subsystem_2", component)
+    IS.remove_component_from_subsystem!(sys, "subsystem_2", component)
     @test IS.get_name.(IS.get_subsystem_components(sys, "subsystem_2")) == ["component_3"]
-    @test_throws ArgumentError IS.remove_subsystem_component!(sys, "subsystem_2", component)
+    @test_throws ArgumentError IS.remove_component_from_subsystem!(
+        sys,
+        "subsystem_2",
+        component,
+    )
 end
 
 @testset "Test addition of component to invalid subsystem" begin
