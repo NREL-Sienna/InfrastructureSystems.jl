@@ -185,5 +185,5 @@ end
 
     sys2, result = validate_serialization(sys)
     @test length(IS.get_subsystems(sys2)) == 2
-    @test IS.get_participating_subsystems(sys2, components[4]) == ["subsystem_2"]
+    @test IS.get_assigned_subsystems(sys2, components[4]) == ["subsystem_2"]
 end

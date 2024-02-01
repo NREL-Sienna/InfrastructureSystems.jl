@@ -124,7 +124,7 @@ end
 """
 Return a Vector of subsystem names that contain the component.
 """
-function get_participating_subsystems(
+function get_assigned_subsystems(
     data::SystemData,
     component::InfrastructureSystemsComponent,
 )
@@ -133,9 +133,9 @@ function get_participating_subsystems(
 end
 
 """
-Return true if the component is participating in any subsystems.
+Return true if the component is assigned to any subsystems.
 """
-function is_participating_in_subsystem(
+function is_assigned_to_subsystem(
     data::SystemData,
     component::InfrastructureSystemsComponent,
 )
@@ -150,9 +150,9 @@ function is_participating_in_subsystem(
 end
 
 """
-Return true if the component is participating in the subsystem.
+Return true if the component is assigned to the subsystem.
 """
-function is_participating_in_subsystem(
+function is_assigned_to_subsystem(
     data::SystemData,
     component::InfrastructureSystemsComponent,
     subsystem_name::AbstractString,

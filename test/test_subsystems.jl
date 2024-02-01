@@ -39,11 +39,11 @@ end
     @test !IS.has_component(sys, "subsystem_3", components["component_5"])
     @test sort!(IS.get_name.(IS.get_subsystem_components(sys, "subsystem_2"))) ==
           ["component_2", "component_3"]
-    @test IS.get_participating_subsystems(sys, components["component_1"]) == ["subsystem_1"]
-    @test IS.is_participating_in_subsystem(sys, components["component_1"])
-    @test !IS.is_participating_in_subsystem(sys, components["component_5"])
-    @test IS.is_participating_in_subsystem(sys, components["component_1"], "subsystem_1")
-    @test !IS.is_participating_in_subsystem(sys, components["component_5"], "subsystem_1")
+    @test IS.get_assigned_subsystems(sys, components["component_1"]) == ["subsystem_1"]
+    @test IS.is_assigned_to_subsystem(sys, components["component_1"])
+    @test !IS.is_assigned_to_subsystem(sys, components["component_5"])
+    @test IS.is_assigned_to_subsystem(sys, components["component_1"], "subsystem_1")
+    @test !IS.is_assigned_to_subsystem(sys, components["component_5"], "subsystem_1")
     @test_throws ArgumentError IS.add_subsystem!(sys, "subsystem_1")
 end
 
@@ -77,7 +77,7 @@ end
     component = IS.get_component(IS.TestComponent, sys, "component_2")
     IS.remove_subsystem!(sys, "subsystem_2")
     @test sort!(collect(IS.get_subsystems(sys))) == ["subsystem_1", "subsystem_3"]
-    @test IS.get_participating_subsystems(sys, component) == ["subsystem_1"]
+    @test IS.get_assigned_subsystems(sys, component) == ["subsystem_1"]
     @test_throws ArgumentError IS.remove_subsystem!(sys, "subsystem_2")
 end
 
