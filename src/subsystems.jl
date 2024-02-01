@@ -132,6 +132,35 @@ function get_participating_subsystems(
     return [k for (k, v) in data.subsystems if uuid in v]
 end
 
+"""
+Return true if the component is participating in any subsystems.
+"""
+function is_participating_in_subsystem(
+    data::SystemData,
+    component::InfrastructureSystemsComponent,
+)
+    uuid = get_uuid(component)
+    for uuids in values(data.subsystems)
+        if uuid in uuids
+            return true
+        end
+    end
+
+    return false
+end
+
+"""
+Return true if the component is participating in the subsystem.
+"""
+function is_participating_in_subsystem(
+    data::SystemData,
+    component::InfrastructureSystemsComponent,
+    subsystem_name::AbstractString,
+)
+    _throw_if_not_stored(data, subsystem_name)
+    return get_uuid(component) in data.subsystems[subsystem_name]
+end
+
 function _throw_if_not_stored(data::SystemData, subsystem_name::AbstractString)
     if !haskey(data.subsystems, subsystem_name)
         throw(ArgumentError("There is no subsystem with name = $subsystem_name."))
