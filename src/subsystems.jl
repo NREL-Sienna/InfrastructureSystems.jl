@@ -19,6 +19,13 @@ function get_subsystems(data::SystemData)
 end
 
 """
+Return the number of subsystems in the system.
+"""
+function get_num_subsystems(data::SystemData)
+    return length(data.subsystems)
+end
+
+"""
 Remove a subsystem from the system.
 
 Throws ArgumentError if the subsystem name is not stored.

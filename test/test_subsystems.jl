@@ -28,6 +28,7 @@ end
 @testset "Test get subsystems and components" begin
     sys = create_system_with_subsystems()
     components = Dict(x.name => x for x in IS.get_components(IS.TestComponent, sys))
+    @test IS.get_num_subsystems(sys) == 3
     @test sort!(collect(IS.get_subsystems(sys))) ==
           ["subsystem_1", "subsystem_2", "subsystem_3"]
     @test IS.has_component(sys, "subsystem_1", components["component_1"])
