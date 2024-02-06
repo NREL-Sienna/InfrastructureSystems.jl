@@ -19,6 +19,13 @@ function get_subsystems(data::SystemData)
 end
 
 """
+Return the number of subsystems in the system.
+"""
+function get_num_subsystems(data::SystemData)
+    return length(data.subsystems)
+end
+
+"""
 Remove a subsystem from the system.
 
 Throws ArgumentError if the subsystem name is not stored.
@@ -79,7 +86,7 @@ Remove a component from a subsystem.
 
 Throws ArgumentError if the subsystem name or component is not stored.
 """
-function remove_subsystem_component!(
+function remove_component_from_subsystem!(
     data::SystemData,
     subsystem_name::AbstractString,
     component::InfrastructureSystemsComponent,
@@ -124,12 +131,41 @@ end
 """
 Return a Vector of subsystem names that contain the component.
 """
-function get_participating_subsystems(
+function get_assigned_subsystems(
     data::SystemData,
     component::InfrastructureSystemsComponent,
 )
     uuid = get_uuid(component)
     return [k for (k, v) in data.subsystems if uuid in v]
+end
+
+"""
+Return true if the component is assigned to any subsystems.
+"""
+function is_assigned_to_subsystem(
+    data::SystemData,
+    component::InfrastructureSystemsComponent,
+)
+    uuid = get_uuid(component)
+    for uuids in values(data.subsystems)
+        if uuid in uuids
+            return true
+        end
+    end
+
+    return false
+end
+
+"""
+Return true if the component is assigned to the subsystem.
+"""
+function is_assigned_to_subsystem(
+    data::SystemData,
+    component::InfrastructureSystemsComponent,
+    subsystem_name::AbstractString,
+)
+    _throw_if_not_stored(data, subsystem_name)
+    return get_uuid(component) in data.subsystems[subsystem_name]
 end
 
 function _throw_if_not_stored(data::SystemData, subsystem_name::AbstractString)

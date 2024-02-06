@@ -28,6 +28,7 @@ end
 @testset "Test get subsystems and components" begin
     sys = create_system_with_subsystems()
     components = Dict(x.name => x for x in IS.get_components(IS.TestComponent, sys))
+    @test IS.get_num_subsystems(sys) == 3
     @test sort!(collect(IS.get_subsystems(sys))) ==
           ["subsystem_1", "subsystem_2", "subsystem_3"]
     @test IS.has_component(sys, "subsystem_1", components["component_1"])
@@ -39,7 +40,11 @@ end
     @test !IS.has_component(sys, "subsystem_3", components["component_5"])
     @test sort!(IS.get_name.(IS.get_subsystem_components(sys, "subsystem_2"))) ==
           ["component_2", "component_3"]
-    @test IS.get_participating_subsystems(sys, components["component_1"]) == ["subsystem_1"]
+    @test IS.get_assigned_subsystems(sys, components["component_1"]) == ["subsystem_1"]
+    @test IS.is_assigned_to_subsystem(sys, components["component_1"])
+    @test !IS.is_assigned_to_subsystem(sys, components["component_5"])
+    @test IS.is_assigned_to_subsystem(sys, components["component_1"], "subsystem_1")
+    @test !IS.is_assigned_to_subsystem(sys, components["component_5"], "subsystem_1")
     @test_throws ArgumentError IS.add_subsystem!(sys, "subsystem_1")
 end
 
@@ -73,16 +78,20 @@ end
     component = IS.get_component(IS.TestComponent, sys, "component_2")
     IS.remove_subsystem!(sys, "subsystem_2")
     @test sort!(collect(IS.get_subsystems(sys))) == ["subsystem_1", "subsystem_3"]
-    @test IS.get_participating_subsystems(sys, component) == ["subsystem_1"]
+    @test IS.get_assigned_subsystems(sys, component) == ["subsystem_1"]
     @test_throws ArgumentError IS.remove_subsystem!(sys, "subsystem_2")
 end
 
 @testset "Test removal of subsystem component" begin
     sys = create_system_with_subsystems()
     component = IS.get_component(IS.TestComponent, sys, "component_2")
-    IS.remove_subsystem_component!(sys, "subsystem_2", component)
+    IS.remove_component_from_subsystem!(sys, "subsystem_2", component)
     @test IS.get_name.(IS.get_subsystem_components(sys, "subsystem_2")) == ["component_3"]
-    @test_throws ArgumentError IS.remove_subsystem_component!(sys, "subsystem_2", component)
+    @test_throws ArgumentError IS.remove_component_from_subsystem!(
+        sys,
+        "subsystem_2",
+        component,
+    )
 end
 
 @testset "Test addition of component to invalid subsystem" begin
