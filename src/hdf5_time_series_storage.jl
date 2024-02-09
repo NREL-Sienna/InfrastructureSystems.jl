@@ -34,7 +34,8 @@ Constructs Hdf5TimeSeriesStorage.
   - `create_file::Bool`: create new file
   - `filename=nothing`: if nothing, create a temp file, else use this name.
   - `directory=nothing`: if set and filename is nothing, create a temp file in this
-    directory. Use tempdir() if not set. This should be set if the time series data is larger
+    directory. If it is not set, use the environment variable SIENNA_TIME_SERIES_DIRECTORY.
+    If that is not set, use tempdir(). This should be set if the time series data is larger
     than the tmp filesystem can hold.
   - `read_only = false`: If true, don't allow changes to the file. Allows simultaneous read
     access.
@@ -48,9 +49,7 @@ function Hdf5TimeSeriesStorage(
 )
     if create_file
         if isnothing(filename)
-            if isnothing(directory)
-                directory = tempdir()
-            end
+            directory = _get_time_series_parent_dir(directory)
             filename, io = mktemp(directory)
             close(io)
         end
@@ -82,7 +81,7 @@ function from_file(
     if read_only
         file_path = abspath(filename)
     else
-        parent = isnothing(directory) ? tempdir() : directory
+        parent = _get_time_series_parent_dir(directory)
         file_path, io = mktemp(parent)
         close(io)
         copy_h5_file(filename, file_path)
@@ -101,6 +100,31 @@ function from_file(
     return storage
 end
 
+function _get_time_series_parent_dir(directory = nothing)
+    # Ensure that a user-passed directory has highest precedence.
+    if !isnothing(directory)
+        if !isdir(directory)
+            error("User passed time series directory, $directory, does not exist.")
+        end
+        return directory
+    end
+
+    directory = get(ENV, "SIENNA_TIME_SERIES_DIRECTORY", nothing)
+    if !isnothing(directory)
+        if !isdir(directory)
+            error(
+                "The directory specified by the environment variable " *
+                "SIENNA_TIME_SERIES_DIRECTORY, $directory, does not exist.",
+            )
+        end
+        @debug "Use time series directory specified by the environment variable" _group =
+            LOG_GROUP_TIME_SERIES directory
+        return directory
+    end
+
+    return tempdir()
+end
+
 function Base.isempty(storage::Hdf5TimeSeriesStorage)
     return HDF5.h5open(storage.file_path, "r+") do file
         root = _get_root(storage, file)
@@ -115,12 +139,11 @@ undergoing a deepcopy.
 # Arguments
 
   - `storage::Hdf5TimeSeriesStorage`: storage instance
-  - `directory::String`: If nothing, use tempdir
+  - `directory::String`: If nothing, use the directory specified by the environment variable
+     SIENNA_TIME_SERIES_DIRECTORY or the system tempdir.
 """
 function copy_to_new_file!(storage::Hdf5TimeSeriesStorage, directory = nothing)
-    if directory === nothing
-        directory = tempdir()
-    end
+    directory = _get_time_series_parent_dir(directory)
 
     # If we ever choose to keep the HDF5 file open then this will break.
     # Any open buffers will need to be flushed.
