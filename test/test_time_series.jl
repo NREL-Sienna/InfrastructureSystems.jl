@@ -2253,3 +2253,18 @@ end
     @test counts.static_time_series_count == 1
     @test counts.components_with_time_series == 2
 end
+
+@testset "Test custom time series directories" begin
+    @test IS._get_time_series_parent_dir(nothing) == tempdir()
+    @test IS._get_time_series_parent_dir(pwd()) == pwd()
+    @test_throws ErrorException IS._get_time_series_parent_dir("/some/invalid/directory/")
+
+    ENV["SIENNA_TIME_SERIES_DIRECTORY"] = pwd()
+    try
+        @test IS._get_time_series_parent_dir() == pwd()
+        ENV["SIENNA_TIME_SERIES_DIRECTORY"] = "/some/invalid/directory/"
+        @test_throws ErrorException IS._get_time_series_parent_dir()
+    finally
+        pop!(ENV, "SIENNA_TIME_SERIES_DIRECTORY")
+    end
+end
