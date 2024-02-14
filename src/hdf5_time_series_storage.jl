@@ -354,7 +354,7 @@ function iterate_time_series(storage::Hdf5TimeSeriesStorage)
         HDF5.h5open(storage.file_path, "r") do file
             root = _get_root(storage, file)
             for uuid_group in root
-                data = uuid_group["data"][:]
+                data = HDF5.read(uuid_group["data"])
                 attributes = Dict()
                 for name in keys(HDF5.attributes(uuid_group))
                     attributes[name] = HDF5.read(HDF5.attributes(uuid_group)[name])
