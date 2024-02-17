@@ -249,11 +249,7 @@ Return true if the structs defined in existing_dir match structs freshly-generat
 from descriptor_file.
 """
 function test_generated_structs(descriptor_file, existing_dir)
-    output_dir = "tmp-test-generated-structs"
-    if isdir(output_dir)
-        rm(output_dir; recursive = true)
-    end
-    mkdir(output_dir)
+    output_dir = mktempdir()
 
     generate_structs(descriptor_file, output_dir; print_results = false)
 
