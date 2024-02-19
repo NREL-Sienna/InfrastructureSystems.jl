@@ -795,6 +795,7 @@ function compare_values(
     x::Hdf5TimeSeriesStorage,
     y::Hdf5TimeSeriesStorage;
     compare_uuids = false,
+    kwargs...,
 )
     item_x = sort!(collect(iterate_time_series(x)); by = z -> z[1])
     item_y = sort!(collect(iterate_time_series(y)); by = z -> z[1])
