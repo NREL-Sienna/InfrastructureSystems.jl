@@ -147,6 +147,7 @@ include("validation.jl")
 include("utils/print.jl")
 include("utils/test.jl")
 include("units.jl")
+include("function_data.jl")
 include("deprecated.jl")
 
 end # module
