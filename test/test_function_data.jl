@@ -39,13 +39,16 @@ end
     @test length(IS.PiecewiseLinearSlopeData([1, 1.1, 1.2], 1, [1.1, 10])) == 2
 
     @test IS.PiecewiseLinearPointData([(0, 0), (1, 1), (1.1, 2)])[2] == (1, 1)
-    @test IS.get_x_coords(IS.PiecewiseLinearPointData([(0, 0), (1, 1), (1.1, 2)])) == [0, 1, 1.1]
+    @test IS.get_x_coords(IS.PiecewiseLinearPointData([(0, 0), (1, 1), (1.1, 2)])) ==
+          [0, 1, 1.1]
 
     # Tests our overridden Base.:(==)
     @test all(get_test_function_data() .== get_test_function_data())
 
-    @test all(isapprox.(
-        IS.get_slopes(IS.PiecewiseLinearPointData([(0, 0), (10, 31.4)])), [3.14]))
+    @test all(
+        isapprox.(
+            IS.get_slopes(IS.PiecewiseLinearPointData([(0, 0), (10, 31.4)])), [3.14]),
+    )
     @test isapprox(
         IS.get_slopes(IS.PiecewiseLinearPointData([(0, 0), (1, 1), (1.1, 2), (1.2, 3)])),
         [1, 10, 10])
