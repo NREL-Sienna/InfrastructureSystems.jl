@@ -437,7 +437,36 @@ function transform_array_for_hdf(data::Vector{<:Real})
     return data
 end
 
-function transform_array_for_hdf(data::SortedDict{Dates.DateTime, Vector{POLYNOMIAL}})
+transform_array_for_hdf(data::SortedDict{Dates.DateTime, Vector{LinearFunctionData}}) =
+    transform_array_for_hdf(
+        SortedDict{Dates.DateTime, Vector{CONSTANT}}(
+            k => get_proportional_term.(v) for (k, v) in data
+        ),
+    )
+
+transform_array_for_hdf(data::Vector{LinearFunctionData}) =
+    transform_array_for_hdf(get_proportional_term.(data))
+
+transform_array_for_hdf(data::Vector{PolynomialFunctionData}) =
+    throw(ArgumentError("Not yet implemented for PolynomialFunctionData"))
+
+transform_array_for_hdf(data::SortedDict{Dates.DateTime, Vector{PolynomialFunctionData}}) =
+    throw(ArgumentError("Not yet implemented for PolynomialFunctionData"))
+
+function transform_array_for_hdf(
+    data::SortedDict{Dates.DateTime, Vector{QuadraticFunctionData}},
+)
+    all(get_constant_term.(vcat(values(data)...)) .== 0) ||
+        throw(
+            ArgumentError(
+                "Not yet implemented for nonzero constant term ($(get_constant_term.(vcat(values(data)...))))",
+            ),
+        )
+    data = SortedDict(
+        k =>
+            [(get_quadratic_term(q), (get_proportional_term(q))) for q in v] for
+        (k, v) in data
+    )
     lin_cost = hcat(values(data)...)
     rows, cols = size(lin_cost)
     @assert_op length(first(lin_cost)) == 2
@@ -451,7 +480,10 @@ function transform_array_for_hdf(data::SortedDict{Dates.DateTime, Vector{POLYNOM
     return t_lin_cost
 end
 
-function transform_array_for_hdf(data::Vector{POLYNOMIAL})
+function transform_array_for_hdf(data::Vector{QuadraticFunctionData})
+    all(get_constant_term.(data) .== 0) ||
+        throw(ArgumentError("Not yet implemented for nonzero constant term"))
+    data = [(get_quadratic_term(q), (get_proportional_term(q))) for q in data]
     rows = length(data)
     @assert_op length(first(data)) == 2
     t_lin_cost = Array{Float64}(undef, rows, 1, 2)
@@ -464,8 +496,10 @@ function transform_array_for_hdf(data::Vector{POLYNOMIAL})
     return t_lin_cost
 end
 
-function transform_array_for_hdf(data::SortedDict{Dates.DateTime, Vector{PWL}})
-    quad_cost = hcat(values(data)...)
+function transform_array_for_hdf(
+    data::SortedDict{Dates.DateTime, Vector{PiecewiseLinearPointData}},
+)
+    quad_cost = hcat([get_points.(v) for v in values(data)]...)
     rows, cols = size(quad_cost)
     tuple_length = length(first(quad_cost))
     @assert_op length(first(first(quad_cost))) == 2
@@ -481,7 +515,10 @@ function transform_array_for_hdf(data::SortedDict{Dates.DateTime, Vector{PWL}})
     return t_quad_cost
 end
 
-function transform_array_for_hdf(data::Vector{PWL})
+# TODO: old code here does not properly handle data with different numbers of points
+# TODO: remove duplication
+function transform_array_for_hdf(data::Vector{PiecewiseLinearPointData})
+    data = get_points.(data)
     rows = length(data)
     tuple_length = length(first(data))
     @assert_op length(first(first(data))) == 2
@@ -496,3 +533,10 @@ function transform_array_for_hdf(data::Vector{PWL})
     end
     return t_quad_cost
 end
+
+transform_array_for_hdf(
+    data::SortedDict{Dates.DateTime, Vector{T}}) where {T <: FunctionData} =
+    throw(ArgumentError("Not currently implemented for $T"))
+
+transform_array_for_hdf(data::Vector{T}) where {T <: FunctionData} =
+    throw(ArgumentError("Not currently implemented for $T"))

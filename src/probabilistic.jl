@@ -3,11 +3,7 @@
         name::String
         resolution::Dates.Period
         percentiles::Vector{Float64}
-        data::Union{
-            SortedDict{Dates.DateTime, Matrix{CONSTANT}},
-            SortedDict{Dates.DateTime, Matrix{POLYNOMIAL}},
-            SortedDict{Dates.DateTime, Matrix{PWL}},
-        }
+        data::SortedDict
         scaling_factor_multiplier::Union{Nothing, Function}
         internal::InfrastructureSystemsInternal
     end
@@ -19,7 +15,7 @@ A Probabilistic forecast for a particular data field in a Component.
   - `name::String`: user-defined name
   - `resolution::Dates.Period`: forecast resolution
   - `percentiles::Vector{Float64}`: Percentiles for the probabilistic forecast
-  - `data::Union{SortedDict{Dates.DateTime, Matrix{CONSTANT}}, SortedDict{Dates.DateTime, Matrix{POLYNOMIAL}}, SortedDict{Dates.DateTime, Matrix{PWL}}}`: timestamp - scalingfactor
+  - `data::SortedDict`: timestamp - scalingfactor
   - `scaling_factor_multiplier::Union{Nothing, Function}`: Applicable when the time series
     data are scaling factors. Called on the associated component to convert the values.
   - `internal::InfrastructureSystemsInternal`
@@ -28,11 +24,7 @@ mutable struct Probabilistic <: Forecast
     "user-defined name"
     name::String
     "timestamp - scalingfactor"
-    data::Union{
-        SortedDict{Dates.DateTime, Matrix{CONSTANT}},
-        SortedDict{Dates.DateTime, Matrix{POLYNOMIAL}},
-        SortedDict{Dates.DateTime, Matrix{PWL}},
-    }
+    data::SortedDict  # TODO see note in Deterministic
     "Percentiles for the probabilistic forecast"
     percentiles::Vector{Float64}
     "forecast resolution"
@@ -203,19 +195,13 @@ function ProbabilisticMetadata(time_series::Probabilistic)
     )
 end
 
-convert_data(data::AbstractDict{Dates.DateTime, Matrix{T}}) where {T} =
-    SortedDict{Dates.DateTime, Matrix{CONSTANT}}(data...)
-convert_data(data::AbstractDict{Dates.DateTime, Matrix{T}}) where {T <: Tuple} =
-    SortedDict{Dates.DateTime, Matrix{POLYNOMIAL}}(data...)
-convert_data(data::AbstractDict{Dates.DateTime, Matrix{Matrix{T}}}) where {T <: Tuple} =
-    SortedDict{Dates.DateTime, Matrix{PWL}}(data...)
 convert_data(
-    data::Union{
-        SortedDict{Dates.DateTime, Matrix{CONSTANT}},
-        SortedDict{Dates.DateTime, Matrix{POLYNOMIAL}},
-        SortedDict{Dates.DateTime, Matrix{PWL}},
-    },
-) = data
+    data::AbstractDict{<:Any, Matrix{T}},
+) where {T <: Union{CONSTANT, FunctionData}} =
+    SortedDict{Dates.DateTime, Matrix{T}}(data...)
+convert_data(
+    data::SortedDict{Dates.DateTime, Matrix{T}},
+) where {T <: Union{CONSTANT, FunctionData}} = data
 
 """
 Get [`Probabilistic`](@ref) `name`.
@@ -285,6 +271,7 @@ function get_horizon(forecast::Probabilistic)
     return size(first(values(get_data(forecast))))[1]
 end
 
+# TODO see Deterministic
 eltype_data(forecast::Probabilistic) = eltype_data_common(forecast)
 get_count(forecast::Probabilistic) = get_count_common(forecast)
 get_initial_times(forecast::Probabilistic) = get_initial_times_common(forecast)

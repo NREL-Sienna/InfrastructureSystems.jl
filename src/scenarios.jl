@@ -3,11 +3,7 @@
         name::String
         resolution::Dates.Period
         scenario_count::Int64
-        data::Union{
-            SortedDict{Dates.DateTime, Matrix{CONSTANT}},
-            SortedDict{Dates.DateTime, Matrix{POLYNOMIAL}},
-            SortedDict{Dates.DateTime, Matrix{PWL}},
-        }
+        data::SortedDict
         scaling_factor_multiplier::Union{Nothing, Function}
         internal::InfrastructureSystemsInternal
     end
@@ -19,7 +15,7 @@ A Discrete Scenario Based time series for a particular data field in a Component
   - `name::String`: user-defined name
   - `resolution::Dates.Period`: forecast resolution
   - `scenario_count::Int64`: Number of scenarios
-  - `data::Union{SortedDict{Dates.DateTime, Matrix{CONSTANT}}, SortedDict{Dates.DateTime, Matrix{POLYNOMIAL}}, SortedDict{Dates.DateTime, Matrix{PWL}}}`: timestamp - scalingfactor
+  - `data::SortedDict`: timestamp - scalingfactor
   - `scaling_factor_multiplier::Union{Nothing, Function}`: Applicable when the time series
     data are scaling factors. Called on the associated component to convert the values.
   - `internal::InfrastructureSystemsInternal`
@@ -28,11 +24,7 @@ mutable struct Scenarios <: Forecast
     "user-defined name"
     name::String
     "timestamp - scalingfactor"
-    data::Union{
-        SortedDict{Dates.DateTime, Matrix{CONSTANT}},
-        SortedDict{Dates.DateTime, Matrix{POLYNOMIAL}},
-        SortedDict{Dates.DateTime, Matrix{PWL}},
-    }
+    data::SortedDict  # TODO see note in Deterministic
     "Number of scenarios"
     scenario_count::Int64
     "forecast resolution"
@@ -51,7 +43,7 @@ function Scenarios(;
     normalization_factor = 1.0,
     internal = InfrastructureSystemsInternal(),
 )
-    data = handle_normalization_factor(convert_data(data), normalization_factor)
+    data = handle_normalization_factor(data, normalization_factor)
     return Scenarios(
         name,
         data,
@@ -237,6 +229,7 @@ Set [`Scenarios`](@ref) `internal`.
 """
 set_internal!(value::Scenarios, val) = value.internal = val
 
+# TODO see Deterministic
 eltype_data(forecast::Scenarios) = eltype_data_common(forecast)
 get_count(forecast::Scenarios) = get_count_common(forecast)
 get_initial_times(forecast::Scenarios) = get_initial_times_common(forecast)

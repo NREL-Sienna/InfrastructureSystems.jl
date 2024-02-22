@@ -130,12 +130,14 @@ end
     other_time = initial_time + resolution
     name = "test"
     horizon = 24
-    polynomial_cost = repeat([(999.0, 1.0)], 24)
+    linear_cost = repeat([IS.LinearFunctionData(3.14)], 24)
+    data_linear = SortedDict(initial_time => linear_cost, other_time => linear_cost)
+    polynomial_cost = repeat([IS.QuadraticFunctionData(999.0, 1.0, 0.0)], 24)
     data_polynomial =
         SortedDict(initial_time => polynomial_cost, other_time => polynomial_cost)
-    pwl_cost = repeat([repeat([(999.0, 1.0)], 5)], 24)
+    pwl_cost = repeat([IS.PiecewiseLinearPointData(repeat([(999.0, 1.0)], 5))], 24)
     data_pwl = SortedDict(initial_time => pwl_cost, other_time => pwl_cost)
-    for d in [data_polynomial, data_pwl]
+    for d in [data_linear, data_polynomial, data_pwl]
         @testset "Add deterministic from $(typeof(d))" begin
             sys = IS.SystemData()
             component_name = "Component1"
@@ -148,6 +150,16 @@ end
         end
     end
 
+    data_ts_linear = Dict(
+        initial_time => TimeSeries.TimeArray(
+            range(initial_time; length = horizon, step = resolution),
+            linear_cost,
+        ),
+        other_time => TimeSeries.TimeArray(
+            range(other_time; length = horizon, step = resolution),
+            linear_cost,
+        ),
+    )
     data_ts_polynomial = Dict(
         initial_time => TimeSeries.TimeArray(
             range(initial_time; length = horizon, step = resolution),
@@ -168,7 +180,7 @@ end
             pwl_cost,
         ),
     )
-    for d in [data_ts_polynomial, data_ts_pwl]
+    for d in [data_ts_linear, data_ts_polynomial, data_ts_pwl]
         @testset "Add deterministic from $(typeof(d))" begin
             sys = IS.SystemData()
             component_name = "Component1"
@@ -260,21 +272,7 @@ end
     @test IS.get_initial_timestamp(forecast) == initial_time
 end
 
-@testset "Test add SingleTimeSeries" begin
-    sys = IS.SystemData()
-    name = "Component1"
-    component = IS.TestComponent(name, 5)
-    IS.add_component!(sys, component)
-
-    initial_time = Dates.DateTime("2020-09-01")
-    resolution = Dates.Hour(1)
-
-    data = TimeSeries.TimeArray(
-        range(initial_time; length = 365, step = resolution),
-        ones(365),
-    )
-    data = IS.SingleTimeSeries(; data = data, name = "test_c")
-    IS.add_time_series!(sys, component, data)
+function _test_add_single_time_series_helper(component, initial_time)
     ts1 = IS.get_time_series(
         IS.SingleTimeSeries,
         component,
@@ -298,6 +296,26 @@ end
         start_time = initial_time + Dates.Day(1),
     )
     @test length(IS.get_data(ts3)) == 341
+end
+
+@testset "Test add SingleTimeSeries" begin
+    sys = IS.SystemData()
+    name = "Component1"
+    component = IS.TestComponent(name, 5)
+    IS.add_component!(sys, component)
+
+    initial_time = Dates.DateTime("2020-09-01")
+    resolution = Dates.Hour(1)
+
+    data = TimeSeries.TimeArray(
+        range(initial_time; length = 365, step = resolution),
+        ones(365),
+    )
+    data = IS.SingleTimeSeries(; data = data, name = "test_c")
+    IS.add_time_series!(sys, component, data)
+
+    _test_add_single_time_series_helper(component, initial_time)
+
     #Throws errors
     @test_throws ArgumentError IS.get_time_series(
         IS.SingleTimeSeries,
@@ -670,7 +688,7 @@ end
     @test length(IS.get_components(IS.TestComponent, sys)) == 0
 end
 
-@testset "Test add SingleTimeSeries with Polynomial Cost" begin
+function _test_add_single_time_series_type(test_value, type_name)
     sys = IS.SystemData()
     name = "Component1"
     component = IS.TestComponent(name, 5)
@@ -678,83 +696,38 @@ end
 
     initial_time = Dates.DateTime("2020-09-01")
     resolution = Dates.Hour(1)
-    other_time = initial_time + resolution
-    polynomial_cost = repeat([(999.0, 1.0)], 365)
-    data_polynomial = TimeSeries.TimeArray(
-        range(initial_time; length = 365, step = resolution),
-        polynomial_cost,
-    )
-    data = IS.SingleTimeSeries(; data = data_polynomial, name = "test_c")
+    data_series =
+        TimeSeries.TimeArray(
+            range(initial_time; length = 365, step = resolution),
+            test_value,
+        )
+    data = IS.SingleTimeSeries(; data = data_series, name = "test_c")
     IS.add_time_series!(sys, component, data)
     ts = IS.get_time_series(IS.SingleTimeSeries, component, "test_c";)
-    @test IS.get_data_type(ts) == "POLYNOMIAL"
-    @test reshape(TimeSeries.values(IS.get_data(ts)), 365) ==
-          TimeSeries.values(data_polynomial)
-    ts1 = IS.get_time_series(
-        IS.SingleTimeSeries,
-        component,
-        "test_c";
-        start_time = initial_time,
-        len = 12,
-    )
-    @test length(IS.get_data(ts1)) == 12
-    ts2 = IS.get_time_series(
-        IS.SingleTimeSeries,
-        component,
-        "test_c";
-        start_time = initial_time + Dates.Day(1),
-        len = 12,
-    )
-    @test length(IS.get_data(ts2)) == 12
-    ts3 = IS.get_time_series(
-        IS.SingleTimeSeries,
-        component,
-        "test_c";
-        start_time = initial_time + Dates.Day(1),
-    )
-    @test length(IS.get_data(ts3)) == 341
+    @test IS.get_data_type(ts) == type_name
+    @test reshape(TimeSeries.values(IS.get_data(ts)), 365) == TimeSeries.values(data_series)
+    _test_add_single_time_series_helper(component, initial_time)
 end
 
-@testset "Test add SingleTimeSeries with PWL Cost" begin
-    sys = IS.SystemData()
-    name = "Component1"
-    component = IS.TestComponent(name, 5)
-    IS.add_component!(sys, component)
+@testset "Test add SingleTimeSeries with LinearFunctionData Cost" begin
+    _test_add_single_time_series_type(
+        repeat([IS.LinearFunctionData(3.14)], 365),
+        "LinearFunctionData",
+    )
+end
 
-    initial_time = Dates.DateTime("2020-09-01")
-    resolution = Dates.Hour(1)
-    other_time = initial_time + resolution
-    pwl_cost = repeat([repeat([(999.0, 1.0)], 5)], 365)
-    data_pwl =
-        TimeSeries.TimeArray(range(initial_time; length = 365, step = resolution), pwl_cost)
-    data = IS.SingleTimeSeries(; data = data_pwl, name = "test_c")
-    IS.add_time_series!(sys, component, data)
-    ts = IS.get_time_series(IS.SingleTimeSeries, component, "test_c";)
-    @test IS.get_data_type(ts) == "PWL"
-    @test reshape(TimeSeries.values(IS.get_data(ts)), 365) == TimeSeries.values(data_pwl)
-    ts1 = IS.get_time_series(
-        IS.SingleTimeSeries,
-        component,
-        "test_c";
-        start_time = initial_time,
-        len = 12,
+@testset "Test add SingleTimeSeries with QuadraticFunctionData Cost" begin
+    _test_add_single_time_series_type(
+        repeat([IS.QuadraticFunctionData(999.0, 1.0, 0.0)], 365),
+        "QuadraticFunctionData",
     )
-    @test length(IS.get_data(ts1)) == 12
-    ts2 = IS.get_time_series(
-        IS.SingleTimeSeries,
-        component,
-        "test_c";
-        start_time = initial_time + Dates.Day(1),
-        len = 12,
+end
+
+@testset "Test add SingleTimeSeries with PiecewiseLinearPointData Cost" begin
+    _test_add_single_time_series_type(
+        repeat([IS.PiecewiseLinearPointData(repeat([(999.0, 1.0)], 5))], 365),
+        "PiecewiseLinearPointData",
     )
-    @test length(IS.get_data(ts2)) == 12
-    ts3 = IS.get_time_series(
-        IS.SingleTimeSeries,
-        component,
-        "test_c";
-        start_time = initial_time + Dates.Day(1),
-    )
-    @test length(IS.get_data(ts3)) == 341
 end
 
 @testset "Test read_time_series_file_metadata" begin
@@ -1465,256 +1438,145 @@ end
     @test IS.get_forecast_total_period(sys) == IS.get_total_period(forecast)
 end
 
+# TODO something like this could be much more widespread to reduce code duplication
+default_time_params = (
+    interval = Dates.Hour(1),
+    initial_timestamp = Dates.DateTime("2020-09-01"),
+    initial_times = collect(
+        range(Dates.DateTime("2020-09-01"); length = 24, step = Dates.Hour(1)),
+    ),
+    horizon = 24,
+)
+
+function _test_get_time_series_option_type(test_data, in_memory, extended)
+    sys = IS.SystemData(; time_series_in_memory = in_memory)
+    name = "Component1"
+    component = IS.TestComponent(name, 5)
+    IS.add_component!(sys, component)
+
+    # Set baseline parameters for the rest of the tests.
+    resolution = Dates.Minute(5)
+    name = "test"
+
+    forecast = if extended
+        IS.Deterministic(; data = test_data, name = name, resolution = resolution)
+    else
+        IS.Deterministic(name, test_data, resolution)
+    end
+    IS.add_time_series!(sys, component, forecast)
+    @test IS.get_forecast_window_count(sys) == length(test_data)
+
+    f2 = IS.get_time_series(IS.Deterministic, component, name)
+    @test IS.get_count(f2) == length(test_data)
+    @test IS.get_initial_timestamp(f2) == default_time_params.initial_times[1]
+    for (i, window) in enumerate(IS.iterate_windows(f2))
+        @test TimeSeries.values(window) == test_data[default_time_params.initial_times[i]]
+    end
+
+    if extended
+        offset = 1
+        count = 1
+        it = default_time_params.initial_times[offset]
+        f2 = IS.get_time_series(
+            IS.Deterministic,
+            component,
+            name;
+            start_time = it,
+            count = count,
+        )
+        @test IS.get_initial_timestamp(f2) == it
+        @test IS.get_count(f2) == count
+        @test IS.get_horizon(f2) == default_time_params.horizon
+        for (i, window) in enumerate(IS.iterate_windows(f2))
+            @test TimeSeries.values(window) ==
+                  test_data[default_time_params.initial_times[i + offset - 1]]
+        end
+    end
+
+    offset = 12
+    count = 5
+    it = default_time_params.initial_times[offset]
+    f2 = IS.get_time_series(
+        IS.Deterministic,
+        component,
+        name;
+        start_time = it,
+        count = count,
+    )
+    @test IS.get_initial_timestamp(f2) == it
+    @test IS.get_count(f2) == count
+    @test IS.get_horizon(f2) == default_time_params.horizon
+    for (i, window) in enumerate(IS.iterate_windows(f2))
+        @test TimeSeries.values(window) ==
+              test_data[default_time_params.initial_times[i + offset - 1]]
+    end
+
+    f2 = IS.get_time_series(
+        IS.Deterministic,
+        component,
+        name;
+        start_time = it,
+        count = count,
+        len = default_time_params.horizon - 1,
+    )
+    @test IS.get_initial_timestamp(f2) == it
+    @test IS.get_count(f2) == count
+    @test IS.get_horizon(f2) == default_time_params.horizon - 1
+    for (i, window) in enumerate(IS.iterate_windows(f2))
+        @test TimeSeries.values(window) ==
+              test_data[default_time_params.initial_times[i + offset - 1]][1:(default_time_params.horizon - 1)]
+    end
+
+    @test_throws ArgumentError IS.get_time_series(
+        IS.Deterministic,
+        component,
+        name;
+        start_time = it + Dates.Minute(1),
+    )
+end
 @testset "Test get_time_series options" begin
     for in_memory in (true, false)
-        sys = IS.SystemData(; time_series_in_memory = in_memory)
-        name = "Component1"
-        component = IS.TestComponent(name, 5)
-        IS.add_component!(sys, component)
-
-        # Set baseline parameters for the rest of the tests.
-        resolution = Dates.Minute(5)
-        interval = Dates.Hour(1)
-        initial_timestamp = Dates.DateTime("2020-09-01")
-        initial_times = collect(range(initial_timestamp; length = 24, step = interval))
-        name = "test"
-        horizon = 24
-        data = SortedDict(it => ones(horizon) * i for (i, it) in enumerate(initial_times))
-
-        forecast = IS.Deterministic(name, data, resolution)
-        IS.add_time_series!(sys, component, forecast)
-        @test IS.get_forecast_window_count(sys) == length(data)
-
-        f2 = IS.get_time_series(IS.Deterministic, component, name)
-        @test IS.get_count(f2) == length(data)
-        @test IS.get_initial_timestamp(f2) == initial_times[1]
-        for (i, window) in enumerate(IS.iterate_windows(f2))
-            @test TimeSeries.values(window) == data[initial_times[i]]
-        end
-
-        offset = 12
-        count = 5
-        it = initial_times[offset]
-        f2 = IS.get_time_series(
-            IS.Deterministic,
-            component,
-            name;
-            start_time = it,
-            count = count,
-        )
-        @test IS.get_initial_timestamp(f2) == it
-        @test IS.get_count(f2) == count
-        @test IS.get_horizon(f2) == horizon
-        for (i, window) in enumerate(IS.iterate_windows(f2))
-            @test TimeSeries.values(window) == data[initial_times[i + offset - 1]]
-        end
-
-        horizon -= 1
-        f2 = IS.get_time_series(
-            IS.Deterministic,
-            component,
-            name;
-            start_time = it,
-            count = count,
-            len = horizon,
-        )
-        @test IS.get_initial_timestamp(f2) == it
-        @test IS.get_count(f2) == count
-        @test IS.get_horizon(f2) == horizon
-        for (i, window) in enumerate(IS.iterate_windows(f2))
-            @test TimeSeries.values(window) ==
-                  data[initial_times[i + offset - 1]][1:horizon]
-        end
-
-        @test_throws ArgumentError IS.get_time_series(
-            IS.Deterministic,
-            component,
-            name;
-            start_time = it + Dates.Minute(1),
+        _test_get_time_series_option_type(
+            SortedDict(
+                it => ones(default_time_params.horizon) * i for
+                (i, it) in enumerate(default_time_params.initial_times)
+            ),
+            in_memory,
+            false,
         )
     end
 end
 
-@testset "Test get_time_series options for Polynomial Cost" begin
+@testset "Test get_time_series options for LinearFunctionData Cost" begin
     for in_memory in (true, false)
-        sys = IS.SystemData(; time_series_in_memory = in_memory)
-        name = "Component1"
-        component = IS.TestComponent(name, 5)
-        IS.add_component!(sys, component)
-
-        # Set baseline parameters for the rest of the tests.
-        resolution = Dates.Minute(5)
-        interval = Dates.Hour(1)
-        initial_timestamp = Dates.DateTime("2020-09-01")
-        initial_times = collect(range(initial_timestamp; length = 24, step = interval))
-        name = "test"
-        horizon = 24
-        data_polynomial = SortedDict{Dates.DateTime, Vector{IS.POLYNOMIAL}}(
-            it => repeat([(999.0, 1.0 * i)], 24) for (i, it) in enumerate(initial_times)
-        )
-
-        forecast =
-            IS.Deterministic(; data = data_polynomial, name = name, resolution = resolution)
-        IS.add_time_series!(sys, component, forecast)
-        @test IS.get_forecast_window_count(sys) == length(data_polynomial)
-
-        f2 = IS.get_time_series(IS.Deterministic, component, name)
-        @test IS.get_count(f2) == length(data_polynomial)
-        @test IS.get_initial_timestamp(f2) == initial_times[1]
-        for (i, window) in enumerate(IS.iterate_windows(f2))
-            @test TimeSeries.values(window) == data_polynomial[initial_times[i]]
-        end
-
-        offset = 1
-        count = 1
-        it = initial_times[offset]
-        f2 = IS.get_time_series(
-            IS.Deterministic,
-            component,
-            name;
-            start_time = it,
-            count = count,
-        )
-        @test IS.get_initial_timestamp(f2) == it
-        @test IS.get_count(f2) == count
-        @test IS.get_horizon(f2) == horizon
-        for (i, window) in enumerate(IS.iterate_windows(f2))
-            @test TimeSeries.values(window) ==
-                  data_polynomial[initial_times[i + offset - 1]]
-        end
-
-        offset = 12
-        count = 5
-        it = initial_times[offset]
-        f2 = IS.get_time_series(
-            IS.Deterministic,
-            component,
-            name;
-            start_time = it,
-            count = count,
-        )
-        @test IS.get_initial_timestamp(f2) == it
-        @test IS.get_count(f2) == count
-        @test IS.get_horizon(f2) == horizon
-        for (i, window) in enumerate(IS.iterate_windows(f2))
-            @test TimeSeries.values(window) ==
-                  data_polynomial[initial_times[i + offset - 1]]
-        end
-
-        horizon -= 1
-        f2 = IS.get_time_series(
-            IS.Deterministic,
-            component,
-            name;
-            start_time = it,
-            count = count,
-            len = horizon,
-        )
-        @test IS.get_initial_timestamp(f2) == it
-        @test IS.get_count(f2) == count
-        @test IS.get_horizon(f2) == horizon
-        for (i, window) in enumerate(IS.iterate_windows(f2))
-            @test TimeSeries.values(window) ==
-                  data_polynomial[initial_times[i + offset - 1]][1:horizon]
-        end
-
-        @test_throws ArgumentError IS.get_time_series(
-            IS.Deterministic,
-            component,
-            name;
-            start_time = it + Dates.Minute(1),
-        )
+        _test_get_time_series_option_type(
+            SortedDict{Dates.DateTime, Vector{IS.LinearFunctionData}}(
+                it => repeat([IS.LinearFunctionData(3.14 * i)], 24) for
+                (i, it) in enumerate(default_time_params.initial_times)
+            ), in_memory, true)
     end
 end
 
-@testset "Test get_time_series options for PWL Cost" begin
-    #for in_memory in (true, false)
-    for in_memory in [false]
-        sys = IS.SystemData(; time_series_in_memory = in_memory)
-        name = "Component1"
-        component = IS.TestComponent(name, 5)
-        IS.add_component!(sys, component)
+@testset "Test get_time_series options for QuadraticFunctionData Cost" begin
+    for in_memory in (true, false)
+        _test_get_time_series_option_type(
+            SortedDict{Dates.DateTime, Vector{IS.QuadraticFunctionData}}(
+                it => repeat([IS.QuadraticFunctionData(999.0, 1.0 * i, 0.0)], 24) for
+                (i, it) in enumerate(default_time_params.initial_times)
+            ), in_memory, true)
+    end
+end
 
-        # Set baseline parameters for the rest of the tests.
-        resolution = Dates.Minute(5)
-        interval = Dates.Hour(1)
-        initial_timestamp = Dates.DateTime("2020-09-01")
-        initial_times = collect(range(initial_timestamp; length = 24, step = interval))
-        name = "test"
-        horizon = 24
-        data_pwl = SortedDict{Dates.DateTime, Vector{IS.PWL}}(
-            it => repeat([repeat([(999.0, 1.0 * i)], 5)], 24) for
-            (i, it) in enumerate(initial_times)
-        )
-
-        forecast = IS.Deterministic(; data = data_pwl, name = name, resolution = resolution)
-        IS.add_time_series!(sys, component, forecast)
-        @test IS.get_forecast_window_count(sys) == length(data_pwl)
-
-        f2 = IS.get_time_series(IS.Deterministic, component, name)
-        @test IS.get_count(f2) == length(data_pwl)
-        @test IS.get_initial_timestamp(f2) == initial_times[1]
-        for (i, window) in enumerate(IS.iterate_windows(f2))
-            @test TimeSeries.values(window) == data_pwl[initial_times[i]]
-        end
-
-        offset = 1
-        count = 1
-        it = initial_times[offset]
-        f2 = IS.get_time_series(
-            IS.Deterministic,
-            component,
-            name;
-            start_time = it,
-            count = count,
-        )
-        @test IS.get_initial_timestamp(f2) == it
-        @test IS.get_count(f2) == count
-        @test IS.get_horizon(f2) == horizon
-        for (i, window) in enumerate(IS.iterate_windows(f2))
-            @test TimeSeries.values(window) == data_pwl[initial_times[i + offset - 1]]
-        end
-
-        offset = 12
-        count = 5
-        it = initial_times[offset]
-        f2 = IS.get_time_series(
-            IS.Deterministic,
-            component,
-            name;
-            start_time = it,
-            count = count,
-        )
-        @test IS.get_initial_timestamp(f2) == it
-        @test IS.get_count(f2) == count
-        @test IS.get_horizon(f2) == horizon
-        for (i, window) in enumerate(IS.iterate_windows(f2))
-            @test TimeSeries.values(window) == data_pwl[initial_times[i + offset - 1]]
-        end
-
-        horizon -= 1
-        f2 = IS.get_time_series(
-            IS.Deterministic,
-            component,
-            name;
-            start_time = it,
-            count = count,
-            len = horizon,
-        )
-        @test IS.get_initial_timestamp(f2) == it
-        @test IS.get_count(f2) == count
-        @test IS.get_horizon(f2) == horizon
-        for (i, window) in enumerate(IS.iterate_windows(f2))
-            @test TimeSeries.values(window) ==
-                  data_pwl[initial_times[i + offset - 1]][1:horizon]
-        end
-
-        @test_throws ArgumentError IS.get_time_series(
-            IS.Deterministic,
-            component,
-            name;
-            start_time = it + Dates.Minute(1),
-        )
+@testset "Test get_time_series options for PiecewiseLinearPointData Cost" begin
+    for in_memory in (true, false)
+        _test_get_time_series_option_type(
+            SortedDict{Dates.DateTime, Vector{IS.PiecewiseLinearPointData}}(
+                it => repeat(
+                    [IS.PiecewiseLinearPointData(repeat([(999.0, 1.0 * i)], 5))],
+                    24,
+                ) for
+                (i, it) in enumerate(default_time_params.initial_times)
+            ), in_memory, true)
     end
 end
 

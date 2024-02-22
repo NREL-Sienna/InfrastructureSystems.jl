@@ -23,6 +23,4 @@ struct HashMismatchError <: Exception
 end
 
 const CONSTANT = Float64
-const POLYNOMIAL = Tuple{Float64, Float64}
-const PWL = Vector{Tuple{Float64, Float64}}
 const LIM_TOL = 1e-6
