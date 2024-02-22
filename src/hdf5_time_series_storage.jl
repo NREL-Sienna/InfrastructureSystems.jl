@@ -236,19 +236,9 @@ Return a String for the data type of the forecast data, this implementation avoi
 """
 function get_data_type(ts::TimeSeriesData)
     data_type = eltype_data(ts)
-    if data_type <: CONSTANT
-        return "CONSTANT"
-    elseif data_type == POLYNOMIAL
-        return "POLYNOMIAL"
-    elseif data_type == PWL
-        return "PWL"
-    elseif data_type <: Integer
-        # We currently don't convert integers stored in TimeSeries.TimeArrays to floats.
-        # This is a workaround.
-        return "CONSTANT"
-    else
-        error("$data_type is not supported in forecast data")
-    end
+    ((data_type <: CONSTANT) || (data_type <: Integer)) && (return "CONSTANT")
+    (data_type <: FunctionData) && (return strip_module_name(data_type))
+    error("$data_type is not supported in forecast data")
 end
 
 function _write_time_series_attributes!(
@@ -302,7 +292,17 @@ function _read_time_series_attributes(
     return data
 end
 
-const _TYPE_DICT = Dict("CONSTANT" => CONSTANT, "POLYNOMIAL" => POLYNOMIAL, "PWL" => PWL)
+# TODO I suspect this could be designed better using reflection even without the security risks of eval discussed above
+const _TYPE_DICT = Dict(
+    strip_module_name(st) => st for st in [
+        LinearFunctionData,
+        QuadraticFunctionData,
+        PolynomialFunctionData,
+        PiecewiseLinearPointData,
+        PiecewiseLinearSlopeData,
+    ]
+)
+_TYPE_DICT["CONSTANT"] = CONSTANT
 
 function _read_time_series_attributes_common(storage::Hdf5TimeSeriesStorage, path, rows)
     initial_timestamp =
@@ -492,12 +492,27 @@ end
 
 function get_hdf_array(
     dataset,
-    type::Type{POLYNOMIAL},
+    ::Type{LinearFunctionData},
     attributes::Dict{String, Any},
     rows::UnitRange{Int},
     columns::UnitRange{Int},
 )
-    data = SortedDict{Dates.DateTime, Vector{POLYNOMIAL}}()
+    data = get_hdf_array(dataset, CONSTANT, attributes, rows, columns)
+    return SortedDict{Dates.DateTime, Vector{LinearFunctionData}}(
+        k => LinearFunctionData.(v) for (k, v) in data
+    )
+end
+
+_quadratic_from_tuple((a, b)::Tuple{Float64, Float64}) = QuadraticFunctionData(a, b, 0.0)
+
+function get_hdf_array(
+    dataset,
+    type::Type{QuadraticFunctionData},
+    attributes::Dict{String, Any},
+    rows::UnitRange{Int},
+    columns::UnitRange{Int},
+)
+    data = SortedDict{Dates.DateTime, Vector{QuadraticFunctionData}}()
     initial_timestamp = attributes["start_time"]
     interval = attributes["interval"]
     start_time = initial_timestamp + interval * (columns.start - 1)
@@ -515,12 +530,12 @@ end
 
 function get_hdf_array(
     dataset,
-    type::Type{PWL},
+    type::Type{PiecewiseLinearPointData},
     attributes::Dict{String, Any},
     rows::UnitRange{Int},
     columns::UnitRange{Int},
 )
-    data = SortedDict{Dates.DateTime, Vector{PWL}}()
+    data = SortedDict{Dates.DateTime, Vector{PiecewiseLinearPointData}}()
     initial_timestamp = attributes["start_time"]
     interval = attributes["interval"]
     start_time = initial_timestamp + interval * (columns.start - 1)
@@ -536,17 +551,21 @@ function get_hdf_array(
     return data
 end
 
-function get_hdf_array(dataset, type::Type{<:CONSTANT}, rows::UnitRange{Int})
+function get_hdf_array(
+    dataset,
+    type::Union{Type{<:CONSTANT}, Type{LinearFunctionData}},
+    rows::UnitRange{Int},
+)
     data = retransform_hdf_array(dataset[rows], type)
     return data
 end
 
-function get_hdf_array(dataset, type::Type{POLYNOMIAL}, rows::UnitRange{Int})
+function get_hdf_array(dataset, type::Type{QuadraticFunctionData}, rows::UnitRange{Int})
     data = retransform_hdf_array(dataset[rows, :, :], type)
     return data
 end
 
-function get_hdf_array(dataset, type::Type{PWL}, rows::UnitRange{Int})
+function get_hdf_array(dataset, type::Type{PiecewiseLinearPointData}, rows::UnitRange{Int})
     data = retransform_hdf_array(dataset[rows, :, :, :], type)
     return data
 end
@@ -555,47 +574,51 @@ function retransform_hdf_array(data::Array, ::Type{<:CONSTANT})
     return data
 end
 
-function retransform_hdf_array(data::Array, T::Type{POLYNOMIAL})
+function retransform_hdf_array(data::Array, ::Type{LinearFunctionData})
+    return LinearFunctionData.(data)
+end
+
+function retransform_hdf_array(data::Array, T::Type{QuadraticFunctionData})
     row, column, tuple_length = get_data_dims(data, T)
     if isnothing(column)
-        t_data = Array{POLYNOMIAL}(undef, row)
+        t_data = Array{Tuple{Float64, Float64}}(undef, row)
         for r in 1:row
             t_data[r] = tuple(data[r, 1:tuple_length]...)
         end
     else
-        t_data = Array{POLYNOMIAL}(undef, row, column)
+        t_data = Array{Tuple{Float64, Float64}}(undef, row, column)
         for r in 1:row, c in 1:column
             t_data[r, c] = tuple(data[r, c, 1:tuple_length]...)
         end
     end
-    return t_data
+    return _quadratic_from_tuple.(t_data)
 end
 
-function retransform_hdf_array(data::Array, T::Type{PWL})
+function retransform_hdf_array(data::Array, T::Type{PiecewiseLinearPointData})
     row, column, tuple_length, array_length = get_data_dims(data, T)
     if isnothing(column)
-        t_data = Array{PWL}(undef, row)
+        t_data = Array{Vector{Tuple{Float64, Float64}}}(undef, row)
         for r in 1:row
-            tuple_array = Array{POLYNOMIAL}(undef, array_length)
+            tuple_array = Array{Tuple{Float64, Float64}}(undef, array_length)
             for l in 1:array_length
                 tuple_array[l] = tuple(data[r, 1:tuple_length, l]...)
             end
             t_data[r] = tuple_array
         end
     else
-        t_data = Array{PWL}(undef, row, column)
+        t_data = Array{Vector{Tuple{Float64, Float64}}}(undef, row, column)
         for r in 1:row, c in 1:column
-            tuple_array = Array{POLYNOMIAL}(undef, array_length)
+            tuple_array = Array{Tuple{Float64, Float64}}(undef, array_length)
             for l in 1:array_length
                 tuple_array[l] = tuple(data[r, c, 1:tuple_length, l]...)
             end
             t_data[r, c] = tuple_array
         end
     end
-    return t_data
+    return PiecewiseLinearPointData.(t_data)
 end
 
-function get_data_dims(data::Array, ::Type{POLYNOMIAL})
+function get_data_dims(data::Array, ::Type{QuadraticFunctionData})
     if length(size(data)) == 2
         row, tuple_length = size(data)
         return (row, nothing, tuple_length)
@@ -606,7 +629,7 @@ function get_data_dims(data::Array, ::Type{POLYNOMIAL})
     end
 end
 
-function get_data_dims(data::Array, ::Type{PWL})
+function get_data_dims(data::Array, ::Type{PiecewiseLinearPointData})
     if length(size(data)) == 3
         row, tuple_length, array_length = size(data)
         return (row, nothing, tuple_length, array_length)

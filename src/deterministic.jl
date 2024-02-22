@@ -1,11 +1,7 @@
 """
     mutable struct Deterministic <: AbstractDeterministic
         name::String
-        data::Union{
-            SortedDict{Dates.DateTime, Vector{CONSTANT}},
-            SortedDict{Dates.DateTime, Vector{POLYNOMIAL}},
-            SortedDict{Dates.DateTime, Vector{PWL}},
-        }
+        data::SortedDict
         resolution::Dates.Period
         scaling_factor_multiplier::Union{Nothing, Function}
         internal::InfrastructureSystemsInternal
@@ -16,7 +12,7 @@ A deterministic forecast for a particular data field in a Component.
 # Arguments
 
   - `name::String`: user-defined name
-  - `data::Union{SortedDict{Dates.DateTime, Vector{CONSTANT}}, SortedDict{Dates.DateTime, Vector{POLYNOMIAL}}, SortedDict{Dates.DateTime, Vector{PWL}}}`: timestamp - scalingfactor
+  - `data::SortedDict`: timestamp - scalingfactor
   - `resolution::Dates.Period`: forecast resolution
   - `scaling_factor_multiplier::Union{Nothing, Function}`: Applicable when the time series
     data are scaling factors. Called on the associated component to convert the values.
@@ -26,11 +22,7 @@ mutable struct Deterministic <: AbstractDeterministic
     "user-defined name"
     name::String
     "timestamp - scalingfactor"
-    data::Union{
-        SortedDict{Dates.DateTime, Vector{CONSTANT}},
-        SortedDict{Dates.DateTime, Vector{POLYNOMIAL}},
-        SortedDict{Dates.DateTime, Vector{PWL}},
-    }
+    data::SortedDict  # TODO handle typing here in a more principled fashion
     "forecast resolution"
     resolution::Dates.Period
     "Applicable when the time series data are scaling factors. Called on the associated component to convert the values."
@@ -202,19 +194,13 @@ function Deterministic(forecast::Deterministic, data)
     return Deterministic(; vals...)
 end
 
-convert_data(data::AbstractDict{Dates.DateTime, Vector{T}}) where {T} =
-    SortedDict{Dates.DateTime, Vector{CONSTANT}}(data...)
-convert_data(data::AbstractDict{Dates.DateTime, Vector{T}}) where {T <: Tuple} =
-    SortedDict{Dates.DateTime, Vector{POLYNOMIAL}}(data...)
-convert_data(data::AbstractDict{Dates.DateTime, Vector{Vector{T}}}) where {T <: Tuple} =
-    SortedDict{Dates.DateTime, Vector{PWL}}(data...)
 convert_data(
-    data::Union{
-        SortedDict{Dates.DateTime, Vector{CONSTANT}},
-        SortedDict{Dates.DateTime, Vector{POLYNOMIAL}},
-        SortedDict{Dates.DateTime, Vector{PWL}},
-    },
-) = data
+    data::AbstractDict{<:Any, Vector{T}},
+) where {T <: Union{CONSTANT, FunctionData}} =
+    SortedDict{Dates.DateTime, Vector{T}}(data...)
+convert_data(
+    data::SortedDict{Dates.DateTime, Vector{T}},
+) where {T <: Union{CONSTANT, FunctionData}} = data
 
 # Workaround for a bug/limitation in SortedDict. If a user tries to construct
 # SortedDict(i => ones(2) for i in 1:2)
@@ -271,6 +257,7 @@ Set [`Deterministic`](@ref) `internal`.
 """
 set_internal!(value::Deterministic, val) = value.internal = val
 
+# TODO handle typing here in a more principled fashion
 eltype_data(forecast::Deterministic) = eltype_data_common(forecast)
 get_count(forecast::Deterministic) = get_count_common(forecast)
 get_horizon(forecast::Deterministic) = get_horizon_common(forecast)
