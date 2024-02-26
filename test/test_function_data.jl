@@ -62,7 +62,7 @@ end
         [1, 10])
 
     @test IS.get_points(IS.PiecewiseLinearSlopeData([1, 3, 5], 1, [2.5, 10])) isa
-          Vector{@NamedTuple{x::Float64, y::Float64}}
+          Vector{IS.XY_COORDS}
     @test isapprox(
         collect.(IS.get_points(IS.PiecewiseLinearSlopeData([1, 3, 5], 1, [2.5, 10]))),
         collect.([(1, 1), (3, 6), (5, 26)]),

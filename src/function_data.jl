@@ -64,10 +64,10 @@ representation of cost functions where the points store quantities (x, y), such 
 The curve starts at the first point given, not the origin.
 
 # Arguments
- - `points::Vector{@NamedTuple{x::Float64, y::Float64}}`: the points that define the function
+ - `points::Vector{XY_COORDS}`: the points that define the function
 """
 struct PiecewiseLinearPointData <: FunctionData
-    points::Vector{@NamedTuple{x::Float64, y::Float64}}
+    points::Vector{XY_COORDS}
 
     function PiecewiseLinearPointData(points::Vector{<:NamedTuple{(:x, :y)}})
         _validate_piecewise_x(first.(points))
@@ -83,7 +83,7 @@ function PiecewiseLinearPointData(points::Vector{<:NamedTuple})
     )
 end
 
-function _convert_to_xy(point)
+function _convert_to_xy_coords(point)
     # Need to be able to handle dicts for deserialization
     if point isa AbstractDict
         (keys(point) == Set(["x", "y"])) && return (x = point["x"], y = point["y"])
@@ -97,7 +97,7 @@ function _convert_to_xy(point)
 end
 
 function PiecewiseLinearPointData(points::Vector)
-    PiecewiseLinearPointData(_convert_to_xy.(points))
+    PiecewiseLinearPointData(_convert_to_xy_coords.(points))
 end
 
 "Get the points that define the piecewise data"
@@ -106,7 +106,7 @@ get_points(data::PiecewiseLinearPointData) = data.points
 "Get the x-coordinates of the points that define the piecewise data"
 get_x_coords(data::PiecewiseLinearPointData) = first.(get_points(data))
 
-function _get_slopes(vc::Vector{@NamedTuple{x::Float64, y::Float64}})
+function _get_slopes(vc::Vector{XY_COORDS})
     slopes = Vector{Float64}(undef, length(vc) - 1)
     (prev_x, prev_y) = vc[1]
     for (i, (comp_x, comp_y)) in enumerate(vc[2:end])
@@ -163,7 +163,7 @@ get_y0(data::PiecewiseLinearSlopeData) = data.y0
 function get_points(data::PiecewiseLinearSlopeData)
     slopes = get_slopes(data)
     x_coords = get_x_coords(data)
-    points = Vector{@NamedTuple{x::Float64, y::Float64}}(undef, length(x_coords))
+    points = Vector{XY_COORDS}(undef, length(x_coords))
     running_y = get_y0(data)
     points[1] = (x = x_coords[1], y = running_y)
     for (i, (prev_slope, this_x, dx)) in
