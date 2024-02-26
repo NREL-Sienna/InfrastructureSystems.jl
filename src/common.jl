@@ -24,3 +24,4 @@ end
 
 const CONSTANT = Float64
 const LIM_TOL = 1e-6
+const XY_COORDS = @NamedTuple{x::Float64, y::Float64}

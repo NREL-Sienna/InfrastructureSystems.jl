@@ -9,6 +9,11 @@ get_test_function_data() = [
 @testset "Test FunctionData validation" begin
     @test_throws ArgumentError IS.PiecewiseLinearPointData([(2, 1), (1, 1)])
     @test_throws ArgumentError IS.PiecewiseLinearSlopeData([2, 1], 1, [1])
+
+    @test IS.PiecewiseLinearPointData([(x = 1, y = 1)]) isa Any  # Test absence of error
+    @test IS.PiecewiseLinearPointData([Dict("x" => 1, "y" => 1)]) isa Any
+    @test_throws ArgumentError IS.PiecewiseLinearPointData([(y = 1, x = 1)])
+    @test_throws ArgumentError IS.PiecewiseLinearPointData([Dict("x" => 1)])
 end
 
 @testset "Test FunctionData trivial getters" begin
@@ -26,7 +31,7 @@ end
     @test coeffs[0] === 3.0 && coeffs[1] === 1.0 && coeffs[3] === 4.0
 
     yd = IS.PiecewiseLinearPointData([(1, 1), (3, 5)])
-    @test IS.get_points(yd) == [(1, 1), (3, 5)]
+    @test IS.get_points(yd) == [(x = 1, y = 1), (x = 3, y = 5)]
 
     dd = IS.PiecewiseLinearSlopeData([1, 3, 5], 2, [3, 6])
     @test IS.get_x_coords(dd) == [1, 3, 5]
@@ -38,7 +43,7 @@ end
     @test length(IS.PiecewiseLinearPointData([(0, 0), (1, 1), (1.1, 2)])) == 2
     @test length(IS.PiecewiseLinearSlopeData([1, 1.1, 1.2], 1, [1.1, 10])) == 2
 
-    @test IS.PiecewiseLinearPointData([(0, 0), (1, 1), (1.1, 2)])[2] == (1, 1)
+    @test IS.PiecewiseLinearPointData([(0, 0), (1, 1), (1.1, 2)])[2] == (x = 1, y = 1)
     @test IS.get_x_coords(IS.PiecewiseLinearPointData([(0, 0), (1, 1), (1.1, 2)])) ==
           [0, 1, 1.1]
 
@@ -56,6 +61,8 @@ end
         IS.get_slopes(IS.PiecewiseLinearPointData([(0, 0), (1, 1), (1.1, 2)])),
         [1, 10])
 
+    @test IS.get_points(IS.PiecewiseLinearSlopeData([1, 3, 5], 1, [2.5, 10])) isa
+          Vector{IS.XY_COORDS}
     @test isapprox(
         collect.(IS.get_points(IS.PiecewiseLinearSlopeData([1, 3, 5], 1, [2.5, 10]))),
         collect.([(1, 1), (3, 6), (5, 26)]),
@@ -84,7 +91,7 @@ end
         pointwise = IS.PiecewiseLinearPointData(collect(zip(rand_x, rand_y)))
         slopewise = IS.PiecewiseLinearSlopeData(
             IS.get_x_coords(pointwise),
-            first(IS.get_points(pointwise))[2],
+            first(IS.get_points(pointwise)).y,
             IS.get_slopes(pointwise))
         pointwise_2 = IS.PiecewiseLinearPointData(IS.get_points(slopewise))
         @test isapprox(
@@ -101,5 +108,24 @@ end
             deserialized = IS.deserialize(typeof(fd), serialized)
             @test deserialized == fd
         end
+    end
+end
+
+@testset "Test FunctionData raw data" begin
+    raw_data_answers = [
+        5.0,
+        (2.0, 3.0, 4.0),
+        [(0, 3.0), (1, 1.0), (3, 4.0)],
+        [(1.0, 1.0), (3.0, 5.0), (5.0, 10.0)],
+        [(1.0, 1.0), (3.0, 2.0), (5.0, 2.5)],
+    ]
+    for (fd, answer) in zip(get_test_function_data(), raw_data_answers)
+        @test IS.get_raw_data_type(fd) == typeof(answer)
+    end
+    for (fd, answer) in zip(get_test_function_data(), raw_data_answers)
+        @test IS.get_raw_data_type(typeof(fd)) == typeof(answer)
+    end
+    for (fd, answer) in zip(get_test_function_data(), raw_data_answers)
+        @test IS.get_raw_data(fd) == answer
     end
 end

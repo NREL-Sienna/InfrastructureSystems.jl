@@ -64,15 +64,40 @@ representation of cost functions where the points store quantities (x, y), such 
 The curve starts at the first point given, not the origin.
 
 # Arguments
- - `points::Vector{Tuple{Float64, Float64}}`: the points (x, y) that define the function
+ - `points::Vector{XY_COORDS}`: the points that define the function
 """
 struct PiecewiseLinearPointData <: FunctionData
-    points::Vector{Tuple{Float64, Float64}}
+    points::Vector{XY_COORDS}
 
-    function PiecewiseLinearPointData(points)
+    function PiecewiseLinearPointData(points::Vector{<:NamedTuple{(:x, :y)}})
         _validate_piecewise_x(first.(points))
         return new(points)
     end
+end
+
+function PiecewiseLinearPointData(points::Vector{<:NamedTuple})
+    throw(
+        ArgumentError(
+            "If constructing PiecewiseLinearPointData with NamedTuples, points must have type Vector{<:NamedTuple{(:x, :y)}}; got $(typeof(points))",
+        ),
+    )
+end
+
+function _convert_to_xy_coords(point)
+    # Need to be able to handle dicts for deserialization
+    if point isa AbstractDict
+        (keys(point) == Set(["x", "y"])) && return (x = point["x"], y = point["y"])
+        throw(
+            ArgumentError(
+                "If constructing PiecewiseLinearPointData with dictionaries, keys must be [\"x\", \"y\"]; got $(collect(keys(point)))",
+            ),
+        )
+    end
+    return NamedTuple{(:x, :y)}(point)
+end
+
+function PiecewiseLinearPointData(points::Vector)
+    PiecewiseLinearPointData(_convert_to_xy_coords.(points))
 end
 
 "Get the points that define the piecewise data"
@@ -81,7 +106,7 @@ get_points(data::PiecewiseLinearPointData) = data.points
 "Get the x-coordinates of the points that define the piecewise data"
 get_x_coords(data::PiecewiseLinearPointData) = first.(get_points(data))
 
-function _get_slopes(vc::Vector{NTuple{2, Float64}})
+function _get_slopes(vc::Vector{XY_COORDS})
     slopes = Vector{Float64}(undef, length(vc) - 1)
     (prev_x, prev_y) = vc[1]
     for (i, (comp_x, comp_y)) in enumerate(vc[2:end])
@@ -138,13 +163,13 @@ get_y0(data::PiecewiseLinearSlopeData) = data.y0
 function get_points(data::PiecewiseLinearSlopeData)
     slopes = get_slopes(data)
     x_coords = get_x_coords(data)
-    points = Vector{Tuple{Float64, Float64}}(undef, length(x_coords))
+    points = Vector{XY_COORDS}(undef, length(x_coords))
     running_y = get_y0(data)
-    points[1] = (x_coords[1], running_y)
+    points[1] = (x = x_coords[1], y = running_y)
     for (i, (prev_slope, this_x, dx)) in
         enumerate(zip(slopes, x_coords[2:end], get_x_lengths(data)))
         running_y += prev_slope * dx
-        points[i + 1] = (this_x, running_y)
+        points[i + 1] = (x = this_x, y = running_y)
     end
     return points
 end
@@ -220,3 +245,36 @@ deserialize(T::Type{<:FunctionData}, val::Dict) = deserialize_struct(T, val)
 
 deserialize(::Type{FunctionData}, val::Dict) =
     throw(ArgumentError("FunctionData is abstract, must specify a concrete subtype"))
+
+# FunctionData support fetching "raw data" to support cases where we might want to store
+# their data in a different container in its most purely numerical form, such as in
+# PowerSimulations.
+
+"""
+Get a bare numerical representation of the data represented by the FunctionData
+"""
+function get_raw_data end
+get_raw_data(fd::LinearFunctionData) = get_proportional_term(fd)
+get_raw_data(fd::QuadraticFunctionData) =
+    (get_quadratic_term(fd), get_proportional_term(fd), get_constant_term(fd))
+get_raw_data(fd::PolynomialFunctionData) =
+    sort([(degree, coeff) for (degree, coeff) in get_coefficients(fd)]; by = first)
+get_raw_data(fd::PiecewiseLinearPointData) = Tuple.(get_points(fd))
+function get_raw_data(fd::PiecewiseLinearSlopeData)
+    x_coords = get_x_coords(fd)
+    return vcat((x_coords[1], get_y0(fd)), collect(zip(x_coords[2:end], get_slopes(fd))))
+end
+
+"""
+Get from a subtype of FunctionData the type of data its get_raw_data method returns
+"""
+function get_raw_data_type end
+get_raw_data_type(::Union{LinearFunctionData, Type{LinearFunctionData}}) = Float64
+get_raw_data_type(::Union{QuadraticFunctionData, Type{QuadraticFunctionData}}) =
+    NTuple{3, Float64}
+get_raw_data_type(::Union{PolynomialFunctionData, Type{PolynomialFunctionData}}) =
+    Vector{Tuple{Int, Float64}}
+get_raw_data_type(::Union{PiecewiseLinearPointData, Type{PiecewiseLinearPointData}}) =
+    Vector{Tuple{Float64, Float64}}
+get_raw_data_type(::Union{PiecewiseLinearSlopeData, Type{PiecewiseLinearSlopeData}}) =
+    Vector{Tuple{Float64, Float64}}
