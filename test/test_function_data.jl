@@ -110,3 +110,22 @@ end
         end
     end
 end
+
+@testset "Test FunctionData raw data" begin
+    raw_data_answers = [
+        5.0,
+        (2.0, 3.0, 4.0),
+        [(0, 3.0), (1, 1.0), (3, 4.0)],
+        [(1.0, 1.0), (3.0, 5.0), (5.0, 10.0)],
+        [(1.0, 1.0), (3.0, 2.0), (5.0, 2.5)],
+    ]
+    for (fd, answer) in zip(get_test_function_data(), raw_data_answers)
+        @test IS.get_raw_data_type(fd) == typeof(answer)
+    end
+    for (fd, answer) in zip(get_test_function_data(), raw_data_answers)
+        @test IS.get_raw_data_type(typeof(fd)) == typeof(answer)
+    end
+    for (fd, answer) in zip(get_test_function_data(), raw_data_answers)
+        @test IS.get_raw_data(fd) == answer
+    end
+end

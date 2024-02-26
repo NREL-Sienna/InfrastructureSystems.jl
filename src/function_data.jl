@@ -245,3 +245,36 @@ deserialize(T::Type{<:FunctionData}, val::Dict) = deserialize_struct(T, val)
 
 deserialize(::Type{FunctionData}, val::Dict) =
     throw(ArgumentError("FunctionData is abstract, must specify a concrete subtype"))
+
+# FunctionData support fetching "raw data" to support cases where we might want to store
+# their data in a different container in its most purely numerical form, such as in
+# PowerSimulations.
+
+"""
+Get a bare numerical representation of the data represented by the FunctionData
+"""
+function get_raw_data end
+get_raw_data(fd::LinearFunctionData) = get_proportional_term(fd)
+get_raw_data(fd::QuadraticFunctionData) =
+    (get_quadratic_term(fd), get_proportional_term(fd), get_constant_term(fd))
+get_raw_data(fd::PolynomialFunctionData) =
+    sort([(degree, coeff) for (degree, coeff) in get_coefficients(fd)]; by = first)
+get_raw_data(fd::PiecewiseLinearPointData) = Tuple.(get_points(fd))
+function get_raw_data(fd::PiecewiseLinearSlopeData)
+    x_coords = get_x_coords(fd)
+    return vcat((x_coords[1], get_y0(fd)), collect(zip(x_coords[2:end], get_slopes(fd))))
+end
+
+"""
+Get from a subtype of FunctionData the type of data its get_raw_data method returns
+"""
+function get_raw_data_type end
+get_raw_data_type(::Union{LinearFunctionData, Type{LinearFunctionData}}) = Float64
+get_raw_data_type(::Union{QuadraticFunctionData, Type{QuadraticFunctionData}}) =
+    NTuple{3, Float64}
+get_raw_data_type(::Union{PolynomialFunctionData, Type{PolynomialFunctionData}}) =
+    Vector{Tuple{Int, Float64}}
+get_raw_data_type(::Union{PiecewiseLinearPointData, Type{PiecewiseLinearPointData}}) =
+    Vector{Tuple{Float64, Float64}}
+get_raw_data_type(::Union{PiecewiseLinearSlopeData, Type{PiecewiseLinearSlopeData}}) =
+    Vector{Tuple{Float64, Float64}}
