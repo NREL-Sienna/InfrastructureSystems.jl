@@ -102,8 +102,8 @@ function show_time_series_data(io::IO, data::SystemData; kwargs...)
     table = [
         "Components with time series data" string(counts.components_with_time_series)
         "Supplemental attributes with time series data" string(counts.supplemental_attributes_with_time_series)
-        "Total StaticTimeSeries" string(counts.static_time_series_count)
-        "Total Forecasts" string(counts.forecast_count)
+        "Unique StaticTimeSeries" string(counts.static_time_series_count)
+        "Unique Forecasts" string(counts.forecast_count)
         "Resolution" string(res)
     ]
 
