@@ -356,14 +356,20 @@ function set_name!(
     return
 end
 
-function compare_values(x::Components, y::Components; compare_uuids = false)
+function compare_values(
+    x::Components,
+    y::Components;
+    compare_uuids = false,
+    exclude = Set{Symbol}(),
+)
     match = true
     for name in fieldnames(Components)
+        name in exclude && continue
         # This gets validated in SystemData.
         name == :time_series_storage && continue
         val_x = getfield(x, name)
         val_y = getfield(y, name)
-        if !compare_values(val_x, val_y; compare_uuids = compare_uuids)
+        if !compare_values(val_x, val_y; compare_uuids = compare_uuids, exclude = exclude)
             @error "Components field = $name does not match" val_x val_y
             match = false
         end

@@ -121,14 +121,22 @@ Recursively compares struct values. Prints all mismatched values to stdout.
   - `x::T`: First value
   - `y::T`: Second value
   - `compare_uuids::Bool = false`: Compare any UUID in the object or composed objects.
+  - `exclude::Set{Symbol} = Set{Symbol}(): Fields to exclude from comparison. Passed on
+     recursively and so applied per type.
 """
-function compare_values(x::T, y::T; compare_uuids = false) where {T}
+function compare_values(
+    x::T,
+    y::T;
+    compare_uuids = false,
+    exclude = Set{Symbol}(),
+) where {T}
     match = true
     fields = fieldnames(T)
     if isempty(fields)
         match = x == y
     else
         for field_name in fields
+            field_name in exclude && continue
             if (T <: TimeSeriesContainer || T <: SupplementalAttributes) &&
                field_name == :time_series_storage
                 # This gets validated at SystemData. Don't repeat for each component.
@@ -137,12 +145,22 @@ function compare_values(x::T, y::T; compare_uuids = false) where {T}
             val1 = getfield(x, field_name)
             val2 = getfield(y, field_name)
             if !isempty(fieldnames(typeof(val1)))
-                if !compare_values(val1, val2; compare_uuids = compare_uuids)
+                if !compare_values(
+                    val1,
+                    val2;
+                    compare_uuids = compare_uuids,
+                    exclude = exclude,
+                )
                     @error "values do not match" T field_name val1 val2
                     match = false
                 end
             elseif val1 isa AbstractArray
-                if !compare_values(val1, val2; compare_uuids = compare_uuids)
+                if !compare_values(
+                    val1,
+                    val2;
+                    compare_uuids = compare_uuids,
+                    exclude = exclude,
+                )
                     @error "values do not match" T field_name val1 val2
                     match = false
                 end
@@ -158,7 +176,12 @@ function compare_values(x::T, y::T; compare_uuids = false) where {T}
     return match
 end
 
-function compare_values(x::Vector{T}, y::Vector{T}; compare_uuids = false) where {T}
+function compare_values(
+    x::Vector{T},
+    y::Vector{T};
+    compare_uuids = false,
+    exclude = Set{Symbol}(),
+) where {T}
     if length(x) != length(y)
         @error "lengths do not match" T length(x) length(y)
         return false
@@ -166,7 +189,7 @@ function compare_values(x::Vector{T}, y::Vector{T}; compare_uuids = false) where
 
     match = true
     for i in range(1; length = length(x))
-        if !compare_values(x[i], y[i]; compare_uuids = compare_uuids)
+        if !compare_values(x[i], y[i]; compare_uuids = compare_uuids, exclude = exclude)
             @error "values do not match" typeof(x[i]) i x[i] y[i]
             match = false
         end
@@ -175,7 +198,7 @@ function compare_values(x::Vector{T}, y::Vector{T}; compare_uuids = false) where
     return match
 end
 
-function compare_values(x::Dict, y::Dict; compare_uuids = false)
+function compare_values(x::Dict, y::Dict; compare_uuids = false, exclude = Set{Symbol}())
     keys_x = Set(keys(x))
     keys_y = Set(keys(y))
     if keys_x != keys_y
@@ -185,7 +208,7 @@ function compare_values(x::Dict, y::Dict; compare_uuids = false)
 
     match = true
     for key in keys_x
-        if !compare_values(x[key], y[key]; compare_uuids = compare_uuids)
+        if !compare_values(x[key], y[key]; compare_uuids = compare_uuids, exclude = exclude)
             @error "values do not match" typeof(x[key]) key x[key] y[key]
             match = false
         end
@@ -194,9 +217,9 @@ function compare_values(x::Dict, y::Dict; compare_uuids = false)
     return match
 end
 
-compare_values(x::Float64, y::Int; compare_uuids = false) = x == Float64(y)
-compare_values(::Type{T}, ::Type{T}; compare_uuids = false) where {T} = true
-compare_values(::Type{T}, ::Type{U}; compare_uuids = false) where {T, U} = false
+compare_values(x::Float64, y::Int; kwargs...) = x == Float64(y)
+compare_values(::Type{T}, ::Type{T}; kwargs...) where {T} = true
+compare_values(::Type{T}, ::Type{U}; kwargs...) where {T, U} = false
 
 # Copied from https://discourse.julialang.org/t/encapsulating-enum-access-via-dot-syntax/11785/10
 """

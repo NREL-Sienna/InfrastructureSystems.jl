@@ -2,6 +2,7 @@
 const TIME_SERIES_STORAGE_FILE = "time_series_storage.h5"
 const TIME_SERIES_DIRECTORY_ENV_VAR = "SIIP_TIME_SERIES_DIRECTORY"
 const VALIDATION_DESCRIPTOR_FILE = "validation_descriptors.json"
+const SERIALIZATION_METADATA_KEY = "__serialization_metadata__"
 
 """
     mutable struct SystemData <: InfrastructureSystemsType
@@ -53,10 +54,10 @@ function SystemData(;
     time_series_directory = nothing,
     compression = CompressionSettings(),
 )
-    if isnothing(validation_descriptor_file)
-        validation_descriptors = Vector()
+    validation_descriptors = if isnothing(validation_descriptor_file)
+        []
     else
-        validation_descriptors = read_validation_descriptor(validation_descriptor_file)
+        read_validation_descriptor(validation_descriptor_file)
     end
 
     if time_series_directory === nothing && haskey(ENV, TIME_SERIES_DIRECTORY_ENV_VAR)
@@ -334,9 +335,15 @@ function _validate_component(
     end
 end
 
-function compare_values(x::SystemData, y::SystemData; compare_uuids = false)
+function compare_values(
+    x::SystemData,
+    y::SystemData;
+    compare_uuids = false,
+    exclude = Set{Symbol}(),
+)
     match = true
     for name in fieldnames(SystemData)
+        name in exclude && continue
         if name == :component_uuids
             # These are not serialized. They get rebuilt when the parent package adds
             # the components.
@@ -350,7 +357,7 @@ function compare_values(x::SystemData, y::SystemData; compare_uuids = false)
             # InMemoryTimeSeriesStorage
             continue
         end
-        if !compare_values(val_x, val_y; compare_uuids = compare_uuids)
+        if !compare_values(val_x, val_y; compare_uuids = compare_uuids, exclude = exclude)
             @error "SystemData field = $name does not match" getfield(x, name) getfield(
                 y,
                 name,
@@ -662,7 +669,7 @@ end
 Parent object should call this prior to serialization so that SystemData can store the
 appropriate path information for the time series data.
 """
-function prepare_for_serialization!(
+function prepare_for_serialization_to_file!(
     data::SystemData,
     filename::AbstractString;
     force = false,
@@ -676,7 +683,6 @@ function prepare_for_serialization!(
     files = [
         filename,
         joinpath(directory, _get_secondary_basename(sys_base, TIME_SERIES_STORAGE_FILE)),
-        joinpath(directory, _get_secondary_basename(sys_base, VALIDATION_DESCRIPTOR_FILE)),
     ]
     for file in files
         if !force && isfile(file)
@@ -685,14 +691,21 @@ function prepare_for_serialization!(
     end
 
     ext = get_ext(data.internal)
-    ext["serialization_directory"] = directory
-    ext["basename"] = _get_system_basename(filename)
+    if haskey(ext, SERIALIZATION_METADATA_KEY)
+        error("Bug: key = $SERIALIZATION_METADATA_KEY should not be present")
+    end
+    ext[SERIALIZATION_METADATA_KEY] = Dict{String, Any}(
+        "serialization_directory" => directory,
+        "basename" => _get_system_basename(filename),
+    )
     return
 end
 
-function serialize(data::SystemData)
-    @debug "serialize SystemData" _group = LOG_GROUP_SERIALIZATION
-    json_data = Dict()
+"""
+Serialize all system and component data to a dictionary.
+"""
+function to_dict(data::SystemData)
+    serialized_data = Dict{String, Any}()
     for field in
         (
         :components,
@@ -702,39 +715,40 @@ function serialize(data::SystemData)
         :time_series_params,
         :internal,
     )
-        json_data[string(field)] = serialize(getfield(data, field))
+        serialized_data[string(field)] = serialize(getfield(data, field))
     end
+
+    serialized_data["version_info"] = serialize_julia_info()
+    return serialized_data
+end
+
+function serialize(data::SystemData)
+    @debug "serialize SystemData" _group = LOG_GROUP_SERIALIZATION
+    json_data = to_dict(data)
 
     ext = get_ext(data.internal)
-    if !haskey(ext, "serialization_directory")
-        error("prepare_for_serialization! was not called")
-    end
-    directory = pop!(ext, "serialization_directory")
-    base = pop!(ext, "basename")
-    isempty(ext) && clear_ext!(data.internal)
+    metadata = get(ext, SERIALIZATION_METADATA_KEY, Dict{String, Any}())
+    if haskey(metadata, "serialization_directory")
+        directory = metadata["serialization_directory"]
+        base = metadata["basename"]
 
-    if isempty(data.time_series_storage)
-        json_data["time_series_compression_enabled"] =
-            get_compression_settings(data.time_series_storage).enabled
-        json_data["time_series_in_memory"] =
-            data.time_series_storage isa InMemoryTimeSeriesStorage
-    else
-        time_series_base_name = _get_secondary_basename(base, TIME_SERIES_STORAGE_FILE)
-        time_series_storage_file = joinpath(directory, time_series_base_name)
-        serialize(data.time_series_storage, time_series_storage_file)
-        json_data["time_series_storage_file"] = time_series_base_name
-        json_data["time_series_storage_type"] = string(typeof(data.time_series_storage))
+        if isempty(data.time_series_storage)
+            json_data["time_series_compression_enabled"] =
+                get_compression_settings(data.time_series_storage).enabled
+            json_data["time_series_in_memory"] =
+                data.time_series_storage isa InMemoryTimeSeriesStorage
+        else
+            time_series_base_name = _get_secondary_basename(base, TIME_SERIES_STORAGE_FILE)
+            time_series_storage_file = joinpath(directory, time_series_base_name)
+            serialize(data.time_series_storage, time_series_storage_file)
+            json_data["time_series_storage_file"] = time_series_base_name
+            json_data["time_series_storage_type"] = string(typeof(data.time_series_storage))
+        end
+
+        pop!(ext, SERIALIZATION_METADATA_KEY)
+        isempty(ext) && clear_ext!(data.internal)
     end
 
-    descriptor_base_name = _get_secondary_basename(base, VALIDATION_DESCRIPTOR_FILE)
-    descriptor_file = joinpath(directory, descriptor_base_name)
-    descriptors = Dict("struct_validation_descriptors" => data.validation_descriptors)
-    text = JSON3.write(descriptors)
-    open(descriptor_file, "w") do io
-        write(io, text)
-    end
-    json_data["validation_descriptor_file"] = descriptor_base_name
-    json_data["version_info"] = serialize_julia_info()
     return json_data
 end
 
@@ -743,16 +757,10 @@ function deserialize(
     raw::Dict;
     time_series_read_only = false,
     time_series_directory = nothing,
+    validation_descriptor_file = nothing,
 )
     @debug "deserialize" raw _group = LOG_GROUP_SERIALIZATION
     time_series_params = deserialize(TimeSeriesParameters, raw["time_series_params"])
-    # The code calling this function must have changed to this directory.
-    if !isfile(raw["validation_descriptor_file"])
-        error(
-            "validation descriptor file $(raw["validation_descriptor_file"]) does not exist",
-        )
-    end
-    validation_descriptors = read_validation_descriptor(raw["validation_descriptor_file"])
 
     if haskey(raw, "time_series_storage_file")
         if !isfile(raw["time_series_storage_file"])
@@ -772,8 +780,9 @@ function deserialize(
         )
     else
         time_series_storage = make_time_series_storage(;
-            in_memory = raw["time_series_compression_enabled"],
-            compression = CompressionSettings(; enabled = raw["time_series_in_memory"]),
+            compression = CompressionSettings(;
+                enabled = get(raw, "time_series_compression_enabled", DEFAULT_COMPRESSION),
+            ),
             directory = time_series_directory,
         )
     end
@@ -781,7 +790,12 @@ function deserialize(
     subsystems = Dict(k => Set(Base.UUID.(v)) for (k, v) in raw["subsystems"])
     attributes = deserialize(SupplementalAttributes, raw["attributes"], time_series_storage)
     internal = deserialize(InfrastructureSystemsInternal, raw["internal"])
-    @debug "deserialize" _group = LOG_GROUP_SERIALIZATION validation_descriptors time_series_storage internal
+    validation_descriptors = if isnothing(validation_descriptor_file)
+        []
+    else
+        read_validation_descriptor(validation_descriptor_file)
+    end
+    @debug "deserialize" _group = LOG_GROUP_SERIALIZATION time_series_storage internal
     sys = SystemData(
         time_series_params,
         validation_descriptors,
