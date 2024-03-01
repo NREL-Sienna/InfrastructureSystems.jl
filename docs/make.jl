@@ -22,7 +22,7 @@ pages = OrderedDict(
 
 # This code performs the automated addition of Literate - Generated Markdowns. The desired
 # section name should be the name of the file for instance network_matrices.jl -> Network Matrices
-# This code is generic to all SIIP documentation
+# This code is generic to all Sienna documentation
 julia_file_filter = x -> occursin(".jl", x)
 folders = Dict(
     "Developer Guide" => filter(julia_file_filter, readdir("docs/src/dev_guide")),

@@ -64,7 +64,7 @@ Optional fields for each struct member:
 
 *Notes*:
 
-  - You will need to decide how to manage the generated files. The SIIP packages keep the
+  - You will need to decide how to manage the generated files. The Sienna packages keep the
     generated code in the git repository. This is not required.
     You could choose to generate them at startup.
   - You may need to create custom constructors and this approach will not allow
