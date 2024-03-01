@@ -18,7 +18,7 @@ function encode_symbol(
     ::Type{T},
     ::Type{U},
     meta::String = CONTAINER_KEY_EMPTY_META,
-) where {T<:InfrastructureSystemsComponent, U}
+) where {T <: InfrastructureSystemsComponent, U}
     meta_ = isempty(meta) ? meta : _DELIMITER * meta
     T_ = replace(replace(strip_module_name(T), "{" => _DELIMITER), "}" => "")
     return Symbol("$(strip_module_name(string(U)))$(_DELIMITER)$(T_)" * meta_)
