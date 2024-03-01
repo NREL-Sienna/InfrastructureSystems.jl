@@ -18,7 +18,7 @@ function encode_symbol(
     ::Type{T},
     ::Type{U},
     meta::String = CONTAINER_KEY_EMPTY_META,
-) where {T <: InfrastructureSystemsComponent U}
+) where {T<:InfrastructureSystemsComponent U}
     meta_ = isempty(meta) ? meta : _DELIMITER * meta
     T_ = replace(replace(strip_module_name(T), "{" => _DELIMITER), "}" => "")
     return Symbol("$(strip_module_name(string(U)))$(_DELIMITER)$(T_)" * meta_)
@@ -43,61 +43,61 @@ end
 #### VariableKeys ####
 
 struct VariableKey{T <: VariableType, U <: InfrastructureSystemsComponent} <:
-    OptimizationContainerKey
- meta::String
+       OptimizationContainerKey
+    meta::String
 end
 
 function VariableKey(
- ::Type{T},
- ::Type{U},
- meta = CONTAINER_KEY_EMPTY_META,
+    ::Type{T},
+    ::Type{U},
+    meta = CONTAINER_KEY_EMPTY_META,
 ) where {T <: VariableType, U <: InfrastructureSystemsComponent}
- if isabstracttype(U)
-     error("Type $U can't be abstract")
- end
- check_meta_chars(meta)
- return VariableKey{T, U}(meta)
+    if isabstracttype(U)
+        error("Type $U can't be abstract")
+    end
+    check_meta_chars(meta)
+    return VariableKey{T, U}(meta)
 end
 
 function VariableKey(
- ::Type{T},
- meta::String = CONTAINER_KEY_EMPTY_META,
+    ::Type{T},
+    meta::String = CONTAINER_KEY_EMPTY_META,
 ) where {T <: VariableType}
- return VariableKey(T, InfrastructureSystemsComponent, meta)
+    return VariableKey(T, InfrastructureSystemsComponent, meta)
 end
 
 get_entry_type(
- ::VariableKey{T, U},
+    ::VariableKey{T, U},
 ) where {T <: VariableType, U <: InfrastructureSystemsComponent} = T
 get_component_type(
- ::VariableKey{T, U},
+    ::VariableKey{T, U},
 ) where {T <: VariableType, U <: InfrastructureSystemsComponent} = U
 
 #### ConstraintKey ####
 
 struct ConstraintKey{T <: ConstraintType, U <: InfrastructureSystemsComponent} <:
-    OptimizationContainerKey
- meta::String
+       OptimizationContainerKey
+    meta::String
 end
 
 function ConstraintKey(
- ::Type{T},
- ::Type{U},
- meta = CONTAINER_KEY_EMPTY_META,
+    ::Type{T},
+    ::Type{U},
+    meta = CONTAINER_KEY_EMPTY_META,
 ) where {T <: ConstraintType, U <: InfrastructureSystemsComponent}
- check_meta_chars(meta)
- return ConstraintKey{T, U}(meta)
+    check_meta_chars(meta)
+    return ConstraintKey{T, U}(meta)
 end
 
 get_entry_type(
- ::ConstraintKey{T, U},
+    ::ConstraintKey{T, U},
 ) where {T <: ConstraintType, U <: InfrastructureSystemsComponent} = T
 get_component_type(
- ::ConstraintKey{T, U},
+    ::ConstraintKey{T, U},
 ) where {T <: ConstraintType, U <: InfrastructureSystemsComponent} = U
 
 function encode_key(key::ConstraintKey)
- return encode_symbol(get_component_type(key), get_entry_type(key), key.meta)
+    return encode_symbol(get_component_type(key), get_entry_type(key), key.meta)
 end
 
 Base.convert(::Type{ConstraintKey}, name::Symbol) = ConstraintKey(decode_symbol(name)...)
@@ -105,39 +105,40 @@ Base.convert(::Type{ConstraintKey}, name::Symbol) = ConstraintKey(decode_symbol(
 #### ExpressionKeys ####
 
 struct ExpressionKey{T <: ExpressionType, U <: InfrastructureSystemsComponent} <:
-    OptimizationContainerKey
- meta::String
+       OptimizationContainerKey
+    meta::String
 end
 
 function ExpressionKey(
- ::Type{T},
- ::Type{U},
- meta = CONTAINER_KEY_EMPTY_META,
+    ::Type{T},
+    ::Type{U},
+    meta = CONTAINER_KEY_EMPTY_META,
 ) where {T <: ExpressionType, U <: InfrastructureSystemsComponent}
- if isabstracttype(U)
-     error("Type $U can't be abstract")
- end
- check_meta_chars(meta)
- return ExpressionKey{T, U}(meta)
+    if isabstracttype(U)
+        error("Type $U can't be abstract")
+    end
+    check_meta_chars(meta)
+    return ExpressionKey{T, U}(meta)
 end
 
 get_entry_type(
- ::ExpressionKey{T, U},
+    ::ExpressionKey{T, U},
 ) where {T <: ExpressionType, U <: InfrastructureSystemsComponent} = T
 
 get_component_type(
- ::ExpressionKey{T, U},
+    ::ExpressionKey{T, U},
 ) where {T <: ExpressionType, U <: InfrastructureSystemsComponent} = U
 
 function encode_key(key::ExpressionKey)
- return encode_symbol(get_component_type(key), get_entry_type(key), key.meta)
+    return encode_symbol(get_component_type(key), get_entry_type(key), key.meta)
 end
 
 Base.convert(::Type{ExpressionKey}, name::Symbol) = ExpressionKey(decode_symbol(name)...)
 
 #### AuxVariableKeys ####
 
-struct AuxVarKey{T <: AuxVariableType, U <: InfrastructureSystemsComponent} <: OptimizationContainerKey
+struct AuxVarKey{T <: AuxVariableType, U <: InfrastructureSystemsComponent} <:
+       OptimizationContainerKey
     meta::String
 end
 
@@ -152,12 +153,17 @@ function AuxVarKey(
     return AuxVarKey{T, U}(meta)
 end
 
-get_entry_type(::AuxVarKey{T, U}) where {T <: AuxVariableType, U <: InfrastructureSystemsComponent} = T
-get_component_type(::AuxVarKey{T, U}) where {T <: AuxVariableType, U <: InfrastructureSystemsComponent} = U
+get_entry_type(
+    ::AuxVarKey{T, U},
+) where {T <: AuxVariableType, U <: InfrastructureSystemsComponent} = T
+get_component_type(
+    ::AuxVarKey{T, U},
+) where {T <: AuxVariableType, U <: InfrastructureSystemsComponent} = U
 
 #### Initial Conditions Keys ####
 
-struct ICKey{T <: InitialConditionType, U <: InfrastructureSystemsComponent} <: OptimizationContainerKey
+struct ICKey{T <: InitialConditionType, U <: InfrastructureSystemsComponent} <:
+       OptimizationContainerKey
     meta::String
 end
 
@@ -172,11 +178,16 @@ function ICKey(
     return ICKey{T, U}(meta)
 end
 
-get_entry_type(::ICKey{T, U}) where {T <: InitialConditionType, U <: InfrastructureSystemsComponent} = T
-get_component_type(::ICKey{T, U}) where {T <: InitialConditionType, U <: InfrastructureSystemsComponent} = U
+get_entry_type(
+    ::ICKey{T, U},
+) where {T <: InitialConditionType, U <: InfrastructureSystemsComponent} = T
+get_component_type(
+    ::ICKey{T, U},
+) where {T <: InitialConditionType, U <: InfrastructureSystemsComponent} = U
 
 #### Parameter Keys #####
-struct ParameterKey{T <: ParameterType, U <: InfrastructureSystemsComponent} <: OptimizationContainerKey
+struct ParameterKey{T <: ParameterType, U <: InfrastructureSystemsComponent} <:
+       OptimizationContainerKey
     meta::String
 end
 
@@ -199,5 +210,9 @@ function ParameterKey(
     return ParameterKey(T, InfrastructureSystemsComponent, meta)
 end
 
-get_entry_type(::ParameterKey{T, U}) where {T <: ParameterType, U <: InfrastructureSystemsComponent} = T
-get_component_type(::ParameterKey{T, U}) where {T <: ParameterType, U <: InfrastructureSystemsComponent} = U
+get_entry_type(
+    ::ParameterKey{T, U},
+) where {T <: ParameterType, U <: InfrastructureSystemsComponent} = T
+get_component_type(
+    ::ParameterKey{T, U},
+) where {T <: ParameterType, U <: InfrastructureSystemsComponent} = U
