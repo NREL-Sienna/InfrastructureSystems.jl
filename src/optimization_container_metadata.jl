@@ -1,9 +1,9 @@
 struct OptimizationContainerMetadata
-    container_key_lookup::Dict{String, <:IS.OptimizationContainerKey}
+    container_key_lookup::Dict{String, <:OptimizationContainerKey}
 end
 
 function OptimizationContainerMetadata()
-    return OptimizationContainerMetadata(Dict{String, IS.OptimizationContainerKey}())
+    return OptimizationContainerMetadata(Dict{String, OptimizationContainerKey}())
 end
 
 function deserialize_metadata(
