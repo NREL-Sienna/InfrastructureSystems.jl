@@ -8,7 +8,7 @@ function validate_serialization(sys::IS.SystemData; time_series_read_only = fals
         if isfile(filename)
             rm(filename)
         end
-        IS.prepare_for_serialization!(sys, filename; force = true)
+        IS.prepare_for_serialization_to_file!(sys, filename; force = true)
         data = IS.serialize(sys)
         open(filename, "w") do io
             return JSON3.write(io, data)
@@ -29,8 +29,6 @@ function validate_serialization(sys::IS.SystemData; time_series_read_only = fals
     else
         @test !isfile(t_file)
     end
-    v_file = splitext(basename(path))[1] * "_" * IS.VALIDATION_DESCRIPTOR_FILE
-    mv(v_file, joinpath(test_dir, v_file))
 
     data = open(path) do io
         return JSON3.read(io, Dict)
@@ -66,11 +64,12 @@ end
     end
 end
 
-@testset "Test prepare_for_serialization" begin
+@testset "Test prepare_for_serialization_to_file" begin
     sys = create_system_data_shared_time_series()
     directory = joinpath(mktempdir(), "dir2")
-    IS.prepare_for_serialization!(sys, joinpath(directory, "sys.json"))
-    @test IS.get_ext(sys.internal)["serialization_directory"] == directory
+    IS.prepare_for_serialization_to_file!(sys, joinpath(directory, "sys.json"))
+    @test IS.get_ext(sys.internal)[IS.SERIALIZATION_METADATA_KEY]["serialization_directory"] ==
+          directory
 end
 
 @testset "Test JSON serialization of with read-only time series" begin

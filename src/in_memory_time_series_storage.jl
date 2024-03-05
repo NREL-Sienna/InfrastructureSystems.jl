@@ -230,6 +230,7 @@ function compare_values(
     x::InMemoryTimeSeriesStorage,
     y::InMemoryTimeSeriesStorage;
     compare_uuids = false,
+    kwargs...,
 )
     keys_x = sort!(collect(keys(x.data)))
     keys_y = sort!(collect(keys(y.data)))
