@@ -62,7 +62,7 @@ function get_variable_value(
     store::AbstractModelStore,
     ::T,
     ::Type{U},
-) where {T <: VariableType, U <: InfrastructureSystemsComponent}
+) where {T <: VariableType, U <: InfrastructureSystemsType}
     return get_data_field(store, :variables)[VariableKey(T, U)]
 end
 
@@ -70,7 +70,7 @@ function get_aux_variable_value(
     store::AbstractModelStore,
     ::T,
     ::Type{U},
-) where {T <: AuxVariableType, U <: InfrastructureSystemsComponent}
+) where {T <: AuxVariableType, U <: InfrastructureSystemsType}
     return get_data_field(store, :aux_variables)[AuxVarKey(T, U)]
 end
 
@@ -78,7 +78,7 @@ function get_dual_value(
     store::AbstractModelStore,
     ::T,
     ::Type{U},
-) where {T <: ConstraintType, U <: InfrastructureSystemsComponent}
+) where {T <: ConstraintType, U <: InfrastructureSystemsType}
     return get_data_field(store, :duals)[ConstraintKey(T, U)]
 end
 
@@ -86,6 +86,6 @@ function get_parameter_value(
     store::AbstractModelStore,
     ::T,
     ::Type{U},
-) where {T <: ParameterType, U <: InfrastructureSystemsComponent}
+) where {T <: ParameterType, U <: InfrastructureSystemsType}
     return get_data_field(store, :parameters)[ParameterKey(T, U)]
 end
