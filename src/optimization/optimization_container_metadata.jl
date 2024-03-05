@@ -1,3 +1,5 @@
+const _CONTAINER_METADATA_FILE = "optimization_container_metadata.bin"
+
 struct OptimizationContainerMetadata
     container_key_lookup::Dict{String, <:OptimizationContainerKey}
 end
@@ -5,6 +7,10 @@ end
 function OptimizationContainerMetadata()
     return OptimizationContainerMetadata(Dict{String, OptimizationContainerKey}())
 end
+
+_make_metadata_filename(model_name::Symbol, output_dir) =
+    joinpath(output_dir, string(model_name), _CONTAINER_METADATA_FILE)
+_make_metadata_filename(output_dir) = joinpath(output_dir, _CONTAINER_METADATA_FILE)
 
 function deserialize_metadata(
     ::Type{OptimizationContainerMetadata},

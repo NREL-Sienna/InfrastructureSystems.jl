@@ -1,12 +1,3 @@
-@scoped_enum(
-    RunStatus,
-    NOT_READY = -2,
-    READY = -1,
-    SUCCESSFUL = 0,
-    RUNNING = 1,
-    FAILED = 2,
-)
-
 struct TimeSeriesCacheKey
     component_uuid::Base.UUID
     time_series_type::Type{<:TimeSeriesData}
@@ -14,21 +5,14 @@ struct TimeSeriesCacheKey
     multiplier_id::Int
 end
 
-mutable struct SimulationInfo
-    number::Int
-    sequence_uuid::Base.UUID
-end
-
 mutable struct ModelInternal{T <: AbstractOptimizationContainer}
     container::T
     ic_model_container::Union{Nothing, T}
     status::BuildStatus
-    run_status::RunStatus
     base_conversion::Bool
     executions::Int
     execution_count::Int
     output_dir::Union{Nothing, String}
-    simulation_info::Union{Nothing, SimulationInfo}
     time_series_cache::Dict{TimeSeriesCacheKey, <:TimeSeriesCache}
     recorders::Vector{Symbol}
     console_level::Base.CoreLogging.LogLevel
@@ -46,7 +30,6 @@ function ModelInternal(
         container,
         nothing,
         BuildStatus.EMPTY,
-        RunStatus.READY,
         true,
         1, #Default executions is 1. The model will be run at least once
         0,
