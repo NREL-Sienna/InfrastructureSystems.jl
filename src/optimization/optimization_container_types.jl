@@ -14,5 +14,3 @@ abstract type ConstructStage end
 
 struct ArgumentConstructStage <: ConstructStage end
 struct ModelConstructStage <: ConstructStage end
-
-@scoped_enum(BuildStatus, IN_PROGRESS = -1, BUILT = 0, FAILED = 1, EMPTY = 2,)

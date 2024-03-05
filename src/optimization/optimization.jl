@@ -19,6 +19,7 @@ export OptimizationProblemResults
 export OptimizationProblemResultsExport
 export OptimizerStats
 
+include("enums.jl")
 include("optimization_container_types.jl")
 include("abstract_model_store.jl")
 include("abstract_model_store_params.jl")
