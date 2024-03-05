@@ -24,7 +24,7 @@ function serialize(event::T) where {T <: AbstractRecorderEvent}
             data[:name] = get_name(event)
             data[:timestamp] = get_timestamp(event)
         else
-            data[fieldname] = getfield(event, fieldname)
+            data[fieldname] = getproperty(event, fieldname)
         end
     end
 
@@ -266,7 +266,7 @@ function show_recorder_events(
         end
         for (fieldname, fieldtype) in zip(fieldnames(T), fieldtypes(T))
             if !(fieldtype <: RecorderEventCommon) && !(fieldname in exclude_columns)
-                data[i, col_index] = getfield(event, fieldname)
+                data[i, col_index] = getproperty(event, fieldname)
                 col_index += 1
             end
         end

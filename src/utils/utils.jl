@@ -134,8 +134,8 @@ function compare_values(x::T, y::T; compare_uuids = false) where {T}
                 # This gets validated at SystemData. Don't repeat for each component.
                 continue
             end
-            val1 = getfield(x, field_name)
-            val2 = getfield(y, field_name)
+            val1 = getproperty(x, field_name)
+            val2 = getproperty(y, field_name)
             if !isempty(fieldnames(typeof(val1)))
                 if !compare_values(val1, val2; compare_uuids = compare_uuids)
                     @error "values do not match" T field_name val1 val2
@@ -235,7 +235,7 @@ macro scoped_enum(T, args...)
                 $(Dict(Int64(x.args[2]) => String(x.args[1]) for x in args))
             Base.string(e::$T) = VALUE2NAME[e.value]
             Base.getproperty(::Type{$T}, sym::Symbol) =
-                haskey(NAME2VALUE, String(sym)) ? $T(String(sym)) : getfield($T, sym)
+                haskey(NAME2VALUE, String(sym)) ? $T(String(sym)) : getproperty($T, sym)
             Base.show(io::IO, e::$T) =
                 print(io, string($T, ".", string(e), " = ", e.value))
             Base.propertynames(::Type{$T}) = $([x.args[1] for x in args])
@@ -269,7 +269,7 @@ function compose_function_delegation_string(
     l *= ") = $m:(" * string(method.name) * ")("
     s = "p" .* string.(1:(method.nargs - 1))
 
-    s[argid] .= "getfield(" .* s[argid] .* ", :$sender_symbol)"
+    s[argid] .= "getproperty(" .* s[argid] .* ", :$sender_symbol)"
     l *= join(s, ", ") * ")"
     l = join(split(l, "#"))
     return l
@@ -388,7 +388,7 @@ function get_module(module_name)
     end
 end
 
-get_type_from_strings(module_name, type) = getfield(get_module(module_name), Symbol(type))
+get_type_from_strings(module_name, type) = getproperty(get_module(module_name), Symbol(type))
 
 # This function is used instead of cp given
 # https://github.com/JuliaLang/julia/issues/30723

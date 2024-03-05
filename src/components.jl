@@ -361,8 +361,8 @@ function compare_values(x::Components, y::Components; compare_uuids = false)
     for name in fieldnames(Components)
         # This gets validated in SystemData.
         name == :time_series_storage && continue
-        val_x = getfield(x, name)
-        val_y = getfield(y, name)
+        val_x = getproperty(x, name)
+        val_y = getproperty(y, name)
         if !compare_values(val_x, val_y; compare_uuids = compare_uuids)
             @error "Components field = $name does not match" val_x val_y
             match = false

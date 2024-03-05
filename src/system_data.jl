@@ -342,8 +342,8 @@ function compare_values(x::SystemData, y::SystemData; compare_uuids = false)
             # the components.
             continue
         end
-        val_x = getfield(x, name)
-        val_y = getfield(y, name)
+        val_x = getproperty(x, name)
+        val_y = getproperty(y, name)
         if name == :time_series_storage && typeof(val_x) != typeof(val_y)
             @warn "Cannot compare $(typeof(val_x)) and $(typeof(val_y))"
             # TODO 1.0: workaround for not being able to convert Hdf5TimeSeriesStorage to
@@ -351,7 +351,7 @@ function compare_values(x::SystemData, y::SystemData; compare_uuids = false)
             continue
         end
         if !compare_values(val_x, val_y; compare_uuids = compare_uuids)
-            @error "SystemData field = $name does not match" getfield(x, name) getfield(
+            @error "SystemData field = $name does not match" getproperty(x, name) getproperty(
                 y,
                 name,
             )
@@ -633,7 +633,7 @@ This requires that category be a string version of a component's abstract type.
 Modules can override for custom behavior.
 """
 function set_component!(metadata::TimeSeriesFileMetadata, data::SystemData, mod::Module)
-    category = getfield(mod, Symbol(metadata.category))
+    category = getproperty(mod, Symbol(metadata.category))
     if isconcretetype(category)
         metadata.component =
             get_component(category, data.components, metadata.component_name)
@@ -702,7 +702,7 @@ function serialize(data::SystemData)
         :time_series_params,
         :internal,
     )
-        json_data[string(field)] = serialize(getfield(data, field))
+        json_data[string(field)] = serialize(getproperty(data, field))
     end
 
     ext = get_ext(data.internal)
