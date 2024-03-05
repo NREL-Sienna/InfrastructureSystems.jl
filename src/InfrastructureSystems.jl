@@ -149,6 +149,6 @@ include("utils/print.jl")
 include("utils/test.jl")
 include("units.jl")
 include("deprecated.jl")
-include("Optimization/Optimization2.jl")
+include("Optimization/Optimization.jl")
 
 end # module
