@@ -253,7 +253,7 @@ macro scoped_enum(T, args...)
                 $(Dict(Int64(x.args[2]) => String(x.args[1]) for x in args))
             Base.string(e::$T) = VALUE2NAME[e.value]
             Base.getproperty(::Type{$T}, sym::Symbol) =
-                haskey(NAME2VALUE, String(sym)) ? $T(String(sym)) : getproperty($T, sym)
+                haskey(NAME2VALUE, String(sym)) ? $T(String(sym)) : getfield($T, sym)
             Base.show(io::IO, e::$T) =
                 print(io, string($T, ".", string(e), " = ", e.value))
             Base.propertynames(::Type{$T}) = $([x.args[1] for x in args])
