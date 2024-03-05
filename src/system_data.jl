@@ -349,8 +349,8 @@ function compare_values(
             # the components.
             continue
         end
-        val_x = getfield(x, name)
-        val_y = getfield(y, name)
+        val_x = getproperty(x, name)
+        val_y = getproperty(y, name)
         if name == :time_series_storage && typeof(val_x) != typeof(val_y)
             @warn "Cannot compare $(typeof(val_x)) and $(typeof(val_y))"
             # TODO 1.0: workaround for not being able to convert Hdf5TimeSeriesStorage to
@@ -640,7 +640,7 @@ This requires that category be a string version of a component's abstract type.
 Modules can override for custom behavior.
 """
 function set_component!(metadata::TimeSeriesFileMetadata, data::SystemData, mod::Module)
-    category = getfield(mod, Symbol(metadata.category))
+    category = getproperty(mod, Symbol(metadata.category))
     if isconcretetype(category)
         metadata.component =
             get_component(category, data.components, metadata.component_name)

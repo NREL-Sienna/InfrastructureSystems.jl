@@ -22,7 +22,7 @@ function Base.empty!(store::AbstractModelStore)
     end
 end
 
-get_data_field(store::AbstractModelStore, type) = getfield(store, type)
+get_data_field(store::AbstractModelStore, type) = getproperty(store, type)
 
 function Base.isempty(store::AbstractModelStore)
     stype = typeof(store)
