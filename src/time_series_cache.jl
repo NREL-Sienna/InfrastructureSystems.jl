@@ -116,6 +116,13 @@ _get_iterations_remaining(c::TimeSeriesCache) = c.common.iterations_remaining[]
 _decrement_iterations_remaining!(c::TimeSeriesCache) = c.common.iterations_remaining[] -= 1
 _get_resolution(cache::TimeSeriesCache) = get_resolution(_get_time_series(cache))
 
+struct TimeSeriesCacheKey
+    component_uuid::Base.UUID
+    time_series_type::Type{<:TimeSeriesData}
+    name::String
+    multiplier_id::Int
+end
+
 struct TimeSeriesCacheCommon{T <: TimeSeriesData, U <: InfrastructureSystemsComponent}
     ts::Base.RefValue{T}
     component::U
@@ -417,7 +424,7 @@ function make_time_series_cache(
     len::Int;
     ignore_scaling_factors = true,
 ) where {T <: StaticTimeSeries}
-    return IS.StaticTimeSeriesCache(
+    return StaticTimeSeriesCache(
         T,
         component,
         name;
@@ -434,7 +441,7 @@ function make_time_series_cache(
     horizon::Int;
     ignore_scaling_factors = true,
 ) where {T <: AbstractDeterministic}
-    return IS.ForecastCache(
+    return ForecastCache(
         T,
         component,
         name;
@@ -452,7 +459,7 @@ function make_time_series_cache(
     horizon::Int;
     ignore_scaling_factors = true,
 )
-    return IS.ForecastCache(
+    return ForecastCache(
         Probabilistic,
         component,
         name;
@@ -466,6 +473,6 @@ function get_time_series_uuid(
     ::Type{T},
     component::U,
     name::AbstractString,
-) where {T <: TimeSeriesData, U <: Component}
-    return string(IS.get_time_series_uuid(T, component, name))
+) where {T <: TimeSeriesData, U <: InfrastructureSystemsComponent}
+    return string(get_time_series_uuid(T, component, name))
 end
