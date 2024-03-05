@@ -77,11 +77,14 @@ function _check_fields(fields)
     return fields
 end
 
-should_export_dual(x::OptimizationProblemResultsExport, key) = _should_export(x, :duals, key)
+should_export_dual(x::OptimizationProblemResultsExport, key) =
+    _should_export(x, :duals, key)
 should_export_expression(x::OptimizationProblemResultsExport, key) =
     _should_export(x, :expressions, key)
-should_export_parameter(x::OptimizationProblemResultsExport, key) = _should_export(x, :parameters, key)
-should_export_variable(x::OptimizationProblemResultsExport, key) = _should_export(x, :variables, key)
+should_export_parameter(x::OptimizationProblemResultsExport, key) =
+    _should_export(x, :parameters, key)
+should_export_variable(x::OptimizationProblemResultsExport, key) =
+    _should_export(x, :variables, key)
 should_export_aux_variable(x::OptimizationProblemResultsExport, key) =
     _should_export(x, :aux_variables, key)
 

@@ -15,16 +15,19 @@ mutable struct OptimizationProblemResults <: Results
     output_dir::String
 end
 
-list_aux_variable_keys(res::OptimizationProblemResults) = collect(keys(res.aux_variable_values))
+list_aux_variable_keys(res::OptimizationProblemResults) =
+    collect(keys(res.aux_variable_values))
 list_aux_variable_names(res::OptimizationProblemResults) =
     encode_keys_as_strings(keys(res.aux_variable_values))
 list_variable_keys(res::OptimizationProblemResults) = collect(keys(res.variable_values))
-list_variable_names(res::OptimizationProblemResults) = encode_keys_as_strings(keys(res.variable_values))
+list_variable_names(res::OptimizationProblemResults) =
+    encode_keys_as_strings(keys(res.variable_values))
 list_parameter_keys(res::OptimizationProblemResults) = collect(keys(res.parameter_values))
 list_parameter_names(res::OptimizationProblemResults) =
     encode_keys_as_strings(keys(res.parameter_values))
 list_dual_keys(res::OptimizationProblemResults) = collect(keys(res.dual_values))
-list_dual_names(res::OptimizationProblemResults) = encode_keys_as_strings(keys(res.dual_values))
+list_dual_names(res::OptimizationProblemResults) =
+    encode_keys_as_strings(keys(res.dual_values))
 list_expression_keys(res::OptimizationProblemResults) = collect(keys(res.expression_values))
 list_expression_names(res::OptimizationProblemResults) =
     encode_keys_as_strings(keys(res.expression_values))
@@ -140,7 +143,10 @@ Set the system in the results instance.
 
 Throws InvalidValue if the source UUID is incorrect.
 """
-function set_data_source!(res::OptimizationProblemResults, source::InfrastructureSystemsType)
+function set_data_source!(
+    res::OptimizationProblemResults,
+    source::InfrastructureSystemsType,
+)
     source_uuid = get_uuid(source)
     if source_uuid != res.source_uuid
         throw(
@@ -321,7 +327,11 @@ function read_variables(res::OptimizationProblemResults, variables; kwargs...)
     return read_variables(res, [VariableKey(x...) for x in variables]; kwargs...)
 end
 
-function read_variables(res::OptimizationProblemResults, variables::Vector{<:AbstractString}; kwargs...)
+function read_variables(
+    res::OptimizationProblemResults,
+    variables::Vector{<:AbstractString};
+    kwargs...,
+)
     return read_variables(
         res,
         [_deserialize_key(VariableKey, res, x) for x in variables];
@@ -391,7 +401,11 @@ function read_duals(res::OptimizationProblemResults, duals; kwargs...)
     return read_duals(res, [ConstraintKey(x...) for x in duals]; kwargs...)
 end
 
-function read_duals(res::OptimizationProblemResults, duals::Vector{<:AbstractString}; kwargs...)
+function read_duals(
+    res::OptimizationProblemResults,
+    duals::Vector{<:AbstractString};
+    kwargs...,
+)
     return read_duals(
         res,
         [_deserialize_key(ConstraintKey, res, x) for x in duals];

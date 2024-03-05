@@ -3,6 +3,10 @@
 """
 module Optimization
 
+export OptimizationProblemResults
+export OptimizationProblemResultsExport
+export OptimizerStats
+
 include("abstract_model_store.jl")
 include("abstract_model_store_params.jl")
 include("model_internal.jl")
