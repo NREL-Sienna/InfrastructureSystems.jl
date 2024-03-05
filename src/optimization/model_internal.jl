@@ -1,10 +1,3 @@
-struct TimeSeriesCacheKey
-    component_uuid::Base.UUID
-    time_series_type::Type{<:TimeSeriesData}
-    name::String
-    multiplier_id::Int
-end
-
 mutable struct ModelInternal{T <: AbstractOptimizationContainer}
     container::T
     ic_model_container::Union{Nothing, T}
@@ -17,7 +10,7 @@ mutable struct ModelInternal{T <: AbstractOptimizationContainer}
     recorders::Vector{Symbol}
     console_level::Base.CoreLogging.LogLevel
     file_level::Base.CoreLogging.LogLevel
-    store_parameters::Union{Nothing, ModelStoreParams}
+    store_parameters::Union{Nothing, AbstractModelStoreParams}
     ext::Dict{String, Any}
 end
 

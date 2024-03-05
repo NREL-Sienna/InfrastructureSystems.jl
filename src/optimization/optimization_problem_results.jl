@@ -58,7 +58,7 @@ end
 Exports all results from the operations problem.
 """
 function export_results(results::OptimizationProblemResults; kwargs...)
-    exports = OptimizationOptimizationProblemResultsExport(
+    exports = OptimizationProblemResultsExport(
         "Problem";
         store_all_duals = true,
         store_all_parameters = true,
@@ -70,7 +70,7 @@ end
 
 function export_results(
     results::OptimizationProblemResults,
-    exports::OptimizationOptimizationProblemResultsExport;
+    exports::OptimizationProblemResultsExport;
     file_type = CSV.File,
 )
     file_type != CSV.File && error("only CSV.File is currently supported")

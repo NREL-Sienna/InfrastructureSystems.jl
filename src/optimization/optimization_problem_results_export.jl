@@ -1,10 +1,10 @@
 struct OptimizationProblemResultsExport
     name::Symbol
-    duals::Set{IS.ConstraintKey}
-    expressions::Set{IS.ExpressionKey}
-    parameters::Set{IS.ParameterKey}
-    variables::Set{IS.VariableKey}
-    aux_variables::Set{IS.AuxVarKey}
+    duals::Set{ConstraintKey}
+    expressions::Set{ExpressionKey}
+    parameters::Set{ParameterKey}
+    variables::Set{VariableKey}
+    aux_variables::Set{AuxVarKey}
     optimizer_stats::Bool
     store_all_flags::Dict{Symbol, Bool}
 
@@ -38,11 +38,11 @@ end
 
 function OptimizationProblemResultsExport(
     name;
-    duals = Set{IS.ConstraintKey}(),
-    expressions = Set{IS.ExpressionKey}(),
-    parameters = Set{IS.ParameterKey}(),
-    variables = Set{IS.VariableKey}(),
-    aux_variables = Set{IS.AuxVarKey}(),
+    duals = Set{ConstraintKey}(),
+    expressions = Set{ExpressionKey}(),
+    parameters = Set{ParameterKey}(),
+    variables = Set{VariableKey}(),
+    aux_variables = Set{AuxVarKey}(),
     optimizer_stats = true,
     store_all_duals = false,
     store_all_expressions = false,
