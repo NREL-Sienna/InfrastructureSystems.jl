@@ -411,7 +411,8 @@ function get_module(module_name)
     end
 end
 
-get_type_from_strings(module_name, type) = getproperty(get_module(module_name), Symbol(type))
+get_type_from_strings(module_name, type) =
+    getproperty(get_module(module_name), Symbol(type))
 
 # This function is used instead of cp given
 # https://github.com/JuliaLang/julia/issues/30723
