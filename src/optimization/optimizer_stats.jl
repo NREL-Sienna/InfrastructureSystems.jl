@@ -81,7 +81,7 @@ Convert OptimizerStats to a matrix of floats that can be serialized.
 function to_matrix(stats::T) where {T <: OptimizerStats}
     field_values = Matrix{Float64}(undef, fieldcount(T), 1)
     for (ix, field) in enumerate(fieldnames(T))
-        value = getfield(stats, field)
+        value = getproperty(stats, field)
         field_values[ix] = ismissing(value) ? NaN : value
     end
     return field_values
@@ -95,7 +95,7 @@ end
 function to_dict(stats::OptimizerStats)
     data = Dict()
     for field in fieldnames(typeof(stats))
-        data[String(field)] = getfield(stats, field)
+        data[String(field)] = getproperty(stats, field)
     end
 
     return data
