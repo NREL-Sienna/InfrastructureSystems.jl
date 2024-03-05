@@ -473,6 +473,6 @@ function get_time_series_uuid(
     ::Type{T},
     component::U,
     name::AbstractString,
-) where {T <: TimeSeriesData, U <: InfrastructureSystemsComponent}
+) where {T <: TimeSeriesData, U <: InfrastructureSystemsType}
     return string(get_time_series_uuid(T, component, name))
 end
