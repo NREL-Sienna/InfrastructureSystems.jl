@@ -162,12 +162,12 @@ get_component_type(
 
 #### Initial Conditions Keys ####
 
-struct ICKey{T <: InitialConditionType, U <: InfrastructureSystemsType} <:
+struct InitialConditionKey{T <: InitialConditionType, U <: InfrastructureSystemsType} <:
        OptimizationContainerKey
     meta::String
 end
 
-function ICKey(
+function InitialConditionKey(
     ::Type{T},
     ::Type{U},
     meta = CONTAINER_KEY_EMPTY_META,
@@ -175,14 +175,14 @@ function ICKey(
     if isabstracttype(U)
         error("Type $U can't be abstract")
     end
-    return ICKey{T, U}(meta)
+    return InitialConditionKey{T, U}(meta)
 end
 
 get_entry_type(
-    ::ICKey{T, U},
+    ::InitialConditionKey{T, U},
 ) where {T <: InitialConditionType, U <: InfrastructureSystemsType} = T
 get_component_type(
-    ::ICKey{T, U},
+    ::InitialConditionKey{T, U},
 ) where {T <: InitialConditionType, U <: InfrastructureSystemsType} = U
 
 #### Parameter Keys #####
