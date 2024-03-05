@@ -408,3 +408,64 @@ function _get_row_size(vals)
 
     return row_size
 end
+
+function make_time_series_cache(
+    ::Type{T},
+    component,
+    name,
+    initial_time,
+    len::Int;
+    ignore_scaling_factors = true,
+) where {T <: StaticTimeSeries}
+    return IS.StaticTimeSeriesCache(
+        T,
+        component,
+        name;
+        start_time = initial_time,
+        ignore_scaling_factors = ignore_scaling_factors,
+    )
+end
+
+function make_time_series_cache(
+    ::Type{T},
+    component,
+    name,
+    initial_time,
+    horizon::Int;
+    ignore_scaling_factors = true,
+) where {T <: AbstractDeterministic}
+    return IS.ForecastCache(
+        T,
+        component,
+        name;
+        start_time = initial_time,
+        horizon = horizon,
+        ignore_scaling_factors = ignore_scaling_factors,
+    )
+end
+
+function make_time_series_cache(
+    ::Type{Probabilistic},
+    component,
+    name,
+    initial_time,
+    horizon::Int;
+    ignore_scaling_factors = true,
+)
+    return IS.ForecastCache(
+        Probabilistic,
+        component,
+        name;
+        start_time = initial_time,
+        horizon = horizon,
+        ignore_scaling_factors = ignore_scaling_factors,
+    )
+end
+
+function get_time_series_uuid(
+    ::Type{T},
+    component::U,
+    name::AbstractString,
+) where {T <: TimeSeriesData, U <: Component}
+    return string(IS.get_time_series_uuid(T, component, name))
+end
