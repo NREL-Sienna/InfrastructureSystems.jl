@@ -52,7 +52,7 @@ function OptimizerStats()
 end
 
 """
-Construct OptimizerStats from a vector that was serialized to HDF5.
+Construct OptimizerStats from a vector that was serialized.
 """
 function OptimizerStats(data::Vector{Float64})
     vals = Vector(undef, length(data))
@@ -76,7 +76,7 @@ function OptimizerStats(data::Vector{Float64})
 end
 
 """
-Convert OptimizerStats to a matrix of floats that can be serialized to HDF5.
+Convert OptimizerStats to a matrix of floats that can be serialized.
 """
 function to_matrix(stats::T) where {T <: OptimizerStats}
     field_values = Matrix{Float64}(undef, fieldcount(T), 1)
