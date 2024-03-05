@@ -1,6 +1,6 @@
 
 const TIME_SERIES_STORAGE_FILE = "time_series_storage.h5"
-const TIME_SERIES_DIRECTORY_ENV_VAR = "Sienna_TIME_SERIES_DIRECTORY"
+const TIME_SERIES_DIRECTORY_ENV_VAR = "SIENNA_TIME_SERIES_DIRECTORY"
 const VALIDATION_DESCRIPTOR_FILE = "validation_descriptors.json"
 
 """
