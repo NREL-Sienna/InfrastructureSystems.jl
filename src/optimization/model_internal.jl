@@ -44,13 +44,13 @@ end
 
 get_recorders(internal::ModelInternal) = internal.recorders
 
-function configure_logging(internal::ModelInternal, file_mode)
+function configure_logging(internal::ModelInternal, file_name, file_mode)
     return configure_logging(;
         console = true,
         console_stream = stderr,
         console_level = internal.console_level,
         file = true,
-        filename = joinpath(internal.output_dir, PROBLEM_LOG_FILENAME),
+        filename = joinpath(internal.output_dir, file_name),
         file_level = internal.file_level,
         file_mode = file_mode,
         tracker = nothing,

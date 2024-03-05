@@ -12,7 +12,8 @@ import ..InfrastructureSystems:
     InfrastructureSystemsComponent,
     Results,
     TimeSeriesCacheKey,
-    TimeSeriesCache
+    TimeSeriesCache,
+    configure_logging
 
 export OptimizationProblemResults
 export OptimizationProblemResultsExport
