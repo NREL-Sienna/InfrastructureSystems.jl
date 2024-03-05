@@ -44,6 +44,24 @@ end
 
 get_recorders(internal::ModelInternal) = internal.recorders
 
+get_constraints(internal::ModelInternal) = internal.container.constraints
+get_execution_count(internal::ModelInternal) = internal.execution_count
+get_executions(internal::ModelInternal) = internal.executions
+get_optimization_container(internal::ModelInternal) = internal.container
+
+set_console_level!(internal::ModelInternal) = internal.console_level = val
+set_file_level!(internal::ModelInternal) = internal.file_level = val
+
+set_executions!(internal::ModelInternal, val::Int) = internal.executions = val
+set_execution_count!(internal::ModelInternal, val::Int) = internal.execution_count = val
+
+function set_status!(internal::ModelInternal, status::BuildStatus)
+    internal.status = status
+    return
+end
+
+set_output_dir!(internal::ModelInternal, path::AbstractString) = internal.output_dir = path
+
 function configure_logging(internal::ModelInternal, file_name, file_mode)
     return configure_logging(;
         console = true,
