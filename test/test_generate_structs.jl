@@ -9,6 +9,9 @@ end
     output_directory = mktempdir()
     descriptor_file = joinpath(output_directory, "structs.json")
     cp(orig_descriptor_file, descriptor_file)
+    # This is necessary in cases where the package has been added through a GitHub branch
+    # where all source files are read-only.
+    chmod(descriptor_file, 0o644)
     new_struct = IS.StructDefinition(;
         struct_name = "MyComponent",
         docstring = "Custom component",
