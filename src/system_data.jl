@@ -985,7 +985,7 @@ set_name!(data::SystemData, component, name) = set_name!(data.components, compon
 function get_component_counts_by_type(data::SystemData)
     counts = Dict{String, Int}()
     for (component_type, components) in data.components.data
-        counts[string(nameof(component_type))] = length(components)
+        counts[strip_module_name(component_type)] = length(components)
     end
 
     return [

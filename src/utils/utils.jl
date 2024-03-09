@@ -60,7 +60,19 @@ function supertypes(::Type{T}, types = []) where {T}
 end
 
 """
-Strips the module name off of a type.
+Strips the module name off of a type. This can be useful to print types as strings and
+receive consistent results regardless of whether the user used `import` or `using` to
+load a package.
+
+Unlike Base.nameof, this function preserves any parametric types.
+
+# Examples
+```julia-repl
+julia> strip_module_name(PowerSystems.RegulationDevice{ThermalStandard})
+"RegulationDevice{ThermalStandard}"
+julia> string(nameof(PowerSystems.RegulationDevice{ThermalStandard}))
+"RegulationDevice"
+```
 """
 function strip_module_name(name::String)
     index = findfirst(".", name)
@@ -79,16 +91,6 @@ end
 
 function strip_module_name(::Type{T}) where {T}
     return strip_module_name(string(T))
-end
-
-function strip_parametric_type(name::AbstractString)
-    index = findfirst("{", name)
-    if !isnothing(index)
-        # Ignore the parametric type.
-        name = name[1:(index.start - 1)]
-    end
-
-    return name
 end
 
 """
@@ -297,7 +299,7 @@ function forward(sender::Tuple{Type, Symbol}, ::Type, method::Method)
     # Assert that function name always starts with `get_*`
     "`forward` only works for accessor methods that are defined as `get_*` or `set_*`"
     @assert startswith(string(method.name), r"set_|get_")
-    sender_type = "$(parentmodule(sender[1])).$(strip_module_name(sender[1]))"
+    sender_type = string(sender[1])
     sender_symbol = string(sender[2])
     code_array = Vector{String}()
     # Search for receiver type in method arguments

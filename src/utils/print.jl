@@ -166,7 +166,7 @@ function Base.show(io::IO, ::MIME"text/plain", ist::InfrastructureSystemsCompone
 end
 
 function Base.show(io::IO, ist::InfrastructureSystemsComponent)
-    print(io, string(nameof(typeof(ist))), "(")
+    print(io, strip_module_name(typeof(ist)), "(")
     is_first = true
     for (name, field_type) in zip(fieldnames(typeof(ist)), fieldtypes(typeof(ist)))
         if field_type <: TimeSeriesContainer || field_type <: InfrastructureSystemsInternal
@@ -210,7 +210,7 @@ function show_container_table(io::IO, container::InfrastructureSystemsContainer;
     header = ["Type", "Count", "Has Static Time Series", "Has Forecasts"]
     data = Array{Any, 2}(undef, length(container.data), length(header))
 
-    type_names = [(string(nameof(x)), x) for x in keys(container.data)]
+    type_names = [(strip_module_name(x), x) for x in keys(container.data)]
     sort!(type_names; by = x -> x[1])
     for (i, (type_name, type)) in enumerate(type_names)
         vals = container.data[type]
@@ -248,7 +248,7 @@ function show_components(
         error("$component_type must be a concrete type")
     end
 
-    title = string(nameof(component_type))
+    title = strip_module_name(component_type)
     header = ["name"]
     has_available = false
     if :available in fieldnames(component_type)

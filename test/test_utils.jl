@@ -14,15 +14,6 @@ end
           "SingleTimeSeries{PowerSystems.HydroDispatch}"
 end
 
-@testset "Test strip_parametric_type" begin
-    @test IS.strip_parametric_type("SingleTimeSeries{PowerSystems.HydroDispatch}") ==
-          "SingleTimeSeries"
-
-    @test IS.strip_parametric_type(
-        "InfrastructureSystems.SingleTimeSeries{PowerSystems.HydroDispatch}",
-    ) == "InfrastructureSystems.SingleTimeSeries"
-end
-
 @testset "Test exported names" begin
     @test IS.validate_exported_names(IS)
 end
