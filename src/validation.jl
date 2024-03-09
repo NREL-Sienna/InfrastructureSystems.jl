@@ -70,7 +70,7 @@ function validate_fields(
     components::Components,
     ist_struct::T,
 ) where {T <: InfrastructureSystemsType}
-    type_name = strip_parametric_type(strip_module_name(repr(T)))
+    type_name = strip_parametric_type(string(nameof(T)))
     struct_descriptor = get_config_descriptor(components.validation_descriptors, type_name)
     isnothing(struct_descriptor) && return true
     is_valid = true

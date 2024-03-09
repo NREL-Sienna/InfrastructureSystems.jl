@@ -170,7 +170,7 @@ function list_recorder_events(
 ) where {T <: AbstractRecorderEvent}
     events = Vector{T}()
     for line in eachline(filename)
-        type_name = "\"" * strip_module_name(T) * "\""
+        type_name = "\"" * string(nameof(T)) * "\""
         # Perform a string search for the type to avoid decoding every JSON object.
         if occursin(type_name, line)
             event = from_json(T, line)

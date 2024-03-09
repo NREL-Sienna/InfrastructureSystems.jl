@@ -60,13 +60,6 @@ function supertypes(::Type{T}, types = []) where {T}
 end
 
 """
-Converts a DataType to a Symbol, stripping off the module name(s).
-"""
-function type_to_symbol(data_type::DataType)
-    return Symbol(strip_module_name(string(data_type)))
-end
-
-"""
 Strips the module name off of a type.
 """
 function strip_module_name(name::String)
