@@ -3,6 +3,7 @@
 """
 module Optimization
 
+import Logging
 import Dates
 import DataFrames
 
@@ -13,7 +14,8 @@ import ..InfrastructureSystems:
     Results,
     TimeSeriesCacheKey,
     TimeSeriesCache,
-    configure_logging
+    configure_logging,
+    strip_module_name
 
 export OptimizationProblemResults
 export OptimizationProblemResultsExport

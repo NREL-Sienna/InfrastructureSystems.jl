@@ -10,7 +10,7 @@ mutable struct ModelInternal{T <: AbstractOptimizationContainer}
     recorders::Vector{Symbol}
     console_level::Base.CoreLogging.LogLevel
     file_level::Base.CoreLogging.LogLevel
-    store_parameters::Union{Nothing, AbstractModelStoreParams}
+    store_params::Union{Nothing, AbstractModelStoreParams}
     ext::Dict{String, Any}
 end
 
@@ -27,7 +27,6 @@ function ModelInternal(
         1, #Default executions is 1. The model will be run at least once
         0,
         nothing,
-        nothing,
         Dict{TimeSeriesCacheKey, TimeSeriesCache}(),
         recorders,
         Logging.Warn,
@@ -42,16 +41,20 @@ function add_recorder!(internal::ModelInternal, recorder::Symbol)
     return
 end
 
+get_container(internal::ModelInternal) = internal.container
 get_recorders(internal::ModelInternal) = internal.recorders
-
+get_store_params(internal::ModelInternal) = internal.store_params
+get_status(internal::ModelInternal) = internal.status
 get_constraints(internal::ModelInternal) = internal.container.constraints
 get_execution_count(internal::ModelInternal) = internal.execution_count
 get_executions(internal::ModelInternal) = internal.executions
 get_ic_model_container(internal::ModelInternal) = internal.ic_model_container
 get_optimization_container(internal::ModelInternal) = internal.container
+get_output_dir(internal::ModelInternal) = internal.output_dir
 
-set_console_level!(internal::ModelInternal) = internal.console_level = val
-set_file_level!(internal::ModelInternal) = internal.file_level = val
+set_store_params!(internal::ModelInternal, store_params) = internal.store_params = store_params
+set_console_level!(internal::ModelInternal, val) = internal.console_level = val
+set_file_level!(internal::ModelInternal, val) = internal.file_level = val
 
 set_executions!(internal::ModelInternal, val::Int) = internal.executions = val
 set_execution_count!(internal::ModelInternal, val::Int) = internal.execution_count = val
