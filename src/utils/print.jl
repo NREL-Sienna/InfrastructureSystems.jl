@@ -210,7 +210,7 @@ function show_container_table(io::IO, container::InfrastructureSystemsContainer;
     header = ["Type", "Count", "Has Static Time Series", "Has Forecasts"]
     data = Array{Any, 2}(undef, length(container.data), length(header))
 
-    type_names = [(strip_module_name(string(x)), x) for x in keys(container.data)]
+    type_names = [(string(nameof(x)), x) for x in keys(container.data)]
     sort!(type_names; by = x -> x[1])
     for (i, (type_name, type)) in enumerate(type_names)
         vals = container.data[type]
@@ -248,7 +248,7 @@ function show_components(
         error("$component_type must be a concrete type")
     end
 
-    title = string(strip_module_name(component_type))
+    title = string(nameof(component_type))
     header = ["name"]
     has_available = false
     if :available in fieldnames(component_type)

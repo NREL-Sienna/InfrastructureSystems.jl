@@ -237,7 +237,7 @@ Return a String for the data type of the forecast data, this implementation avoi
 function get_data_type(ts::TimeSeriesData)
     data_type = eltype_data(ts)
     ((data_type <: CONSTANT) || (data_type <: Integer)) && (return "CONSTANT")
-    (data_type <: FunctionData) && (return strip_module_name(data_type))
+    (data_type <: FunctionData) && (return string(nameof(data_type)))
     error("$data_type is not supported in forecast data")
 end
 
@@ -294,7 +294,7 @@ end
 
 # TODO I suspect this could be designed better using reflection even without the security risks of eval discussed above
 const _TYPE_DICT = Dict(
-    strip_module_name(st) => st for st in [
+    string(nameof(st)) => st for st in [
         LinearFunctionData,
         QuadraticFunctionData,
         PolynomialFunctionData,

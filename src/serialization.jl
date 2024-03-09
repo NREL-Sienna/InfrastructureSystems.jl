@@ -238,7 +238,7 @@ end
 function serialize(resolution::Dates.Period)
     return Dict(
         "value" => resolution.value,
-        TYPE_KEY => strip_module_name(typeof(resolution)),
+        TYPE_KEY => string(nameof(typeof(resolution))),
     )
 end
 
