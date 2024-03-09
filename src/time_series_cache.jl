@@ -468,11 +468,3 @@ function make_time_series_cache(
         ignore_scaling_factors = ignore_scaling_factors,
     )
 end
-
-function get_time_series_uuid(
-    ::Type{T},
-    component::U,
-    name::AbstractString,
-) where {T <: TimeSeriesData, U <: InfrastructureSystemsType}
-    return string(get_time_series_uuid(T, component, name))
-end
