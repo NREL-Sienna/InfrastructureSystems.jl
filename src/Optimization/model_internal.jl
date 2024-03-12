@@ -51,8 +51,11 @@ get_executions(internal::ModelInternal) = internal.executions
 get_ic_model_container(internal::ModelInternal) = internal.ic_model_container
 get_optimization_container(internal::ModelInternal) = internal.container
 get_output_dir(internal::ModelInternal) = internal.output_dir
+get_time_series_cache(internal::ModelInternal) = internal.time_series_cache
 
-set_store_params!(internal::ModelInternal, store_params) = internal.store_params = store_params
+set_container!(internal::ModelInternal, val) = internal.container = val
+set_store_params!(internal::ModelInternal, store_params) =
+    internal.store_params = store_params
 set_console_level!(internal::ModelInternal, val) = internal.console_level = val
 set_file_level!(internal::ModelInternal, val) = internal.file_level = val
 

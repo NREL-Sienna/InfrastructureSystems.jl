@@ -1,4 +1,4 @@
-# This needs renaming to avoid collision with the DecionModelResults/EmulationModelResults
+# This needs renaming to avoid collision with the DecisionModelResults/EmulationModelResults
 mutable struct OptimizationProblemResults <: Results
     base_power::Float64
     timestamps::StepRange{Dates.DateTime, Dates.Millisecond}
@@ -41,8 +41,9 @@ get_total_cost(res::OptimizationProblemResults) = get_objective_value(res)
 get_optimizer_stats(res::OptimizationProblemResults) = res.optimizer_stats
 get_parameter_values(res::OptimizationProblemResults) = res.parameter_values
 get_resolution(res::OptimizationProblemResults) = res.timestamps.step
-get_system(res::OptimizationProblemResults) = res.system
+get_source_data(res::OptimizationProblemResults) = res.source_data
 get_forecast_horizon(res::OptimizationProblemResults) = length(get_timestamps(res))
+get_output_dir(res::OptimizationProblemResults) = res.output_dir
 
 get_result_values(x::OptimizationProblemResults, ::AuxVarKey) = x.aux_variable_values
 get_result_values(x::OptimizationProblemResults, ::ConstraintKey) = x.dual_values
@@ -52,6 +53,61 @@ get_result_values(x::OptimizationProblemResults, ::VariableKey) = x.variable_val
 
 function get_objective_value(res::OptimizationProblemResults, execution = 1)
     return res.optimizer_stats[execution, :objective_value]
+end
+
+function export_result(
+    ::Type{CSV.File},
+    path,
+    key::OptimizationContainerKey,
+    timestamp::Dates.DateTime,
+    df::DataFrames.DataFrame,
+)
+    name = encode_key_as_string(key)
+    export_result(CSV.File, path, name, timestamp, df)
+    return
+end
+
+function export_result(
+    ::Type{CSV.File},
+    path,
+    name::AbstractString,
+    timestamp::Dates.DateTime,
+    df::DataFrames.DataFrame,
+)
+    filename = joinpath(path, name * "_" * convert_for_path(timestamp) * ".csv")
+    export_result(CSV.File, filename, df)
+    return
+end
+
+function export_result(
+    ::Type{CSV.File},
+    path,
+    key::OptimizationContainerKey,
+    df::DataFrames.DataFrame,
+)
+    name = encode_key_as_string(key)
+    export_result(CSV.File, path, name, df)
+    return
+end
+
+function export_result(
+    ::Type{CSV.File},
+    path,
+    name::AbstractString,
+    df::DataFrames.DataFrame,
+)
+    filename = joinpath(path, name * ".csv")
+    export_result(CSV.File, filename, df)
+    return
+end
+
+function export_result(::Type{CSV.File}, filename, df::DataFrames.DataFrame)
+    open(filename, "w") do io
+        CSV.write(io, df)
+    end
+
+    @debug "Exported $filename"
+    return
 end
 
 """
@@ -74,50 +130,30 @@ function export_results(
     file_type = CSV.File,
 )
     file_type != CSV.File && error("only CSV.File is currently supported")
-    export_path = mkpath(joinpath(results.output_dir, "variables"))
-    for (key, df) in results.variable_values
-        if should_export_variable(exports, key)
-            export_result(file_type, export_path, key, df)
-        end
-    end
-
-    export_path = mkpath(joinpath(results.output_dir, "aux_variables"))
-    for (key, df) in results.aux_variable_values
-        if should_export_aux_variable(exports, key)
-            export_result(file_type, export_path, key, df)
-        end
-    end
-
-    export_path = mkpath(joinpath(results.output_dir, "duals"))
-    for (key, df) in results.dual_values
-        if should_export_dual(exports, key)
-            export_result(file_type, export_path, key, df)
-        end
-    end
-
-    export_path = mkpath(joinpath(results.output_dir, "parameters"))
-    for (key, df) in results.parameter_values
-        if should_export_parameter(exports, key)
-            export_result(file_type, export_path, key, df)
-        end
-    end
-
-    export_path = mkpath(joinpath(results.output_dir, "expressions"))
-    for (key, df) in results.expression_values
-        if should_export_expression(exports, key)
-            export_result(file_type, export_path, key, df)
+    for (source, decider, label) in [
+        (results.variable_values, should_export_variable, "variables"),
+        (results.aux_variable_values, should_export_aux_variable, "aux_variables"),
+        (results.dual_values, should_export_dual, "duals"),
+        (results.parameter_values, should_export_parameter, "parameters"),
+        (results.expression_values, should_export_expression, "expressions"),
+    ]
+        export_path = mkpath(joinpath(get_output_dir(results), label))
+        for (key, df) in source
+            if decider(exports, key)
+                export_result(file_type, export_path, key, df)
+            end
         end
     end
 
     if exports.optimizer_stats
         export_result(
             file_type,
-            joinpath(results.output_dir, "optimizer_stats.csv"),
+            joinpath(get_output_dir(results), "optimizer_stats.csv"),
             results.optimizer_stats,
         )
     end
 
-    @info "Exported OptimizationProblemResults to $(results.output_dir)"
+    @info "Exported OptimizationProblemResults to $(get_output_dir(results))"
 end
 
 function _deserialize_key(
@@ -136,6 +172,14 @@ function _deserialize_key(
     return make_key(T, args...)
 end
 
+function _validate_keys(existing_keys, result_keys)
+    diff = setdiff(result_keys, existing_keys)
+    if !isempty(diff)
+        throw(IS.InvalidValue("These keys are not stored: $diff"))
+    end
+    return
+end
+
 read_optimizer_stats(res::OptimizationProblemResults) = res.optimizer_stats
 
 """
@@ -143,12 +187,12 @@ Set the system in the results instance.
 
 Throws InvalidValue if the source UUID is incorrect.
 """
-function set_data_source!(
+function set_source_data!(
     res::OptimizationProblemResults,
     source::InfrastructureSystemsType,
 )
     source_uuid = get_uuid(source)
-    if source_uuid != res.source_uuid
+    if source_uuid != res.source_data_uuid
         throw(
             InvalidValue(
                 "System mismatch. $sys_uuid does not match the stored value of $(res.source_uuid)",
@@ -156,12 +200,13 @@ function set_data_source!(
         )
     end
 
-    res.source = source
+    res.source_data = source
     return
 end
 
 const _PROBLEM_RESULTS_FILENAME = "problem_results.bin"
 
+# TODO test this in IS
 """
 Serialize the results to a binary file.
 
@@ -177,6 +222,8 @@ function serialize_results(res::OptimizationProblemResults, directory::AbstractS
     @info "Serialize OptimizationProblemResults to $filename"
 end
 
+make_system_filename(sys_uuid::Union{Base.UUID, AbstractString}) = "system-$(sys_uuid).json"
+
 """
 Construct a OptimizationProblemResults instance from a serialized directory.
 
@@ -191,9 +238,10 @@ function OptimizationProblemResults(directory::AbstractString)
     end
 
     results = Serialization.deserialize(filename)
-    possible_sys_file = joinpath(directory, make_system_filename(results.system_uuid))
+    possible_sys_file = joinpath(directory, make_system_filename(results.source_data_uuid))
     if isfile(possible_sys_file)
-        set_system!(results, PSY.System(possible_sys_file))
+        @error "Unimplemented branch left over from move from PowerSimulations"  # TODO
+    # set_system!(results, PSY.System(possible_sys_file))
     else
         @info "$directory does not contain a serialized System, skipping deserialization."
     end
@@ -206,7 +254,7 @@ function _copy_for_serialization(res::OptimizationProblemResults)
         res.base_power,
         res.timestamps,
         nothing,
-        res.system_uuid,
+        res.source_data_uuid,
         res.aux_variable_values,
         res.variable_values,
         res.dual_values,
@@ -673,7 +721,122 @@ function read_results_with_keys(
     )
 end
 
-function export_realized_results(res::OptimizationProblemResults)
-    save_path = mkpath(joinpath(res.output_dir, "export"))
+"""
+Save the realized results to CSV files for all variables, paramaters, duals, auxiliary variables,
+expressions, and optimizer statistics.
+
+# Arguments
+
+  - `res::Results`: Results
+  - `save_path::AbstractString` : path to save results (defaults to simulation path)
+"""
+function export_realized_results(res::Results)
+    save_path = mkpath(joinpath(get_output_dir(res), "export"))
     return export_realized_results(res, save_path)
+end
+
+function export_realized_results(
+    res::Results,
+    save_path::AbstractString,
+)
+    if !isdir(save_path)
+        throw(IS.ConflictingInputsError("Specified path is not valid."))
+    end
+    write_data(read_results_with_keys(res, list_variable_keys(res)), save_path)
+    !isempty(list_dual_keys(res)) &&
+        write_data(
+            read_results_with_keys(res, list_dual_keys(res)),
+            save_path;
+            name = "dual",
+        )
+    !isempty(list_parameter_keys(res)) && write_data(
+        read_results_with_keys(res, list_parameter_keys(res)),
+        save_path;
+        name = "parameter",
+    )
+    !isempty(list_aux_variable_keys(res)) && write_data(
+        read_results_with_keys(res, list_aux_variable_keys(res)),
+        save_path;
+        name = "aux_variable",
+    )
+    !isempty(list_expression_keys(res)) && write_data(
+        read_results_with_keys(res, list_expression_keys(res)),
+        save_path;
+        name = "expression",
+    )
+    export_optimizer_stats(res, save_path)
+    files = readdir(save_path)
+    compute_file_hash(save_path, files)
+    @info("Files written to $save_path folder.")
+    return save_path
+end
+
+"""
+Save the optimizer statistics to CSV or JSON
+
+# Arguments
+
+  - `res::Union{OptimizationProblemResults, SimulationProblmeResults`: Results
+  - `directory::AbstractString` : target directory
+  - `format = "CSV"` : can be "csv" or "json
+"""
+function export_optimizer_stats(
+    res::Results,
+    directory::AbstractString;
+    format = "csv",
+)
+    data = read_optimizer_stats(res)
+    isnothing(data) && return
+    if uppercase(format) == "CSV"
+        CSV.write(joinpath(directory, "optimizer_stats.csv"), data)
+    elseif uppercase(format) == "JSON"
+        JSON.write(joinpath(directory, "optimizer_stats.json"), JSON.json(to_dict(data)))
+    else
+        throw(error("writing optimizer stats only supports csv or json formats"))
+    end
+end
+
+function write_data(
+    vars_results::Dict,
+    time::DataFrames.DataFrame,
+    save_path::AbstractString,
+)
+    for (k, v) in vars_results
+        var = DataFrames.DataFrame()
+        if size(time, 1) == size(v, 1)
+            var = hcat(time, v)
+        else
+            var = v
+        end
+        file_path = joinpath(save_path, "$(k).csv")
+        CSV.write(file_path, var)
+    end
+end
+
+function write_data(
+    data::DataFrames.DataFrame,
+    save_path::AbstractString,
+    file_name::String,
+)
+    if isfile(save_path)
+        save_path = dirname(save_path)
+    end
+    file_path = joinpath(save_path, "$(file_name).csv")
+    CSV.write(file_path, data)
+    return
+end
+
+# writing a dictionary of dataframes to files
+function write_data(vars_results::Dict, save_path::String; kwargs...)
+    name = get(kwargs, :name, "")
+    for (k, v) in vars_results
+        keyname = encode_key_as_string(k)
+        file_path = joinpath(save_path, "$name$keyname.csv")
+        @debug "writing" file_path
+        if isempty(vars_results[k])
+            @debug "$name$k is empty, not writing $file_path"
+        else
+            CSV.write(file_path, vars_results[k])
+        end
+    end
 end

@@ -1,4 +1,8 @@
 import InteractiveUtils
+import SHA
+import JSON3
+
+const HASH_FILENAME = "check.sha256"
 
 g_cached_subtypes = Dict{DataType, Vector{DataType}}()
 
@@ -564,3 +568,32 @@ transform_array_for_hdf(
 
 transform_array_for_hdf(data::Vector{T}) where {T <: FunctionData} =
     throw(ArgumentError("Not currently implemented for $T"))
+
+to_namedtuple(val) = (; (x => getfield(val, x) for x in fieldnames(typeof(val)))...)
+
+function compute_file_hash(path::String, files::Vector{String})
+    data = Dict("files" => [])
+    for file in files
+        file_path = joinpath(path, file)
+        # Don't put the path in the file so that we can move results directories.
+        file_info = Dict("filename" => file, "hash" => compute_sha256(file_path))
+        push!(data["files"], file_info)
+    end
+
+    open(joinpath(path, HASH_FILENAME), "w") do io
+        JSON3.write(io, data)
+    end
+end
+
+function compute_file_hash(path::String, file::String)
+    return compute_file_hash(path, [file])
+end
+
+"""
+Return the SHA 256 hash of a file.
+"""
+function compute_sha256(filename::AbstractString)
+    return open(filename) do io
+        return bytes2hex(SHA.sha256(io))
+    end
+end
