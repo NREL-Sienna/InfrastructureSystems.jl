@@ -89,3 +89,11 @@ function get_parameter_value(
 ) where {T <: ParameterType, U <: InfrastructureSystemsType}
     return get_data_field(store, :parameters)[ParameterKey(T, U)]
 end
+
+function get_expression_value(
+    store::AbstractModelStore,
+    ::T,
+    ::Type{U},
+) where {T <: ExpressionType, U <: InfrastructureSystemsType}
+    return get_data_field(store, :expressions)[ExpressionKey(T, U)]
+end
