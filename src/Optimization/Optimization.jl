@@ -21,7 +21,8 @@ import ..InfrastructureSystems:
     strip_module_name,
     to_namedtuple,
     get_uuid,
-    compute_file_hash
+    compute_file_hash,
+    convert_for_path
 
 export OptimizationProblemResults
 export OptimizationProblemResultsExport

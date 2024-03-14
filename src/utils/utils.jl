@@ -592,3 +592,5 @@ function compute_sha256(filename::AbstractString)
         return bytes2hex(SHA.sha256(io))
     end
 end
+
+convert_for_path(x::Dates.DateTime) = replace(string(x), ":" => "-")
