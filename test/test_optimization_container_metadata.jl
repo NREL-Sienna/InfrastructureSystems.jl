@@ -13,7 +13,7 @@ import InfrastructureSystems.Optimization:
     file_dir = mktempdir()
     model_name = :MockModel
     IS.Optimization.serialize_metadata(file_dir, metadata, model_name)
-    file_path = IS.Optimization._make_metadata_filename(file_dir, model_name)
+    file_path = IS.Optimization._make_metadata_filename(model_name, file_dir)
     deserialized_metadata = IS.Optimization.deserialize_metadata(
         OptimizationContainerMetadata,
         file_dir,
