@@ -24,7 +24,7 @@ function encode_symbol(
     return Symbol("$(strip_module_name(string(U)))$(_DELIMITER)$(T_)" * meta_)
 end
 
-function check_meta_chars(meta)
+function check_meta_chars(meta::String)
     # Underscores in this field will prevent us from being able to decode keys.
     if occursin(_DELIMITER, meta)
         throw(InvalidValue("'$_DELIMITER' is not allowed in meta"))
@@ -53,7 +53,7 @@ function VariableKey(
     meta = CONTAINER_KEY_EMPTY_META,
 ) where {T <: VariableType, U <: InfrastructureSystemsType}
     if isabstracttype(U)
-        error("Type $U can't be abstract")
+        throw(ArgumentError("Type $U can't be abstract"))
     end
     check_meta_chars(meta)
     return VariableKey{T, U}(meta)
@@ -115,7 +115,7 @@ function ExpressionKey(
     meta = CONTAINER_KEY_EMPTY_META,
 ) where {T <: ExpressionType, U <: InfrastructureSystemsType}
     if isabstracttype(U)
-        error("Type $U can't be abstract")
+        throw(ArgumentError("Type $U can't be abstract"))
     end
     check_meta_chars(meta)
     return ExpressionKey{T, U}(meta)
@@ -148,7 +148,7 @@ function AuxVarKey(
     meta = CONTAINER_KEY_EMPTY_META,
 ) where {T <: AuxVariableType, U <: InfrastructureSystemsType}
     if isabstracttype(U)
-        error("Type $U can't be abstract")
+        throw(ArgumentError("Type $U can't be abstract"))
     end
     return AuxVarKey{T, U}(meta)
 end
@@ -173,7 +173,7 @@ function InitialConditionKey(
     meta = CONTAINER_KEY_EMPTY_META,
 ) where {T <: InitialConditionType, U <: InfrastructureSystemsType}
     if isabstracttype(U)
-        error("Type $U can't be abstract")
+        throw(ArgumentError("Type $U can't be abstract"))
     end
     return InitialConditionKey{T, U}(meta)
 end
@@ -197,7 +197,7 @@ function ParameterKey(
     meta = CONTAINER_KEY_EMPTY_META,
 ) where {T <: ParameterType, U <: InfrastructureSystemsType}
     if isabstracttype(U)
-        error("Type $U can't be abstract")
+        throw(ArgumentError("Type $U can't be abstract"))
     end
     check_meta_chars(meta)
     return ParameterKey{T, U}(meta)
