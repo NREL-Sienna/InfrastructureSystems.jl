@@ -1,0 +1,1 @@
+struct MockContainer <: AbstractOptimizationContainer end

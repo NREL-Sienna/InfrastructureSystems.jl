@@ -38,5 +38,6 @@ include("optimization_container_metadata.jl")
 include("optimizer_stats.jl")
 include("optimization_problem_results_export.jl")
 include("optimization_problem_results.jl")
+include("optimization_test_utils.jl")
 
 end
