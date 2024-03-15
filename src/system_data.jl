@@ -358,7 +358,7 @@ function compare_values(
             continue
         end
         if !compare_values(val_x, val_y; compare_uuids = compare_uuids, exclude = exclude)
-            @error "SystemData field = $name does not match" getfield(x, name) getfield(
+            @error "SystemData field = $name does not match" getproperty(x, name) getproperty(
                 y,
                 name,
             )
@@ -715,7 +715,7 @@ function to_dict(data::SystemData)
         :time_series_params,
         :internal,
     )
-        serialized_data[string(field)] = serialize(getfield(data, field))
+        serialized_data[string(field)] = serialize(getproperty(data, field))
     end
 
     serialized_data["version_info"] = serialize_julia_info()
