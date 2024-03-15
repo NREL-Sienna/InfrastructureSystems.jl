@@ -12,6 +12,7 @@ mutable struct OptimizationProblemResults <: Results
     optimizer_stats::DataFrames.DataFrame
     optimization_container_metadata::OptimizationContainerMetadata
     model_type::String
+    results_dir::String
     output_dir::String
 end
 
@@ -44,6 +45,8 @@ get_resolution(res::OptimizationProblemResults) = res.timestamps.step
 get_source_data(res::OptimizationProblemResults) = res.source_data
 get_forecast_horizon(res::OptimizationProblemResults) = length(get_timestamps(res))
 get_output_dir(res::OptimizationProblemResults) = res.output_dir
+get_results_dir(res::OptimizationProblemResults) = res.results_dir
+get_source_data_uuid(res::OptimizationProblemResults) = res.source_data_uuid
 
 get_result_values(x::OptimizationProblemResults, ::AuxVarKey) = x.aux_variable_values
 get_result_values(x::OptimizationProblemResults, ::ConstraintKey) = x.dual_values
@@ -222,31 +225,14 @@ function serialize_results(res::OptimizationProblemResults, directory::AbstractS
     @info "Serialize OptimizationProblemResults to $filename"
 end
 
-make_system_filename(sys_uuid::Union{Base.UUID, AbstractString}) = "system-$(sys_uuid).json"
-
 """
-Construct a OptimizationProblemResults instance from a serialized directory.
-
-If the directory contains a serialized PowerSystems.System then it will deserialize that
-system and add it to the results. Otherwise, it is up to the caller to call
-[`set_system!`](@ref) on the returned instance to restore it.
+Construct a OptimizationProblemResults instance from a serialized directory. It is up to the
+user or a higher-level package to set the source data using [`set_source_data!`](@ref).
 """
 function OptimizationProblemResults(directory::AbstractString)
     filename = joinpath(directory, _PROBLEM_RESULTS_FILENAME)
-    if !isfile(filename)
-        error("No results file exists in $directory")
-    end
-
-    results = Serialization.deserialize(filename)
-    possible_sys_file = joinpath(directory, make_system_filename(results.source_data_uuid))
-    if isfile(possible_sys_file)
-        @error "Unimplemented branch left over from move from PowerSimulations"  # TODO
-    # set_system!(results, PSY.System(possible_sys_file))
-    else
-        @info "$directory does not contain a serialized System, skipping deserialization."
-    end
-
-    return results
+    isfile(filename) || error("No results file exists in $directory")
+    return Serialization.deserialize(filename)
 end
 
 function _copy_for_serialization(res::OptimizationProblemResults)
@@ -263,6 +249,7 @@ function _copy_for_serialization(res::OptimizationProblemResults)
         res.optimizer_stats,
         res.optimization_container_metadata,
         res.model_type,
+        res.results_dir,
         res.output_dir,
     )
 end
