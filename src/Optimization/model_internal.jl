@@ -48,7 +48,8 @@ get_status(internal::ModelInternal) = internal.status
 get_constraints(internal::ModelInternal) = internal.container.constraints
 get_execution_count(internal::ModelInternal) = internal.execution_count
 get_executions(internal::ModelInternal) = internal.executions
-get_initial_conditions_model_container(internal::ModelInternal) = internal.initial_conditions_model_container
+get_initial_conditions_model_container(internal::ModelInternal) =
+    internal.initial_conditions_model_container
 get_optimization_container(internal::ModelInternal) = internal.container
 get_output_dir(internal::ModelInternal) = internal.output_dir
 get_time_series_cache(internal::ModelInternal) = internal.time_series_cache
