@@ -1,6 +1,6 @@
 mutable struct ModelInternal{T <: AbstractOptimizationContainer}
     container::T
-    ic_model_container::Union{Nothing, T}
+    initial_conditions_model_container::Union{Nothing, T}
     status::BuildStatus
     base_conversion::Bool
     executions::Int
@@ -48,7 +48,7 @@ get_status(internal::ModelInternal) = internal.status
 get_constraints(internal::ModelInternal) = internal.container.constraints
 get_execution_count(internal::ModelInternal) = internal.execution_count
 get_executions(internal::ModelInternal) = internal.executions
-get_ic_model_container(internal::ModelInternal) = internal.ic_model_container
+get_initial_conditions_model_container(internal::ModelInternal) = internal.initial_conditions_model_container
 get_optimization_container(internal::ModelInternal) = internal.container
 get_output_dir(internal::ModelInternal) = internal.output_dir
 get_time_series_cache(internal::ModelInternal) = internal.time_series_cache
@@ -62,11 +62,11 @@ set_file_level!(internal::ModelInternal, val) = internal.file_level = val
 set_executions!(internal::ModelInternal, val::Int) = internal.executions = val
 set_execution_count!(internal::ModelInternal, val::Int) = internal.execution_count = val
 
-function set_ic_model_container!(
+function set_initial_conditions_model_container!(
     internal::ModelInternal,
     val::Union{Nothing, AbstractOptimizationContainer},
 )
-    internal.ic_model_container = val
+    internal.initial_conditions_model_container = val
     return
 end
 

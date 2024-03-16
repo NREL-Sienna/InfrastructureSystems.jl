@@ -5,9 +5,9 @@ const IS = InfrastructureSystems
         IS.Optimization.MockContainer(),
     )
     @test IS.Optimization.get_status(internal) == IS.Optimization.BuildStatus.EMPTY
-    IS.Optimization.set_ic_model_container!(internal, IS.Optimization.MockContainer())
+    IS.Optimization.set_initial_conditions_model_container!(internal, IS.Optimization.MockContainer())
     @test isa(
-        IS.Optimization.get_ic_model_container(internal),
+        IS.Optimization.get_initial_conditions_model_container(internal),
         IS.Optimization.MockContainer,
     )
     IS.Optimization.add_recorder!(internal, :MockRecorder)
