@@ -23,4 +23,9 @@ import InfrastructureSystems.Optimization:
         deserialized_metadata,
         encode_key_as_string(var_key),
     )
+    key = IS.Optimization.deserialize_key(
+        metadata,
+        "Optimization.MockVariable__TestComponent",
+    )
+    @test key == var_key
 end

@@ -35,10 +35,7 @@ function deserialize_metadata(
     return Serialization.deserialize(filename)
 end
 
-function deserialize_key(
-    metadata::OptimizationContainerMetadata,
-    output_dir::AbstractString,
-)
+function deserialize_key(metadata::OptimizationContainerMetadata, name::AbstractString)
     !haskey(metadata.container_key_lookup, name) && error("$name is not stored")
     return metadata.container_key_lookup[name]
 end
