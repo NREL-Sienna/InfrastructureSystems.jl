@@ -59,4 +59,7 @@ const IS = InfrastructureSystems
     var_key2 = VariableKey(IS.Optimization.MockVariable2, IS.TestComponent)
     @test IS.Optimization.convert_result_to_natural_units(var_key2)
     @test !IS.Optimization.should_write_resulting_value(var_key2)
+
+    key_strings = IS.Optimization.encode_keys_as_strings([var_key, var_key2])
+    @test isa(key_strings, Vector{String})
 end
