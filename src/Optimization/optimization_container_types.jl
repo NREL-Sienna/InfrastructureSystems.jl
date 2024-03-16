@@ -17,6 +17,10 @@ should_write_resulting_value(::Type{<:ConstraintType}) = true
 should_write_resulting_value(::Type{<:AuxVariableType}) = true
 should_write_resulting_value(::Type{<:ExpressionType}) = true
 
+
+abstract type RightHandSideParameter <: ParameterType end
+abstract type ObjectiveFunctionParameter <: ParameterType end
+
 """
 Optimization Container construction stage
 """
