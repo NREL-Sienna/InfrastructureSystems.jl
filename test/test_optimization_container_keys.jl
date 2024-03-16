@@ -55,7 +55,17 @@ const IS = InfrastructureSystems
     @test_throws IS.InvalidValue IS.Optimization.check_meta_chars("ZZ__CC")
 
     @test !IS.Optimization.convert_result_to_natural_units(var_key)
+    @test !IS.Optimization.convert_result_to_natural_units(constraint_key)
+    @test !IS.Optimization.convert_result_to_natural_units(auxvar_key)
+    @test !IS.Optimization.convert_result_to_natural_units(expression_key)
+    @test !IS.Optimization.convert_result_to_natural_units(parameter_key)
+
     @test IS.Optimization.should_write_resulting_value(var_key)
+    @test IS.Optimization.should_write_resulting_value(constraint_key)
+    @test IS.Optimization.should_write_resulting_value(auxvar_key)
+    @test IS.Optimization.should_write_resulting_value(expression_key)
+    @test IS.Optimization.should_write_resulting_value(parameter_key)
+
     var_key2 = VariableKey(IS.Optimization.MockVariable2, IS.TestComponent)
     @test IS.Optimization.convert_result_to_natural_units(var_key2)
     @test !IS.Optimization.should_write_resulting_value(var_key2)
