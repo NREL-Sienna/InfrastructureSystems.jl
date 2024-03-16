@@ -59,13 +59,6 @@ function VariableKey(
     return VariableKey{T, U}(meta)
 end
 
-function VariableKey(
-    ::Type{T},
-    meta::String = CONTAINER_KEY_EMPTY_META,
-) where {T <: VariableType}
-    return VariableKey(T, InfrastructureSystemsType, meta)
-end
-
 get_entry_type(
     ::VariableKey{T, U},
 ) where {T <: VariableType, U <: InfrastructureSystemsType} = T
@@ -201,13 +194,6 @@ function ParameterKey(
     end
     check_meta_chars(meta)
     return ParameterKey{T, U}(meta)
-end
-
-function ParameterKey(
-    ::Type{T},
-    meta::String = CONTAINER_KEY_EMPTY_META,
-) where {T <: ParameterType}
-    return ParameterKey(T, InfrastructureSystemsType, meta)
 end
 
 get_entry_type(
