@@ -62,4 +62,11 @@ const IS = InfrastructureSystems
 
     key_strings = IS.Optimization.encode_keys_as_strings([var_key, var_key2])
     @test isa(key_strings, Vector{String})
+
+    made_key = IS.Optimization.make_key(
+        VariableKey,
+        IS.Optimization.MockVariable2,
+        IS.TestComponent,
+    )
+    @test isa(made_key, VariableKey)
 end
