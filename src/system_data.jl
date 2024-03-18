@@ -108,6 +108,16 @@ function SystemData(
     )
 end
 
+function open_time_series_store!(
+    func::Function,
+    data::SystemData,
+    mode = "r",
+    args...;
+    kwargs...,
+)
+    open_store!(func, data.time_series_storage, mode, args...; kwargs...)
+end
+
 """
 Adds time_series from a metadata file or metadata descriptors.
 
@@ -144,10 +154,12 @@ function add_time_series_from_file_metadata!(
     file_metadata::Vector{TimeSeriesFileMetadata};
     resolution = nothing,
 ) where {T <: InfrastructureSystemsComponent}
-    cache = TimeSeriesParsingCache()
-    for metadata in file_metadata
-        if resolution === nothing || metadata.resolution == resolution
-            add_time_series_from_file_metadata_internal!(data, T, cache, metadata)
+    open_time_series_store!(data, "r+") do
+        cache = TimeSeriesParsingCache()
+        for metadata in file_metadata
+            if resolution === nothing || metadata.resolution == resolution
+                add_time_series_from_file_metadata_internal!(data, T, cache, metadata)
+            end
         end
     end
     return

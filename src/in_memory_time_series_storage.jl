@@ -37,6 +37,16 @@ function InMemoryTimeSeriesStorage(hdf5_storage::Hdf5TimeSeriesStorage)
     return storage
 end
 
+function open_store!(
+    func::Function,
+    store::InMemoryTimeSeriesStorage,
+    mode = "r",
+    args...;
+    kwargs...,
+)
+    func(args...; kwargs...)
+end
+
 Base.isempty(storage::InMemoryTimeSeriesStorage) = isempty(storage.data)
 
 check_read_only(storage::InMemoryTimeSeriesStorage) = nothing

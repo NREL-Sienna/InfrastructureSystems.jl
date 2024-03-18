@@ -17,6 +17,7 @@ mutable struct Hdf5TimeSeriesStorage <: TimeSeriesStorage
     file_path::String
     read_only::Bool
     compression::CompressionSettings
+    file::Union{Nothing, HDF5.File}
 end
 
 """
@@ -54,15 +55,32 @@ function Hdf5TimeSeriesStorage(
             close(io)
         end
 
-        storage = Hdf5TimeSeriesStorage(filename, read_only, compression)
+        storage = Hdf5TimeSeriesStorage(filename, read_only, compression, nothing)
         _make_file(storage)
     else
-        storage = Hdf5TimeSeriesStorage(filename, read_only, compression)
+        storage = Hdf5TimeSeriesStorage(filename, read_only, compression, nothing)
     end
 
     @debug "Constructed new Hdf5TimeSeriesStorage" _group = LOG_GROUP_TIME_SERIES storage.file_path read_only compression
 
     return storage
+end
+
+function open_store!(
+    func::Function,
+    storage::Hdf5TimeSeriesStorage,
+    mode = "r",
+    args...;
+    kwargs...,
+)
+    HDF5.h5open(storage.file_path, mode) do file
+        storage.file = file
+        try
+            func(args...; kwargs...)
+        finally
+            storage.file = nothing
+        end
+    end
 end
 
 """
@@ -125,11 +143,17 @@ function _get_time_series_parent_dir(directory = nothing)
     return tempdir()
 end
 
-function Base.isempty(storage::Hdf5TimeSeriesStorage)
-    return HDF5.h5open(storage.file_path, "r+") do file
-        root = _get_root(storage, file)
-        return isempty(keys(root))
+Base.isempty(storage::Hdf5TimeSeriesStorage) = _isempty(storage, storage.file)
+
+function _isempty(storage::Hdf5TimeSeriesStorage, ::Nothing)
+    return HDF5.h5open(storage.file_path, "r") do file
+        _isempty(storage, file)
     end
+end
+
+function _isempty(storage::Hdf5TimeSeriesStorage, file::HDF5.File)
+    root = _get_root(storage, file)
+    return isempty(keys(root))
 end
 
 """
@@ -173,13 +197,21 @@ get_compression_settings(storage::Hdf5TimeSeriesStorage) = storage.compression
 get_file_path(storage::Hdf5TimeSeriesStorage) = storage.file_path
 
 function read_data_format_version(storage::Hdf5TimeSeriesStorage)
+    return _read_data_format_version(storage, storage.file)
+end
+
+function _read_data_format_version(storage::Hdf5TimeSeriesStorage, ::Nothing)
     HDF5.h5open(storage.file_path, "r") do file
-        root = _get_root(storage, file)
-        if !haskey(HDF5.attributes(root), TIME_SERIES_VERSION_KEY)
-            return "1.0.0"
-        end
-        return HDF5.read(HDF5.attributes(root)[TIME_SERIES_VERSION_KEY])
+        return _read_data_format_version(storage, file)
     end
+end
+
+function _read_data_format_version(storage::Hdf5TimeSeriesStorage, file::HDF5.File)
+    root = _get_root(storage, file)
+    if !haskey(HDF5.attributes(root), TIME_SERIES_VERSION_KEY)
+        return "1.0.0"
+    end
+    return HDF5.read(HDF5.attributes(root)[TIME_SERIES_VERSION_KEY])
 end
 
 function serialize_time_series!(
@@ -189,45 +221,64 @@ function serialize_time_series!(
     ts::TimeSeriesData,
 )
     check_read_only(storage)
+    _serialize_time_series!(storage, component_uuid, name, ts, storage.file)
+    return
+end
+
+function _serialize_time_series!(
+    storage::Hdf5TimeSeriesStorage,
+    component_uuid::UUIDs.UUID,
+    name::AbstractString,
+    ts::TimeSeriesData,
+    ::Nothing,
+)
+    HDF5.h5open(storage.file_path, "r+") do file
+        _serialize_time_series!(storage, component_uuid, name, ts, file)
+    end
+    return
+end
+
+function _serialize_time_series!(
+    storage::Hdf5TimeSeriesStorage,
+    component_uuid::UUIDs.UUID,
+    name::AbstractString,
+    ts::TimeSeriesData,
+    file::HDF5.File,
+)
+    root = _get_root(storage, file)
     uuid = string(get_uuid(ts))
     component_name = make_component_name(component_uuid, name)
-
-    HDF5.h5open(storage.file_path, "r+") do file
-        root = _get_root(storage, file)
-        if !haskey(root, uuid)
-            group = HDF5.create_group(root, uuid)
-            # Create a group to store component references as attributes.
-            # Use this instead of this time series' group or the dataset so that
-            # the only attributes are component references.
-            component_refs = HDF5.create_group(group, COMPONENT_REFERENCES_KEY)
-            data = get_array_for_hdf(ts)
-            settings = storage.compression
-            if settings.enabled
-                if settings.type == CompressionTypes.BLOSC
-                    group["data", blosc = settings.level] = data
-                elseif settings.type == CompressionTypes.DEFLATE
-                    if settings.shuffle
-                        group["data", shuffle = (), deflate = settings.level] = data
-                    else
-                        group["data", deflate = settings.level] = data
-                    end
+    if !haskey(root, uuid)
+        group = HDF5.create_group(root, uuid)
+        # Create a group to store component references as attributes.
+        # Use this instead of this time series' group or the dataset so that
+        # the only attributes are component references.
+        component_refs = HDF5.create_group(group, COMPONENT_REFERENCES_KEY)
+        data = get_array_for_hdf(ts)
+        settings = storage.compression
+        if settings.enabled
+            if settings.type == CompressionTypes.BLOSC
+                group["data", blosc = settings.level] = data
+            elseif settings.type == CompressionTypes.DEFLATE
+                if settings.shuffle
+                    group["data", shuffle = (), deflate = settings.level] = data
                 else
-                    error("not implemented for type=$(settings.type)")
+                    group["data", deflate = settings.level] = data
                 end
             else
-                group["data"] = data
+                error("not implemented for type=$(settings.type)")
             end
-            _write_time_series_attributes!(storage, ts, group)
-            @debug "Create new time series entry." _group = LOG_GROUP_TIME_SERIES uuid component_uuid name
         else
-            component_refs = root[uuid][COMPONENT_REFERENCES_KEY]
-            @debug "Add reference to existing time series entry." _group =
-                LOG_GROUP_TIME_SERIES uuid component_uuid name
+            group["data"] = data
         end
-        HDF5.attributes(component_refs)[component_name] = true
-        return
+        _write_time_series_attributes!(storage, ts, group)
+        @debug "Create new time series entry." _group = LOG_GROUP_TIME_SERIES uuid component_uuid name
+    else
+        component_refs = root[uuid][COMPONENT_REFERENCES_KEY]
+        @debug "Add reference to existing time series entry." _group =
+            LOG_GROUP_TIME_SERIES uuid component_uuid name
     end
-
+    HDF5.attributes(component_refs)[component_name] = true
     return
 end
 
@@ -331,20 +382,41 @@ function add_time_series_reference!(
     name::AbstractString,
     ts_uuid::UUIDs.UUID,
 )
+    _add_time_series_reference!(storage, component_uuid, name, ts_uuid, storage.file)
+end
+
+function _add_time_series_reference!(
+    storage::Hdf5TimeSeriesStorage,
+    component_uuid::UUIDs.UUID,
+    name::AbstractString,
+    ts_uuid::UUIDs.UUID,
+    ::Nothing,
+)
+    HDF5.h5open(storage.file_path, "r+") do file
+        _add_time_series_reference!(storage, component_uuid, name, ts_uuid, file)
+    end
+end
+
+function _add_time_series_reference!(
+    storage::Hdf5TimeSeriesStorage,
+    component_uuid::UUIDs.UUID,
+    name::AbstractString,
+    ts_uuid::UUIDs.UUID,
+    file::HDF5.File,
+)
     check_read_only(storage)
     uuid = string(ts_uuid)
     component_name = make_component_name(component_uuid, name)
-    HDF5.h5open(storage.file_path, "r+") do file
-        root = _get_root(storage, file)
-        path = root[uuid][COMPONENT_REFERENCES_KEY]
+    root = _get_root(storage, file)
+    path = root[uuid][COMPONENT_REFERENCES_KEY]
 
-        # It's possible that this is overly restrictive, but as of now there is not a good
-        # reason for a caller to add a reference multiple times. This should be a bug.
-        @assert !haskey(HDF5.attributes(path), component_name) "There is already a reference to $component_name for time series $ts_uuid"
+    # It's possible that this is overly restrictive, but as of now there is not a good
+    # reason for a caller to add a reference multiple times. This should be a bug.
+    @assert !haskey(HDF5.attributes(path), component_name) "There is already a reference to $component_name for time series $ts_uuid"
 
-        HDF5.attributes(path)[component_name] = true
-        @debug "Add reference to existing time series entry." _group = LOG_GROUP_TIME_SERIES uuid component_uuid name
-    end
+    HDF5.attributes(path)[component_name] = true
+    @debug "Add reference to existing time series entry." _group = LOG_GROUP_TIME_SERIES uuid component_uuid name
+    return
 end
 
 # TODO: This needs to change if we want to directly convert Hdf5TimeSeriesStorage to
@@ -391,16 +463,37 @@ function remove_time_series!(
     name::AbstractString,
 )
     check_read_only(storage)
+    _remove_time_series!(storage, uuid, component_uuid, name, storage.file)
+end
+
+function _remove_time_series!(
+    storage::Hdf5TimeSeriesStorage,
+    uuid::UUIDs.UUID,
+    component_uuid::UUIDs.UUID,
+    name::AbstractString,
+    ::Nothing,
+)
     HDF5.h5open(storage.file_path, "r+") do file
-        root = _get_root(storage, file)
-        path = _get_time_series_path(root, uuid)
-        components = path[COMPONENT_REFERENCES_KEY]
-        HDF5.delete_attribute(components, make_component_name(component_uuid, name))
-        if isempty(keys(HDF5.attributes(components)))
-            @debug "$path has no more references; delete it." _group = LOG_GROUP_TIME_SERIES
-            HDF5.delete_object(path)
-        end
+        _remove_time_series!(storage, uuid, component_uuid, name, file)
     end
+end
+
+function _remove_time_series!(
+    storage::Hdf5TimeSeriesStorage,
+    uuid::UUIDs.UUID,
+    component_uuid::UUIDs.UUID,
+    name::AbstractString,
+    file::HDF5.File,
+)
+    root = _get_root(storage, file)
+    path = _get_time_series_path(root, uuid)
+    components = path[COMPONENT_REFERENCES_KEY]
+    HDF5.delete_attribute(components, make_component_name(component_uuid, name))
+    if isempty(keys(HDF5.attributes(components)))
+        @debug "$path has no more references; delete it." _group = LOG_GROUP_TIME_SERIES
+        HDF5.delete_object(path)
+    end
+    return
 end
 
 function deserialize_time_series(
@@ -410,28 +503,50 @@ function deserialize_time_series(
     rows::UnitRange,
     columns::UnitRange,
 ) where {T <: StaticTimeSeries}
-    # Note that all range checks must occur at a higher level.
+    _deserialize_time_series(T, storage, ts_metadata, rows, columns, storage.file)
+end
+
+function _deserialize_time_series(
+    ::Type{T},
+    storage::Hdf5TimeSeriesStorage,
+    ts_metadata::TimeSeriesMetadata,
+    rows::UnitRange,
+    columns::UnitRange,
+    ::Nothing,
+) where {T <: StaticTimeSeries}
     return HDF5.h5open(storage.file_path, "r") do file
-        root = _get_root(storage, file)
-        uuid = get_time_series_uuid(ts_metadata)
-        path = _get_time_series_path(root, uuid)
-        attributes = _read_time_series_attributes(storage, path, rows, T)
-        @assert_op attributes["type"] == T
-        @debug "deserializing a StaticTimeSeries" _group = LOG_GROUP_TIME_SERIES T
-        data_type = attributes["data_type"]
-        data = get_hdf_array(path["data"], data_type, rows)
-        return T(
-            ts_metadata,
-            TimeSeries.TimeArray(
-                range(
-                    attributes["start_time"];
-                    length = length(rows),
-                    step = attributes["resolution"],
-                ),
-                data,
-            ),
-        )
+        _deserialize_time_series(T, storage, ts_metadata, rows, columns, file)
     end
+end
+
+function _deserialize_time_series(
+    ::Type{T},
+    storage::Hdf5TimeSeriesStorage,
+    ts_metadata::TimeSeriesMetadata,
+    rows::UnitRange,
+    columns::UnitRange,
+    file::HDF5.File,
+) where {T <: StaticTimeSeries}
+    # Note that all range checks must occur at a higher level.
+    root = _get_root(storage, file)
+    uuid = get_time_series_uuid(ts_metadata)
+    path = _get_time_series_path(root, uuid)
+    attributes = _read_time_series_attributes(storage, path, rows, T)
+    @assert_op attributes["type"] == T
+    @debug "deserializing a StaticTimeSeries" _group = LOG_GROUP_TIME_SERIES T
+    data_type = attributes["data_type"]
+    data = get_hdf_array(path["data"], data_type, rows)
+    return T(
+        ts_metadata,
+        TimeSeries.TimeArray(
+            range(
+                attributes["start_time"];
+                length = length(rows),
+                step = attributes["resolution"],
+            ),
+            data,
+        ),
+    )
 end
 
 function deserialize_time_series(
@@ -442,29 +557,51 @@ function deserialize_time_series(
     columns::UnitRange,
 ) where {T <: AbstractDeterministic}
     # Note that all range checks must occur at a higher level.
-    return HDF5.h5open(storage.file_path, "r") do file
-        root = _get_root(storage, file)
-        uuid = get_time_series_uuid(ts_metadata)
-        path = _get_time_series_path(root, uuid)
-        actual_type = _read_time_series_type(path)
-        if actual_type == SingleTimeSeries
-            last_index = size(path["data"])[1]
-            return deserialize_deterministic_from_single_time_series(
-                storage,
-                ts_metadata,
-                rows,
-                columns,
-                last_index,
-            )
-        end
+    _deserialize_time_series(T, storage, ts_metadata, rows, columns, storage.file)
+end
 
-        attributes = _read_time_series_attributes(storage, path, rows, T)
-        @assert actual_type <: T "actual_type = $actual_type T = $T"
-        @debug "deserializing a Forecast" _group = LOG_GROUP_TIME_SERIES T
-        data_type = attributes["data_type"]
-        data = get_hdf_array(path["data"], data_type, attributes, rows, columns)
-        return actual_type(ts_metadata, data)
+function _deserialize_time_series(
+    ::Type{T},
+    storage::Hdf5TimeSeriesStorage,
+    ts_metadata::TimeSeriesMetadata,
+    rows::UnitRange,
+    columns::UnitRange,
+    ::Nothing,
+) where {T <: AbstractDeterministic}
+    return HDF5.h5open(storage.file_path, "r") do file
+        _deserialize_time_series(T, storage, ts_metadata, rows, columns, file)
     end
+end
+
+function _deserialize_time_series(
+    ::Type{T},
+    storage::Hdf5TimeSeriesStorage,
+    ts_metadata::TimeSeriesMetadata,
+    rows::UnitRange,
+    columns::UnitRange,
+    file::HDF5.File,
+) where {T <: AbstractDeterministic}
+    root = _get_root(storage, file)
+    uuid = get_time_series_uuid(ts_metadata)
+    path = _get_time_series_path(root, uuid)
+    actual_type = _read_time_series_type(path)
+    if actual_type == SingleTimeSeries
+        last_index = size(path["data"])[1]
+        return deserialize_deterministic_from_single_time_series(
+            storage,
+            ts_metadata,
+            rows,
+            columns,
+            last_index,
+        )
+    end
+
+    attributes = _read_time_series_attributes(storage, path, rows, T)
+    @assert actual_type <: T "actual_type = $actual_type T = $T"
+    @debug "deserializing a Forecast" _group = LOG_GROUP_TIME_SERIES T
+    data_type = attributes["data_type"]
+    data = get_hdf_array(path["data"], data_type, attributes, rows, columns)
+    return actual_type(ts_metadata, data)
 end
 
 function get_hdf_array(
@@ -647,38 +784,59 @@ function deserialize_time_series(
     rows::UnitRange,
     columns::UnitRange,
 ) where {T <: Probabilistic}
+    _deserialize_time_series(T, storage, ts_metadata, rows, columns, storage.file)
+end
+
+function _deserialize_time_series(
+    ::Type{T},
+    storage::Hdf5TimeSeriesStorage,
+    ts_metadata::TimeSeriesMetadata,
+    rows::UnitRange,
+    columns::UnitRange,
+    ::Nothing,
+) where {T <: Probabilistic}
+    return HDF5.h5open(storage.file_path, "r") do file
+        _deserialize_time_series(T, storage, ts_metadata, rows, columns, file)
+    end
+end
+
+function _deserialize_time_series(
+    ::Type{T},
+    storage::Hdf5TimeSeriesStorage,
+    ts_metadata::TimeSeriesMetadata,
+    rows::UnitRange,
+    columns::UnitRange,
+    file::HDF5.File,
+) where {T <: Probabilistic}
     # Note that all range checks must occur at a higher level.
     total_percentiles = length(get_percentiles(ts_metadata))
-
-    return HDF5.h5open(storage.file_path, "r") do file
-        root = _get_root(storage, file)
-        uuid = get_time_series_uuid(ts_metadata)
-        path = _get_time_series_path(root, uuid)
-        attributes = _read_time_series_attributes(storage, path, rows, T)
-        @assert_op attributes["type"] == T
-        @assert_op length(attributes["dataset_size"]) == 3
-        @debug "deserializing a Forecast" _group = LOG_GROUP_TIME_SERIES T
-        data = SortedDict{Dates.DateTime, Matrix{attributes["data_type"]}}()
-        initial_timestamp = attributes["start_time"]
-        interval = attributes["interval"]
-        start_time = initial_timestamp + interval * (first(columns) - 1)
-        if length(columns) == 1
-            data[start_time] =
-                transpose(path["data"][1:total_percentiles, rows, first(columns)])
-        else
-            data_read = PermutedDimsArray(
-                path["data"][1:total_percentiles, rows, columns],
-                [3, 2, 1],
-            )
-            for (i, it) in enumerate(
-                range(start_time; length = length(columns), step = attributes["interval"]),
-            )
-                data[it] = @view data_read[i, 1:length(rows), 1:total_percentiles]
-            end
+    root = _get_root(storage, file)
+    uuid = get_time_series_uuid(ts_metadata)
+    path = _get_time_series_path(root, uuid)
+    attributes = _read_time_series_attributes(storage, path, rows, T)
+    @assert_op attributes["type"] == T
+    @assert_op length(attributes["dataset_size"]) == 3
+    @debug "deserializing a Forecast" _group = LOG_GROUP_TIME_SERIES T
+    data = SortedDict{Dates.DateTime, Matrix{attributes["data_type"]}}()
+    initial_timestamp = attributes["start_time"]
+    interval = attributes["interval"]
+    start_time = initial_timestamp + interval * (first(columns) - 1)
+    if length(columns) == 1
+        data[start_time] =
+            transpose(path["data"][1:total_percentiles, rows, first(columns)])
+    else
+        data_read = PermutedDimsArray(
+            path["data"][1:total_percentiles, rows, columns],
+            [3, 2, 1],
+        )
+        for (i, it) in enumerate(
+            range(start_time; length = length(columns), step = attributes["interval"]),
+        )
+            data[it] = @view data_read[i, 1:length(rows), 1:total_percentiles]
         end
-
-        return T(ts_metadata, data)
     end
+
+    return T(ts_metadata, data)
 end
 
 function deserialize_time_series(
@@ -688,36 +846,58 @@ function deserialize_time_series(
     rows::UnitRange,
     columns::UnitRange,
 ) where {T <: Scenarios}
+    _deserialize_time_series(T, storage, ts_metadata, rows, columns, storage.file)
+end
+
+function _deserialize_time_series(
+    ::Type{T},
+    storage::Hdf5TimeSeriesStorage,
+    ts_metadata::TimeSeriesMetadata,
+    rows::UnitRange,
+    columns::UnitRange,
+    ::Nothing,
+) where {T <: Scenarios}
+    return HDF5.h5open(storage.file_path, "r") do file
+        _deserialize_time_series(T, storage, ts_metadata, rows, columns, file)
+    end
+end
+
+function _deserialize_time_series(
+    ::Type{T},
+    storage::Hdf5TimeSeriesStorage,
+    ts_metadata::TimeSeriesMetadata,
+    rows::UnitRange,
+    columns::UnitRange,
+    file::HDF5.File,
+) where {T <: Scenarios}
     # Note that all range checks must occur at a higher level.
     total_scenarios = get_scenario_count(ts_metadata)
 
-    return HDF5.h5open(storage.file_path, "r") do file
-        root = _get_root(storage, file)
-        uuid = get_time_series_uuid(ts_metadata)
-        path = _get_time_series_path(root, uuid)
-        attributes = _read_time_series_attributes(storage, path, rows, T)
-        @assert_op attributes["type"] == T
-        @assert_op length(attributes["dataset_size"]) == 3
-        @debug "deserializing a Forecast" _group = LOG_GROUP_TIME_SERIES T
-        data = SortedDict{Dates.DateTime, Matrix{attributes["data_type"]}}()
-        initial_timestamp = attributes["start_time"]
-        interval = attributes["interval"]
-        start_time = initial_timestamp + interval * (first(columns) - 1)
-        if length(columns) == 1
-            data[start_time] =
-                transpose(path["data"][1:total_scenarios, rows, first(columns)])
-        else
-            data_read =
-                PermutedDimsArray(path["data"][1:total_scenarios, rows, columns], [3, 2, 1])
-            for (i, it) in enumerate(
-                range(start_time; length = length(columns), step = attributes["interval"]),
-            )
-                data[it] = @view data_read[i, 1:length(rows), 1:total_scenarios]
-            end
+    root = _get_root(storage, file)
+    uuid = get_time_series_uuid(ts_metadata)
+    path = _get_time_series_path(root, uuid)
+    attributes = _read_time_series_attributes(storage, path, rows, T)
+    @assert_op attributes["type"] == T
+    @assert_op length(attributes["dataset_size"]) == 3
+    @debug "deserializing a Forecast" _group = LOG_GROUP_TIME_SERIES T
+    data = SortedDict{Dates.DateTime, Matrix{attributes["data_type"]}}()
+    initial_timestamp = attributes["start_time"]
+    interval = attributes["interval"]
+    start_time = initial_timestamp + interval * (first(columns) - 1)
+    if length(columns) == 1
+        data[start_time] =
+            transpose(path["data"][1:total_scenarios, rows, first(columns)])
+    else
+        data_read =
+            PermutedDimsArray(path["data"][1:total_scenarios, rows, columns], [3, 2, 1])
+        for (i, it) in enumerate(
+            range(start_time; length = length(columns), step = attributes["interval"]),
+        )
+            data[it] = @view data_read[i, 1:length(rows), 1:total_scenarios]
         end
-
-        return T(ts_metadata, data)
     end
+
+    return T(ts_metadata, data)
 end
 
 function clear_time_series!(storage::Hdf5TimeSeriesStorage)
@@ -728,18 +908,17 @@ function clear_time_series!(storage::Hdf5TimeSeriesStorage)
     @info "Cleared all time series."
 end
 
-function get_num_time_series(storage::Hdf5TimeSeriesStorage)
-    num = 0
+get_num_time_series(storage::Hdf5TimeSeriesStorage) =
+    _get_num_time_series(storage, storage.file)
 
+function _get_num_time_series(storage::Hdf5TimeSeriesStorage, ::Nothing)
     HDF5.h5open(storage.file_path, "r") do file
-        root = _get_root(storage, file)
-        for component in root
-            num += 1
-        end
+        _get_num_time_series(storage, file)
     end
-
-    return num
 end
+
+_get_num_time_series(storage::Hdf5TimeSeriesStorage, file::HDF5.File) =
+    length(_get_root(storage, file))
 
 function replace_component_uuid!(
     storage::Hdf5TimeSeriesStorage,
@@ -749,28 +928,70 @@ function replace_component_uuid!(
     name,
 )
     check_read_only(storage)
-    HDF5.h5open(storage.file_path, "r+") do file
-        root = _get_root(storage, file)
-        path = _get_time_series_path(root, ts_uuid)
-        components = path[COMPONENT_REFERENCES_KEY]
-        HDF5.delete_attribute(components, make_component_name(old_component_uuid, name))
-        new_component_name = make_component_name(new_component_uuid, name)
-        if haskey(HDF5.attributes(components), new_component_name)
-            error("BUG! $new_component_name is already stored in time series $ts_uuid")
-        end
+    _replace_component_uuid!(
+        storage,
+        ts_uuid,
+        old_component_uuid,
+        new_component_uuid,
+        name,
+        storage.file,
+    )
+end
 
-        HDF5.attributes(components)[new_component_name] = true
-        return
+function _replace_component_uuid!(
+    storage::Hdf5TimeSeriesStorage,
+    ts_uuid,
+    old_component_uuid,
+    new_component_uuid,
+    name,
+    ::Nothing,
+)
+    HDF5.h5open(storage.file_path, "r+") do file
+        _replace_component_uuid!(
+            storage,
+            ts_uuid,
+            old_component_uuid,
+            new_component_uuid,
+            name,
+            file,
+        )
     end
 end
 
-function _make_file(storage::Hdf5TimeSeriesStorage)
-    HDF5.h5open(storage.file_path, "w") do file
-        root = HDF5.create_group(file, HDF5_TS_ROOT_PATH)
-        HDF5.attributes(root)[TIME_SERIES_VERSION_KEY] = TIME_SERIES_DATA_FORMAT_VERSION
-        _serialize_compression_settings(storage, root)
-        return
+function _replace_component_uuid!(
+    storage::Hdf5TimeSeriesStorage,
+    ts_uuid,
+    old_component_uuid,
+    new_component_uuid,
+    name,
+    file::HDF5.File,
+)
+    root = _get_root(storage, file)
+    path = _get_time_series_path(root, ts_uuid)
+    components = path[COMPONENT_REFERENCES_KEY]
+    HDF5.delete_attribute(components, make_component_name(old_component_uuid, name))
+    new_component_name = make_component_name(new_component_uuid, name)
+    if haskey(HDF5.attributes(components), new_component_name)
+        error("BUG! $new_component_name is already stored in time series $ts_uuid")
     end
+
+    HDF5.attributes(components)[new_component_name] = true
+    return
+end
+
+_make_file(storage::Hdf5TimeSeriesStorage) = _make_file(storage, storage.file)
+
+function _make_file(storage::Hdf5TimeSeriesStorage, ::Nothing)
+    HDF5.h5open(storage.file_path, "w") do file
+        _make_file(storage, file)
+    end
+end
+
+function _make_file(storage::Hdf5TimeSeriesStorage, file::HDF5.File)
+    root = HDF5.create_group(file, HDF5_TS_ROOT_PATH)
+    HDF5.attributes(root)[TIME_SERIES_VERSION_KEY] = TIME_SERIES_DATA_FORMAT_VERSION
+    _serialize_compression_settings(storage, root)
+    return
 end
 
 function _serialize_compression_settings(storage::Hdf5TimeSeriesStorage, root)
@@ -782,16 +1003,23 @@ function _serialize_compression_settings(storage::Hdf5TimeSeriesStorage, root)
 end
 
 function _deserialize_compression_settings!(storage::Hdf5TimeSeriesStorage)
+    _deserialize_compression_settings!(storage, storage.file)
+end
+
+function _deserialize_compression_settings!(storage::Hdf5TimeSeriesStorage, ::Nothing)
     HDF5.h5open(storage.file_path, "r+") do file
-        root = _get_root(storage, file)
-        storage.compression = CompressionSettings(;
-            enabled = HDF5.read(HDF5.attributes(root)["compression_enabled"]),
-            type = CompressionTypes(HDF5.read(HDF5.attributes(root)["compression_type"])),
-            level = HDF5.read(HDF5.attributes(root)["compression_level"]),
-            shuffle = HDF5.read(HDF5.attributes(root)["compression_shuffle"]),
-        )
-        return
+        _deserialize_compression_settings!(storage, file)
     end
+end
+
+function _deserialize_compression_settings!(storage::Hdf5TimeSeriesStorage, file::HDF5.File)
+    root = _get_root(storage, file)
+    storage.compression = CompressionSettings(;
+        enabled = HDF5.read(HDF5.attributes(root)["compression_enabled"]),
+        type = CompressionTypes(HDF5.read(HDF5.attributes(root)["compression_type"])),
+        level = HDF5.read(HDF5.attributes(root)["compression_level"]),
+        shuffle = HDF5.read(HDF5.attributes(root)["compression_shuffle"]),
+    )
     return
 end
 

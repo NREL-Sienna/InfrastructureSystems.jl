@@ -434,3 +434,69 @@ end
     @test uuid1 != uuid2
     @test IS.get_component(IS.TestComponent, data, name).name == name
 end
+
+@testset "Test bulk add of time series" begin
+    for in_memory in (false, true)
+        sys = IS.SystemData()
+        initial_time = Dates.DateTime("2020-09-01")
+        resolution = Dates.Hour(1)
+        len = 24
+        timestamps = range(initial_time; length = len, step = resolution)
+        arrays = [TimeSeries.TimeArray(timestamps, rand(len)) for _ in 1:5]
+        ts_name = "test"
+        component_names = String[]
+
+        IS.open_time_series_store!(sys, "r+") do
+            for (i, ta) in enumerate(arrays)
+                name = "component_$(i)"
+                component = IS.TestComponent(name, 3)
+                IS.add_component!(sys, component)
+                push!(component_names, name)
+                ts = IS.SingleTimeSeries(; data = ta, name = ts_name)
+                IS.add_time_series!(sys, component, ts)
+            end
+        end
+
+        IS.open_time_series_store!(sys, "r") do
+            for (i, expected_array) in enumerate(arrays)
+                name = component_names[i]
+                component = IS.get_component(IS.TestComponent, sys, name)
+                @test !isnothing(component)
+                ts = IS.get_time_series(IS.SingleTimeSeries, component, ts_name)
+                @test ts.data == expected_array
+            end
+        end
+    end
+end
+
+@testset "Test bulk add of time series via function with args and kwargs" begin
+    function add_time_series(sys_data, component, ta; ts_name)
+        ts = IS.SingleTimeSeries(; data = ta, name = ts_name)
+        IS.add_time_series!(sys_data, component, ts)
+    end
+
+    for in_memory in (false, true)
+        sys = IS.SystemData()
+        initial_time = Dates.DateTime("2020-09-01")
+        resolution = Dates.Hour(1)
+        len = 24
+        timestamps = range(initial_time; length = len, step = resolution)
+        ta = TimeSeries.TimeArray(timestamps, rand(len))
+        ts_name = "test"
+        name = "component"
+        component = IS.TestComponent(name, 3)
+        IS.add_component!(sys, component)
+        IS.open_time_series_store!(
+            add_time_series,
+            sys,
+            "r+",
+            sys,
+            component,
+            ta;
+            ts_name = ts_name,
+        )
+
+        ts = IS.get_time_series(IS.SingleTimeSeries, component, ts_name)
+        @test ts.data == ta
+    end
+end
