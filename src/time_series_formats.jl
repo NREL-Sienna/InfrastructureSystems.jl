@@ -27,7 +27,7 @@ function read_time_series(
     @debug "Read CSV data from $(data_file)." _group = LOG_GROUP_TIME_SERIES
 
     format = get_time_series_format(file)
-    @debug "$format detected for the time series" _group = LOG_GROUP_TIME_SERIES
+    @debug "$format detected for the time series" T _group = LOG_GROUP_TIME_SERIES
     return read_time_series(format, T, file, component_name; kwargs...)
 end
 
