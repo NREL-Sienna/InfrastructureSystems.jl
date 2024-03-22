@@ -117,7 +117,6 @@ function read_time_series_file_metadata(file_path::AbstractString)
         csv = DataFrames.DataFrame(CSV.File(file_path))
         metadata = Vector{TimeSeriesFileMetadata}()
         for row in eachrow(csv)
-            category = row.category
             scaling_factor_multiplier = get(row, :scaling_factor_multiplier, nothing)
             scaling_factor_multiplier_module =
                 get(row, :scaling_factor_multiplier_module, nothing)
@@ -255,7 +254,7 @@ function TimeSeriesParsedInfo(metadata::TimeSeriesFileMetadata, raw_data::RawTim
             normalization_factor = NormalizationTypes.MAX
         else
             factor = metadata.normalization_factor
-            throw(DataFormatError("unsupported normalization_factor {factor}"))
+            throw(DataFormatError("unsupported normalization_factor $factor"))
         end
     elseif metadata.normalization_factor == 0.0
         throw(DataFormatError("unsupported normalization_factor value of 0.0"))
