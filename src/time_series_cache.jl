@@ -120,7 +120,6 @@ struct TimeSeriesCacheKey
     component_uuid::Base.UUID
     time_series_type::Type{<:TimeSeriesData}
     name::String
-    multiplier_id::Int
 end
 
 struct TimeSeriesCacheCommon{T <: TimeSeriesData, U <: InfrastructureSystemsComponent}
