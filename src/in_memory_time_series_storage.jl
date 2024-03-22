@@ -49,9 +49,9 @@ end
 
 Base.isempty(storage::InMemoryTimeSeriesStorage) = isempty(storage.data)
 
-check_read_only(storage::InMemoryTimeSeriesStorage) = nothing
+check_read_only(::InMemoryTimeSeriesStorage) = nothing
 
-get_compression_settings(storage::InMemoryTimeSeriesStorage) =
+get_compression_settings(::InMemoryTimeSeriesStorage) =
     CompressionSettings(; enabled = false)
 
 is_read_only(storage::InMemoryTimeSeriesStorage) = false
@@ -128,15 +128,15 @@ function deserialize_time_series(
         throw(ArgumentError("$uuid is not stored"))
     end
 
-    ts = storage.data[uuid].ts
+    ts_data = get_data(storage.data[uuid].ts)
     total_rows = length(ts_metadata)
     if rows.start == 1 && length(rows) == total_rows
         # No memory allocation
-        return ts
+        return T(ts_metadata, ts_data)
     end
 
     # TimeArray doesn't support @view
-    return T(ts, get_data(ts)[rows])
+    return T(ts_metadata, ts_data[rows])
 end
 
 function deserialize_time_series(
@@ -152,41 +152,41 @@ function deserialize_time_series(
     end
 
     ts = storage.data[uuid].ts
+    ts_data = get_data(ts)
     if ts isa SingleTimeSeries
         return deserialize_deterministic_from_single_time_series(
             storage,
             ts_metadata,
             rows,
             columns,
-            length(ts),
+            length(ts_data),
         )
     end
 
     total_rows = length(ts_metadata)
     total_columns = get_count(ts_metadata)
     if length(rows) == total_rows && length(columns) == total_columns
-        return ts
+        return T(ts_metadata, ts_data)
     end
 
-    full_data = get_data(ts)
-    initial_timestamp = get_initial_timestamp(ts)
-    resolution = get_resolution(ts)
-    interval = get_interval(ts)
+    initial_timestamp = get_initial_timestamp(ts_metadata)
+    resolution = get_resolution(ts_metadata)
+    interval = get_interval(ts_metadata)
     start_time = initial_timestamp + interval * (columns.start - 1)
-    data = SortedDict{Dates.DateTime, eltype(typeof(full_data)).parameters[2]}()
+    data = SortedDict{Dates.DateTime, eltype(typeof(ts_data)).parameters[2]}()
     for initial_time in range(start_time; step = interval, length = length(columns))
         if rows.start == 1
             it = initial_time
         else
             it = initial_time + (rows.start - 1) * resolution
         end
-        data[it] = @view full_data[initial_time][rows]
+        data[it] = @view ts_data[initial_time][rows]
     end
 
     if T <: AbstractDeterministic
-        return Deterministic(ts, data)
+        return Deterministic(ts_metadata, data)
     else
-        return T(ts, data)
+        return T(ts_metadata, data)
     end
 end
 
@@ -223,9 +223,10 @@ function replace_component_uuid!(
     end
     push!(record.component_names, new_component_name)
 
-    @debug "Replaced $component_name with $new_component_name for $uuid." _group =
+    @debug "Replaced $component_name with $new_component_name for $ts_uuid." _group =
         LOG_GROUP_TIME_SERIES
 end
+
 function convert_to_hdf5(storage::InMemoryTimeSeriesStorage, filename::AbstractString)
     create_file = true
     hdf5_storage = Hdf5TimeSeriesStorage(create_file; filename = filename)

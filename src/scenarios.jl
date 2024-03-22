@@ -126,6 +126,29 @@ function Scenarios(
     )
 end
 
+"""
+Construct Scenarios that shares the data from an existing instance.
+
+This is useful in cases where you want a component to use the same time series data for
+two different attributes.
+"""
+function Scenarios(
+    src::Scenarios,
+    name::AbstractString;
+    scaling_factor_multiplier::Union{Nothing, Function} = nothing,
+)
+    # units and ext are not copied
+    internal = InfrastructureSystemsInternal(; uuid = get_uuid(src))
+    return Scenarios(
+        name,
+        src.data,
+        src.scenario_count,
+        src.resolution,
+        scaling_factor_multiplier,
+        internal,
+    )
+end
+
 function Scenarios(ts_metadata::ScenariosMetadata, data::SortedDict)
     return Scenarios(;
         name = get_name(ts_metadata),
