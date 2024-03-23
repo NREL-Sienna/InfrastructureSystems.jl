@@ -1,15 +1,17 @@
 mutable struct TestComponent <: InfrastructureSystemsComponent
     name::String
     val::Int
+    val2::Int
     time_series_container::TimeSeriesContainer
     supplemental_attributes_container::SupplementalAttributesContainer
     internal::InfrastructureSystemsInternal
 end
 
-function TestComponent(name, val)
+function TestComponent(name, val; val2 = 0)
     return TestComponent(
         name,
         val,
+        val2,
         TimeSeriesContainer(),
         SupplementalAttributesContainer(),
         InfrastructureSystemsInternal(),
@@ -51,6 +53,7 @@ end
 get_internal(component::TestComponent) = component.internal
 get_internal(component::AdditionalTestComponent) = component.internal
 get_val(component::TestComponent) = component.val
+get_val2(component::TestComponent) = component.val2
 get_supplemental_attributes_container(component::TestComponent) =
     component.supplemental_attributes_container
 get_supplemental_attributes_container(component::AdditionalTestComponent) =
@@ -69,6 +72,7 @@ function deserialize(::Type{TestComponent}, data::Dict)
     return TestComponent(
         data["name"],
         data["val"],
+        data["val2"],
         deserialize(TimeSeriesContainer, data["time_series_container"]),
         data["supplemental_attributes_container"],
         deserialize(InfrastructureSystemsInternal, data["internal"]),

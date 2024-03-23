@@ -194,6 +194,28 @@ function Deterministic(forecast::Deterministic, data)
     return Deterministic(; vals...)
 end
 
+"""
+Construct Deterministic that shares the data from an existing instance.
+
+This is useful in cases where you want a component to use the same time series data for
+two different attributes.
+"""
+function Deterministic(
+    src::Deterministic,
+    name::AbstractString;
+    scaling_factor_multiplier::Union{Nothing, Function} = nothing,
+)
+    # units and ext are not copied
+    internal = InfrastructureSystemsInternal(; uuid = get_uuid(src))
+    return Deterministic(
+        name,
+        src.data,
+        src.resolution,
+        scaling_factor_multiplier,
+        internal,
+    )
+end
+
 convert_data(
     data::AbstractDict{<:Any, Vector{T}},
 ) where {T <: Union{CONSTANT, FunctionData}} =

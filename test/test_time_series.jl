@@ -2097,6 +2097,147 @@ end
     end
 end
 
+@testset "Test SingleTimeSeries shared by two component fields" begin
+    for use_scaling_factor in (true, false)
+        for in_memory in (true, false)
+            sys = IS.SystemData(; time_series_in_memory = in_memory)
+            component = IS.TestComponent("Component1", 2; val2 = 3)
+            IS.add_component!(sys, component)
+
+            initial_time = Dates.DateTime("2020-01-01T00:00:00")
+            end_time = Dates.DateTime("2020-01-01T23:00:00")
+            dates = collect(initial_time:Dates.Hour(1):end_time)
+            len = length(dates)
+            resolution = Dates.Hour(1)
+            data = rand(24)
+            ta = TimeSeries.TimeArray(dates, data, ["1"])
+            name1 = "val"
+            name2 = "val2"
+            sfm1 = use_scaling_factor ? IS.get_val : nothing
+            sfm2 = use_scaling_factor ? IS.get_val2 : nothing
+            ts1a = IS.SingleTimeSeries(;
+                name = name1,
+                data = ta,
+                scaling_factor_multiplier = sfm1,
+            )
+            IS.add_time_series!(sys, component, ts1a)
+            ts2a = IS.SingleTimeSeries(ts1a, name2; scaling_factor_multiplier = sfm2)
+            IS.add_time_series!(sys, component, ts2a)
+            @test IS.get_num_time_series(sys.time_series_storage) == 1
+            ts1b = IS.get_time_series(IS.SingleTimeSeries, component, name1)
+            ts2b = IS.get_time_series(IS.SingleTimeSeries, component, name2)
+            @test ts1b.data == ts2b.data
+            ta_vals = TimeSeries.values(ta)
+            expected1 = use_scaling_factor ? ta_vals * component.val : ta_vals
+            expected2 = use_scaling_factor ? ta_vals * component.val2 : ta_vals
+            @test IS.get_time_series_values(
+                component,
+                ts1b,
+                initial_time;
+            ) == expected1
+            @test IS.get_time_series_values(
+                component,
+                ts2b,
+                initial_time;
+            ) == expected2
+        end
+    end
+end
+
+function test_forecasts_with_shared_component_fields(forecast_type)
+    for use_scaling_factor in (true, false)
+        for in_memory in (true, false)
+            sys = IS.SystemData(; time_series_in_memory = in_memory)
+            component = IS.TestComponent("Component1", 2; val2 = 3)
+            IS.add_component!(sys, component)
+
+            initial_time = Dates.DateTime("2020-01-01T00:00:00")
+            end_time = Dates.DateTime("2020-01-01T23:00:00")
+            dates = collect(initial_time:Dates.Hour(1):end_time)
+            len = length(dates)
+            resolution = Dates.Hour(1)
+            other_time = initial_time + resolution
+            name1 = "val"
+            name2 = "val2"
+            horizon = 24
+            sfm1 = use_scaling_factor ? IS.get_val : nothing
+            sfm2 = use_scaling_factor ? IS.get_val2 : nothing
+            if forecast_type <: IS.Deterministic
+                data =
+                    SortedDict(initial_time => rand(horizon), other_time => rand(horizon))
+                forecast1a = IS.Deterministic(;
+                    data = data,
+                    name = name1,
+                    resolution = resolution,
+                    scaling_factor_multiplier = sfm1,
+                )
+            elseif forecast_type <: IS.Probabilistic
+                data =
+                    Dict(initial_time => rand(horizon, 99), other_time => ones(horizon, 99))
+                forecast1a = IS.Probabilistic(
+                    name1,
+                    data,
+                    ones(99),
+                    resolution;
+                    scaling_factor_multiplier = sfm1,
+                )
+            elseif forecast_type <: IS.Scenarios
+                data =
+                    Dict(initial_time => rand(horizon, 99), other_time => ones(horizon, 99))
+                forecast1a =
+                    IS.Scenarios(name1, data, resolution; scaling_factor_multiplier = sfm1)
+            else
+                error("Unsupported forecast type: $forecast_type")
+            end
+            IS.add_time_series!(sys, component, forecast1a)
+            forecast2a = forecast_type(forecast1a, name2; scaling_factor_multiplier = sfm2)
+            IS.add_time_series!(sys, component, forecast2a)
+            @test IS.get_num_time_series(sys.time_series_storage) == 1
+            forecast1b = IS.get_time_series(forecast_type, component, name1)
+            forecast2b = IS.get_time_series(forecast_type, component, name2)
+            @test forecast1b.data == forecast2b.data
+            expected1 =
+                use_scaling_factor ? data[initial_time] * component.val : data[initial_time]
+            expected2 = if use_scaling_factor
+                data[initial_time] * component.val2
+            else
+                data[initial_time]
+            end
+            @test IS.get_time_series_values(
+                component,
+                forecast1b,
+                initial_time;
+            ) == expected1
+            @test IS.get_time_series_values(
+                component,
+                forecast2b,
+                initial_time;
+            ) == expected2
+            IS.remove_time_series!(sys, forecast_type, component, "val")
+            @test IS.get_num_time_series(sys.time_series_storage) == 1
+            @test IS.get_time_series_values(
+                component,
+                forecast2b,
+                initial_time;
+            ) == expected2
+            IS.remove_time_series!(sys, forecast_type, component, "val2")
+            @test IS.get_num_time_series(sys.time_series_storage) == 0
+        end
+    end
+end
+
+@testset "Test Deterministic shared by two component fields" begin
+    test_forecasts_with_shared_component_fields(IS.Deterministic)
+end
+
+@testset "Test Probabilistic shared by two component fields" begin
+    test_forecasts_with_shared_component_fields(IS.Probabilistic)
+end
+
+@testset "Test Scenarios shared by two component fields" begin
+    test_forecasts_with_shared_component_fields(IS.Scenarios)
+end
+
 @testset "Test custom time series directory via env" begin
     @assert !haskey(ENV, IS.TIME_SERIES_DIRECTORY_ENV_VAR)
     path = mkpath("tmp-ts-dir")
