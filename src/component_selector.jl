@@ -65,7 +65,7 @@ select_components(
 Construct a ComponentSelector from a Component reference, pointing to Components in any
 System with the given Component's subtype and name.
 """
-select_components(component_ref::InfrastructureSystemsComponent, name::Union{String, Nothing}) =
+select_components(component_ref::InfrastructureSystemsComponent, name::Union{String, Nothing} = nothing) =
     select_components(typeof(component_ref), get_name(component_ref), name)
 
 # Naming
@@ -119,12 +119,6 @@ select_components(
 # Naming
 default_name(e::SubtypeComponentSelector) = subtype_to_string(e.component_subtype)
 
-# Contents
-function get_subselectors(e::SubtypeComponentSelector, sys::System)
-    # Lazily construct SingleComponentSelectors from the Components
-    return Iterators.map(select_components, get_components(e, sys))
-end
-
 # FilterComponentSelector
 "ComponentSelectorSet represented by a filter function and a subtype of Component."
 struct FilterComponentSelector <: ComponentSelectorSet
@@ -162,7 +156,3 @@ end
 default_name(e::FilterComponentSelector) =
     string(e.filter_fn) * NAME_DELIMETER * subtype_to_string(e.component_subtype)
 
-# Contents
-function get_subselectors(e::FilterComponentSelector, sys::SystemData)
-    return Iterators.map(select_components, get_components(e, sys))
-end
