@@ -92,11 +92,6 @@ select_components(content::ComponentSelector...; name::Union{String, Nothing} = 
 # Naming
 default_name(e::ListComponentSelector) = "[$(join(get_name.(e.content), ", "))]"
 
-# Contents
-function get_subselectors(e::ListComponentSelector)
-    return e.content
-end
-
 # SubtypeComponentSelector
 "ComponentSelectorSet represented by a subtype of Component."
 struct SubtypeComponentSelector <: ComponentSelectorSet
