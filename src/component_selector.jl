@@ -14,7 +14,8 @@ abstract type ComponentSelectorSet <: ComponentSelector end
 const NAME_DELIMETER::String = "__"
 
 "Canonical way to turn a Component subtype into a unique string."
-subtype_to_string(subtype::Type{<:InfrastructureSystemsComponent}) = strip_module_name(subtype)
+subtype_to_string(subtype::Type{<:InfrastructureSystemsComponent}) =
+    strip_module_name(subtype)
 
 "Canonical way to turn a Component specification/instance into a unique-per-System string."
 component_to_qualified_string(
@@ -65,7 +66,10 @@ select_components(
 Construct a ComponentSelector from a Component reference, pointing to Components in any
 System with the given Component's subtype and name.
 """
-select_components(component_ref::InfrastructureSystemsComponent, name::Union{String, Nothing} = nothing) =
+select_components(
+    component_ref::InfrastructureSystemsComponent,
+    name::Union{String, Nothing} = nothing,
+) =
     select_components(typeof(component_ref), get_name(component_ref), name)
 
 # Naming
@@ -150,4 +154,3 @@ end
 # Naming
 default_name(e::FilterComponentSelector) =
     string(e.filter_fn) * NAME_DELIMETER * subtype_to_string(e.component_subtype)
-
