@@ -185,7 +185,7 @@ function Deterministic(forecast::Deterministic, data)
             # Need to create a new UUID.
             val = InfrastructureSystemsInternal()
         else
-            val = getfield(forecast, fname)
+            val = getproperty(forecast, fname)
         end
 
         vals[fname] = val

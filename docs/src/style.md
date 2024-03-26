@@ -1,4 +1,4 @@
-# [Julia Coding Style Guide for SIIP](@id style_guide)
+# [Julia Coding Style Guide for Sienna](@id style_guide)
 
 ## Goals
 
@@ -192,7 +192,7 @@ Good:
     abstract type Foo end
 ```
 
-All SIIP packages perform tests using [JuliaFormatter](https://github.com/domluna/JuliaFormatter.jl)
+All Sienna packages perform tests using [JuliaFormatter](https://github.com/domluna/JuliaFormatter.jl)
 if you are unsure of your format, you can run `julia  -e 'using JuliaFormatter; include(".github/workflows/formatter_code.jl")'`
 at the root of the package. Make sure to have the latest version of JuliaFormatter in your
 main environment
