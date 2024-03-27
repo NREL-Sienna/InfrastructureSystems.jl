@@ -348,7 +348,6 @@ const _TYPE_DICT = Dict(
     string(nameof(st)) => st for st in [
         LinearFunctionData,
         QuadraticFunctionData,
-        PolynomialFunctionData,
         PiecewiseLinearPointData,
         PiecewiseLinearSlopeData,
     ]

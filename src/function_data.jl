@@ -34,21 +34,6 @@ get_quadratic_term(fd::QuadraticFunctionData) = fd.quadratic_term
 get_proportional_term(fd::QuadraticFunctionData) = fd.proportional_term
 get_constant_term(fd::QuadraticFunctionData) = fd.constant_term
 
-"""
-Structure to represent the underlying data of higher order polynomials. Principally used for
-the representation of cost functions where
-`f(x) = sum_{i in keys(coefficients)} coefficients[i]*x^i`.
-
-# Arguments
- - `coefficients::Dict{Int, Float64}`: values are coefficients, keys are degrees to which
-   the coefficients apply (0 for the constant term, 2 for the squared term, etc.)
-"""
-struct PolynomialFunctionData <: FunctionData
-    coefficients::Dict{Int, Float64}
-end
-
-get_coefficients(fd::PolynomialFunctionData) = fd.coefficients
-
 function _validate_piecewise_x(x_coords)
     # TODO currently there exist cases where we are constructing a PiecewiseLinearPointData
     # with only one point (e.g., `calculate_variable_cost` within
@@ -197,9 +182,6 @@ Base.:(==)(a::PiecewiseLinearSlopeData, b::PiecewiseLinearSlopeData) =
     (get_y0(a) == get_y0(b)) &&
     (get_slopes(a) == get_slopes(b))
 
-Base.:(==)(a::PolynomialFunctionData, b::PolynomialFunctionData) =
-    get_coefficients(a) == get_coefficients(b)
-
 function _slope_convexity_check(slopes::Vector{Float64})
     for ix in 1:(length(slopes) - 1)
         if slopes[ix] > slopes[ix + 1]
@@ -222,24 +204,12 @@ LinearFunctionData(; proportional_term) = LinearFunctionData(proportional_term)
 QuadraticFunctionData(; quadratic_term, proportional_term, constant_term) =
     QuadraticFunctionData(quadratic_term, proportional_term, constant_term)
 
-PolynomialFunctionData(; coefficients) = PolynomialFunctionData(coefficients)
-
 PiecewiseLinearPointData(; points) = PiecewiseLinearPointData(points)
 
 PiecewiseLinearSlopeData(; x_coords, y0, slopes) =
     PiecewiseLinearSlopeData(x_coords, y0, slopes)
 
 serialize(val::FunctionData) = serialize_struct(val)
-
-function deserialize_struct(T::Type{PolynomialFunctionData}, val::Dict)
-    data = deserialize_to_dict(T, val)
-    data[Symbol("coefficients")] =
-        Dict(
-            (k isa String ? parse(Int, k) : k, v)
-            for (k, v) in data[Symbol("coefficients")]
-        )
-    return T(; data...)
-end
 
 deserialize(T::Type{<:FunctionData}, val::Dict) = deserialize_struct(T, val)
 
@@ -257,8 +227,6 @@ function get_raw_data end
 get_raw_data(fd::LinearFunctionData) = get_proportional_term(fd)
 get_raw_data(fd::QuadraticFunctionData) =
     (get_quadratic_term(fd), get_proportional_term(fd), get_constant_term(fd))
-get_raw_data(fd::PolynomialFunctionData) =
-    sort([(degree, coeff) for (degree, coeff) in get_coefficients(fd)]; by = first)
 get_raw_data(fd::PiecewiseLinearPointData) = Tuple.(get_points(fd))
 function get_raw_data(fd::PiecewiseLinearSlopeData)
     x_coords = get_x_coords(fd)
@@ -272,8 +240,6 @@ function get_raw_data_type end
 get_raw_data_type(::Union{LinearFunctionData, Type{LinearFunctionData}}) = Float64
 get_raw_data_type(::Union{QuadraticFunctionData, Type{QuadraticFunctionData}}) =
     NTuple{3, Float64}
-get_raw_data_type(::Union{PolynomialFunctionData, Type{PolynomialFunctionData}}) =
-    Vector{Tuple{Int, Float64}}
 get_raw_data_type(::Union{PiecewiseLinearPointData, Type{PiecewiseLinearPointData}}) =
     Vector{Tuple{Float64, Float64}}
 get_raw_data_type(::Union{PiecewiseLinearSlopeData, Type{PiecewiseLinearSlopeData}}) =

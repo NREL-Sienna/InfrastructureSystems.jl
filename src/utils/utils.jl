@@ -465,12 +465,6 @@ transform_array_for_hdf(data::SortedDict{Dates.DateTime, Vector{LinearFunctionDa
 transform_array_for_hdf(data::Vector{LinearFunctionData}) =
     transform_array_for_hdf(get_proportional_term.(data))
 
-transform_array_for_hdf(data::Vector{PolynomialFunctionData}) =
-    throw(ArgumentError("Not yet implemented for PolynomialFunctionData"))
-
-transform_array_for_hdf(data::SortedDict{Dates.DateTime, Vector{PolynomialFunctionData}}) =
-    throw(ArgumentError("Not yet implemented for PolynomialFunctionData"))
-
 function transform_array_for_hdf(
     data::SortedDict{Dates.DateTime, Vector{QuadraticFunctionData}},
 )

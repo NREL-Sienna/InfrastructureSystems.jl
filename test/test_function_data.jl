@@ -1,7 +1,6 @@
 get_test_function_data() = [
     IS.LinearFunctionData(5),
     IS.QuadraticFunctionData(2, 3, 4),
-    IS.PolynomialFunctionData(Dict(0 => 3.0, 1 => 1.0, 3 => 4.0)),
     IS.PiecewiseLinearPointData([(1, 1), (3, 5), (5, 10)]),
     IS.PiecewiseLinearSlopeData([1, 3, 5], 1, [2, 2.5]),
 ]
@@ -24,11 +23,6 @@ end
     @test IS.get_quadratic_term(qd) == 2
     @test IS.get_proportional_term(qd) == 3
     @test IS.get_constant_term(qd) == 4
-
-    pd = IS.PolynomialFunctionData(Dict(0 => 3.0, 1 => 1.0, 3 => 4.0))
-    coeffs = IS.get_coefficients(pd)
-    @test length(coeffs) == 3
-    @test coeffs[0] === 3.0 && coeffs[1] === 1.0 && coeffs[3] === 4.0
 
     yd = IS.PiecewiseLinearPointData([(1, 1), (3, 5)])
     @test IS.get_points(yd) == [(x = 1, y = 1), (x = 3, y = 5)]
@@ -115,7 +109,6 @@ end
     raw_data_answers = [
         5.0,
         (2.0, 3.0, 4.0),
-        [(0, 3.0), (1, 1.0), (3, 4.0)],
         [(1.0, 1.0), (3.0, 5.0), (5.0, 10.0)],
         [(1.0, 1.0), (3.0, 2.0), (5.0, 2.5)],
     ]
