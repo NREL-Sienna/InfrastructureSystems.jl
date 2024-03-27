@@ -455,34 +455,14 @@ function transform_array_for_hdf(data::Vector{<:Real})
     return data
 end
 
-transform_array_for_hdf(data::SortedDict{Dates.DateTime, Vector{LinearFunctionData}}) =
-    transform_array_for_hdf(
-        SortedDict{Dates.DateTime, Vector{CONSTANT}}(
-            k => get_proportional_term.(v) for (k, v) in data
-        ),
-    )
-
-transform_array_for_hdf(data::Vector{LinearFunctionData}) =
-    transform_array_for_hdf(get_proportional_term.(data))
-
 function transform_array_for_hdf(
-    data::SortedDict{Dates.DateTime, Vector{QuadraticFunctionData}},
-)
-    all(get_constant_term.(vcat(values(data)...)) .== 0) ||
-        throw(
-            ArgumentError(
-                "Not yet implemented for nonzero constant term ($(get_constant_term.(vcat(values(data)...))))",
-            ),
-        )
-    data = SortedDict(
-        k =>
-            [(get_quadratic_term(q), (get_proportional_term(q))) for q in v] for
-        (k, v) in data
-    )
+    data::SortedDict{Dates.DateTime, Vector{T}},
+) where {T <: Union{LinearFunctionData, QuadraticFunctionData}}
+    data = SortedDict(k => get_raw_data.(v) for (k, v) in data)
     lin_cost = hcat(values(data)...)
     rows, cols = size(lin_cost)
-    @assert_op length(first(lin_cost)) == 2
-    t_lin_cost = Array{Float64}(undef, rows, cols, 2)
+    degree = fieldcount(get_raw_data_type(T))  # 2 for linear, 3 for quadratic
+    t_lin_cost = Array{Float64}(undef, rows, cols, degree)
     for r in 1:rows, c in 1:cols
         tuple = lin_cost[r, c]
         for (i, value) in enumerate(tuple)
@@ -492,13 +472,13 @@ function transform_array_for_hdf(
     return t_lin_cost
 end
 
-function transform_array_for_hdf(data::Vector{QuadraticFunctionData})
-    all(get_constant_term.(data) .== 0) ||
-        throw(ArgumentError("Not yet implemented for nonzero constant term"))
-    data = [(get_quadratic_term(q), (get_proportional_term(q))) for q in data]
+function transform_array_for_hdf(
+    data::Vector{T},
+) where {T <: Union{LinearFunctionData, QuadraticFunctionData}}
+    data = get_raw_data.(data)
     rows = length(data)
-    @assert_op length(first(data)) == 2
-    t_lin_cost = Array{Float64}(undef, rows, 1, 2)
+    degree = fieldcount(get_raw_data_type(T))  # 2 for linear, 3 for quadratic
+    t_lin_cost = Array{Float64}(undef, rows, 1, degree)
     for r in 1:rows
         tuple = data[r]
         for (i, value) in enumerate(tuple)

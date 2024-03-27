@@ -130,9 +130,9 @@ end
     other_time = initial_time + resolution
     name = "test"
     horizon = 24
-    linear_cost = repeat([IS.LinearFunctionData(3.14)], 24)
+    linear_cost = repeat([IS.LinearFunctionData(3.14, 1.23)], 24)
     data_linear = SortedDict(initial_time => linear_cost, other_time => linear_cost)
-    polynomial_cost = repeat([IS.QuadraticFunctionData(999.0, 1.0, 0.0)], 24)
+    polynomial_cost = repeat([IS.QuadraticFunctionData(999.0, 1.0, 0.5)], 24)
     data_polynomial =
         SortedDict(initial_time => polynomial_cost, other_time => polynomial_cost)
     pwl_cost = repeat([IS.PiecewiseLinearPointData(repeat([(999.0, 1.0)], 5))], 24)
@@ -711,14 +711,14 @@ end
 
 @testset "Test add SingleTimeSeries with LinearFunctionData Cost" begin
     _test_add_single_time_series_type(
-        repeat([IS.LinearFunctionData(3.14)], 365),
+        repeat([IS.LinearFunctionData(3.14, 1.23)], 365),
         "LinearFunctionData",
     )
 end
 
 @testset "Test add SingleTimeSeries with QuadraticFunctionData Cost" begin
     _test_add_single_time_series_type(
-        repeat([IS.QuadraticFunctionData(999.0, 1.0, 0.0)], 365),
+        repeat([IS.QuadraticFunctionData(999.0, 1.0, 0.5)], 365),
         "QuadraticFunctionData",
     )
 end
@@ -1551,7 +1551,7 @@ end
     for in_memory in (true, false)
         _test_get_time_series_option_type(
             SortedDict{Dates.DateTime, Vector{IS.LinearFunctionData}}(
-                it => repeat([IS.LinearFunctionData(3.14 * i)], 24) for
+                it => repeat([IS.LinearFunctionData(3.14 * i, 1.23 * i)], 24) for
                 (i, it) in enumerate(default_time_params.initial_times)
             ), in_memory, true)
     end
@@ -1561,7 +1561,7 @@ end
     for in_memory in (true, false)
         _test_get_time_series_option_type(
             SortedDict{Dates.DateTime, Vector{IS.QuadraticFunctionData}}(
-                it => repeat([IS.QuadraticFunctionData(999.0, 1.0 * i, 0.0)], 24) for
+                it => repeat([IS.QuadraticFunctionData(999.0, 1.0 * i, 1.23)], 24) for
                 (i, it) in enumerate(default_time_params.initial_times)
             ), in_memory, true)
     end

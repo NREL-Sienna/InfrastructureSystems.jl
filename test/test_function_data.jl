@@ -1,9 +1,14 @@
 get_test_function_data() = [
-    IS.LinearFunctionData(5),
+    IS.LinearFunctionData(5, 1),
     IS.QuadraticFunctionData(2, 3, 4),
     IS.PiecewiseLinearPointData([(1, 1), (3, 5), (5, 10)]),
     IS.PiecewiseLinearSlopeData([1, 3, 5], 1, [2, 2.5]),
 ]
+
+@testset "Test FunctionData constructors" begin
+    @test all(isa.(get_test_function_data(), IS.FunctionData))
+    @test IS.LinearFunctionData(5) isa IS.FunctionData
+end
 
 @testset "Test FunctionData validation" begin
     @test_throws ArgumentError IS.PiecewiseLinearPointData([(2, 1), (1, 1)])
@@ -16,7 +21,7 @@ get_test_function_data() = [
 end
 
 @testset "Test FunctionData trivial getters" begin
-    ld = IS.LinearFunctionData(5)
+    ld = IS.LinearFunctionData(5, 1)
     @test IS.get_proportional_term(ld) == 5
 
     qd = IS.QuadraticFunctionData(2, 3, 4)
@@ -107,7 +112,7 @@ end
 
 @testset "Test FunctionData raw data" begin
     raw_data_answers = [
-        5.0,
+        (5.0, 1.0),
         (2.0, 3.0, 4.0),
         [(1.0, 1.0), (3.0, 5.0), (5.0, 10.0)],
         [(1.0, 1.0), (3.0, 2.0), (5.0, 2.5)],

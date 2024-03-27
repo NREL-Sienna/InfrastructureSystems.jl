@@ -628,34 +628,24 @@ end
 
 function get_hdf_array(
     dataset,
-    ::Type{LinearFunctionData},
+    T::Union{
+        Type{LinearFunctionData},
+        Type{QuadraticFunctionData},
+        Type{PiecewiseLinearPointData},
+    },
     attributes::Dict{String, Any},
     rows::UnitRange{Int},
     columns::UnitRange{Int},
 )
-    data = get_hdf_array(dataset, CONSTANT, attributes, rows, columns)
-    return SortedDict{Dates.DateTime, Vector{LinearFunctionData}}(
-        k => LinearFunctionData.(v) for (k, v) in data
-    )
-end
-
-_quadratic_from_tuple((a, b)::Tuple{Float64, Float64}) = QuadraticFunctionData(a, b, 0.0)
-
-function get_hdf_array(
-    dataset,
-    type::Type{QuadraticFunctionData},
-    attributes::Dict{String, Any},
-    rows::UnitRange{Int},
-    columns::UnitRange{Int},
-)
-    data = SortedDict{Dates.DateTime, Vector{QuadraticFunctionData}}()
+    data = SortedDict{Dates.DateTime, Vector{T}}()
     initial_timestamp = attributes["start_time"]
     interval = attributes["interval"]
     start_time = initial_timestamp + interval * (columns.start - 1)
+    colons = repeat([:], ndims(dataset) - 2)
     if length(columns) == 1
-        data[start_time] = retransform_hdf_array(dataset[rows, columns.start, :], type)
+        data[start_time] = retransform_hdf_array(dataset[rows, columns.start, colons...], T)
     else
-        data_read = retransform_hdf_array(dataset[rows, columns, :], type)
+        data_read = retransform_hdf_array(dataset[rows, columns, colons...], T)
         for (i, it) in
             enumerate(range(start_time; length = length(columns), step = interval))
             data[it] = @view data_read[1:length(rows), i]
@@ -666,43 +656,24 @@ end
 
 function get_hdf_array(
     dataset,
-    type::Type{PiecewiseLinearPointData},
-    attributes::Dict{String, Any},
-    rows::UnitRange{Int},
-    columns::UnitRange{Int},
-)
-    data = SortedDict{Dates.DateTime, Vector{PiecewiseLinearPointData}}()
-    initial_timestamp = attributes["start_time"]
-    interval = attributes["interval"]
-    start_time = initial_timestamp + interval * (columns.start - 1)
-    if length(columns) == 1
-        data[start_time] = retransform_hdf_array(dataset[rows, columns.start, :, :], type)
-    else
-        data_read = retransform_hdf_array(dataset[rows, columns, :, :], type)
-        for (i, it) in
-            enumerate(range(start_time; length = length(columns), step = interval))
-            data[it] = @view data_read[1:length(rows), i]
-        end
-    end
-    return data
-end
-
-function get_hdf_array(
-    dataset,
-    type::Union{Type{<:CONSTANT}, Type{LinearFunctionData}},
+    type::Type{<:CONSTANT},
     rows::UnitRange{Int},
 )
     data = retransform_hdf_array(dataset[rows], type)
     return data
 end
 
-function get_hdf_array(dataset, type::Type{QuadraticFunctionData}, rows::UnitRange{Int})
-    data = retransform_hdf_array(dataset[rows, :, :], type)
-    return data
-end
-
-function get_hdf_array(dataset, type::Type{PiecewiseLinearPointData}, rows::UnitRange{Int})
-    data = retransform_hdf_array(dataset[rows, :, :, :], type)
+function get_hdf_array(
+    dataset,
+    T::Union{
+        Type{LinearFunctionData},
+        Type{QuadraticFunctionData},
+        Type{PiecewiseLinearPointData},
+    },
+    rows::UnitRange{Int},
+)
+    colons = repeat([:], ndims(dataset) - 1)
+    data = retransform_hdf_array(dataset[rows, colons...], T)
     return data
 end
 
@@ -710,28 +681,23 @@ function retransform_hdf_array(data::Array, ::Type{<:CONSTANT})
     return data
 end
 
-function retransform_hdf_array(data::Array, ::Type{LinearFunctionData})
-    return LinearFunctionData.(data)
-end
-
-function retransform_hdf_array(data::Array, T::Type{QuadraticFunctionData})
-    row, column, tuple_length = get_data_dims(data, T)
-    if isnothing(column)
-        t_data = Array{Tuple{Float64, Float64}}(undef, row)
-        for r in 1:row
-            t_data[r] = tuple(data[r, 1:tuple_length]...)
-        end
-    else
-        t_data = Array{Tuple{Float64, Float64}}(undef, row, column)
-        for r in 1:row, c in 1:column
-            t_data[r, c] = tuple(data[r, c, 1:tuple_length]...)
-        end
-    end
-    return _quadratic_from_tuple.(t_data)
+function retransform_hdf_array(
+    data::Array,
+    T::Union{Type{LinearFunctionData}, Type{QuadraticFunctionData}},
+)
+    length_req = fieldcount(get_raw_data_type(T))
+    (size(data)[end] == length_req) || throw(
+        ArgumentError(
+            "Last dimension of data must have length $length_req, got size $(size(data))",
+        ),
+    )
+    dims_to_keep = Tuple(1:(ndims(data) - 1))
+    # Pop off the last dimension and call the constructor on that data
+    return map(x -> T(x...), eachslice(data; dims = dims_to_keep))
 end
 
 function retransform_hdf_array(data::Array, T::Type{PiecewiseLinearPointData})
-    row, column, tuple_length, array_length = get_data_dims(data, T)
+    row, column, tuple_length, array_length = get_data_dims_3_or_4(data)
     if isnothing(column)
         t_data = Array{Vector{Tuple{Float64, Float64}}}(undef, row)
         for r in 1:row
@@ -754,18 +720,7 @@ function retransform_hdf_array(data::Array, T::Type{PiecewiseLinearPointData})
     return PiecewiseLinearPointData.(t_data)
 end
 
-function get_data_dims(data::Array, ::Type{QuadraticFunctionData})
-    if length(size(data)) == 2
-        row, tuple_length = size(data)
-        return (row, nothing, tuple_length)
-    elseif length(size(data)) == 3
-        return size(data)
-    else
-        error("Hdf data array is $(length(size(data)))-D array, expected 2-D or 3-D array.")
-    end
-end
-
-function get_data_dims(data::Array, ::Type{PiecewiseLinearPointData})
+function get_data_dims_3_or_4(data::Array)
     if length(size(data)) == 3
         row, tuple_length, array_length = size(data)
         return (row, nothing, tuple_length, array_length)

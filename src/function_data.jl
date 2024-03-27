@@ -2,21 +2,25 @@ abstract type FunctionData end
 
 """
 Structure to represent the underlying data of linear functions. Principally used for
-the representation of cost functions `f(x) = proportional_term*x`.
+the representation of cost functions `f(x) = proportional_term*x + constant_term`.
 
 # Arguments
- - `proportional_term::Float64`: the proportional term in the function
-   `f(x) = proportional_term*x`
+ - `proportional_term::Float64`: the proportional term in the represented function
+ - `constant_term::Float64`: the constant term in the represented function
 """
 struct LinearFunctionData <: FunctionData
     proportional_term::Float64
+    constant_term::Float64
 end
 
+LinearFunctionData(proportional_term) = LinearFunctionData(proportional_term, 0.0)
+
 get_proportional_term(fd::LinearFunctionData) = fd.proportional_term
+get_constant_term(fd::LinearFunctionData) = fd.constant_term
 
 """
-Structure to represent the underlying data of quadratic polynomial functions. Principally
-used for the representation of cost functions
+Structure to represent the underlying data of quadratic functions. Principally used for the
+representation of cost functions
 `f(x) = quadratic_term*x^2 + proportional_term*x + constant_term`.
 
 # Arguments
@@ -199,7 +203,8 @@ is_convex(pwl::Union{PiecewiseLinearPointData, PiecewiseLinearSlopeData}) =
     _slope_convexity_check(get_slopes(pwl))
 
 # kwargs-only constructors for deserialization
-LinearFunctionData(; proportional_term) = LinearFunctionData(proportional_term)
+LinearFunctionData(; proportional_term, constant_term) =
+    LinearFunctionData(proportional_term, constant_term)
 
 QuadraticFunctionData(; quadratic_term, proportional_term, constant_term) =
     QuadraticFunctionData(quadratic_term, proportional_term, constant_term)
@@ -224,7 +229,7 @@ deserialize(::Type{FunctionData}, val::Dict) =
 Get a bare numerical representation of the data represented by the FunctionData
 """
 function get_raw_data end
-get_raw_data(fd::LinearFunctionData) = get_proportional_term(fd)
+get_raw_data(fd::LinearFunctionData) = (get_proportional_term(fd), get_constant_term(fd))
 get_raw_data(fd::QuadraticFunctionData) =
     (get_quadratic_term(fd), get_proportional_term(fd), get_constant_term(fd))
 get_raw_data(fd::PiecewiseLinearPointData) = Tuple.(get_points(fd))
@@ -237,7 +242,8 @@ end
 Get from a subtype of FunctionData the type of data its get_raw_data method returns
 """
 function get_raw_data_type end
-get_raw_data_type(::Union{LinearFunctionData, Type{LinearFunctionData}}) = Float64
+get_raw_data_type(::Union{LinearFunctionData, Type{LinearFunctionData}}) =
+    NTuple{2, Float64}
 get_raw_data_type(::Union{QuadraticFunctionData, Type{QuadraticFunctionData}}) =
     NTuple{3, Float64}
 get_raw_data_type(::Union{PiecewiseLinearPointData, Type{PiecewiseLinearPointData}}) =
