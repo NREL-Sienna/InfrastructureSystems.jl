@@ -348,8 +348,8 @@ const _TYPE_DICT = Dict(
     string(nameof(st)) => st for st in [
         LinearFunctionData,
         QuadraticFunctionData,
-        PiecewiseLinearPointData,
-        PiecewiseLinearSlopeData,
+        PiecewiseLinearData,
+        PiecewiseStepData,
     ]
 )
 _TYPE_DICT["CONSTANT"] = CONSTANT
@@ -631,7 +631,7 @@ function get_hdf_array(
     T::Union{
         Type{LinearFunctionData},
         Type{QuadraticFunctionData},
-        Type{PiecewiseLinearPointData},
+        Type{PiecewiseLinearData},
     },
     attributes::Dict{String, Any},
     rows::UnitRange{Int},
@@ -668,7 +668,7 @@ function get_hdf_array(
     T::Union{
         Type{LinearFunctionData},
         Type{QuadraticFunctionData},
-        Type{PiecewiseLinearPointData},
+        Type{PiecewiseLinearData},
     },
     rows::UnitRange{Int},
 )
@@ -696,7 +696,7 @@ function retransform_hdf_array(
     return map(x -> T(x...), eachslice(data; dims = dims_to_keep))
 end
 
-function retransform_hdf_array(data::Array, T::Type{PiecewiseLinearPointData})
+function retransform_hdf_array(data::Array, T::Type{PiecewiseLinearData})
     row, column, tuple_length, array_length = get_data_dims_3_or_4(data)
     if isnothing(column)
         t_data = Array{Vector{Tuple{Float64, Float64}}}(undef, row)
@@ -717,7 +717,7 @@ function retransform_hdf_array(data::Array, T::Type{PiecewiseLinearPointData})
             t_data[r, c] = tuple_array
         end
     end
-    return PiecewiseLinearPointData.(t_data)
+    return PiecewiseLinearData.(t_data)
 end
 
 function get_data_dims_3_or_4(data::Array)

@@ -489,7 +489,7 @@ function transform_array_for_hdf(
 end
 
 function transform_array_for_hdf(
-    data::SortedDict{Dates.DateTime, Vector{PiecewiseLinearPointData}},
+    data::SortedDict{Dates.DateTime, Vector{PiecewiseLinearData}},
 )
     quad_cost = hcat([get_points.(v) for v in values(data)]...)
     rows, cols = size(quad_cost)
@@ -509,7 +509,7 @@ end
 
 # TODO: old code here does not properly handle data with different numbers of points
 # TODO: remove duplication
-function transform_array_for_hdf(data::Vector{PiecewiseLinearPointData})
+function transform_array_for_hdf(data::Vector{PiecewiseLinearData})
     data = get_points.(data)
     rows = length(data)
     tuple_length = length(first(data))

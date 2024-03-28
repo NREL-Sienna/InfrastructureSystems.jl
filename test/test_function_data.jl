@@ -1,23 +1,26 @@
 get_test_function_data() = [
     IS.LinearFunctionData(5, 1),
     IS.QuadraticFunctionData(2, 3, 4),
-    IS.PiecewiseLinearPointData([(1, 1), (3, 5), (5, 10)]),
-    IS.PiecewiseLinearSlopeData([1, 3, 5], 1, [2, 2.5]),
+    IS.PiecewiseLinearData([(1, 1), (3, 5), (5, 10)]),
+    IS.PiecewiseStepData([1, 3, 5], [2, 2.5], 1),
 ]
 
 @testset "Test FunctionData constructors" begin
     @test all(isa.(get_test_function_data(), IS.FunctionData))
     @test IS.LinearFunctionData(5) isa IS.FunctionData
+    @test IS.PiecewiseStepData([1, 3, 5], [2, 2.5], nothing) isa IS.FunctionData
+    @test IS.PiecewiseStepData([1, 3, 5], [2, 2.5]) isa IS.FunctionData
 end
 
 @testset "Test FunctionData validation" begin
-    @test_throws ArgumentError IS.PiecewiseLinearPointData([(2, 1), (1, 1)])
-    @test_throws ArgumentError IS.PiecewiseLinearSlopeData([2, 1], 1, [1])
-
-    @test IS.PiecewiseLinearPointData([(x = 1, y = 1)]) isa Any  # Test absence of error
-    @test IS.PiecewiseLinearPointData([Dict("x" => 1, "y" => 1)]) isa Any
-    @test_throws ArgumentError IS.PiecewiseLinearPointData([(y = 1, x = 1)])
-    @test_throws ArgumentError IS.PiecewiseLinearPointData([Dict("x" => 1)])
+    # x-coordinates need to be sorted
+    @test_throws ArgumentError IS.PiecewiseLinearData([(2, 1), (1, 1)])
+    @test_throws ArgumentError IS.PiecewiseStepData([2, 1], [1], 1)
+    
+    @test IS.PiecewiseLinearData([(x = 1, y = 1)]) isa Any  # Test absence of error
+    @test IS.PiecewiseLinearData([Dict("x" => 1, "y" => 1)]) isa Any
+    @test_throws ArgumentError IS.PiecewiseLinearData([(y = 1, x = 1)])
+    @test_throws ArgumentError IS.PiecewiseLinearData([Dict("x" => 1)])
 end
 
 @testset "Test FunctionData trivial getters" begin
@@ -29,21 +32,23 @@ end
     @test IS.get_proportional_term(qd) == 3
     @test IS.get_constant_term(qd) == 4
 
-    yd = IS.PiecewiseLinearPointData([(1, 1), (3, 5)])
+    yd = IS.PiecewiseLinearData([(1, 1), (3, 5)])
     @test IS.get_points(yd) == [(x = 1, y = 1), (x = 3, y = 5)]
+    @test IS.get_x_coords(yd) == ([1, 3])
+    @test IS.get_y_coords(yd) == ([1, 5])
 
-    dd = IS.PiecewiseLinearSlopeData([1, 3, 5], 2, [3, 6])
+    dd = IS.PiecewiseStepData([1, 3, 5], [3, 6], 2)
     @test IS.get_x_coords(dd) == [1, 3, 5]
-    @test IS.get_y0(dd) == 2
-    @test IS.get_slopes(dd) == [3, 6]
+    @test IS.get_y_coords(dd) == [3, 6]
+    @test IS.get_c(dd) == 2
 end
 
 @testset "Test FunctionData calculations" begin
-    @test length(IS.PiecewiseLinearPointData([(0, 0), (1, 1), (1.1, 2)])) == 2
-    @test length(IS.PiecewiseLinearSlopeData([1, 1.1, 1.2], 1, [1.1, 10])) == 2
+    @test length(IS.PiecewiseLinearData([(0, 0), (1, 1), (1.1, 2)])) == 2
+    @test length(IS.PiecewiseStepData([1, 1.1, 1.2], [1.1, 10], 1)) == 2
 
-    @test IS.PiecewiseLinearPointData([(0, 0), (1, 1), (1.1, 2)])[2] == (x = 1, y = 1)
-    @test IS.get_x_coords(IS.PiecewiseLinearPointData([(0, 0), (1, 1), (1.1, 2)])) ==
+    @test IS.PiecewiseLinearData([(0, 0), (1, 1), (1.1, 2)])[2] == (x = 1, y = 1)
+    @test IS.get_x_coords(IS.PiecewiseLinearData([(0, 0), (1, 1), (1.1, 2)])) ==
           [0, 1, 1.1]
 
     # Tests our overridden Base.:(==)
@@ -51,51 +56,49 @@ end
 
     @test all(
         isapprox.(
-            IS.get_slopes(IS.PiecewiseLinearPointData([(0, 0), (10, 31.4)])), [3.14]),
+            IS.get_slopes(IS.PiecewiseLinearData([(0, 0), (10, 31.4)])), [3.14]),
     )
     @test isapprox(
-        IS.get_slopes(IS.PiecewiseLinearPointData([(0, 0), (1, 1), (1.1, 2), (1.2, 3)])),
+        IS.get_slopes(IS.PiecewiseLinearData([(0, 0), (1, 1), (1.1, 2), (1.2, 3)])),
         [1, 10, 10])
     @test isapprox(
-        IS.get_slopes(IS.PiecewiseLinearPointData([(0, 0), (1, 1), (1.1, 2)])),
+        IS.get_slopes(IS.PiecewiseLinearData([(0, 0), (1, 1), (1.1, 2)])),
         [1, 10])
 
-    @test IS.get_points(IS.PiecewiseLinearSlopeData([1, 3, 5], 1, [2.5, 10])) isa
-          Vector{IS.XY_COORDS}
+    integral = IS.integrate(IS.PiecewiseStepData([1, 3, 5], [2.5, 10], 1))
+    @test integral isa IS.PiecewiseLinearData
     @test isapprox(
-        collect.(IS.get_points(IS.PiecewiseLinearSlopeData([1, 3, 5], 1, [2.5, 10]))),
+        collect.(IS.get_points(integral)),
         collect.([(1, 1), (3, 6), (5, 26)]),
     )
 
     @test isapprox(
-        IS.get_x_lengths(IS.PiecewiseLinearPointData([(1, 1), (1.1, 2), (1.2, 3)])),
+        IS.get_x_lengths(IS.PiecewiseLinearData([(1, 1), (1.1, 2), (1.2, 3)])),
         [0.1, 0.1])
     @test isapprox(
-        IS.get_x_lengths(IS.PiecewiseLinearSlopeData([1, 1.1, 1.2], 1, [1.1, 10])),
+        IS.get_x_lengths(IS.PiecewiseStepData([1, 1.1, 1.2], [1.1, 10], 1)),
         [0.1, 0.1])
 
-    @test IS.is_convex(IS.PiecewiseLinearSlopeData([0, 1, 1.1, 1.2], 1, [1.1, 10, 10]))
-    @test !IS.is_convex(IS.PiecewiseLinearSlopeData([0, 1, 1.1, 1.2], 1, [1.1, 10, 9]))
-    @test IS.is_convex(IS.PiecewiseLinearPointData([(0, 0), (1, 1), (1.1, 2), (1.2, 3)]))
-    @test !IS.is_convex(IS.PiecewiseLinearPointData([(0, 0), (1, 1), (1.1, 2), (5, 3)]))
+    @test IS.is_convex(IS.PiecewiseLinearData([(0, 0), (1, 1), (1.1, 2), (1.2, 3)]))
+    @test !IS.is_convex(IS.PiecewiseLinearData([(0, 0), (1, 1), (1.1, 2), (5, 3)]))
 end
 
-@testset "Test FunctionData piecewise point/slope conversion" begin
+@testset "Test PiecewiseLinearData <-> PiecewiseStepData conversion" begin
     rng = Random.Xoshiro(47)  # Set random seed for determinism
     n_tests = 100
     n_points = 10
     for _ in 1:n_tests
         rand_x = sort(rand(rng, n_points))
         rand_y = rand(rng, n_points)
-        pointwise = IS.PiecewiseLinearPointData(collect(zip(rand_x, rand_y)))
-        slopewise = IS.PiecewiseLinearSlopeData(
-            IS.get_x_coords(pointwise),
-            first(IS.get_points(pointwise)).y,
-            IS.get_slopes(pointwise))
-        pointwise_2 = IS.PiecewiseLinearPointData(IS.get_points(slopewise))
+        pointwise = IS.PiecewiseLinearData(collect(zip(rand_x, rand_y)))
+        slopewise = IS.differentiate(pointwise)
+        pointwise_2 = IS.integrate(slopewise)
         @test isapprox(
             collect.(IS.get_points(pointwise_2)), collect.(IS.get_points(pointwise)))
+        # Fundamental theorem of calculus is experimentally verified :)
     end
+
+    @test_throws ArgumentError IS.integrate(IS.PiecewiseStepData([1, 3, 5], [2, 2.5]))
 end
 
 @testset "Test FunctionData serialization round trip" begin

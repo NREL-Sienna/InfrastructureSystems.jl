@@ -135,7 +135,7 @@ end
     polynomial_cost = repeat([IS.QuadraticFunctionData(999.0, 1.0, 0.5)], 24)
     data_polynomial =
         SortedDict(initial_time => polynomial_cost, other_time => polynomial_cost)
-    pwl_cost = repeat([IS.PiecewiseLinearPointData(repeat([(999.0, 1.0)], 5))], 24)
+    pwl_cost = repeat([IS.PiecewiseLinearData(repeat([(999.0, 1.0)], 5))], 24)
     data_pwl = SortedDict(initial_time => pwl_cost, other_time => pwl_cost)
     for d in [data_linear, data_polynomial, data_pwl]
         @testset "Add deterministic from $(typeof(d))" begin
@@ -723,10 +723,10 @@ end
     )
 end
 
-@testset "Test add SingleTimeSeries with PiecewiseLinearPointData Cost" begin
+@testset "Test add SingleTimeSeries with PiecewiseLinearData Cost" begin
     _test_add_single_time_series_type(
-        repeat([IS.PiecewiseLinearPointData(repeat([(999.0, 1.0)], 5))], 365),
-        "PiecewiseLinearPointData",
+        repeat([IS.PiecewiseLinearData(repeat([(999.0, 1.0)], 5))], 365),
+        "PiecewiseLinearData",
     )
 end
 
@@ -1567,12 +1567,12 @@ end
     end
 end
 
-@testset "Test get_time_series options for PiecewiseLinearPointData Cost" begin
+@testset "Test get_time_series options for PiecewiseLinearData Cost" begin
     for in_memory in (true, false)
         _test_get_time_series_option_type(
-            SortedDict{Dates.DateTime, Vector{IS.PiecewiseLinearPointData}}(
+            SortedDict{Dates.DateTime, Vector{IS.PiecewiseLinearData}}(
                 it => repeat(
-                    [IS.PiecewiseLinearPointData(repeat([(999.0, 1.0 * i)], 5))],
+                    [IS.PiecewiseLinearData(repeat([(999.0, 1.0 * i)], 5))],
                     24,
                 ) for
                 (i, it) in enumerate(default_time_params.initial_times)
