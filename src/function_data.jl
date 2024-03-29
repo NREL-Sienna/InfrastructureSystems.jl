@@ -138,13 +138,12 @@ quantities (x, dy/dx), such as (MW, \$/MWh).
 struct PiecewiseStepData <: FunctionData
     x_coords::Vector{Float64}
     y_coords::Vector{Float64}
-    c::Union{Nothing, Float64}
 
-    function PiecewiseStepData(x_coords, y_coords, c = nothing)
+    function PiecewiseStepData(x_coords, y_coords)
         _validate_piecewise_x(x_coords)
         (length(y_coords) == length(x_coords) - 1) ||
             throw(ArgumentError("Must specify one fewer y-coordinates than x-coordinates"))
-        return new(x_coords, y_coords, c)
+        return new(x_coords, y_coords)
     end
 end
 
@@ -154,30 +153,18 @@ get_x_coords(data::PiecewiseStepData) = data.x_coords
 "Get the y-coordinates of the segments in the PiecewiseStepData"
 get_y_coords(data::PiecewiseStepData) = data.y_coords
 
-"Get the field `c` of the PiecewiseStepData"
-get_c(data::PiecewiseStepData) = data.c
-
-"""
-Calculate the derivative of the PiecewiseLinearData as a PiecewiseStepData, embedding the
-first y-coordinate of the linear data as the `c` field of the step data
-"""
-differentiate(data::PiecewiseLinearData) =
-    PiecewiseStepData(get_x_coords(data), get_slopes(data), first(get_points(data)).y)
-
-"Calculate the integral from 0 to x of the PiecewiseStepData as a PiecewiseLinearData"
-function integrate(data::PiecewiseStepData)
-    running_y = get_c(data)
-    isnothing(running_y) && throw(ArgumentError("Cannot integrate with an undefined `c`"))
-    x_coords = get_x_coords(data)
+function running_sum(data::PiecewiseStepData)
     slopes = get_y_coords(data)
+    x_coords = get_x_coords(data)
     points = Vector{XY_COORDS}(undef, length(x_coords))
+    running_y = 0
     points[1] = (x = x_coords[1], y = running_y)
     for (i, (prev_slope, this_x, dx)) in
         enumerate(zip(slopes, x_coords[2:end], get_x_lengths(data)))
         running_y += prev_slope * dx
         points[i + 1] = (x = this_x, y = running_y)
     end
-    return PiecewiseLinearData(points)
+    return points
 end
 
 """
@@ -198,8 +185,7 @@ Base.:(==)(a::PiecewiseLinearData, b::PiecewiseLinearData) =
 
 Base.:(==)(a::PiecewiseStepData, b::PiecewiseStepData) =
     (get_x_coords(a) == get_x_coords(b)) &&
-    (get_y_coords(a) == get_y_coords(b)) &&
-    (get_c(a) == get_c(b))
+    (get_y_coords(a) == get_y_coords(b))
 
 function _slope_convexity_check(slopes::Vector{Float64})
     for ix in 1:(length(slopes) - 1)
@@ -226,8 +212,8 @@ QuadraticFunctionData(; quadratic_term, proportional_term, constant_term) =
 
 PiecewiseLinearData(; points) = PiecewiseLinearData(points)
 
-PiecewiseStepData(; x_coords, y_coords, c) =
-    PiecewiseStepData(x_coords, y_coords, c)
+PiecewiseStepData(; x_coords, y_coords) =
+    PiecewiseStepData(x_coords, y_coords)
 
 serialize(val::FunctionData) = serialize_struct(val)
 
@@ -250,7 +236,7 @@ get_raw_data(fd::QuadraticFunctionData) =
 get_raw_data(fd::PiecewiseLinearData) = Tuple.(get_points(fd))
 function get_raw_data(fd::PiecewiseStepData)
     x_coords = get_x_coords(fd)
-    return vcat((x_coords[1], get_c(fd)), collect(zip(x_coords[2:end], get_y_coords(fd))))
+    return vcat((x_coords[1], NaN), collect(zip(x_coords[2:end], get_y_coords(fd))))  # Using NaN for type simplicity
 end
 
 """
