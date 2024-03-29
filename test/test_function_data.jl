@@ -78,6 +78,10 @@ end
 
     @test IS.is_convex(IS.PiecewiseLinearData([(0, 0), (1, 1), (1.1, 2), (1.2, 3)]))
     @test !IS.is_convex(IS.PiecewiseLinearData([(0, 0), (1, 1), (1.1, 2), (5, 3)]))
+
+    @test IS.QuadraticFunctionData(IS.LinearFunctionData(1, 2)) ==
+        convert(IS.QuadraticFunctionData, IS.LinearFunctionData(1, 2)) ==
+        IS.QuadraticFunctionData(0, 1, 2)
 end
 
 @testset "Test PiecewiseLinearData <-> PiecewiseStepData conversion" begin

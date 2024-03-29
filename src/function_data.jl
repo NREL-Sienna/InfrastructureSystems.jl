@@ -251,3 +251,11 @@ get_raw_data_type(::Union{PiecewiseLinearData, Type{PiecewiseLinearData}}) =
     Vector{Tuple{Float64, Float64}}
 get_raw_data_type(::Union{PiecewiseStepData, Type{PiecewiseStepData}}) =
     Vector{Tuple{Float64, Float64}}
+
+"Losslessly convert `LinearFunctionData` to `QuadraticFunctionData`"
+QuadraticFunctionData(data::LinearFunctionData) =
+    QuadraticFunctionData(0, get_proportional_term(data), get_constant_term(data))
+
+"Losslessly convert `LinearFunctionData` to `QuadraticFunctionData`"
+Base.convert(::Type{QuadraticFunctionData}, data::LinearFunctionData) =
+    QuadraticFunctionData(data)
