@@ -247,3 +247,9 @@ QuadraticFunctionData(data::LinearFunctionData) =
 "Losslessly convert `LinearFunctionData` to `QuadraticFunctionData`"
 Base.convert(::Type{QuadraticFunctionData}, data::LinearFunctionData) =
     QuadraticFunctionData(data)
+
+"Get a `LinearFunctionData` representing the function `f(x) = 0`"
+Base.zero(::Union{LinearFunctionData, Type{LinearFunctionData}}) = LinearFunctionData(0, 0)
+
+"Get a `FunctionData` representing the function `f(x) = 0`"
+Base.zero(::Type{FunctionData}) = Base.zero(LinearFunctionData)
