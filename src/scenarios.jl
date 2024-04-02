@@ -170,7 +170,7 @@ function Scenarios(info::TimeSeriesParsedInfo)
     )
 end
 
-function ScenariosMetadata(time_series::Scenarios)
+function ScenariosMetadata(time_series::Scenarios; features...)
     return ScenariosMetadata(
         get_name(time_series),
         get_resolution(time_series),
@@ -181,6 +181,7 @@ function ScenariosMetadata(time_series::Scenarios)
         get_uuid(time_series),
         get_horizon(time_series),
         get_scaling_factor_multiplier(time_series),
+        Dict{String, Any}(string(k) => v for (k, v) in features),
     )
 end
 

@@ -207,7 +207,7 @@ function read_time_series(
 ) where {T <: Union{TimeSeriesFormatPeriodAsColumn, TimeSeriesFormatDateTimeAsColumn}}
     first_timestamp = get_timestamp(T, file, 1)
     value_columns = get_value_columns(T, file)
-    vals = [(string(x) => getproperty(file, x)) for x in value_columns]
+    vals = [(string(x) => Base.getproperty(file, x)) for x in value_columns]
     series_length = length(vals[1][2])
     return RawTimeSeries(first_timestamp, Dict(vals...), series_length)
 end
@@ -229,7 +229,7 @@ function read_time_series(
     vals = Vector{Float64}()
     for i in 1:length(file)
         for period in period_cols_as_symbols
-            val = getproperty(file, period)[i]
+            val = Base.getproperty(file, period)[i]
             push!(vals, val)
         end
     end
@@ -253,7 +253,7 @@ function read_time_series(
 ) where {T <: TimeSeriesFormatComponentsAsColumnsNoTime}
     first_timestamp = get(kwargs, :start_datetime, Dates.DateTime(Dates.today()))
     value_columns = get_value_columns(T, file)
-    vals = [(string(x) => getproperty(file, x)) for x in value_columns]
+    vals = [(string(x) => Base.getproperty(file, x)) for x in value_columns]
     series_length = length(vals[1][2])
     return RawTimeSeries(first_timestamp, Dict(vals...), series_length)
 end

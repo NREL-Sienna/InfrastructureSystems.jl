@@ -4,6 +4,7 @@ include("ScenariosMetadata.jl")
 include("SingleTimeSeriesMetadata.jl")
 
 export get_count
+export get_features
 export get_horizon
 export get_initial_timestamp
 export get_interval
@@ -16,6 +17,7 @@ export get_scenario_count
 export get_time_series_type
 export get_time_series_uuid
 export set_count!
+export set_features!
 export set_horizon!
 export set_initial_timestamp!
 export set_interval!

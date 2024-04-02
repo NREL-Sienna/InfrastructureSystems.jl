@@ -1,6 +1,6 @@
 
 @testset "Test add_component" begin
-    container = IS.Components(IS.InMemoryTimeSeriesStorage())
+    container = IS.Components(IS.TimeSeriesManager(; in_memory = true))
 
     component = IS.TestComponent("component1", 5)
     IS.add_component!(container, component)
@@ -15,13 +15,13 @@
         val::Int
     end
 
-    container = IS.Components(IS.InMemoryTimeSeriesStorage())
+    container = IS.Components(IS.TimeSeriesManager(; in_memory = true))
     component = BadComponent("component1", 5)
     @test_throws MethodError IS.add_component!(container, component)
 end
 
 @testset "Test clear_components" begin
-    container = IS.Components(IS.InMemoryTimeSeriesStorage())
+    container = IS.Components(IS.TimeSeriesManager(; in_memory = true))
 
     component = IS.TestComponent("component1", 5)
     IS.add_component!(container, component)
@@ -34,7 +34,7 @@ end
 end
 
 @testset "Test remove_component" begin
-    container = IS.Components(IS.InMemoryTimeSeriesStorage())
+    container = IS.Components(IS.TimeSeriesManager(; in_memory = true))
 
     component = IS.TestComponent("component1", 5)
     IS.add_component!(container, component)
@@ -47,7 +47,7 @@ end
 end
 
 @testset "Test remove_component by name" begin
-    container = IS.Components(IS.InMemoryTimeSeriesStorage())
+    container = IS.Components(IS.TimeSeriesManager(; in_memory = true))
 
     name = "component1"
     component = IS.TestComponent(name, 5)
@@ -75,7 +75,7 @@ end
 end
 
 @testset "Test get_components" begin
-    container = IS.Components(IS.InMemoryTimeSeriesStorage())
+    container = IS.Components(IS.TimeSeriesManager(; in_memory = true))
 
     # empty
     components = IS.get_components(IS.TestComponent, container)
@@ -118,7 +118,7 @@ end
 end
 
 @testset "Test get_component" begin
-    container = IS.Components(IS.InMemoryTimeSeriesStorage())
+    container = IS.Components(IS.TimeSeriesManager(; in_memory = true))
 
     component = IS.TestComponent("component1", 5)
     IS.add_component!(container, component)
@@ -138,12 +138,12 @@ end
 end
 
 @testset "Test empty get_component" begin
-    container = IS.Components(IS.InMemoryTimeSeriesStorage())
+    container = IS.Components(IS.TimeSeriesManager(; in_memory = true))
     @test isempty(collect(IS.get_components(IS.TestComponent, container)))
 end
 
 @testset "Test get_components_by_name" begin
-    container = IS.Components(IS.InMemoryTimeSeriesStorage())
+    container = IS.Components(IS.TimeSeriesManager(; in_memory = true))
 
     component = IS.TestComponent("component1", 5)
     IS.add_component!(container, component)
@@ -159,7 +159,7 @@ end
 end
 
 @testset "Test iterate_components" begin
-    container = IS.Components(IS.InMemoryTimeSeriesStorage())
+    container = IS.Components(IS.TimeSeriesManager(; in_memory = true))
     component = IS.TestComponent("component1", 5)
     IS.add_component!(container, component)
 
@@ -171,7 +171,7 @@ end
 end
 
 @testset "Test components serialization" begin
-    container = IS.Components(IS.InMemoryTimeSeriesStorage())
+    container = IS.Components(IS.TimeSeriesManager(; in_memory = true))
     component = IS.TestComponent("component1", 5)
     IS.add_component!(container, component)
     data = IS.serialize(container)
@@ -181,7 +181,7 @@ end
 end
 
 @testset "Summarize components" begin
-    container = IS.Components(IS.InMemoryTimeSeriesStorage())
+    container = IS.Components(IS.TimeSeriesManager(; in_memory = true))
     component = IS.TestComponent("component1", 5)
     IS.add_component!(container, component)
     summary(devnull, container)

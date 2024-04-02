@@ -194,7 +194,7 @@ function SingleTimeSeries(ts_metadata::SingleTimeSeriesMetadata, data::TimeSerie
     )
 end
 
-function SingleTimeSeriesMetadata(ts::SingleTimeSeries)
+function SingleTimeSeriesMetadata(ts::SingleTimeSeries; features...)
     return SingleTimeSeriesMetadata(
         get_name(ts),
         get_resolution(ts),
@@ -202,6 +202,7 @@ function SingleTimeSeriesMetadata(ts::SingleTimeSeries)
         get_uuid(ts),
         length(ts),
         get_scaling_factor_multiplier(ts),
+        Dict{String, Any}(string(k) => v for (k, v) in features),
     )
 end
 

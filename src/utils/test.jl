@@ -73,7 +73,7 @@ function deserialize(::Type{TestComponent}, data::Dict)
         data["name"],
         data["val"],
         data["val2"],
-        deserialize(TimeSeriesContainer, data["time_series_container"]),
+        TimeSeriesContainer(),
         data["supplemental_attributes_container"],
         deserialize(InfrastructureSystemsInternal, data["internal"]),
     )

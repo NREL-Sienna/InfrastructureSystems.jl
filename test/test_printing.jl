@@ -4,7 +4,7 @@
     show(io, "text/plain", sys)
     text = String(take!(io))
     @test occursin("TestComponent", text)
-    @test occursin("Time Series Summary", text)
+    @test occursin("time_series_type", text)
 end
 
 @testset "Test show_component_tables" begin

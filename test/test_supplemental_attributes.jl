@@ -1,5 +1,5 @@
 @testset "Test add_supplemental_attribute" begin
-    container = IS.SupplementalAttributes(IS.InMemoryTimeSeriesStorage())
+    container = IS.SupplementalAttributes(IS.TimeSeriesManager(; in_memory = true))
     geo_supplemental_attribute = IS.GeographicInfo()
     component = IS.TestComponent("component1", 5)
     IS.add_supplemental_attribute!(container, component, geo_supplemental_attribute)
@@ -12,7 +12,7 @@
         geo_supplemental_attribute,
     )
 
-    container = IS.SupplementalAttributes(IS.InMemoryTimeSeriesStorage())
+    container = IS.SupplementalAttributes(IS.TimeSeriesManager(; in_memory = true))
     geo_supplemental_attribute = IS.GeographicInfo()
     @test_throws ArgumentError IS._add_supplemental_attribute!(
         container,
@@ -21,7 +21,7 @@
 end
 
 @testset "Test clear_supplemental_attributes" begin
-    container = IS.SupplementalAttributes(IS.InMemoryTimeSeriesStorage())
+    container = IS.SupplementalAttributes(IS.TimeSeriesManager(; in_memory = true))
     geo_supplemental_attribute = IS.GeographicInfo()
     component = IS.TestComponent("component1", 5)
     IS.add_supplemental_attribute!(container, component, geo_supplemental_attribute)
@@ -35,7 +35,7 @@ end
 end
 
 @testset "Test remove_supplemental_attribute" begin
-    container = IS.SupplementalAttributes(IS.InMemoryTimeSeriesStorage())
+    container = IS.SupplementalAttributes(IS.TimeSeriesManager(; in_memory = true))
     geo_supplemental_attribute = IS.GeographicInfo()
     component = IS.TestComponent("component1", 5)
     IS.add_supplemental_attribute!(container, component, geo_supplemental_attribute)
@@ -65,7 +65,7 @@ end
 end
 
 @testset "Test iterate_SupplementalAttributes" begin
-    container = IS.SupplementalAttributes(IS.InMemoryTimeSeriesStorage())
+    container = IS.SupplementalAttributes(IS.TimeSeriesManager(; in_memory = true))
     geo_supplemental_attribute = IS.GeographicInfo()
     component = IS.TestComponent("component1", 5)
     IS.add_supplemental_attribute!(container, component, geo_supplemental_attribute)
@@ -78,7 +78,7 @@ end
 end
 
 @testset "Summarize SupplementalAttributes" begin
-    container = IS.SupplementalAttributes(IS.InMemoryTimeSeriesStorage())
+    container = IS.SupplementalAttributes(IS.TimeSeriesManager(; in_memory = true))
     geo_supplemental_attribute = IS.GeographicInfo()
     component = IS.TestComponent("component1", 5)
     IS.add_supplemental_attribute!(container, component, geo_supplemental_attribute)
@@ -86,7 +86,7 @@ end
 end
 
 @testset "Test supplemental_attributes serialization" begin
-    container = IS.SupplementalAttributes(IS.InMemoryTimeSeriesStorage())
+    container = IS.SupplementalAttributes(IS.TimeSeriesManager(; in_memory = true))
     geo_supplemental_attribute = IS.GeographicInfo()
     component = IS.TestComponent("component1", 5)
     IS.add_supplemental_attribute!(container, component, geo_supplemental_attribute)
