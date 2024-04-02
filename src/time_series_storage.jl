@@ -4,7 +4,6 @@ Abstract type for time series storage implementations.
 
 All subtypes must implement:
 
-  - add_time_series_reference!
   - check_read_only
   - clear_time_series!
   - deserialize_time_series
@@ -80,13 +79,7 @@ end
 function serialize(storage::TimeSeriesStorage, file_path::AbstractString)
     if storage isa Hdf5TimeSeriesStorage
         if abspath(get_file_path(storage)) == abspath(file_path)
-            if !is_read_only(storage)
-                error("Attempting to overwrite identical time series file")
-            end
-
-            @debug "Skip time series serialization because the paths are identical" _group =
-                LOG_GROUP_TIME_SERIES
-            return
+            error("Attempting to overwrite identical time series file")
         end
 
         copy_h5_file(get_file_path(storage), file_path)

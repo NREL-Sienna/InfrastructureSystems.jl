@@ -201,10 +201,10 @@ end
         interval,
     )
 
-    forecast = IS.get_time_series(IS.AbstractDeterministic, component, name)
+    forecast = IS.get_time_series(IS.Deterministic, component, name)
     initial_times = collect(IS.get_initial_times(forecast))
     cache =
-        IS.ForecastCache(IS.AbstractDeterministic, component, name; cache_size_bytes = 1024)
+        IS.ForecastCache(IS.Deterministic, component, name; cache_size_bytes = 1024)
 
     for (i, ta) in enumerate(cache)
         @test TimeSeries.timestamp(ta) ==

@@ -204,7 +204,7 @@ function Probabilistic(
     )
 end
 
-function ProbabilisticMetadata(time_series::Probabilistic)
+function ProbabilisticMetadata(time_series::Probabilistic; features...)
     return ProbabilisticMetadata(
         get_name(time_series),
         get_initial_timestamp(time_series),
@@ -215,6 +215,7 @@ function ProbabilisticMetadata(time_series::Probabilistic)
         get_uuid(time_series),
         get_horizon(time_series),
         get_scaling_factor_multiplier(time_series),
+        Dict{String, Any}(string(k) => v for (k, v) in features),
     )
 end
 

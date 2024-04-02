@@ -26,3 +26,15 @@ abstract type TimeSeriesData <: InfrastructureSystemsComponent end
 # - get_resolution
 # - make_time_array
 # - eltype_data
+
+abstract type AbstractTimeSeriesParameters <: InfrastructureSystemsType end
+
+struct StaticTimeSeriesParameters <: AbstractTimeSeriesParameters end
+
+Base.@kwdef struct ForecastParameters <: AbstractTimeSeriesParameters
+    horizon::Int
+    initial_timestamp::Dates.DateTime
+    interval::Dates.Period
+    count::Int
+    resolution::Dates.Period
+end

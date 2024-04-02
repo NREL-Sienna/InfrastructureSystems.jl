@@ -132,8 +132,8 @@ function compare_values(
     else
         for field_name in fields
             field_name in exclude && continue
-            if (T <: TimeSeriesContainer || T <: SupplementalAttributes) &&
-               field_name == :time_series_storage
+            if (T <: TimeSeriesContainer && field_name == :manager) ||
+               (T <: SupplementalAttributes && field_name == :time_series_manager)
                 # This gets validated at SystemData. Don't repeat for each component.
                 continue
             end
