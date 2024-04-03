@@ -34,7 +34,7 @@ IS.@scoped_enum Fruit APPLE = 1 ORANGE = 2
     @test IS.deserialize(Fruit, IS.serialize(Fruit.APPLE)) == Fruit.APPLE
 
     @test IS.deserialize_struct(Foo, IS.serialize_struct(Foo(Fruit.APPLE))) ==
-        Foo(Fruit.APPLE)
+          Foo(Fruit.APPLE)
 end
 
 @testset "Test undef component prints" begin
