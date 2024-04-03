@@ -217,6 +217,7 @@ compare_values(::Type{T}, ::Type{T}; kwargs...) where {T} = true
 compare_values(::Type{T}, ::Type{U}; kwargs...) where {T, U} = false
 
 # Copied from https://discourse.julialang.org/t/encapsulating-enum-access-via-dot-syntax/11785/10
+# Some InfrastructureSystems-specific modifications
 """
 Macro to wrap Enum in a module to keep the top level scope clean.
 
@@ -242,6 +243,7 @@ macro scoped_enum(T, args...)
         :(
             module $(Symbol("$(T)Module"))
             using JSON3
+            import InfrastructureSystems
             export $T
             struct $T
                 value::Int64
@@ -258,6 +260,10 @@ macro scoped_enum(T, args...)
                 print(io, string($T, ".", string(e), " = ", e.value))
             Base.propertynames(::Type{$T}) = $([x.args[1] for x in args])
             JSON3.StructType(::Type{$T}) = JSON3.StructTypes.StringType()
+
+            InfrastructureSystems.serialize(val::$T) = Base.string(val)
+            InfrastructureSystems.deserialize(::Type{$T}, val) =
+                JSON3.StructTypes.constructfrom($T, val)
 
             Base.convert(::Type{$T}, val::Integer) = $T(val)
             Base.isless(val::$T, other::$T) = isless(val.value, other.value)

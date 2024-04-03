@@ -5,20 +5,13 @@ abstract type UnitsData end
 
 @scoped_enum(UnitSystem, SYSTEM_BASE = 0, DEVICE_BASE = 1, NATURAL_UNITS = 2,)
 
-const _UNIT_SYSTEM_MAP = Dict(string(x) => x for x in instances(UnitSystem))
-
 mutable struct SystemUnitsSettings <: UnitsData
     base_value::Float64
     unit_system::UnitSystem
 end
 
-function serialize(val::SystemUnitsSettings)
-    return Dict("base_value" => val.base_value, "unit_system" => string(val.unit_system))
-end
-
-function deserialize(::Type{SystemUnitsSettings}, data::Dict)
-    return SystemUnitsSettings(data["base_value"], _UNIT_SYSTEM_MAP[data["unit_system"]])
-end
+serialize(val::SystemUnitsSettings) = IS.serialize_struct(val)
+deserialize(T::Type{<:SystemUnitsSettings}, val::Dict) = IS.deserialize_struct(T, val)
 
 """
 Internal storage common to InfrastructureSystems types.
