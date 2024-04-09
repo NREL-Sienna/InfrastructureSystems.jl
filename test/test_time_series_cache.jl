@@ -243,3 +243,47 @@ end
         @test TimeSeries.values(ta) == IS.get_time_series_values(component, forecast, it)
     end
 end
+
+@testset "Test repeated reads of time series cache" begin
+    sys = IS.SystemData()
+    name = "Component1"
+    component = IS.TestComponent(name, 5)
+    IS.add_component!(sys, component)
+    file = joinpath(FORECASTS_DIR, "DateTimeAsColumnDeterministic.csv")
+    resolution = Dates.Hour(1)
+    forecast = IS.Deterministic("test", file, component, resolution)
+    initial_timestamp = IS.get_initial_timestamp(forecast)
+    initial_times = collect(IS.get_initial_times(forecast))
+    interval = IS.get_interval(forecast)
+    IS.add_time_series!(sys, component, forecast)
+
+    cache = IS.ForecastCache(IS.Deterministic, component, "test")
+    @test cache.in_memory_count == 168
+    @test IS.get_next_time(cache) == initial_timestamp
+    @test length(cache) == cache.common.num_iterations == 168
+
+    for it in initial_times
+        expected_timestamps = IS.get_time_series_timestamps(component, forecast, it)
+        expected_values = IS.get_time_series_values(component, forecast, it)
+        for _ in 1:2
+            ta = IS.get_time_series_array!(cache, it)
+            @test TimeSeries.timestamp(ta) ==
+                  IS.get_time_series_timestamps(component, forecast, it)
+            @test TimeSeries.values(ta) ==
+                  IS.get_time_series_values(component, forecast, it)
+        end
+    end
+
+    @test_throws IS.InvalidValue IS.get_time_series_array!(cache, initial_timestamp)
+    @test_throws IS.InvalidValue IS.get_time_series_array!(
+        cache,
+        initial_times[end] + resolution,
+    )
+    IS.reset!(cache)
+    @test_throws IS.InvalidValue IS.get_time_series_array!(
+        cache,
+        initial_timestamp - resolution,
+    )
+    IS.get_time_series_array!(cache, initial_timestamp)
+    @test_throws IS.InvalidValue IS.get_time_series_array!(cache, initial_times[3])
+end
