@@ -756,11 +756,10 @@ function serialize(data::SystemData)
             json_data["time_series_storage_file"] = time_series_base_name
             json_data["time_series_storage_type"] = string(typeof(data.time_series_storage))
         end
-
-        pop!(ext, SERIALIZATION_METADATA_KEY)
-        isempty(ext) && clear_ext!(data.internal)
     end
 
+    pop!(ext, SERIALIZATION_METADATA_KEY, nothing)
+    isempty(ext) && clear_ext!(data.internal)
     return json_data
 end
 
@@ -869,6 +868,12 @@ function add_masked_component!(data::SystemData, component; kwargs...)
     )
     data.component_uuids[get_uuid(component)] = component
     return
+end
+
+function remove_masked_component!(data::SystemData, component)
+    component = remove_component!(data.masked_components, component)
+    _handle_component_removal!(data, component)
+    return component
 end
 
 function _check_duplicate_component_uuid(data::SystemData, component)
