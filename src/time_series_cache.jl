@@ -23,7 +23,8 @@ Base.length(c::TimeSeriesCache) = _get_num_iterations(c)
 Return the TimeSeries.TimeArray starting at timestamp.
 Reads from storage if the data is not already in cache.
 
-Timestamps must be read sequentially. Random access may be added in the future.
+Timestamps must be read sequentially. Repeated reads are allowed. Random access may be added
+in the future.
 
 # Arguments
 
@@ -31,33 +32,49 @@ Timestamps must be read sequentially. Random access may be added in the future.
   - `timestamp::Dates.DateTime`: starting timestamp for the time series array
 """
 function get_time_series_array!(cache::TimeSeriesCache, timestamp::Dates.DateTime)
+    _check_timestamp(cache, timestamp)
     next_time = get_next_time(cache)
-    if next_time === nothing
-        throw(InvalidValue("timestamp = $timestamp is beyond the range of the time series"))
-    end
 
-    if timestamp != next_time
-        throw(InvalidValue("random access is not currently supported. next = $next_time"))
-    end
-
-    if next_time > _get_last_cached_time(cache)
-        @debug "get_next_time_series_array! update cache" _group = LOG_GROUP_TIME_SERIES next_time
+    if timestamp > _get_last_cached_time(cache)
+        @debug "get_time_series_array! update cache" _group = LOG_GROUP_TIME_SERIES timestamp next_time
         _update!(cache)
     else
-        @debug "get_next_time_series_array! data is in cache" _group = LOG_GROUP_TIME_SERIES next_time
+        @debug "get_time_series_array! data is in cache" _group = LOG_GROUP_TIME_SERIES timestamp next_time
     end
 
     len = _get_length(cache)
     ta = get_time_series_array(
         _get_component(cache),
         _get_time_series(cache),
-        next_time;
+        timestamp;
         len = len,
         ignore_scaling_factors = _get_ignore_scaling_factors(cache),
     )
-    _increment_next_time!(cache, len)
-    _decrement_iterations_remaining!(cache)
+    if !isnothing(next_time) && timestamp == next_time
+        _increment_next_time!(cache, len)
+        _decrement_iterations_remaining!(cache)
+        _set_last_timestamp_read!(cache, timestamp)
+    end
     return ta
+end
+
+function _check_timestamp(cache::TimeSeriesCache, timestamp::Dates.DateTime)
+    last_read = _get_last_timestamp_read(cache)
+    next_time = get_next_time(cache)
+
+    if last_read < _get_start_time(cache)
+        if timestamp != next_time
+            throw(InvalidValue("Invalid request. Valid timestamps are [$next_time]."))
+        end
+    elseif isnothing(next_time)
+        if timestamp != last_read
+            throw(InvalidValue("Invalid request. Valid timestamps are [$last_read]."))
+        end
+    elseif timestamp != next_time && timestamp != last_read
+        throw(
+            InvalidValue("Invalid request. Valid timestamps are [$last_read, $next_time]."),
+        )
+    end
 end
 
 """
@@ -105,6 +122,9 @@ _get_last_cached_time(c::TimeSeriesCache) = c.common.last_cached_time[]
 _get_length_available(c::TimeSeriesCache) = c.common.length_available[]
 _set_length_available!(c::TimeSeriesCache, len) = c.common.length_available[] = len
 _get_length_remaining(c::TimeSeriesCache) = c.common.length_remaining[]
+_get_last_timestamp_read(c::TimeSeriesCache) = c.common.last_read_time[]
+_set_last_timestamp_read!(c::TimeSeriesCache, val) = c.common.last_read_time[] = val
+_get_start_time(c::TimeSeriesCache) = c.common.start_time
 _decrement_length_remaining!(c::TimeSeriesCache, num) = c.common.length_remaining[] -= num
 _get_name(c::TimeSeriesCache) = c.common.name
 _get_num_iterations(c::TimeSeriesCache) = c.common.num_iterations
@@ -120,9 +140,10 @@ struct TimeSeriesCacheCommon{T <: TimeSeriesData, U <: InfrastructureSystemsComp
     ts::Base.RefValue{T}
     component::U
     name::String
-    orig_next_time::Dates.DateTime
+    start_time::Dates.DateTime
     next_time::Base.RefValue{Dates.DateTime}
     last_cached_time::Base.RefValue{Dates.DateTime}
+    last_read_time::Base.RefValue{Dates.DateTime}
     "Total length"
     len::Int
     "Cached data available to read"
@@ -150,6 +171,7 @@ struct TimeSeriesCacheCommon{T <: TimeSeriesData, U <: InfrastructureSystemsComp
             next_time,
             Ref(next_time),
             Ref(next_time - Dates.Minute(1)),
+            Ref(next_time - Dates.Minute(1)),
             len,
             Ref(0),
             Ref(len),
@@ -163,8 +185,9 @@ end
 _get_component(c::TimeSeriesCacheCommon) = c.component
 
 function _reset!(common::TimeSeriesCacheCommon)
-    common.next_time[] = common.orig_next_time
-    common.last_cached_time[] = common.orig_next_time - Dates.Minute(1)
+    common.next_time[] = common.start_time
+    common.last_cached_time[] = common.start_time - Dates.Minute(1)
+    common.last_read_time[] = common.last_cached_time[]
     common.length_available[] = common.len
     common.length_remaining[] = common.len
     common.iterations_remaining[] = common.num_iterations
