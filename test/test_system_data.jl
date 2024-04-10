@@ -95,6 +95,12 @@ end
     # This needs to return time series for masked components.
     @test length(collect(IS.get_time_series_multiple(data; type = IS.SingleTimeSeries))) ==
           3
+
+    IS.remove_masked_component!(
+        data,
+        IS.get_masked_component(IS.TestComponent, data, "component_2"),
+    )
+    @test isempty(IS.get_masked_components(IS.TestComponent, data))
 end
 
 @testset "Test compare_values" begin
