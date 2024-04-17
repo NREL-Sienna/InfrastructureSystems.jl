@@ -1,3 +1,6 @@
+"""
+Common structure to keep track of optimization models' internal information.
+"""
 mutable struct ModelInternal{T <: AbstractOptimizationContainer}
     container::T
     initial_conditions_model_container::Union{Nothing, T}
