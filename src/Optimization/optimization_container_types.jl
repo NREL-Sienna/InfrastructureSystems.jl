@@ -22,6 +22,8 @@ should_write_resulting_value(::Type{<:ParameterType}) = true
 abstract type RightHandSideParameter <: ParameterType end
 abstract type ObjectiveFunctionParameter <: ParameterType end
 
+abstract type TimeSeriesParameter <: RightHandSideParameter end
+
 """
 Optimization Container construction stage
 """
