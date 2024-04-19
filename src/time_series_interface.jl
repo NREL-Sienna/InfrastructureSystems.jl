@@ -61,17 +61,6 @@ function get_time_series(
     return deserialize_time_series(T, storage, ts_metadata, rows, columns)
 end
 
-function get_time_series_uuid(
-    ::Type{T},
-    owner::TimeSeriesOwners,
-    name::AbstractString,
-) where {T <: TimeSeriesData}
-    # TODO: do we need this?
-    metadata_type = time_series_data_to_metadata(T)
-    metadata = get_time_series_metadata(metadata_type, owner, name)
-    return get_time_series_uuid(metadata)
-end
-
 function get_time_series_metadata(
     ::Type{T},
     owner::TimeSeriesOwners,
@@ -95,8 +84,17 @@ function get_time_series_array(
     start_time::Union{Nothing, Dates.DateTime} = nothing,
     len::Union{Nothing, Int} = nothing,
     ignore_scaling_factors = false,
+    features...,
 ) where {T <: TimeSeriesData}
-    ts = get_time_series(T, owner, name; start_time = start_time, len = len, count = 1)
+    ts = get_time_series(
+        T,
+        owner,
+        name;
+        start_time = start_time,
+        len = len,
+        count = 1,
+        features...,
+    )
     if start_time === nothing
         start_time = get_initial_timestamp(ts)
     end
@@ -163,9 +161,17 @@ function get_time_series_timestamps(
     name::AbstractString;
     start_time::Union{Nothing, Dates.DateTime} = nothing,
     len::Union{Nothing, Int} = nothing,
+    features...,
 ) where {T <: TimeSeriesData}
     return TimeSeries.timestamp(
-        get_time_series_array(T, owner, name; start_time = start_time, len = len),
+        get_time_series_array(
+            T,
+            owner,
+            name;
+            start_time = start_time,
+            len = len,
+            features...,
+        ),
     )
 end
 
@@ -210,6 +216,7 @@ function get_time_series_values(
     start_time::Union{Nothing, Dates.DateTime} = nothing,
     len::Union{Nothing, Int} = nothing,
     ignore_scaling_factors = false,
+    features...,
 ) where {T <: TimeSeriesData}
     return TimeSeries.values(
         get_time_series_array(
@@ -219,6 +226,7 @@ function get_time_series_values(
             start_time = start_time,
             len = len,
             ignore_scaling_factors = ignore_scaling_factors,
+            features...,
         ),
     )
 end
@@ -410,26 +418,6 @@ function list_time_series_metadata(
         name = name,
         features...,
     )
-end
-
-function get_time_series(
-    owner::TimeSeriesOwners,
-    time_series::TimeSeriesData,
-)
-    storage = get_time_series_storage(owner)
-    return get_time_series(storage, get_time_series_uuid(time_series))
-end
-
-function get_time_series_uuids(owner::TimeSeriesOwners)
-    mgr = get_time_series_manager(owner)
-    if isnothing(mgr)
-        return []
-    end
-
-    return [
-        (get_time_series_uuid(x), get_name(x)) for
-        x in list_metadata(mgr.metadata_store, owner)
-    ]
 end
 
 function clear_time_series!(owner::TimeSeriesOwners)

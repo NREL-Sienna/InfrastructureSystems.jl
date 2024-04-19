@@ -363,11 +363,41 @@ end
         rand(365),
     )
     ts_name = "test_c"
-    data = IS.SingleTimeSeries(; data = data, name = ts_name)
-    IS.add_time_series!(sys, component, data; scenario = "low", model_year = "2030")
-    IS.add_time_series!(sys, component, data; scenario = "high", model_year = "2030")
-    IS.add_time_series!(sys, component, data; scenario = "low", model_year = "2035")
-    IS.add_time_series!(sys, component, data; scenario = "high", model_year = "2035")
+    ts = IS.SingleTimeSeries(; data = data, name = ts_name)
+    IS.add_time_series!(sys, component, ts; scenario = "low", model_year = "2030")
+    # get_time_series with partial query works if there is only 1.
+    @test IS.get_time_series(IS.SingleTimeSeries, component, ts_name).data == data
+    @test IS.get_time_series(
+        IS.SingleTimeSeries,
+        component,
+        ts_name;
+        scenario = "low",
+    ).data == data
+    @test IS.get_time_series(
+        IS.SingleTimeSeries,
+        component,
+        ts_name;
+        scenario = "low",
+        model_year = "2030",
+    ).data == data
+    @test IS.get_time_series_values(
+        IS.SingleTimeSeries,
+        component,
+        ts_name;
+        scenario = "low",
+        model_year = "2030",
+    ) == TimeSeries.values(data)
+    @test IS.get_time_series_timestamps(
+        IS.SingleTimeSeries,
+        component,
+        ts_name;
+        scenario = "low",
+        model_year = "2030",
+    ) == TimeSeries.timestamp(data)
+
+    IS.add_time_series!(sys, component, ts; scenario = "high", model_year = "2030")
+    IS.add_time_series!(sys, component, ts; scenario = "low", model_year = "2035")
+    IS.add_time_series!(sys, component, ts; scenario = "high", model_year = "2035")
 
     @test_throws ArgumentError IS.get_time_series(
         IS.SingleTimeSeries,
@@ -389,10 +419,28 @@ end
     ) isa IS.SingleTimeSeries
     @test IS.has_time_series(component, IS.SingleTimeSeries)
     @test IS.has_time_series(component, IS.SingleTimeSeries, ts_name)
-    @test IS.has_time_series(component, IS.SingleTimeSeries, ts_name, scenario="low")
-    @test IS.has_time_series(component, IS.SingleTimeSeries, ts_name, model_year = "2030", scenario="low")
-    @test IS.has_time_series(component, IS.SingleTimeSeries, ts_name, model_year = "2030", scenario="low")
-    @test !IS.has_time_series(component, IS.SingleTimeSeries, ts_name, model_year = "2060", scenario="low")
+    @test IS.has_time_series(component, IS.SingleTimeSeries, ts_name, scenario = "low")
+    @test IS.has_time_series(
+        component,
+        IS.SingleTimeSeries,
+        ts_name,
+        model_year = "2030",
+        scenario = "low",
+    )
+    @test IS.has_time_series(
+        component,
+        IS.SingleTimeSeries,
+        ts_name,
+        model_year = "2030",
+        scenario = "low",
+    )
+    @test !IS.has_time_series(
+        component,
+        IS.SingleTimeSeries,
+        ts_name;
+        model_year = "2060",
+        scenario = "low",
+    )
     @test length(IS.list_time_series_info(component)) == 4
     @test IS.list_time_series_info(component)[1].type === IS.SingleTimeSeries
     @test Tables.rowtable(
@@ -400,7 +448,7 @@ end
             sys.time_series_manager.metadata_store,
             "SELECT COUNT(*) AS count FROM $(IS.METADATA_TABLE_NAME)",
         ),
-   )[1].count == 4
+    )[1].count == 4
 end
 
 @testset "Test add Deterministic with features" begin
@@ -488,6 +536,8 @@ end
         scenario = "low",
         model_year = "2035",
     )[1].features["model_year"] == "2035"
+    @test length(IS.list_time_series_info(component)) == 4
+    @test IS.list_time_series_info(component)[1].type === IS.Deterministic
 
     IS.remove_time_series!(sys, IS.Deterministic, component, ts_name; scenario = "low")
     @test length(

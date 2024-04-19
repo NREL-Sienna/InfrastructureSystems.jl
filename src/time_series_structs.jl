@@ -1,6 +1,6 @@
 const TimeSeriesOwners = Union{InfrastructureSystemsComponent, SupplementalAttribute}
 
-Base.@kwdef struct StaticTimeSeriesInfo <: InfrastructureSystemsType
+@kwdef struct StaticTimeSeriesInfo <: InfrastructureSystemsType
     type::DataType
     name::String
     initial_timestamp::Dates.DateTime
@@ -20,7 +20,7 @@ function make_time_series_info(metadata::StaticTimeSeriesMetadata)
     )
 end
 
-Base.@kwdef struct ForecastInfo <: InfrastructureSystemsType
+@kwdef struct ForecastInfo <: InfrastructureSystemsType
     type::DataType
     name::String
     initial_timestamp::Dates.DateTime
@@ -48,7 +48,7 @@ end
 Provides counts of time series including attachments to components and supplemental
 attributes.
 """
-Base.@kwdef struct TimeSeriesCounts
+@kwdef struct TimeSeriesCounts
     components_with_time_series::Int
     supplemental_attributes_with_time_series::Int
     static_time_series_count::Int
@@ -56,13 +56,9 @@ Base.@kwdef struct TimeSeriesCounts
 end
 
 # TODO: This is now only used in PSY. Consider moving.
-struct TimeSeriesKey <: InfrastructureSystemsType
+@kwdef struct TimeSeriesKey <: InfrastructureSystemsType
     time_series_type::Type{<:TimeSeriesData}
     name::String
-end
-
-function TimeSeriesKey(; time_series_type::Type{<:TimeSeriesData}, name::String)
-    return TimeSeriesKey(time_series_type, name)
 end
 
 function TimeSeriesKey(data::TimeSeriesData)

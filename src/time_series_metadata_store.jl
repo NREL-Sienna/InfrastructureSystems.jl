@@ -54,7 +54,11 @@ function _create_metadata_table!(store::TimeSeriesMetadataStore)
         "owner_type TEXT NOT NULL",
         "owner_category TEXT NOT NULL",
         "features TEXT NOT NULL",
+        # The metadata is included as a convenience for serialization/de-serialization,
+        # specifically for types: time_series_type and scaling_factor_multplier.
+        # There is a lot duplication of data.
         "metadata JSON NOT NULL",
+                                
     ]
     schema_text = join(schema, ",")
     _execute(store, "CREATE TABLE $(METADATA_TABLE_NAME)($(schema_text))")
@@ -700,7 +704,9 @@ function remove_metadata!(
         owner;
         time_series_type = time_series_type,
         name = name,
-        require_full_feature_match = false,  # TODO: needs more consideration
+        # TODO/PERF: This can be made faster by attempting search by a full match
+        # and then fallback to partial. We likely don't care about this for removing.
+        require_full_feature_match = false,
         features...,
     )
     num_deleted = _remove_metadata!(store, where_clause)
@@ -739,7 +745,6 @@ end
 Run a query and return the results in a DataFrame.
 """
 function sql(store::TimeSeriesMetadataStore, query::String)
-    """Run a SQL query on the time series metadata table."""
     return DataFrames.DataFrame(_execute(store, query))
 end
 

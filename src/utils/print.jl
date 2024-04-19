@@ -273,6 +273,10 @@ function show_components(
 end
 
 function show_time_series(owner::TimeSeriesOwners)
+    show_time_series(stdout, owner)
+end
+
+function show_time_series(io::IO, owner::TimeSeriesOwners)
     data_by_type = Dict{Any, Vector{OrderedDict{String, Any}}}()
     for info in list_time_series_info(owner)
         if !haskey(data_by_type, info.type)
@@ -289,7 +293,7 @@ function show_time_series(owner::TimeSeriesOwners)
         push!(data_by_type[info.type], data)
     end
     for rows in values(data_by_type)
-        PrettyTables.pretty_table(DataFrame(rows))
+        PrettyTables.pretty_table(io, DataFrame(rows))
     end
 end
 
