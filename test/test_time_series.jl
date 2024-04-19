@@ -124,7 +124,7 @@ end
     @test_throws ArgumentError IS.Deterministic(name, data_ts_two_cols)
 end
 
-@testset "Test add Deterministic Cost Timeseries " begin
+@testset "Test add Deterministic Cost Timeseries" begin
     initial_time = Dates.DateTime("2020-09-01")
     resolution = Dates.Hour(1)
     other_time = initial_time + resolution

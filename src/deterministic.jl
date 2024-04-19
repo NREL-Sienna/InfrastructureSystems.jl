@@ -216,21 +216,23 @@ function Deterministic(
     )
 end
 
-convert_data(
-    data::AbstractDict{<:Any, Vector{T}},
-) where {T <: Union{CONSTANT, FunctionData}} =
-    SortedDict{Dates.DateTime, Vector{T}}(data...)
-convert_data(
-    data::SortedDict{Dates.DateTime, Vector{T}},
-) where {T <: Union{CONSTANT, FunctionData}} = data
-
 # Workaround for a bug/limitation in SortedDict. If a user tries to construct
 # SortedDict(i => ones(2) for i in 1:2)
 # it won't discern the types and will return SortedDict{Any,Any,Base.Order.ForwardOrdering}
 # https://github.com/JuliaCollections/DataStructures.jl/issues/239
 # This will only work for the most common use case of Vector{CONSTANT}.
 # For other types the user will need to create SortedDict with explicit key-value types.
-convert_data(data::AbstractDict) = SortedDict{Dates.DateTime, Vector{CONSTANT}}(data...)
+
+# If values are no more specific than Any, assume CONSTANT
+convert_data(data::AbstractDict{<:Any, Any}) =
+    SortedDict{Dates.DateTime, Vector{CONSTANT}}(data...)
+
+# If values are more specific, don't assume CONSTANT but do upgrade some types
+convert_data(data::AbstractDict{<:Any, Vector{T}}) where {T} =
+    SortedDict{Dates.DateTime, Vector{T}}(data...)
+
+# If everything is fully specified, pass through
+convert_data(data::SortedDict{Dates.DateTime, Vector}) = data
 
 function get_array_for_hdf(forecast::Deterministic)
     return transform_array_for_hdf(forecast.data)

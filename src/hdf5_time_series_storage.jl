@@ -285,12 +285,12 @@ end
 """
 Return a String for the data type of the forecast data, this implementation avoids the use of `eval` on arbitrary code stored in HDF dataset.
 """
-function get_data_type(ts::TimeSeriesData)
-    data_type = eltype_data(ts)
-    ((data_type <: CONSTANT) || (data_type <: Integer)) && (return "CONSTANT")
-    (data_type <: FunctionData) && (return string(nameof(data_type)))
-    error("$data_type is not supported in forecast data")
-end
+get_data_type(ts::TimeSeriesData) = get_type_label(eltype_data(ts))
+
+# Can define new methods for new types if the default doesn't work for them
+get_type_label(::Type{CONSTANT}) = "CONSTANT"
+get_type_label(::Type{Integer}) = get_type_label(CONSTANT)
+get_type_label(data_type::Type{<:Any}) = string(nameof(data_type))
 
 function _write_time_series_attributes!(
     storage::Hdf5TimeSeriesStorage,

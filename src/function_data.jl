@@ -39,11 +39,8 @@ get_proportional_term(fd::QuadraticFunctionData) = fd.proportional_term
 get_constant_term(fd::QuadraticFunctionData) = fd.constant_term
 
 function _validate_piecewise_x(x_coords)
-    # TODO currently there exist cases where we are constructing a PiecewiseLinearData
-    # with only one point (e.g., `calculate_variable_cost` within
-    # `power_system_table_data.jl`) -- what does this represent?
-    # (length(x_coords) >= 2) ||
-    #     throw(ArgumentError("Must specify at least two x-coordinates"))
+    (length(x_coords) >= 2) ||
+        throw(ArgumentError("Must specify at least two x-coordinates"))
     issorted(x_coords) ||
         throw(ArgumentError("Piecewise x-coordinates must be ascending, got $x_coords"))
 end
