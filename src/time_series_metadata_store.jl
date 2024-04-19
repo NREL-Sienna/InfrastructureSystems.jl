@@ -58,7 +58,6 @@ function _create_metadata_table!(store::TimeSeriesMetadataStore)
         # specifically for types: time_series_type and scaling_factor_multplier.
         # There is a lot duplication of data.
         "metadata JSON NOT NULL",
-                                
     ]
     schema_text = join(schema, ",")
     _execute(store, "CREATE TABLE $(METADATA_TABLE_NAME)($(schema_text))")

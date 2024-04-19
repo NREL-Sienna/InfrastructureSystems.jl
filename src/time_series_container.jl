@@ -9,8 +9,6 @@ function TimeSeriesContainer()
     return TimeSeriesContainer(nothing)
 end
 
-getproperty(::TimeSeriesContainer, x) = nothing
-
 get_time_series_manager(x::TimeSeriesContainer) = x.manager
 
 function set_time_series_manager!(
