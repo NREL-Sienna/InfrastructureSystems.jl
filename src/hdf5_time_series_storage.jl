@@ -289,7 +289,7 @@ get_data_type(ts::TimeSeriesData) = get_type_label(eltype_data(ts))
 
 # Can define new methods for new types if the default doesn't work for them
 get_type_label(::Type{CONSTANT}) = "CONSTANT"
-get_type_label(::Type{Integer}) = get_type_label(CONSTANT)
+get_type_label(::Type{<:Integer}) = get_type_label(CONSTANT)
 get_type_label(data_type::Type{<:Any}) = string(nameof(data_type))
 
 function _write_time_series_attributes!(
@@ -628,11 +628,7 @@ end
 
 function get_hdf_array(
     dataset,
-    T::Union{
-        Type{LinearFunctionData},
-        Type{QuadraticFunctionData},
-        Type{PiecewiseLinearData},
-    },
+    T,
     attributes::Dict{String, Any},
     rows::UnitRange{Int},
     columns::UnitRange{Int},
@@ -665,11 +661,7 @@ end
 
 function get_hdf_array(
     dataset,
-    T::Union{
-        Type{LinearFunctionData},
-        Type{QuadraticFunctionData},
-        Type{PiecewiseLinearData},
-    },
+    T,
     rows::UnitRange{Int},
 )
     colons = repeat([:], ndims(dataset) - 1)
@@ -693,42 +685,25 @@ function retransform_hdf_array(
     )
     dims_to_keep = Tuple(1:(ndims(data) - 1))
     # Pop off the last dimension and call the constructor on that data
-    return map(x -> T(x...), eachslice(data; dims = dims_to_keep))
+    return map(x -> T(x...), eachslice(data; dims = dims_to_keep))  # PERF possibly preallocation would be better
 end
 
-function retransform_hdf_array(data::Array, T::Type{PiecewiseLinearData})
-    row, column, tuple_length, array_length = get_data_dims_3_or_4(data)
-    if isnothing(column)
-        t_data = Array{Vector{Tuple{Float64, Float64}}}(undef, row)
-        for r in 1:row
-            tuple_array = Array{Tuple{Float64, Float64}}(undef, array_length)
-            for l in 1:array_length
-                tuple_array[l] = tuple(data[r, 1:tuple_length, l]...)
-            end
-            t_data[r] = tuple_array
-        end
-    else
-        t_data = Array{Vector{Tuple{Float64, Float64}}}(undef, row, column)
-        for r in 1:row, c in 1:column
-            tuple_array = Array{Tuple{Float64, Float64}}(undef, array_length)
-            for l in 1:array_length
-                tuple_array[l] = tuple(data[r, c, 1:tuple_length, l]...)
-            end
-            t_data[r, c] = tuple_array
-        end
-    end
-    return PiecewiseLinearData.(t_data)
-end
+retransform_hdf_array(data::Array, T::Type{PiecewiseLinearData}) =
+    T.(retransform_hdf_array(data, Vector{<:Union{Tuple, NamedTuple}}))
 
-function get_data_dims_3_or_4(data::Array)
-    if length(size(data)) == 3
-        row, tuple_length, array_length = size(data)
-        return (row, nothing, tuple_length, array_length)
-    elseif length(size(data)) == 4
-        return size(data)
-    else
-        error("Hdf data array is $(length(size(data)))-D array, expected 3-D or 4-D array.")
-    end
+function retransform_hdf_array(data::Array, T::Type{Vector{<:Union{Tuple, NamedTuple}}})
+    length_req = 2
+    (size(data)[end] == length_req) || throw(
+        ArgumentError(
+            "Last dimension of data must have length $length_req, got size $(size(data))",
+        ),
+    )
+    dims_to_keep = Tuple(1:(ndims(data) - 2))
+    # Pop off the last dimension and call the constructor on that data
+    return map(
+        x -> [Tuple(pair) for pair in eachrow(x)],
+        eachslice(data; dims = dims_to_keep),
+    )  # PERF possibly preallocation would be better
 end
 
 function deserialize_time_series(

@@ -15,10 +15,14 @@ end
     @test_throws ArgumentError IS.PiecewiseLinearData([(2, 1), (1, 1)])
     @test_throws ArgumentError IS.PiecewiseStepData([2, 1], [1])
 
-    @test IS.PiecewiseLinearData([(x = 1, y = 1)]) isa Any  # Test absence of error
-    @test IS.PiecewiseLinearData([Dict("x" => 1, "y" => 1)]) isa Any
-    @test_throws ArgumentError IS.PiecewiseLinearData([(y = 1, x = 1)])
-    @test_throws ArgumentError IS.PiecewiseLinearData([Dict("x" => 1)])
+    # must specify at least two x-coordinates
+    @test_throws ArgumentError IS.PiecewiseLinearData([(2, 1)])
+
+    @test IS.PiecewiseLinearData([(x = 1, y = 1), (x = 2, y = 2)]) isa Any  # Test absence of error
+    @test IS.PiecewiseLinearData([Dict("x" => 1, "y" => 1), Dict("x" => 2, "y" => 2)]) isa
+          Any
+    @test_throws ArgumentError IS.PiecewiseLinearData([(y = 1, x = 1), (y = 2, x = 2)])
+    @test_throws ArgumentError IS.PiecewiseLinearData([Dict("x" => 1), Dict("x" => 2)])
 end
 
 @testset "Test FunctionData trivial getters" begin
