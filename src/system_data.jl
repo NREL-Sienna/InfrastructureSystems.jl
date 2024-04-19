@@ -465,10 +465,10 @@ function transform_single_time_series!(
     if length(resolutions) > 1
         # TODO: This needs to support an alternate method where horizon is expressed as a
         # Period (horizon * resolution)
-        error(
+        throw(ConflictingInputsError(
             "transform_single_time_series! is not yet supported when there is more than " *
             "one resolution: $resolutions",
-        )
+           ))
     end
 
     remove_time_series!(data, DeterministicSingleTimeSeries)

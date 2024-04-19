@@ -117,4 +117,6 @@ end
         ts_ = IS.get_time_series(IS.SingleTimeSeries, attribute, "test")
         @test IS.get_initial_timestamp(ts_) == initial_time
     end
+
+    @test length(collect(IS.iterate_supplemental_attributes_with_time_series(data))) == 3
 end

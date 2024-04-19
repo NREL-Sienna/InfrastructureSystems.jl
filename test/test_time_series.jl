@@ -387,6 +387,20 @@ end
         scenario = "low",
         model_year = "2035",
     ) isa IS.SingleTimeSeries
+    @test IS.has_time_series(component, IS.SingleTimeSeries)
+    @test IS.has_time_series(component, IS.SingleTimeSeries, ts_name)
+    @test IS.has_time_series(component, IS.SingleTimeSeries, ts_name, scenario="low")
+    @test IS.has_time_series(component, IS.SingleTimeSeries, ts_name, model_year = "2030", scenario="low")
+    @test IS.has_time_series(component, IS.SingleTimeSeries, ts_name, model_year = "2030", scenario="low")
+    @test !IS.has_time_series(component, IS.SingleTimeSeries, ts_name, model_year = "2060", scenario="low")
+    @test length(IS.list_time_series_info(component)) == 4
+    @test IS.list_time_series_info(component)[1].type === IS.SingleTimeSeries
+    @test Tables.rowtable(
+        IS.sql(
+            sys.time_series_manager.metadata_store,
+            "SELECT COUNT(*) AS count FROM $(IS.METADATA_TABLE_NAME)",
+        ),
+   )[1].count == 4
 end
 
 @testset "Test add Deterministic with features" begin
@@ -647,6 +661,22 @@ end
             IS.DeterministicSingleTimeSeries,
             horizon,
             resolution * (horizon + 1),
+        )
+
+        # Multiple resolutions is not supported yet
+        resolution2 = Dates.Hour(1)
+        dates = create_dates("2020-01-01T00:00:00", resolution2, "2020-01-02T00:00:00")
+        data = collect(1:length(dates))
+        ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
+        name = "val2"
+        ts = IS.SingleTimeSeries(name, ta)
+        IS.add_time_series!(sys, component, ts)
+        horizon = 24
+        @test_throws IS.ConflictingInputsError IS.transform_single_time_series!(
+            sys,
+            IS.DeterministicSingleTimeSeries,
+            horizon,
+            resolution2 * (horizon + 1),
         )
 
         # Ensure that attempted removal of nonexistent types works fine

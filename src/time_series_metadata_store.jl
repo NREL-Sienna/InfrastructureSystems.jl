@@ -583,7 +583,7 @@ has_time_series(
     time_series_type::Type{<:TimeSeriesData},
     name::String;
     features...,
-) = has_metadata(store, owner, time_series_type, name, features...)
+) = has_metadata(store, owner, time_series_type, name; features...)
 
 """
 Return a sorted Vector of distinct resolutions for all time series of the given type
@@ -946,7 +946,7 @@ _get_owner_category(
 _get_owner_category(::Union{SupplementalAttribute, Type{<:SupplementalAttribute}}) =
     "SupplementalAttribute"
 _get_time_series_category(::Type{<:Forecast}) = "Forecast"
-_get_time_series_category(::Type{<:StaticTimeSeries}) = "Forecast"
+_get_time_series_category(::Type{<:StaticTimeSeries}) = "StaticTimeSeries"
 
 function _make_feature_filter(; features...)
     data = _make_sorted_feature_array(; features...)

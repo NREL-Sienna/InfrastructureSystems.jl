@@ -66,6 +66,7 @@ function get_time_series_uuid(
     owner::TimeSeriesOwners,
     name::AbstractString,
 ) where {T <: TimeSeriesData}
+    # TODO: do we need this?
     metadata_type = time_series_data_to_metadata(T)
     metadata = get_time_series_metadata(metadata_type, owner, name)
     return get_time_series_uuid(metadata)
@@ -409,46 +410,6 @@ function list_time_series_metadata(
         name = name,
         features...,
     )
-end
-
-function get_num_time_series(owner::TimeSeriesOwners)
-    mgr = get_time_series_manager(owner)
-    if isnothing(mgr)
-        return (0, 0)
-    end
-
-    static_ts_count = 0
-    forecast_count = 0
-    for metadata in list_metadata(mgr.metadata_store, owner)
-        if metadata isa StaticTimeSeriesMetadata
-            static_ts_count += 1
-        elseif metadata isa ForecastMetadata
-            forecast_count += 1
-        else
-            error("panic")
-        end
-    end
-
-    return (static_ts_count, forecast_count)
-end
-
-function get_num_time_series_by_type(owner::TimeSeriesOwners)
-    counts = Dict{String, Int}()
-    mgr = get_time_series_manager(owner)
-    if isnothing(mgr)
-        return counts
-    end
-
-    for metadata in list_metadata(mgr.metadata_store, owner)
-        type = string(nameof(time_series_metadata_to_data(metadata)))
-        if haskey(counts, type)
-            counts[type] += 1
-        else
-            counts[type] = 1
-        end
-    end
-
-    return counts
 end
 
 function get_time_series(

@@ -32,25 +32,6 @@ function TimeSeriesManager(;
     return TimeSeriesManager(data_store, metadata_store, read_only)
 end
 
-function add_metadata!(
-    mgr::TimeSeriesManager,
-    component::TimeSeriesOwners,
-    metadata::TimeSeriesMetadata;
-    skip_if_present = false,
-    features...,
-)
-    _throw_if_read_only(mgr)
-    add_metadata!(
-        mgr.metadata_store,
-        metadata,
-        component;
-        skip_if_present = skip_if_present,
-    )
-    @debug "Added $(summary(metadata)) to $(summary(component)) " _group =
-        LOG_GROUP_TIME_SERIES
-    return
-end
-
 function add_time_series!(
     mgr::TimeSeriesManager,
     owner::TimeSeriesOwners,
@@ -58,6 +39,7 @@ function add_time_series!(
     skip_if_present = false,
     features...,
 )
+    _throw_if_read_only(mgr)
     throw_if_does_not_support_time_series(owner)
     _check_time_series_params(mgr, time_series)
     metadata_type = time_series_data_to_metadata(typeof(time_series))
@@ -81,6 +63,8 @@ function add_time_series!(
             metadata;
         )
     end
+    @debug "Added $(summary(metadata)) to $(summary(owner)) " _group =
+        LOG_GROUP_TIME_SERIES
     return
 end
 
