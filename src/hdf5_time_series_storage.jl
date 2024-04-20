@@ -290,7 +290,7 @@ get_data_type(ts::TimeSeriesData) = get_type_label(eltype_data(ts))
 # Can define new methods for new types if the default doesn't work for them
 get_type_label(::Type{CONSTANT}) = "CONSTANT"
 get_type_label(::Type{<:Integer}) = get_type_label(CONSTANT)
-get_type_label(data_type::Type{<:Any}) = string(nameof(data_type))
+get_type_label(data_type::Type{<:Any}) = string(data_type)
 
 function _write_time_series_attributes!(
     storage::Hdf5TimeSeriesStorage,
@@ -343,22 +343,42 @@ function _read_time_series_attributes(
     return data
 end
 
-# TODO I suspect this could be designed better using reflection even without the security risks of eval discussed above
-const _TYPE_DICT = Dict(
-    string(nameof(st)) => st for st in [
-        LinearFunctionData,
-        QuadraticFunctionData,
-        PiecewiseLinearData,
-        PiecewiseStepData,
-    ]
-)
-_TYPE_DICT["CONSTANT"] = CONSTANT
+_TYPE_DICT = Dict("CONSTANT" => CONSTANT)  # Special cases that shouldn't get parsed as Julia types
+
+# I hate to do such string manipulation, but I'd really like to have this work for types not
+# currently in scope (e.g., those in PowerSystems). Another way to do this would be
+# dispatching on Val(Symbol(type_str)) and writing methods in PowerSystems; this is more
+# automatic.
+function parse_type(type_str)
+    haskey(_TYPE_DICT, type_str) && return _TYPE_DICT[type_str]
+
+    # If the type string has a module name embedded, use that
+    check_for_module = split(type_str, '.')
+    if length(check_for_module) > 1
+        my_module = getproperty(Main, Symbol(join(check_for_module[1:(end - 1)], '.')))
+    else
+        my_module = Main
+    end
+    rest = check_for_module[end]
+
+    # Split by things you might find in a parametric type, remove empty trailing string
+    splitted = filter(!=(""), split(rest, ['{', ',', '}']))
+    primary_type = getproperty(my_module, Symbol(first(splitted)))
+    (length(splitted) == 1) && return primary_type
+    (length(splitted) > 2) && throw(
+        NotImplementedError(
+            :parse_type,
+            "parametric types with more than one parameter, got $type_str",
+        ),
+    )
+    return primary_type{getproperty(Main, Symbol(splitted[2]))}
+end
 
 function _read_time_series_attributes_common(storage::Hdf5TimeSeriesStorage, path, rows)
     initial_timestamp =
         Dates.epochms2datetime(HDF5.read(HDF5.attributes(path)["initial_timestamp"]))
     resolution = Dates.Millisecond(HDF5.read(HDF5.attributes(path)["resolution"]))
-    data_type = _TYPE_DICT[HDF5.read(HDF5.attributes(path)["data_type"])]
+    data_type = parse_type(HDF5.read(HDF5.attributes(path)["data_type"]))
     return Dict(
         "type" => _read_time_series_type(path),
         "initial_timestamp" => initial_timestamp,

@@ -712,21 +712,21 @@ end
 @testset "Test add SingleTimeSeries with LinearFunctionData Cost" begin
     _test_add_single_time_series_type(
         repeat([IS.LinearFunctionData(3.14, 1.23)], 365),
-        "LinearFunctionData",
+        "InfrastructureSystems.LinearFunctionData",
     )
 end
 
 @testset "Test add SingleTimeSeries with QuadraticFunctionData Cost" begin
     _test_add_single_time_series_type(
         repeat([IS.QuadraticFunctionData(999.0, 1.0, 0.5)], 365),
-        "QuadraticFunctionData",
+        "InfrastructureSystems.QuadraticFunctionData",
     )
 end
 
 @testset "Test add SingleTimeSeries with PiecewiseLinearData Cost" begin
     _test_add_single_time_series_type(
         repeat([IS.PiecewiseLinearData(repeat([(999.0, 1.0)], 5))], 365),
-        "PiecewiseLinearData",
+        "InfrastructureSystems.PiecewiseLinearData",
     )
 end
 
