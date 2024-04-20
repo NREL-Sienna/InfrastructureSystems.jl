@@ -689,9 +689,9 @@ function retransform_hdf_array(
 end
 
 retransform_hdf_array(data::Array, T::Type{PiecewiseLinearData}) =
-    T.(retransform_hdf_array(data, Vector{<:Union{Tuple, NamedTuple}}))
+    T.(retransform_hdf_array(data, Vector{NamedTuple}))
 
-function retransform_hdf_array(data::Array, T::Type{Vector{<:Union{Tuple, NamedTuple}}})
+function retransform_hdf_array(data::Array, T::Type{<:Vector{<:Union{Tuple, NamedTuple}}})
     length_req = 2
     (size(data)[end] == length_req) || throw(
         ArgumentError(

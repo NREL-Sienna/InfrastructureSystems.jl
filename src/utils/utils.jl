@@ -535,9 +535,8 @@ function transform_array_for_hdf(
     return t_quad_cost
 end
 
-transform_array_for_hdf(data::Vector{T}) where {T <: FunctionData} =
-    throw(UnimplementedError(:transform_array_for_hdf, T))
+transform_array_for_hdf(::Vector{T}) where {T <: FunctionData} =
+    throw(NotImplementedError(:transform_array_for_hdf, T))
 
-transform_array_for_hdf(
-    data::SortedDict{Dates.DateTime, Vector{T}}) where {T <: FunctionData} =
-    throw(UnimplementedError(:transform_array_for_hdf, T))
+transform_array_for_hdf(::SortedDict{Dates.DateTime, Vector{T}}) where {T <: FunctionData} =
+    throw(NotImplementedError(:transform_array_for_hdf, T))
