@@ -463,7 +463,7 @@ end
 
 transform_array_for_hdf(
     data::Vector{T},
-) where {T <: Union{LinearFunctionData, QuadraticFunctionData}} =
+) where {T <: Union{LinearFunctionData, QuadraticFunctionData, PiecewiseLinearData}} =
     transform_array_for_hdf(get_raw_data.(data))
 
 function transform_array_for_hdf(data::Vector{T}) where {T <: Tuple}
@@ -478,7 +478,7 @@ end
 
 transform_array_for_hdf(
     data::SortedDict{Dates.DateTime, Vector{T}},
-) where {T <: Union{LinearFunctionData, QuadraticFunctionData}} =
+) where {T <: Union{LinearFunctionData, QuadraticFunctionData, PiecewiseLinearData}} =
     transform_array_for_hdf(
         SortedDict{Dates.DateTime, Vector{get_raw_data_type(T)}}(
             k => get_raw_data.(v) for (k, v) in data
@@ -498,9 +498,6 @@ function transform_array_for_hdf(
     return t_lin_cost
 end
 
-transform_array_for_hdf(data::Vector{PiecewiseLinearData}) =
-    transform_array_for_hdf(get_points.(data))
-
 function transform_array_for_hdf(data::Vector{<:Vector{<:Union{Tuple, NamedTuple}}})
     rows = length(data)
     n_points = length(first(data))
@@ -517,13 +514,6 @@ function transform_array_for_hdf(data::Vector{<:Vector{<:Union{Tuple, NamedTuple
     end
     return t_quad_cost
 end
-
-transform_array_for_hdf(data::SortedDict{Dates.DateTime, Vector{PiecewiseLinearData}}) =
-    transform_array_for_hdf(
-        SortedDict{Dates.DateTime, Vector{Vector{Tuple{Float64, Float64}}}}(
-            k => get_raw_data.(v) for (k, v) in data
-        ),
-    )
 
 function transform_array_for_hdf(
     data::SortedDict{Dates.DateTime, Vector{Vector{Tuple{Float64, Float64}}}},
@@ -546,8 +536,8 @@ function transform_array_for_hdf(
 end
 
 transform_array_for_hdf(data::Vector{T}) where {T <: FunctionData} =
-    throw(ArgumentError("Not currently implemented for $T"))
+    throw(UnimplementedError(:transform_array_for_hdf, T))
 
 transform_array_for_hdf(
     data::SortedDict{Dates.DateTime, Vector{T}}) where {T <: FunctionData} =
-    throw(ArgumentError("Not currently implemented for $T"))
+    throw(UnimplementedError(:transform_array_for_hdf, T))
