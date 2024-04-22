@@ -17,9 +17,7 @@ function TimeSeriesManager(;
     end
 
     if isnothing(metadata_store)
-        filename, io = mktemp(isnothing(directory) ? tempdir() : directory)
-        close(io)
-        metadata_store = TimeSeriesMetadataStore(filename)
+        metadata_store = TimeSeriesMetadataStore()
     end
 
     if isnothing(data_store)
@@ -97,19 +95,13 @@ function Base.deepcopy_internal(mgr::TimeSeriesManager, dict::IdDict)
         copy_to_new_file!(data_store, dirname(mgr.data_store.file_path))
     end
 
-    close_temporarily!(mgr.metadata_store) do
-        # TODO: Change this implementation when SQLite.jl supports backup.
-        # https://github.com/JuliaDatabases/SQLite.jl/issues/210
-        new_db_file, io = mktemp()
-        close(io)
-        cp(mgr.metadata_store.db.file, new_db_file; force = true)
-        metadata_store = from_file(TimeSeriesMetadataStore, new_db_file)
-        new_mgr = TimeSeriesManager(data_store, metadata_store, mgr.read_only)
-        dict[mgr] = new_mgr
-        dict[mgr.data_store] = new_mgr.data_store
-        dict[mgr.metadata_store] = new_mgr.metadata_store
-        return new_mgr
-    end
+    new_db_file = backup_to_temp(mgr.metadata_store)
+    metadata_store = TimeSeriesMetadataStore(new_db_file)
+    new_mgr = TimeSeriesManager(data_store, metadata_store, mgr.read_only)
+    dict[mgr] = new_mgr
+    dict[mgr.data_store] = new_mgr.data_store
+    dict[mgr.metadata_store] = new_mgr.metadata_store
+    return new_mgr
 end
 
 get_metadata(

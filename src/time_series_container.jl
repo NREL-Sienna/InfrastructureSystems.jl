@@ -5,8 +5,8 @@ mutable struct TimeSeriesContainer
     manager::Union{Nothing, TimeSeriesManager}
 end
 
-function TimeSeriesContainer()
-    return TimeSeriesContainer(nothing)
+function TimeSeriesContainer(; manager = nothing)
+    return TimeSeriesContainer(manager)
 end
 
 get_time_series_manager(x::TimeSeriesContainer) = x.manager

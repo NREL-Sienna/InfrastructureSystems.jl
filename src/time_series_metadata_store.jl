@@ -5,23 +5,32 @@ mutable struct TimeSeriesMetadataStore
     db::SQLite.DB
 end
 
-function TimeSeriesMetadataStore(filename::AbstractString)
-    # An ideal solution would be to create an in-memory database and then perform a SQLite
-    # backup to a file whenever the user serializes the system. However, SQLite.jl does
-    # not support that feature yet: https://github.com/JuliaDatabases/SQLite.jl/issues/210
-    store = TimeSeriesMetadataStore(SQLite.DB(filename))
+"""
+Construct a new TimeSeriesMetadataStore with an in-memory database.
+"""
+function TimeSeriesMetadataStore()
+    store = TimeSeriesMetadataStore(SQLite.DB())
     _create_metadata_table!(store)
     _create_indexes!(store)
     @debug "Initializedd new time series metadata table" _group = LOG_GROUP_TIME_SERIES
     return store
 end
 
-function from_file(::Type{TimeSeriesMetadataStore}, filename::AbstractString)
-    store = TimeSeriesMetadataStore(SQLite.DB(filename))
+"""
+Load a TimeSeriesMetadataStore from a saved database into an in-memory database.
+"""
+function TimeSeriesMetadataStore(filename::AbstractString)
+    src = SQLite.DB(filename)
+    db = SQLite.DB()
+    backup(db, src)
+    store = TimeSeriesMetadataStore(db)
     @debug "Loaded time series metadata from file" _group = LOG_GROUP_TIME_SERIES filename
     return store
 end
 
+"""
+Load a TimeSeriesMetadataStore from an HDF5 file into an in-memory database.
+"""
 function from_h5_file(::Type{TimeSeriesMetadataStore}, src::AbstractString, directory)
     data = HDF5.h5open(src, "r") do file
         file[HDF5_TS_METADATA_ROOT_PATH][:]
@@ -30,7 +39,7 @@ function from_h5_file(::Type{TimeSeriesMetadataStore}, src::AbstractString, dire
     filename, io = mktemp(isnothing(directory) ? tempdir() : directory)
     write(io, data)
     close(io)
-    return from_file(TimeSeriesMetadataStore, filename)
+    return TimeSeriesMetadataStore(filename)
 end
 
 function _create_metadata_table!(store::TimeSeriesMetadataStore)
@@ -136,30 +145,22 @@ function add_metadata!(
 end
 
 """
+Backup the database to a file on the temporary filesystem and return that filename.
+"""
+function backup_to_temp(store::TimeSeriesMetadataStore)
+    filename, io = mktemp()
+    close(io)
+    dst = SQLite.DB(filename)
+    backup(dst, store.db)
+    close(dst)
+    return filename
+end
+
+"""
 Clear all time series metadata from the store.
 """
 function clear_metadata!(store::TimeSeriesMetadataStore)
     _execute(store, "DELETE FROM $METADATA_TABLE_NAME")
-end
-
-function backup(store::TimeSeriesMetadataStore, filename::String)
-    # This is an unfortunate implementation. SQLite supports backup but SQLite.jl does not.
-    # https://github.com/JuliaDatabases/SQLite.jl/issues/210
-    # When they address the limitation, search the IS repo for this github issue number
-    # to fix all locations.
-    was_open = isopen(store.db)
-    if was_open
-        close(store.db)
-    end
-
-    cp(store.db.file, filename)
-    @debug "Backed up time series metadata" _group = LOG_GROUP_TIME_SERIES filename
-
-    if was_open
-        store.db = SQLite.DB(store.db.file)
-    end
-
-    return
 end
 
 function check_params_compatibility(
@@ -251,15 +252,6 @@ function check_consistency(store::TimeSeriesMetadataStore, ::Type{<:StaticTimeSe
 
     row = table[1]
     return Dates.DateTime(row.initial_timestamp), row.length
-end
-
-function close_temporarily!(func::Function, store::TimeSeriesMetadataStore)
-    try
-        close(store.db)
-        func()
-    finally
-        store.db = SQLite.DB(store.db.file)
-    end
 end
 
 function get_forecast_initial_times(store::TimeSeriesMetadataStore)
@@ -748,11 +740,7 @@ function sql(store::TimeSeriesMetadataStore, query::String)
 end
 
 function to_h5_file(store::TimeSeriesMetadataStore, dst::String)
-    metadata_path, io = mktemp()
-    close(io)
-    rm(metadata_path)
-    backup(store, metadata_path)
-
+    metadata_path = backup_to_temp(store)
     data = open(metadata_path, "r") do io
         read(io)
     end
