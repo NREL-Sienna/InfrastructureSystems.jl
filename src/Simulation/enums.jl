@@ -6,3 +6,5 @@ IS.@scoped_enum(
     RUNNING = 1,
     FAILED = 2,
 )
+
+@scoped_enum(SimlBuildStatus, IN_PROGRESS = -1, BUILT = 0, FAILED = 1, EMPTY = 2,)
