@@ -136,6 +136,12 @@ _get_iterations_remaining(c::TimeSeriesCache) = c.common.iterations_remaining[]
 _decrement_iterations_remaining!(c::TimeSeriesCache) = c.common.iterations_remaining[] -= 1
 _get_resolution(cache::TimeSeriesCache) = get_resolution(_get_time_series(cache))
 
+struct TimeSeriesCacheKey
+    component_uuid::Base.UUID
+    time_series_type::Type{<:TimeSeriesData}
+    name::String
+end
+
 struct TimeSeriesCacheCommon{T <: TimeSeriesData, U <: InfrastructureSystemsComponent}
     ts::Base.RefValue{T}
     component::U
@@ -428,4 +434,57 @@ function _get_row_size(vals)
     end
 
     return row_size
+end
+
+function make_time_series_cache(
+    ::Type{T},
+    component,
+    name,
+    initial_time,
+    len::Int;
+    ignore_scaling_factors = true,
+) where {T <: StaticTimeSeries}
+    return StaticTimeSeriesCache(
+        T,
+        component,
+        name;
+        start_time = initial_time,
+        ignore_scaling_factors = ignore_scaling_factors,
+    )
+end
+
+function make_time_series_cache(
+    ::Type{T},
+    component,
+    name,
+    initial_time,
+    horizon::Int;
+    ignore_scaling_factors = true,
+) where {T <: AbstractDeterministic}
+    return ForecastCache(
+        T,
+        component,
+        name;
+        start_time = initial_time,
+        horizon = horizon,
+        ignore_scaling_factors = ignore_scaling_factors,
+    )
+end
+
+function make_time_series_cache(
+    ::Type{Probabilistic},
+    component,
+    name,
+    initial_time,
+    horizon::Int;
+    ignore_scaling_factors = true,
+)
+    return ForecastCache(
+        Probabilistic,
+        component,
+        name;
+        start_time = initial_time,
+        horizon = horizon,
+        ignore_scaling_factors = ignore_scaling_factors,
+    )
 end

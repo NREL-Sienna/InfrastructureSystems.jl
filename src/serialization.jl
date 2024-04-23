@@ -98,7 +98,7 @@ end
 function serialize_struct(val::T) where {T}
     @debug "serialize_struct" _group = LOG_GROUP_SERIALIZATION val T
     data = Dict{String, Any}(
-        string(name) => serialize(getfield(val, name)) for name in fieldnames(T)
+        string(name) => serialize(getproperty(val, name)) for name in fieldnames(T)
     )
     add_serialization_metadata!(data, T)
     return data
@@ -130,7 +130,7 @@ end
 
 function get_type_from_serialization_metadata(metadata::Dict)
     _module = get_module(metadata[MODULE_KEY])
-    base_type = getfield(_module, Symbol(metadata[TYPE_KEY]))
+    base_type = getproperty(_module, Symbol(metadata[TYPE_KEY]))
     if !get(metadata, CONSTRUCT_WITH_PARAMETERS_KEY, false)
         return base_type
     end
@@ -139,7 +139,7 @@ function get_type_from_serialization_metadata(metadata::Dict)
     # - each parameter must be in _module
     # - does not support nested parametrics.
     # Reserves should be fixed and then we can remove this hack.
-    parameters = [getfield(_module, Symbol(x)) for x in metadata[PARAMETERS_KEY]]
+    parameters = [getproperty(_module, Symbol(x)) for x in metadata[PARAMETERS_KEY]]
     return base_type{parameters...}
 end
 
@@ -231,7 +231,7 @@ function serialize(resolution::Dates.Period)
 end
 
 function deserialize(::Type{Dates.Period}, data::Dict)
-    return getfield(Dates, Symbol(data[TYPE_KEY]))(data["value"])
+    return getproperty(Dates, Symbol(data[TYPE_KEY]))(data["value"])
 end
 
 deserialize(::Type{Dates.DateTime}, val::AbstractString) = Dates.DateTime(val)

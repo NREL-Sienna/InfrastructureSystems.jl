@@ -1,6 +1,6 @@
 
 const TIME_SERIES_STORAGE_FILE = "time_series_storage.h5"
-const TIME_SERIES_DIRECTORY_ENV_VAR = "SIIP_TIME_SERIES_DIRECTORY"
+const TIME_SERIES_DIRECTORY_ENV_VAR = "SIENNA_TIME_SERIES_DIRECTORY"
 const VALIDATION_DESCRIPTOR_FILE = "validation_descriptors.json"
 const SERIALIZATION_METADATA_KEY = "__serialization_metadata__"
 
@@ -324,7 +324,7 @@ function compare_values(
         val_x = getfield(x, name)
         val_y = getfield(y, name)
         if !compare_values(val_x, val_y; compare_uuids = compare_uuids, exclude = exclude)
-            @error "SystemData field = $name does not match" getfield(x, name) getfield(
+            @error "SystemData field = $name does not match" getproperty(x, name) getproperty(
                 y,
                 name,
             )
@@ -503,7 +503,7 @@ This requires that category be a string version of a component's abstract type.
 Modules can override for custom behavior.
 """
 function set_component!(metadata::TimeSeriesFileMetadata, data::SystemData, mod::Module)
-    category = getfield(mod, Symbol(metadata.category))
+    category = getproperty(mod, Symbol(metadata.category))
     if isconcretetype(category)
         metadata.component =
             get_component(category, data.components, metadata.component_name)
@@ -577,7 +577,7 @@ function to_dict(data::SystemData)
         :attributes,
         :internal,
     )
-        serialized_data[string(field)] = serialize(getfield(data, field))
+        serialized_data[string(field)] = serialize(getproperty(data, field))
     end
 
     serialized_data["version_info"] = serialize_julia_info()

@@ -97,7 +97,7 @@ end
 function Base.show(io::IO, ::MIME"text/plain", system_units::SystemUnitsSettings)
     print(io, summary(system_units), ":")
     for name in fieldnames(typeof(system_units))
-        val = getfield(system_units, name)
+        val = getproperty(system_units, name)
         print(io, "\n      ", name, ": ", val)
     end
 end
@@ -111,9 +111,9 @@ function Base.show(io::IO, ::MIME"text/plain", ist::InfrastructureSystemsCompone
         elseif obj isa InfrastructureSystemsType
             val = summary(getfield(ist, name))
         elseif obj isa Vector{<:InfrastructureSystemsComponent}
-            val = summary(getfield(ist, name))
+            val = summary(getproperty(ist, name))
         else
-            val = getfield(ist, name)
+            val = getproperty(ist, name)
         end
         # Not allowed to print `nothing`
         if isnothing(val)
@@ -130,7 +130,7 @@ function Base.show(io::IO, ist::InfrastructureSystemsComponent)
         if field_type <: TimeSeriesContainer || field_type <: InfrastructureSystemsInternal
             continue
         else
-            val = getfield(ist, name)
+            val = getproperty(ist, name)
         end
         if is_first
             is_first = false

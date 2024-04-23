@@ -366,6 +366,8 @@ function compare_values(
         val_x = getfield(x, name)
         val_y = getfield(y, name)
         if !compare_values(val_x, val_y; compare_uuids = compare_uuids, exclude = exclude)
+            val_x = getfield(x, name)
+            val_y = getfield(y, name)
             @error "Components field = $name does not match" val_x val_y
             match = false
         end

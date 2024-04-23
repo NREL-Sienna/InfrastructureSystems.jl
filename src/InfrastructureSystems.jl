@@ -31,7 +31,7 @@ using DocStringExtensions
 # Do not add export statements.
 
 """
-Base type for any struct in the SIIP packages.
+Base type for any struct in the Sienna packages.
 All structs must implement a kwarg-only constructor to allow deserializing from a Dict.
 """
 abstract type InfrastructureSystemsType end
@@ -156,5 +156,6 @@ include("utils/print.jl")
 include("utils/test.jl")
 include("units.jl")
 include("deprecated.jl")
+include("Optimization/Optimization.jl")
 
 end # module
