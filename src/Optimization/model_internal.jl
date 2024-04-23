@@ -4,7 +4,7 @@ Common structure to keep track of optimization models' internal information.
 mutable struct ModelInternal{T <: AbstractOptimizationContainer}
     container::T
     initial_conditions_model_container::Union{Nothing, T}
-    status::BuildStatus
+    status::ModelBuildStatus
     base_conversion::Bool
     executions::Int
     execution_count::Int
@@ -25,7 +25,7 @@ function ModelInternal(
     return ModelInternal{T}(
         container,
         nothing,
-        BuildStatus.EMPTY,
+        ModelBuildStatus.EMPTY,
         true,
         1, #Default executions is 1. The model will be run at least once
         0,
@@ -74,7 +74,7 @@ function set_initial_conditions_model_container!(
     return
 end
 
-function set_status!(internal::ModelInternal, status::BuildStatus)
+function set_status!(internal::ModelInternal, status::ModelBuildStatus)
     internal.status = status
     return
 end
