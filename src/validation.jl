@@ -76,14 +76,14 @@ function validate_fields(
     is_valid = true
 
     for (field_name, fieldtype) in zip(fieldnames(T), fieldtypes(T))
-        field_value = getfield(ist_struct, field_name)
+        field_value = getproperty(ist_struct, field_name)
         if isnothing(field_value)  # Many structs are of type Union{Nothing, xxx}.
 
         elseif fieldtype <: Union{Nothing, InfrastructureSystemsType} &&
                !(fieldtype <: InfrastructureSystemsType)
             # Recurse. Components are validated separately and do not need to
             # be validated twice.
-            if !validate_fields(components, getfield(ist_struct, field_name))
+            if !validate_fields(components, getproperty(ist_struct, field_name))
                 is_valid = false
             end
         else
@@ -112,7 +112,7 @@ function get_limits(valid_range::String, ist_struct::InfrastructureSystemsType)
     # Gets min and max values from activepowerlimits for activepower, etc.
     function recur(d, a, i = 1)
         if i <= length(a)
-            d = getfield(d, Symbol(a[i]))
+            d = getproperty(d, Symbol(a[i]))
             recur(d, a, i + 1)
         else
             return d

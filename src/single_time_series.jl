@@ -342,7 +342,7 @@ function SingleTimeSeries(time_series::SingleTimeSeries, data::TimeSeries.TimeAr
             # Need to create a new UUID.
             val = InfrastructureSystemsInternal()
         else
-            val = getfield(time_series, fname)
+            val = getproperty(time_series, fname)
         end
 
         push!(vals, val)
