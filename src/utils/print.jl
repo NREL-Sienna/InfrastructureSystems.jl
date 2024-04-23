@@ -46,13 +46,11 @@ function Base.show(io::IO, ::MIME"text/html", container::InfrastructureSystemsCo
     end
 end
 
-function Base.summary(time_series::TimeSeriesData)
-    return "$(typeof(time_series)).$(get_name(time_series))"
-end
-
-function Base.summary(time_series::TimeSeriesMetadata)
-    return "$(typeof(time_series)).$(get_name(time_series))"
-end
+make_label(type::Type{<:InfrastructureSystemsType}, name) = "$(nameof(type)): $name"
+Base.summary(x::InfrastructureSystemsComponent) = make_label(typeof(x), get_name(x))
+Base.summary(x::SupplementalAttribute) = make_label(typeof(x), get_uuid(x))
+Base.summary(x::TimeSeriesData) = make_label(typeof(x), get_name(x))
+Base.summary(x::TimeSeriesMetadata) = make_label(typeof(x), get_name(x))
 
 function Base.show(io::IO, data::SystemData)
     show(io, data.components)
@@ -86,12 +84,6 @@ function show_time_series_data(io::IO, data::SystemData; kwargs...)
         kwargs...,
     )
     return
-end
-
-function Base.summary(ist::InfrastructureSystemsComponent)
-    # All InfrastructureSystemsComponent subtypes are supposed to implement get_name.
-    # Some don't.  They need to override this function.
-    return "$(typeof(ist)).$(get_name(ist))"
 end
 
 function Base.show(io::IO, ::MIME"text/plain", system_units::SystemUnitsSettings)
