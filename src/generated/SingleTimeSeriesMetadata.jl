@@ -12,7 +12,7 @@ This file is auto-generated. Do not edit.
         time_series_uuid::UUIDs.UUID
         length::Int
         scaling_factor_multiplier::Union{Nothing, Function}
-        features::Dict{String, <:Any}
+        features::Dict{String, Union{Bool, Int, String}}
         internal::InfrastructureSystemsInternal
     end
 
@@ -25,7 +25,7 @@ A TimeSeries Data object in contigous form.
 - `time_series_uuid::UUIDs.UUID`: reference to time series data
 - `length::Int`: length of this time series
 - `scaling_factor_multiplier::Union{Nothing, Function}`: Applicable when the time series data are scaling factors. Called on the associated component to convert the values.
-- `features::Dict{String, <:Any}`: User-defined tags that describe the relationship between a component and a time series array.
+- `features::Dict{String, Union{Bool, Int, String}}`: User-defined tags that differentiate multiple time series arrays that represent the same component attribute, such as different arrays for different scenarios or years.
 - `internal::InfrastructureSystemsInternal`
 """
 mutable struct SingleTimeSeriesMetadata <: StaticTimeSeriesMetadata
@@ -40,8 +40,8 @@ mutable struct SingleTimeSeriesMetadata <: StaticTimeSeriesMetadata
     length::Int
     "Applicable when the time series data are scaling factors. Called on the associated component to convert the values."
     scaling_factor_multiplier::Union{Nothing, Function}
-    "User-defined tags that describe the relationship between a component and a time series array."
-    features::Dict{String, <:Any}
+    "User-defined tags that differentiate multiple time series arrays that represent the same component attribute, such as different arrays for different scenarios or years."
+    features::Dict{String, Union{Bool, Int, String}}
     internal::InfrastructureSystemsInternal
 end
 

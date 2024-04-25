@@ -15,7 +15,7 @@ This file is auto-generated. Do not edit.
         horizon::Int
         time_series_type::Type{<:AbstractDeterministic}
         scaling_factor_multiplier::Union{Nothing, Function}
-        features::Dict{String, <:Any}
+        features::Dict{String, Union{Bool, Int, String}}
         internal::InfrastructureSystemsInternal
     end
 
@@ -31,7 +31,7 @@ A deterministic forecast for a particular data field in a Component.
 - `horizon::Int`: length of this time series
 - `time_series_type::Type{<:AbstractDeterministic}`: Type of the time series data associated with this metadata.
 - `scaling_factor_multiplier::Union{Nothing, Function}`: Applicable when the time series data are scaling factors. Called on the associated component to convert the values.
-- `features::Dict{String, <:Any}`: User-defined tags that describe the relationship between a component and a time series array.
+- `features::Dict{String, Union{Bool, Int, String}}`: User-defined tags that differentiate multiple time series arrays that represent the same component attribute, such as different arrays for different scenarios or years.
 - `internal::InfrastructureSystemsInternal`
 """
 mutable struct DeterministicMetadata <: ForecastMetadata
@@ -52,8 +52,8 @@ mutable struct DeterministicMetadata <: ForecastMetadata
     time_series_type::Type{<:AbstractDeterministic}
     "Applicable when the time series data are scaling factors. Called on the associated component to convert the values."
     scaling_factor_multiplier::Union{Nothing, Function}
-    "User-defined tags that describe the relationship between a component and a time series array."
-    features::Dict{String, <:Any}
+    "User-defined tags that differentiate multiple time series arrays that represent the same component attribute, such as different arrays for different scenarios or years."
+    features::Dict{String, Union{Bool, Int, String}}
     internal::InfrastructureSystemsInternal
 end
 
