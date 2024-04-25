@@ -46,7 +46,13 @@ function add_time_series!(
     metadata_exists = has_metadata(mgr.metadata_store, owner, metadata)
 
     if metadata_exists && !skip_if_present
-        throw(ArgumentError("$(summary(metadata)) is already stored"))
+        msg = if isempty(features)
+            "$(summary(metadata)) is already stored"
+        else
+            fmsg = join(["$k = $v" for (k, v) in features], ", ")
+            "$(summary(metadata)) with features $fmsg is already stored"
+        end
+        throw(ArgumentError(msg))
     end
 
     if !data_exists
@@ -243,8 +249,8 @@ function compare_values(
 )
     match = true
     for name in fieldnames(TimeSeriesManager)
-        val_x = getfield(x, name)
-        val_y = getfield(y, name)
+        val_x = getproperty(x, name)
+        val_y = getproperty(y, name)
         if name == :data_store && typeof(val_x) != typeof(val_y)
             @warn "Cannot compare $(typeof(val_x)) and $(typeof(val_y))"
             # TODO 1.0: workaround for not being able to convert Hdf5TimeSeriesStorage to
@@ -253,7 +259,7 @@ function compare_values(
         end
 
         if !compare_values(val_x, val_y; compare_uuids = compare_uuids, exclude = exclude)
-            @error "TimeSeriesManager field = $name does not match" getfield(x, name) getfield(
+            @error "TimeSeriesManager field = $name does not match" getproperty(x, name) getproperty(
                 y,
                 name,
             )

@@ -47,6 +47,12 @@
         start_time = other_time,
         count = 2,
     )
+    @test_throws ArgumentError IS.get_time_series(
+        IS.Deterministic,
+        component,
+        name;
+        start_time = other_time + resolution,
+    )
 
     count = IS.get_count(var2)
     @test count == 2
@@ -449,6 +455,97 @@ end
             "SELECT COUNT(*) AS count FROM $(IS.METADATA_TABLE_NAME)",
         ),
     )[1].count == 4
+end
+
+@testset "Test add with features with mixed types" begin
+    sys = IS.SystemData()
+    name = "Component1"
+    component = IS.TestComponent(name, 5)
+    IS.add_component!(sys, component)
+
+    initial_time = Dates.DateTime("2020-09-01")
+    resolution = Dates.Hour(1)
+
+    data = TimeSeries.TimeArray(
+        range(initial_time; length = 365, step = resolution),
+        rand(365),
+    )
+    ts_name = "test"
+    ts = IS.SingleTimeSeries(; data = data, name = ts_name)
+    IS.add_time_series!(sys, component, ts; scenario = "low", model_year = "2030")
+    @test IS.has_time_series(
+        component,
+        IS.SingleTimeSeries,
+        ts_name;
+        scenario = "low",
+        model_year = "2030",
+    )
+    @test !IS.has_time_series(
+        component,
+        IS.SingleTimeSeries,
+        ts_name;
+        scenario = "low",
+        model_year = 2030,
+    )
+    IS.add_time_series!(sys, component, ts; scenario = "low", model_year = 2030)
+    @test IS.has_time_series(
+        component,
+        IS.SingleTimeSeries,
+        ts_name;
+        scenario = "low",
+        model_year = 2030,
+    )
+    IS.add_time_series!(sys, component, ts; scenario = "low", model_year = 2035)
+    @test IS.has_time_series(
+        component,
+        IS.SingleTimeSeries,
+        ts_name;
+        scenario = "low",
+        model_year = 2035,
+    )
+    @test !IS.has_time_series(
+        component,
+        IS.SingleTimeSeries,
+        ts_name;
+        scenario = "low",
+        model_year = "2035",
+    )
+    IS.add_time_series!(sys, component, ts; scenario = "low", model_year = "2035")
+    @test IS.has_time_series(
+        component,
+        IS.SingleTimeSeries,
+        ts_name;
+        scenario = "low",
+        model_year = "2035",
+    )
+    IS.add_time_series!(sys, component, ts; scenario = "low", some_condition = true)
+    @test IS.has_time_series(component, IS.SingleTimeSeries, ts_name; some_condition = true)
+    @test !IS.has_time_series(
+        component,
+        IS.SingleTimeSeries,
+        ts_name;
+        some_condition = "true",
+    )
+    IS.add_time_series!(sys, component, ts; scenario = "low", some_condition = "false")
+    @test !IS.has_time_series(
+        component,
+        IS.SingleTimeSeries,
+        ts_name;
+        some_condition = false,
+    )
+    IS.add_time_series!(sys, component, ts; scenario = "low", some_condition = false)
+    @test IS.has_time_series(
+        component,
+        IS.SingleTimeSeries,
+        ts_name;
+        some_condition = false,
+    )
+    @test_throws MethodError IS.add_time_series!(
+        sys,
+        component,
+        ts;
+        scenario = Dict("key" => "val"),
+    )
 end
 
 @testset "Test add Deterministic with features" begin
@@ -948,26 +1045,26 @@ function _test_add_single_time_series_type(test_value, type_name)
     #_test_add_single_time_series_helper(component, initial_time)
 end
 
-#@testset "Test add SingleTimeSeries with LinearFunctionData Cost" begin
-#    _test_add_single_time_series_type(
-#        repeat([IS.LinearFunctionData(3.14)], 365),
-#        "LinearFunctionData",
-#    )
-#end
-#
-#@testset "Test add SingleTimeSeries with QuadraticFunctionData Cost" begin
-#    _test_add_single_time_series_type(
-#        repeat([IS.QuadraticFunctionData(999.0, 1.0, 0.0)], 365),
-#        "QuadraticFunctionData",
-#    )
-#end
-#
-#@testset "Test add SingleTimeSeries with PiecewiseLinearPointData Cost" begin
-#    _test_add_single_time_series_type(
-#        repeat([IS.PiecewiseLinearPointData(repeat([(999.0, 1.0)], 5))], 365),
-#        "PiecewiseLinearPointData",
-#    )
-#end
+@testset "Test add SingleTimeSeries with LinearFunctionData Cost" begin
+    _test_add_single_time_series_type(
+        repeat([IS.LinearFunctionData(3.14)], 365),
+        "LinearFunctionData",
+    )
+end
+
+@testset "Test add SingleTimeSeries with QuadraticFunctionData Cost" begin
+    _test_add_single_time_series_type(
+        repeat([IS.QuadraticFunctionData(999.0, 1.0, 0.0)], 365),
+        "QuadraticFunctionData",
+    )
+end
+
+@testset "Test add SingleTimeSeries with PiecewiseLinearPointData Cost" begin
+    _test_add_single_time_series_type(
+        repeat([IS.PiecewiseLinearPointData(repeat([(999.0, 1.0)], 5))], 365),
+        "PiecewiseLinearPointData",
+    )
+end
 
 @testset "Test read_time_series_file_metadata" begin
     file = joinpath(FORECASTS_DIR, "ComponentsAsColumnsNoTime.json")

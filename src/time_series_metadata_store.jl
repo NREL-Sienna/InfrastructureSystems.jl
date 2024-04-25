@@ -109,17 +109,13 @@ function _create_indexes!(store::TimeSeriesMetadataStore)
 end
 
 """
-Add metadata to the store.
+Add metadata to the store. The caller must check if there are duplicates.
 """
 function add_metadata!(
     store::TimeSeriesMetadataStore,
     owner::TimeSeriesOwners,
     metadata::TimeSeriesMetadata;
 )
-    if has_metadata(store, owner, metadata)
-        throw(ArgumentError("time_series $(summary(metadata)) is already stored"))
-    end
-
     check_params_compatibility(store, metadata)
     owner_category = _get_owner_category(owner)
     ts_type = time_series_metadata_to_data(metadata)
@@ -511,7 +507,7 @@ function has_metadata(
     metadata::TimeSeriesMetadata,
 )
     features = Dict(Symbol(k) => v for (k, v) in get_features(metadata))
-    return has_metadata(
+    return _try_has_time_series_metadata_by_full_params(
         store,
         owner,
         time_series_metadata_to_data(metadata),
@@ -942,10 +938,16 @@ _get_time_series_category(::Type{<:StaticTimeSeries}) = "StaticTimeSeries"
 
 function _make_feature_filter(; features...)
     data = _make_sorted_feature_array(; features...)
-    return join((["metadata->>'\$.features.$k' = '$v'" for (k, v) in data]), "AND ")
+    return join(
+        (["metadata->>'\$.features.$k' = $(_make_val_str(v))" for (k, v) in data]),
+        " AND ",
+    )
 end
 
-function _make_features_string(features::Dict{String, <:Any})
+_make_val_str(val::Union{Bool, Int}) = string(val)
+_make_val_str(val::String) = "'$val'"
+
+function _make_features_string(features::Dict{String, Union{Bool, Int, String}})
     key_names = sort!(collect(keys(features)))
     data = [Dict(k => features[k]) for k in key_names]
     return JSON3.write(data)
