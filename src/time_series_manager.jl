@@ -256,6 +256,10 @@ function compare_values(
             # TODO 1.0: workaround for not being able to convert Hdf5TimeSeriesStorage to
             # InMemoryTimeSeriesStorage
             continue
+        elseif name == :read_only
+            # Skip this because users can change it during deserialization and we test it
+            # separately.
+            continue
         end
 
         if !compare_values(val_x, val_y; compare_uuids = compare_uuids, exclude = exclude)

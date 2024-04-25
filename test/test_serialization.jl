@@ -64,16 +64,31 @@ end
           directory
 end
 
+function _make_time_series()
+    initial_time = Dates.DateTime("2020-09-01")
+    resolution = Dates.Hour(1)
+    data = TimeSeries.TimeArray(
+        range(initial_time; length = 2, step = resolution),
+        ones(2),
+    )
+    data = IS.SingleTimeSeries(; data = data, name = "ts")
+end
+
 @testset "Test JSON serialization of with read-only time series" begin
     sys = create_system_data_shared_time_series(; time_series_in_memory = false)
-    sys2, result = validate_serialization(sys)
+    sys2, result = validate_serialization(sys; time_series_read_only = true)
     @test result
+
+    component = first(IS.get_components(IS.TestComponent, sys2))
+    @test_throws ArgumentError IS.add_time_series!(sys, component, _make_time_series())
 end
 
 @testset "Test JSON serialization of with mutable time series" begin
     sys = create_system_data_shared_time_series(; time_series_in_memory = false)
     sys2, result = validate_serialization(sys; time_series_read_only = false)
     @test result
+    component = first(IS.get_components(IS.TestComponent, sys2))
+    IS.add_time_series!(sys2, component, _make_time_series())
 end
 
 @testset "Test JSON serialization with no time series" begin
