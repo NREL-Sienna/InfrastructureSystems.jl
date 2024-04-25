@@ -1,4 +1,4 @@
-IS.@scoped_enum(
+@scoped_enum(
     RunStatus,
     NOT_READY = -2,
     INITIALIZED = -1,
