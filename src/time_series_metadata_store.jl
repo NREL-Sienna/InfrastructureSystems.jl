@@ -12,7 +12,7 @@ function TimeSeriesMetadataStore()
     store = TimeSeriesMetadataStore(SQLite.DB())
     _create_metadata_table!(store)
     _create_indexes!(store)
-    @debug "Initializedd new time series metadata table" _group = LOG_GROUP_TIME_SERIES
+    @debug "Initialized new time series metadata table" _group = LOG_GROUP_TIME_SERIES
     return store
 end
 
@@ -64,7 +64,7 @@ function _create_metadata_table!(store::TimeSeriesMetadataStore)
         "owner_category TEXT NOT NULL",
         "features TEXT NOT NULL",
         # The metadata is included as a convenience for serialization/de-serialization,
-        # specifically for types: time_series_type and scaling_factor_multplier.
+        # specifically for types: time_series_type and scaling_factor_mulitplier.
         # There is a lot duplication of data.
         "metadata JSON NOT NULL",
     ]
@@ -83,20 +83,12 @@ function _create_indexes!(store::TimeSeriesMetadataStore)
     # 2. Optimize for checks at system.add_time_series. Use all fields and features.
     # 3. Optimize for returning all metadata for a time series UUID.
     SQLite.createindex!(store.db, METADATA_TABLE_NAME, "by_id", "id"; unique = true)
-    SQLite.createindex!(store.db, METADATA_TABLE_NAME, "by_c", "owner_uuid"; unique = false)
-    SQLite.createindex!(
-        store.db,
-        METADATA_TABLE_NAME,
-        "by_c_n_tst",
-        ["owner_uuid", "name", "time_series_type"];
-        unique = false,
-    )
     SQLite.createindex!(
         store.db,
         METADATA_TABLE_NAME,
         "by_c_n_tst_features",
         ["owner_uuid", "name", "time_series_type", "features"];
-        unique = false,
+        unique = true,
     )
     SQLite.createindex!(
         store.db,
