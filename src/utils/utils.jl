@@ -564,7 +564,7 @@ transform_array_for_hdf(
 transform_array_for_hdf(data::Vector{T}) where {T <: FunctionData} =
     throw(ArgumentError("Not currently implemented for $T"))
 
-to_namedtuple(val) = (; (x => getfield(val, x) for x in fieldnames(typeof(val)))...)
+to_namedtuple(val) = (; (x => getproperty(val, x) for x in fieldnames(typeof(val)))...)
 
 function compute_file_hash(path::String, files::Vector{String})
     data = Dict("files" => [])

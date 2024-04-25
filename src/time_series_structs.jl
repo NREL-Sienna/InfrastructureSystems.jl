@@ -1,7 +1,7 @@
 const TimeSeriesOwners = Union{InfrastructureSystemsComponent, SupplementalAttribute}
 
 @kwdef struct StaticTimeSeriesInfo <: InfrastructureSystemsType
-    type::DataType
+    type::Type{<:TimeSeriesData}
     name::String
     initial_timestamp::Dates.DateTime
     resolution::Dates.Period
@@ -21,7 +21,7 @@ function make_time_series_info(metadata::StaticTimeSeriesMetadata)
 end
 
 @kwdef struct ForecastInfo <: InfrastructureSystemsType
-    type::DataType
+    type::Type{<:TimeSeriesData}
     name::String
     initial_timestamp::Dates.DateTime
     resolution::Dates.Period
@@ -70,7 +70,7 @@ function deserialize_struct(::Type{TimeSeriesKey}, data::Dict)
     for field_name in fieldnames(TimeSeriesKey)
         val = data[string(field_name)]
         if field_name == :time_series_type
-            val = getfield(InfrastructureSystems, Symbol(strip_module_name(val)))
+            val = getproperty(InfrastructureSystems, Symbol(strip_module_name(val)))
         end
         vals[field_name] = val
     end

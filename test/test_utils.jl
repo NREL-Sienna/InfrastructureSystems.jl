@@ -44,6 +44,6 @@ IS.get_name(::FakeTimeSeries) = "fake"
 @testset "Test TimeSeriesData printing" begin
     @test occursin(
         "FakeTimeSeries: fake",
-        sprint(show, MIME("text/plain"), FakeTimeSeries()),
+        sprint(show, MIME("text/plain"), summary(FakeTimeSeries())),
     )
 end

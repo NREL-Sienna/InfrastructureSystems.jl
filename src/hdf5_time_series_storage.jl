@@ -859,7 +859,7 @@ function compare_values(
 
     for ((uuid_x, data_x), (uuid_y, data_y)) in zip(item_x, item_y)
         if uuid_x != uuid_y
-            @error "UUIDs doesn't match" uuid_x uuid_y
+            @error "UUIDs don't match" uuid_x uuid_y
             return false
         end
         if data_x != data_y

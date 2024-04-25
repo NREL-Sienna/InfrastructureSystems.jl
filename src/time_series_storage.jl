@@ -9,7 +9,6 @@ All subtypes must implement:
   - deserialize_time_series
   - get_compression_settings
   - get_num_time_series
-  - is_read_only
   - remove_time_series!
   - serialize_time_series!
   - replace_component_uuid!

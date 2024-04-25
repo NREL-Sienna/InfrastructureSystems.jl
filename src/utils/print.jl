@@ -97,11 +97,11 @@ end
 function Base.show(io::IO, ::MIME"text/plain", ist::InfrastructureSystemsComponent)
     print(io, summary(ist), ":")
     for name in fieldnames(typeof(ist))
-        obj = getfield(ist, name)
+        obj = getproperty(ist, name)
         if obj isa InfrastructureSystemsInternal || obj isa TimeSeriesContainer
             continue
         elseif obj isa InfrastructureSystemsType
-            val = summary(getfield(ist, name))
+            val = summary(getproperty(ist, name))
         elseif obj isa Vector{<:InfrastructureSystemsComponent}
             val = summary(getproperty(ist, name))
         else
