@@ -9,6 +9,8 @@ end
 Construct a new TimeSeriesMetadataStore with an in-memory database.
 """
 function TimeSeriesMetadataStore()
+    # This metadata is not expected to exceed system memory, so create an in-memory
+    # database so that it is faster. This could be changed.
     store = TimeSeriesMetadataStore(SQLite.DB())
     _create_metadata_table!(store)
     _create_indexes!(store)
@@ -64,8 +66,8 @@ function _create_metadata_table!(store::TimeSeriesMetadataStore)
         "owner_category TEXT NOT NULL",
         "features TEXT NOT NULL",
         # The metadata is included as a convenience for serialization/de-serialization,
-        # specifically for types: time_series_type and scaling_factor_mulitplier.
-        # There is a lot duplication of data.
+        # specifically for types and their modules: time_series_type and scaling_factor_mulitplier.
+        # There is duplication of data, but it saves a lot of code.
         "metadata JSON NOT NULL",
     ]
     schema_text = join(schema, ",")
@@ -82,7 +84,6 @@ function _create_indexes!(store::TimeSeriesMetadataStore)
     #    1c. time series for one component/attribute with all features
     # 2. Optimize for checks at system.add_time_series. Use all fields and features.
     # 3. Optimize for returning all metadata for a time series UUID.
-    SQLite.createindex!(store.db, METADATA_TABLE_NAME, "by_id", "id"; unique = true)
     SQLite.createindex!(
         store.db,
         METADATA_TABLE_NAME,
@@ -121,7 +122,7 @@ function add_metadata!(
         ts_category,
         features,
     )
-    params = chop(repeat("?,", length(vals)))
+    params = repeat("?,", length(vals) - 1) * "jsonb(?)"
     SQLite.DBInterface.execute(
         store.db,
         "INSERT INTO $METADATA_TABLE_NAME VALUES($params)",
@@ -623,7 +624,11 @@ function list_metadata(
         name = name,
         features...,
     )
-    query = "SELECT metadata FROM $METADATA_TABLE_NAME WHERE $where_clause"
+    query = """
+        SELECT json(metadata) AS metadata
+        FROM $METADATA_TABLE_NAME
+        WHERE $where_clause
+    """
     table = Tables.rowtable(_execute(store, query))
     return [_deserialize_metadata(x.metadata) for x in table]
 end
@@ -844,7 +849,7 @@ function _try_get_time_series_metadata_by_full_params(
         owner,
         time_series_type,
         name,
-        "metadata";
+        "json(metadata) AS metadata";
         features...,
     )
     len = length(rows)
