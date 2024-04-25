@@ -9,50 +9,6 @@ function prepare_for_removal!(component::InfrastructureSystemsComponent)
 end
 
 """
-Returns an iterator of TimeSeriesData instances attached to the component.
-
-Note that passing a filter function can be much slower than the other filtering parameters
-because it reads time series data from media.
-
-Call `collect` on the result to get an array.
-
-# Arguments
-
-  - `owner::InfrastructureSystemsComponent`: component or attribute from which to get time_series
-  - `filter_func = nothing`: Only return time_series for which this returns true.
-  - `type = nothing`: Only return time_series with this type.
-  - `name = nothing`: Only return time_series matching this value.
-"""
-function get_time_series_multiple(
-    owner::TimeSeriesOwners,
-    filter_func = nothing;
-    type = nothing,
-    name = nothing,
-)
-    throw_if_does_not_support_time_series(owner)
-    mgr = get_time_series_manager(owner)
-    # This is true when the component is not part of a system.
-    isnothing(mgr) && return ()
-    storage = get_time_series_storage(owner)
-
-    Channel() do channel
-        for metadata in list_metadata(mgr, owner; time_series_type = type, name = name)
-            ts = deserialize_time_series(
-                isnothing(type) ? time_series_metadata_to_data(metadata) : type,
-                storage,
-                metadata,
-                UnitRange(1, length(metadata)),
-                UnitRange(1, get_count(metadata)),
-            )
-            if !isnothing(filter_func) && !filter_func(ts)
-                continue
-            end
-            put!(channel, ts)
-        end
-    end
-end
-
-"""
 Transform all instances of SingleTimeSeries to DeterministicSingleTimeSeries. Do nothing
 if the component does not contain any instances.
 

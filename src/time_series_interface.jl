@@ -61,6 +61,50 @@ function get_time_series(
     return deserialize_time_series(T, storage, ts_metadata, rows, columns)
 end
 
+"""
+Returns an iterator of TimeSeriesData instances attached to the component or attribute.
+
+Note that passing a filter function can be much slower than the other filtering parameters
+because it reads time series data from media.
+
+Call `collect` on the result to get an array.
+
+# Arguments
+
+  - `owner::TimeSeriesOwners`: component or attribute from which to get time_series
+  - `filter_func = nothing`: Only return time_series for which this returns true.
+  - `type = nothing`: Only return time_series with this type.
+  - `name = nothing`: Only return time_series matching this value.
+"""
+function get_time_series_multiple(
+    owner::TimeSeriesOwners,
+    filter_func = nothing;
+    type = nothing,
+    name = nothing,
+)
+    throw_if_does_not_support_time_series(owner)
+    mgr = get_time_series_manager(owner)
+    # This is true when the component or attribute is not part of a system.
+    isnothing(mgr) && return ()
+    storage = get_time_series_storage(owner)
+
+    Channel() do channel
+        for metadata in list_metadata(mgr, owner; time_series_type = type, name = name)
+            ts = deserialize_time_series(
+                isnothing(type) ? time_series_metadata_to_data(metadata) : type,
+                storage,
+                metadata,
+                UnitRange(1, length(metadata)),
+                UnitRange(1, get_count(metadata)),
+            )
+            if !isnothing(filter_func) && !filter_func(ts)
+                continue
+            end
+            put!(channel, ts)
+        end
+    end
+end
+
 function get_time_series_metadata(
     ::Type{T},
     owner::TimeSeriesOwners,
@@ -507,34 +551,60 @@ function _get_rows(start_time, len, ts_metadata::ForecastMetadata)
     return UnitRange(1, len)
 end
 
-function _check_start_time(start_time, ts_metadata::TimeSeriesMetadata)
-    if start_time === nothing
-        return get_initial_timestamp(ts_metadata)
-    end
+function _check_start_time(start_time, metadata::StaticTimeSeriesMetadata)
+    return _check_start_time_common(start_time, metadata)
+end
 
-    time_diff = start_time - get_initial_timestamp(ts_metadata)
-    if time_diff < Dates.Second(0)
+function _check_start_time(start_time, metadata::ForecastMetadata)
+    actual_start_time = _check_start_time_common(start_time, metadata)
+    window_count = get_count(metadata)
+    interval = get_interval(metadata)
+    time_diff = actual_start_time - get_initial_timestamp(metadata)
+    if window_count > 1 &&
+       Dates.Millisecond(time_diff) % Dates.Millisecond(interval) != Dates.Second(0)
         throw(
             ArgumentError(
-                "start_time=$start_time is earlier than $(get_initial_timestamp(ts_metadata))",
+                "start_time=$start_time is not on a multiple of interval=$interval",
             ),
         )
     end
 
-    if typeof(ts_metadata) <: ForecastMetadata
-        window_count = get_count(ts_metadata)
-        interval = get_interval(ts_metadata)
-        if window_count > 1 &&
-           Dates.Millisecond(time_diff) % Dates.Millisecond(interval) != Dates.Second(0)
-            throw(
-                ArgumentError(
-                    "start_time=$start_time is not on a multiple of interval=$interval",
-                ),
-            )
-        end
+    return actual_start_time
+end
+
+function _check_start_time_common(start_time, metadata::TimeSeriesMetadata)
+    if start_time === nothing
+        return get_initial_timestamp(metadata)
+    end
+
+    if start_time < get_initial_timestamp(metadata)
+        throw(
+            ArgumentError(
+                "start_time = $start_time is earlier than $(get_initial_timestamp(metadata))",
+            ),
+        )
+    end
+
+    last_time = _get_last_user_start_timestamp(metadata)
+    if start_time > last_time
+        throw(
+            ArgumentError(
+                "start_time = $start_time is greater than the last timestamp $last_time",
+            ),
+        )
     end
 
     return start_time
+end
+
+function _get_last_user_start_timestamp(metadata::StaticTimeSeriesMetadata)
+    return get_initial_timestamp(metadata) +
+           (get_length(metadata) - 1) * get_resolution(metadata)
+end
+
+function _get_last_user_start_timestamp(forecast::ForecastMetadata)
+    return get_initial_timestamp(forecast) +
+           (get_count(forecast) - 1) * get_interval(forecast)
 end
 
 function get_forecast_window_count(initial_timestamp, interval, resolution, len, horizon)
@@ -548,9 +618,7 @@ function get_forecast_window_count(initial_timestamp, interval, resolution, len,
         diff =
             Dates.Millisecond(last_initial_time - initial_timestamp) %
             Dates.Millisecond(interval)
-        if diff != Dates.Millisecond(0)
-            last_initial_time -= diff
-        end
+        last_initial_time -= diff
         count =
             Dates.Millisecond(last_initial_time - initial_timestamp) /
             Dates.Millisecond(interval) + 1
