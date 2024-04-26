@@ -46,29 +46,16 @@ function Base.show(io::IO, ::MIME"text/html", container::InfrastructureSystemsCo
     end
 end
 
-function Base.summary(container::TimeSeriesContainer)
-    return "$(typeof(container)): $(length(container))"
-end
-
-function Base.show(io::IO, ::MIME"text/plain", container::TimeSeriesContainer)
-    println(io, summary(container))
-    for key in keys(container.data)
-        println(io, "$(key.time_series_type): name=$(key.name)")
-    end
-end
-
-function Base.summary(time_series::TimeSeriesData)
-    return "$(typeof(time_series)) time_series ($(length(time_series)))"
-end
-
-function Base.summary(time_series::TimeSeriesMetadata)
-    return "$(typeof(time_series)) time_series"
-end
+make_label(type::Type{<:InfrastructureSystemsType}, name) = "$(nameof(type)): $name"
+Base.summary(x::InfrastructureSystemsComponent) = make_label(typeof(x), get_name(x))
+Base.summary(x::SupplementalAttribute) = make_label(typeof(x), get_uuid(x))
+Base.summary(x::TimeSeriesData) = make_label(typeof(x), get_name(x))
+Base.summary(x::TimeSeriesMetadata) = make_label(typeof(x), get_name(x))
 
 function Base.show(io::IO, data::SystemData)
     show(io, data.components)
     println(io, "\n")
-    return show(io, data.time_series_params)
+    show_time_series_data(io, data)
 end
 
 function Base.show(io::IO, ::MIME"text/plain", data::SystemData)
@@ -77,7 +64,6 @@ function Base.show(io::IO, ::MIME"text/plain", data::SystemData)
     show(io, MIME"text/plain"(), data.attributes)
     println(io, "\n")
     show_time_series_data(io, data; backend = Val(:auto))
-    show(io, data.time_series_params)
 end
 
 function Base.show(io::IO, ::MIME"text/html", data::SystemData)
@@ -86,54 +72,18 @@ function Base.show(io::IO, ::MIME"text/html", data::SystemData)
     show(io, MIME"text/html"(), data.attributes)
     println(io, "\n")
     show_time_series_data(io, data; backend = Val(:html), standalone = false)
-    show(io, data.time_series_params)
 end
 
 function show_time_series_data(io::IO, data::SystemData; kwargs...)
-    counts = get_time_series_counts(data)
-    if counts.static_time_series_count == 0 && counts.forecast_count == 0
-        return
-    end
-
-    res = get_time_series_resolution(data)
-    res = res <= Dates.Minute(1) ? Dates.Second(res) : Dates.Minute(res)
-
-    header = ["Property", "Value"]
-    table = [
-        "Components with time series data" string(counts.components_with_time_series)
-        "Supplemental attributes with time series data" string(counts.supplemental_attributes_with_time_series)
-        "Unique StaticTimeSeries" string(counts.static_time_series_count)
-        "Unique Forecasts" string(counts.forecast_count)
-        "Resolution" string(res)
-    ]
-
-    if counts.forecast_count > 0
-        initial_times = get_forecast_initial_times(data)
-        table2 = [
-            "First initial time" string(first(initial_times))
-            "Last initial time" string(last(initial_times))
-            "Horizon" string(get_forecast_horizon(data))
-            "Interval" string(Dates.Minute(get_forecast_interval(data)))
-            "Forecast window count" string(get_forecast_window_count(data))
-        ]
-        table = vcat(table, table2)
-    end
-
+    table = get_time_series_summary_table(data)
     PrettyTables.pretty_table(
         io,
         table;
-        header = header,
         title = "Time Series Summary",
         alignment = :l,
         kwargs...,
     )
     return
-end
-
-function Base.summary(ist::InfrastructureSystemsComponent)
-    # All InfrastructureSystemsComponent subtypes are supposed to implement get_name.
-    # Some don't.  They need to override this function.
-    return "$(get_name(ist)) ($(typeof(ist)))"
 end
 
 function Base.show(io::IO, ::MIME"text/plain", system_units::SystemUnitsSettings)
@@ -148,9 +98,9 @@ function Base.show(io::IO, ::MIME"text/plain", ist::InfrastructureSystemsCompone
     print(io, summary(ist), ":")
     for name in fieldnames(typeof(ist))
         obj = getproperty(ist, name)
-        if obj isa InfrastructureSystemsInternal
+        if obj isa InfrastructureSystemsInternal || obj isa TimeSeriesContainer
             continue
-        elseif obj isa TimeSeriesContainer || obj isa InfrastructureSystemsType
+        elseif obj isa InfrastructureSystemsType
             val = summary(getproperty(ist, name))
         elseif obj isa Vector{<:InfrastructureSystemsComponent}
             val = summary(getproperty(ist, name))
@@ -272,7 +222,7 @@ function show_components(
         data[i, 1] = get_name(component)
         j = 2
         if has_available
-            data[i, 2] = getproperty(component, :available)
+            data[i, 2] = Base.getproperty(component, :available)
             j += 1
         end
 
@@ -287,13 +237,14 @@ function show_components(
                 parent = parentmodule(component_type)
                 # This logic enables application of system units in PowerSystems through
                 # its getter functions.
-                val = getproperty(component, column)
-                if val isa TimeSeriesContainer ||
-                   val isa InfrastructureSystemsType ||
-                   val isa Vector{<:InfrastructureSystemsComponent}
+                val = Base.getproperty(component, column)
+                if val isa TimeSeriesContainer
+                    continue
+                elseif val isa InfrastructureSystemsType ||
+                       val isa Vector{<:InfrastructureSystemsComponent}
                     val = summary(val)
                 elseif hasproperty(parent, getter_name)
-                    getter_func = getproperty(parent, getter_name)
+                    getter_func = Base.getproperty(parent, getter_name)
                     val = getter_func(component)
                 end
                 data[i, j] = val
@@ -311,6 +262,31 @@ function show_components(
         kwargs...,
     )
     return
+end
+
+function show_time_series(owner::TimeSeriesOwners)
+    show_time_series(stdout, owner)
+end
+
+function show_time_series(io::IO, owner::TimeSeriesOwners)
+    data_by_type = Dict{Any, Vector{OrderedDict{String, Any}}}()
+    for info in list_time_series_info(owner)
+        if !haskey(data_by_type, info.type)
+            data_by_type[info.type] = Vector{OrderedDict{String, Any}}()
+        end
+        data = OrderedDict{String, Any}()
+        for field in fieldnames(typeof(info))
+            if field == :type
+                data[string(field)] = string(nameof(Base.getproperty(info, field)))
+            else
+                data[string(field)] = Base.getproperty(info, field)
+            end
+        end
+        push!(data_by_type[info.type], data)
+    end
+    for rows in values(data_by_type)
+        PrettyTables.pretty_table(io, DataFrame(rows))
+    end
 end
 
 ## This function takes in a time period or date period and returns a compound period

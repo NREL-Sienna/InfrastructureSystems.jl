@@ -4,6 +4,7 @@ import JSON3
 
 const HASH_FILENAME = "check.sha256"
 
+# TODO DT: possibly incorrect
 g_cached_subtypes = Dict{DataType, Vector{DataType}}()
 
 """
@@ -136,8 +137,8 @@ function compare_values(
     else
         for field_name in fields
             field_name in exclude && continue
-            if (T <: TimeSeriesContainer || T <: SupplementalAttributes) &&
-               field_name == :time_series_storage
+            if (T <: TimeSeriesContainer && field_name == :manager) ||
+               (T <: SupplementalAttributes && field_name == :time_series_manager)
                 # This gets validated at SystemData. Don't repeat for each component.
                 continue
             end
@@ -564,7 +565,7 @@ transform_array_for_hdf(
 transform_array_for_hdf(data::Vector{T}) where {T <: FunctionData} =
     throw(ArgumentError("Not currently implemented for $T"))
 
-to_namedtuple(val) = (; (x => getfield(val, x) for x in fieldnames(typeof(val)))...)
+to_namedtuple(val) = (; (x => getproperty(val, x) for x in fieldnames(typeof(val)))...)
 
 function compute_file_hash(path::String, files::Vector{String})
     data = Dict("files" => [])

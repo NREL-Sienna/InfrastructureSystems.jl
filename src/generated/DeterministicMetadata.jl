@@ -15,6 +15,7 @@ This file is auto-generated. Do not edit.
         horizon::Int
         time_series_type::Type{<:AbstractDeterministic}
         scaling_factor_multiplier::Union{Nothing, Function}
+        features::Dict{String, Union{Bool, Int, String}}
         internal::InfrastructureSystemsInternal
     end
 
@@ -30,6 +31,7 @@ A deterministic forecast for a particular data field in a Component.
 - `horizon::Int`: length of this time series
 - `time_series_type::Type{<:AbstractDeterministic}`: Type of the time series data associated with this metadata.
 - `scaling_factor_multiplier::Union{Nothing, Function}`: Applicable when the time series data are scaling factors. Called on the associated component to convert the values.
+- `features::Dict{String, Union{Bool, Int, String}}`: User-defined tags that differentiate multiple time series arrays that represent the same component attribute, such as different arrays for different scenarios or years.
 - `internal::InfrastructureSystemsInternal`
 """
 mutable struct DeterministicMetadata <: ForecastMetadata
@@ -50,15 +52,17 @@ mutable struct DeterministicMetadata <: ForecastMetadata
     time_series_type::Type{<:AbstractDeterministic}
     "Applicable when the time series data are scaling factors. Called on the associated component to convert the values."
     scaling_factor_multiplier::Union{Nothing, Function}
+    "User-defined tags that differentiate multiple time series arrays that represent the same component attribute, such as different arrays for different scenarios or years."
+    features::Dict{String, Union{Bool, Int, String}}
     internal::InfrastructureSystemsInternal
 end
 
-function DeterministicMetadata(name, resolution, initial_timestamp, interval, count, time_series_uuid, horizon, time_series_type, scaling_factor_multiplier=nothing, )
-    DeterministicMetadata(name, resolution, initial_timestamp, interval, count, time_series_uuid, horizon, time_series_type, scaling_factor_multiplier, InfrastructureSystemsInternal(), )
+function DeterministicMetadata(name, resolution, initial_timestamp, interval, count, time_series_uuid, horizon, time_series_type, scaling_factor_multiplier=nothing, features=Dict{String, Any}(), )
+    DeterministicMetadata(name, resolution, initial_timestamp, interval, count, time_series_uuid, horizon, time_series_type, scaling_factor_multiplier, features, InfrastructureSystemsInternal(), )
 end
 
-function DeterministicMetadata(; name, resolution, initial_timestamp, interval, count, time_series_uuid, horizon, time_series_type, scaling_factor_multiplier=nothing, internal=InfrastructureSystemsInternal(), )
-    DeterministicMetadata(name, resolution, initial_timestamp, interval, count, time_series_uuid, horizon, time_series_type, scaling_factor_multiplier, internal, )
+function DeterministicMetadata(; name, resolution, initial_timestamp, interval, count, time_series_uuid, horizon, time_series_type, scaling_factor_multiplier=nothing, features=Dict{String, Any}(), internal=InfrastructureSystemsInternal(), )
+    DeterministicMetadata(name, resolution, initial_timestamp, interval, count, time_series_uuid, horizon, time_series_type, scaling_factor_multiplier, features, internal, )
 end
 
 """Get [`DeterministicMetadata`](@ref) `name`."""
@@ -79,6 +83,8 @@ get_horizon(value::DeterministicMetadata) = value.horizon
 get_time_series_type(value::DeterministicMetadata) = value.time_series_type
 """Get [`DeterministicMetadata`](@ref) `scaling_factor_multiplier`."""
 get_scaling_factor_multiplier(value::DeterministicMetadata) = value.scaling_factor_multiplier
+"""Get [`DeterministicMetadata`](@ref) `features`."""
+get_features(value::DeterministicMetadata) = value.features
 """Get [`DeterministicMetadata`](@ref) `internal`."""
 get_internal(value::DeterministicMetadata) = value.internal
 
@@ -100,5 +106,7 @@ set_horizon!(value::DeterministicMetadata, val) = value.horizon = val
 set_time_series_type!(value::DeterministicMetadata, val) = value.time_series_type = val
 """Set [`DeterministicMetadata`](@ref) `scaling_factor_multiplier`."""
 set_scaling_factor_multiplier!(value::DeterministicMetadata, val) = value.scaling_factor_multiplier = val
+"""Set [`DeterministicMetadata`](@ref) `features`."""
+set_features!(value::DeterministicMetadata, val) = value.features = val
 """Set [`DeterministicMetadata`](@ref) `internal`."""
 set_internal!(value::DeterministicMetadata, val) = value.internal = val

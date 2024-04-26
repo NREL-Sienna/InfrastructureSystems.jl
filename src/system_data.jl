@@ -11,10 +11,7 @@ const SERIALIZATION_METADATA_KEY = "__serialization_metadata__"
         are not exposed in the standard library calls like [`get_components`](@ref).
         Examples are components in a subsystem."
         masked_components::Components
-        time_series_params::TimeSeriesParameters
         validation_descriptors::Vector
-        time_series_storage::TimeSeriesStorage
-        time_series_storage_file::Union{Nothing, String}
         internal::InfrastructureSystemsInternal
     end
 
@@ -28,8 +25,7 @@ mutable struct SystemData <: InfrastructureSystemsType
     "User-defined subystems. Components can be regular or masked."
     subsystems::Dict{String, Set{Base.UUID}}
     attributes::SupplementalAttributes
-    time_series_params::TimeSeriesParameters
-    time_series_storage::TimeSeriesStorage
+    time_series_manager::TimeSeriesManager
     validation_descriptors::Vector
     internal::InfrastructureSystemsInternal
 end
@@ -60,49 +56,42 @@ function SystemData(;
         read_validation_descriptor(validation_descriptor_file)
     end
 
-    if time_series_directory === nothing && haskey(ENV, TIME_SERIES_DIRECTORY_ENV_VAR)
-        time_series_directory = ENV[TIME_SERIES_DIRECTORY_ENV_VAR]
-    end
-
-    ts_storage = make_time_series_storage(;
+    time_series_manager = TimeSeriesManager(;
         in_memory = time_series_in_memory,
         directory = time_series_directory,
         compression = compression,
     )
-    components = Components(ts_storage, validation_descriptors)
-    attributes = SupplementalAttributes(ts_storage)
-    masked_components = Components(ts_storage, validation_descriptors)
+    components = Components(time_series_manager, validation_descriptors)
+    attributes = SupplementalAttributes(time_series_manager)
+    masked_components = Components(time_series_manager, validation_descriptors)
     return SystemData(
         components,
         masked_components,
         Dict{Base.UUID, InfrastructureSystemsComponent}(),
         Dict{String, Set{Base.UUID}}(),
         attributes,
-        TimeSeriesParameters(),
-        ts_storage,
+        time_series_manager,
         validation_descriptors,
         InfrastructureSystemsInternal(),
     )
 end
 
 function SystemData(
-    time_series_params,
     validation_descriptors,
-    time_series_storage,
+    time_series_manager,
     subsystems,
     attributes,
     internal,
 )
-    components = Components(time_series_storage, validation_descriptors)
-    masked_components = Components(time_series_storage, validation_descriptors)
+    components = Components(time_series_manager, validation_descriptors)
+    masked_components = Components(time_series_manager, validation_descriptors)
     return SystemData(
         components,
         masked_components,
         Dict{Base.UUID, InfrastructureSystemsComponent}(),
         subsystems,
         attributes,
-        time_series_params,
-        time_series_storage,
+        time_series_manager,
         validation_descriptors,
         internal,
     )
@@ -115,7 +104,13 @@ function open_time_series_store!(
     args...;
     kwargs...,
 )
-    open_store!(func, data.time_series_storage, mode, args...; kwargs...)
+    open_store!(
+        func,
+        data.time_series_manager.data_store,
+        mode,
+        args...;
+        kwargs...,
+    )
 end
 
 """
@@ -166,62 +161,31 @@ function add_time_series_from_file_metadata!(
 end
 
 """
-Add time series data to a component.
+Add time series data to a component or supplemental attribute.
 
 # Arguments
 
   - `data::SystemData`: SystemData
-  - `component::InfrastructureSystemsComponent`: will store the time series reference
+  - `owner::InfrastructureSystemsComponent`: will store the time series reference
   - `time_series::TimeSeriesData`: Any object of subtype TimeSeriesData
 
-Throws ArgumentError if the component is not stored in the system.
+Throws ArgumentError if the owner is not stored in the system.
 """
 function add_time_series!(
     data::SystemData,
-    component::InfrastructureSystemsComponent,
+    owner::TimeSeriesOwners,
     time_series::TimeSeriesData;
     skip_if_present = false,
+    features...,
 )
-    metadata_type = time_series_data_to_metadata(typeof(time_series))
-    ts_metadata = metadata_type(time_series)
-    _validate_component(data, component)
-    attach_time_series_and_serialize!(
-        data,
-        component,
-        ts_metadata,
+    _validate(data, owner)
+    add_time_series!(
+        data.time_series_manager,
+        owner,
         time_series;
         skip_if_present = skip_if_present,
+        features...,
     )
-    return
-end
-
-"""
-Add time series data to an attribute.
-
-# Arguments
-
-  - `data::SystemData`: SystemData
-  - `attribute::SupplementalAttribute`: will store the time series reference
-  - `time_series::TimeSeriesData`: Any object of subtype TimeSeriesData
-
-Throws ArgumentError if the attribute is not stored in the system.
-"""
-function add_time_series!(
-    data::SystemData,
-    attribute::SupplementalAttribute,
-    time_series::TimeSeriesData;
-    skip_if_present = false,
-)
-    metadata_type = time_series_data_to_metadata(typeof(time_series))
-    ts_metadata = metadata_type(time_series)
-    attach_time_series_and_serialize!(
-        data,
-        attribute,
-        ts_metadata,
-        time_series;
-        skip_if_present = skip_if_present,
-    )
-    return
 end
 
 """
@@ -238,11 +202,19 @@ individually with the same data because in this case, only one time series array
 
 Throws ArgumentError if a component is not stored in the system.
 """
-function add_time_series!(data::SystemData, components, time_series::TimeSeriesData)
-    metadata_type = time_series_data_to_metadata(typeof(time_series))
-    ts_metadata = metadata_type(time_series)
+function add_time_series!(
+    data::SystemData,
+    components,
+    time_series::TimeSeriesData;
+    features...,
+)
     for component in components
-        attach_time_series_and_serialize!(data, component, ts_metadata, time_series)
+        add_time_series!(
+            data,
+            component,
+            time_series;
+            features...,
+        )
     end
 end
 
@@ -266,16 +238,10 @@ function remove_time_series!(
     data::SystemData,
     ::Type{T},
     component::InfrastructureSystemsComponent,
-    name::String,
+    name::String;
+    features...,
 ) where {T <: TimeSeriesData}
-    type = time_series_data_to_metadata(T)
-    time_series = get_time_series_metadata(type, component, name)
-    uuid = get_time_series_uuid(time_series)
-    if remove_time_series_metadata!(component, type, name)
-        remove_time_series!(data.time_series_storage, uuid, get_uuid(component), name)
-    end
-
-    return
+    return remove_time_series!(data.time_series_manager, T, component, name; features...)
 end
 
 function remove_time_series!(
@@ -283,46 +249,30 @@ function remove_time_series!(
     component::InfrastructureSystemsComponent,
     ts_metadata::TimeSeriesMetadata,
 )
-    uuid = get_time_series_uuid(ts_metadata)
-    name = get_name(ts_metadata)
-    if remove_time_series_metadata!(component, typeof(ts_metadata), name)
-        remove_time_series!(data.time_series_storage, uuid, get_uuid(component), name)
-    end
-
-    return
+    return remove_time_series!(data.time_series_manager, component, ts_metadata)
 end
 
 """
-Return a time series from TimeSeriesFileMetadata.
+Removes all time series of a particular type from a System.
 
 # Arguments
 
-  - `cache::TimeSeriesParsingCache`: cached data
-  - `ts_file_metadata::TimeSeriesFileMetadata`: metadata
-  - `resolution::{Nothing, Dates.Period}`: skip any time_series that don't match this resolution
+  - `data::SystemData`: system
+  - `type::Type{<:TimeSeriesData}`: Type of time series objects to remove.
 """
-function make_time_series!(
-    cache::TimeSeriesParsingCache,
-    ts_file_metadata::TimeSeriesFileMetadata,
-)
-    info = add_time_series_info!(cache, ts_file_metadata)
-    return ts_file_metadata.time_series_type(info)
-end
-
-function add_time_series_info!(
-    cache::TimeSeriesParsingCache,
-    metadata::TimeSeriesFileMetadata,
-)
-    time_series = _add_time_series_info!(cache, metadata)
-    info = TimeSeriesParsedInfo(metadata, time_series)
-    @debug "Added TimeSeriesParsedInfo" _group = LOG_GROUP_TIME_SERIES metadata
-    return info
+function remove_time_series!(data::SystemData, ::Type{T}) where {T <: TimeSeriesData}
+    _throw_if_read_only(data.time_series_manager)
+    for component in iterate_components_with_time_series(data; time_series_type = T)
+        for ts_metadata in list_time_series_metadata(component; time_series_type = T)
+            remove_time_series!(data, component, ts_metadata)
+        end
+    end
 end
 
 """
-Checks that the component exists in data and the UUID's match.
+Checks that the component exists in data and is the same object.
 """
-function _validate_component(
+function _validate(
     data::SystemData,
     component::T,
 ) where {T <: InfrastructureSystemsComponent}
@@ -335,13 +285,23 @@ function _validate_component(
         end
     end
 
-    user_uuid = get_uuid(component)
-    ps_uuid = get_uuid(comp)
-    if user_uuid != ps_uuid
+    if component !== comp
         throw(
             ArgumentError(
-                "comp UUID doesn't match, perhaps it was copied?; " *
-                "$T name=$(get_name(component)) user=$user_uuid system=$ps_uuid",
+                "$(summary(component)) does not match the stored component of the same " *
+                "type and name. Was it copied?",
+            ),
+        )
+    end
+end
+
+function _validate(data::SystemData, attribute::SupplementalAttribute)
+    _attribute = get_supplemental_attribute(data, get_uuid(attribute))
+    if attribute !== _attribute
+        throw(
+            ArgumentError(
+                "$(summary(attribute)) does not match the stored attribute of the same " *
+                "type and name. Was it copied?",
             ),
         )
     end
@@ -363,12 +323,6 @@ function compare_values(
         end
         val_x = getproperty(x, name)
         val_y = getproperty(y, name)
-        if name == :time_series_storage && typeof(val_x) != typeof(val_y)
-            @warn "Cannot compare $(typeof(val_x)) and $(typeof(val_y))"
-            # TODO 1.0: workaround for not being able to convert Hdf5TimeSeriesStorage to
-            # InMemoryTimeSeriesStorage
-            continue
-        end
         if !compare_values(val_x, val_y; compare_uuids = compare_uuids, exclude = exclude)
             @error "SystemData field = $name does not match" getproperty(x, name) getproperty(
                 y,
@@ -422,7 +376,7 @@ function mask_component!(
     remove_time_series = false,
 )
     remove_component!(data.components, component; remove_time_series = remove_time_series)
-    set_time_series_storage!(component, nothing)
+    set_time_series_manager!(component, nothing)
     return add_masked_component!(
         data,
         component;
@@ -431,50 +385,34 @@ function mask_component!(
     )
 end
 
-function clear_time_series!(data::SystemData)
-    clear_time_series!(data.time_series_storage)
-    clear_time_series!(data.components)
-    reset_info!(data.time_series_params)
-    return
+clear_time_series!(data::SystemData) = clear_time_series!(data.time_series_manager)
+
+function iterate_components_with_time_series(
+    data::SystemData;
+    time_series_type::Union{Nothing, Type{<:TimeSeriesData}} = nothing,
+)
+    return (
+        get_component(data, x) for
+        x in list_owner_uuids_with_time_series(
+            data.time_series_manager.metadata_store,
+            InfrastructureSystemsComponent;
+            time_series_type = time_series_type,
+        )
+    )
 end
 
-function iterate_components_with_time_series(data::SystemData)
-    return Iterators.Flatten((
-        iterate_components_with_time_series(data.components),
-        iterate_components_with_time_series(data.masked_components),
-    ))
-end
-
-function iterate_supplemental_attributes_with_time_series(data::SystemData)
-    iterate_supplemental_attributes_with_time_series(data.attributes)
-end
-
-"""
-Removes all time series of a particular type from a System.
-
-# Arguments
-
-  - `data::SystemData`: system
-  - `type::Type{<:TimeSeriesData}`: Type of time series objects to remove.
-"""
-function remove_time_series!(data::SystemData, ::Type{T}) where {T <: TimeSeriesData}
-    for component in iterate_components_with_time_series(data)
-        for ts_metadata in list_time_series_metadata(component)
-            if time_series_metadata_to_data(ts_metadata) <: T
-                remove_time_series!(data, component, ts_metadata)
-            end
-        end
-    end
-    counts = get_time_series_counts(data)
-    if counts.forecast_count == 0
-        if counts.static_time_series_count == 0
-            reset_info!(data.time_series_params)
-        else
-            reset_info!(data.time_series_params.forecast_params)
-        end
-    end
-
-    return
+function iterate_supplemental_attributes_with_time_series(
+    data::SystemData,
+    time_series_type::Union{Nothing, Type{<:TimeSeriesData}} = nothing,
+)
+    return (
+        get_supplemental_attribute(data, x) for
+        x in list_owner_uuids_with_time_series(
+            data.time_series_manager.metadata_store,
+            SupplementalAttribute;
+            time_series_type = time_series_type,
+        )
+    )
 end
 
 """
@@ -499,7 +437,7 @@ function get_time_series_multiple(
     name = nothing,
 )
     Channel() do channel
-        for component in iterate_components_with_time_series(data)
+        for component in iterate_components_with_time_series(data; time_series_type = type)
             for time_series in
                 get_time_series_multiple(component, filter_func; type = type, name = name)
                 put!(channel, time_series)
@@ -508,105 +446,8 @@ function get_time_series_multiple(
     end
 end
 
-# These are guaranteed to be consistent already.
-check_time_series_consistency(::SystemData, ::Type{<:Forecast}) = nothing
-
-function check_time_series_consistency(data::SystemData, ::Type{SingleTimeSeries})
-    first_initial_timestamp = Dates.now()
-    first_len = 0
-    found_first = false
-    for component in iterate_components_with_time_series(data)
-        container = get_time_series_container(component)
-        for key in keys(container.data)
-            ts_metadata = container.data[key]
-            if time_series_metadata_to_data(ts_metadata) === SingleTimeSeries
-                initial_timestamp = get_initial_timestamp(ts_metadata)
-                len = get_length(ts_metadata)
-                if !found_first
-                    first_initial_timestamp = get_initial_timestamp(ts_metadata)
-                    first_len = get_length(ts_metadata)
-                    found_first = true
-                else
-                    if initial_timestamp != first_initial_timestamp
-                        throw(
-                            InvalidValue(
-                                "SingleTimeSeries initial timestamps are inconsistent; $initial_timestamp != $first_initial_timestamp",
-                            ),
-                        )
-                    end
-                    if len != first_len
-                        throw(
-                            InvalidValue(
-                                "SingleTimeSeries lengths are inconsistent; $len != $first_len",
-                            ),
-                        )
-                    end
-                end
-            end
-        end
-    end
-
-    return first_initial_timestamp, first_len
-end
-
-"""
-Provides counts of time series including attachments to components and supplemental
-attributes.
-"""
-struct TimeSeriesCounts
-    components_with_time_series::Int
-    supplemental_attributes_with_time_series::Int
-    static_time_series_count::Int
-    forecast_count::Int
-end
-
-"""
-Build an instance of TimeSeriesCounts by scanning the system.
-"""
-function get_time_series_counts(data::SystemData)
-    component_count = 0
-    attribute_count = 0
-    static_time_series_count = 0
-    forecast_count = 0
-    # Note that the same time series UUID can exist in in multiple types, such as with
-    # SingleTimeSeries and DeterministicSingleTimeSeries.
-    uuids_by_type = Dict{DataType, Set{Base.UUID}}()
-
-    function update_time_series_counts(object)
-        for metadata in iterate_time_series_metadata(get_time_series_container(object))
-            ts_type = time_series_metadata_to_data(metadata)
-            if !haskey(uuids_by_type, ts_type)
-                uuids_by_type[ts_type] = Set{Base.UUID}()
-            end
-            uuid = get_time_series_uuid(metadata)
-            if !in(uuid, uuids_by_type[ts_type])
-                if ts_type <: StaticTimeSeries
-                    static_time_series_count += 1
-                elseif ts_type <: Forecast
-                    forecast_count += 1
-                end
-                push!(uuids_by_type[ts_type], uuid)
-            end
-        end
-    end
-
-    for component in iterate_components_with_time_series(data)
-        component_count += 1
-        update_time_series_counts(component)
-    end
-
-    for attr in iterate_supplemental_attributes_with_time_series(data)
-        attribute_count += 1
-        update_time_series_counts(attr)
-    end
-
-    return TimeSeriesCounts(
-        component_count,
-        attribute_count,
-        static_time_series_count,
-        forecast_count,
-    )
-end
+check_time_series_consistency(data::SystemData, ts_type) =
+    check_consistency(data.time_series_manager.metadata_store, ts_type)
 
 """
 Transform all instances of SingleTimeSeries to DeterministicSingleTimeSeries.
@@ -620,29 +461,39 @@ function transform_single_time_series!(
     horizon::Int,
     interval::Dates.Period,
 ) where {T <: DeterministicSingleTimeSeries}
+    resolutions = list_time_series_resolutions(data; time_series_type = SingleTimeSeries)
+    if length(resolutions) > 1
+        # TODO: This needs to support an alternate method where horizon is expressed as a
+        # Period (horizon * resolution)
+        throw(
+            ConflictingInputsError(
+                "transform_single_time_series! is not yet supported when there is more than " *
+                "one resolution: $resolutions",
+            ),
+        )
+    end
+
     remove_time_series!(data, DeterministicSingleTimeSeries)
-    params = nothing
-    set_params = false
-    for component in iterate_components_with_time_series(data)
-        if params === nothing
+    for (i, uuid) in enumerate(
+        list_owner_uuids_with_time_series(
+            data.time_series_manager.metadata_store,
+            InfrastructureSystemsComponent;
+            time_series_type = SingleTimeSeries,
+        ),
+    )
+        component = get_component(data, uuid)
+        if i == 1
             params = get_single_time_series_transformed_parameters(
                 component,
                 T,
                 horizon,
                 interval,
             )
-            if params === nothing
-                # This component doesn't have SingleTimeSeries.
-                continue
-            end
             # This will throw if there is another forecast type with conflicting parameters.
-            check_params_compatibility(data.time_series_params, params)
+            check_params_compatibility(data.time_series_manager.metadata_store, params)
         end
 
-        if transform_single_time_series_internal!(component, T, params) && !set_params
-            set_parameters!(data.time_series_params, params)
-            set_params = true
-        end
+        transform_single_time_series_internal!(component, T, horizon, interval)
     end
 end
 
@@ -724,7 +575,6 @@ function to_dict(data::SystemData)
         :masked_components,
         :subsystems,
         :attributes,
-        :time_series_params,
         :internal,
     )
         serialized_data[string(field)] = serialize(getproperty(data, field))
@@ -744,17 +594,19 @@ function serialize(data::SystemData)
         directory = metadata["serialization_directory"]
         base = metadata["basename"]
 
-        if isempty(data.time_series_storage)
+        if isempty(data.time_series_manager.data_store)
             json_data["time_series_compression_enabled"] =
-                get_compression_settings(data.time_series_storage).enabled
+                get_compression_settings(data.time_series_manager.data_store).enabled
             json_data["time_series_in_memory"] =
-                data.time_series_storage isa InMemoryTimeSeriesStorage
+                data.time_series_manager.data_store isa InMemoryTimeSeriesStorage
         else
             time_series_base_name = _get_secondary_basename(base, TIME_SERIES_STORAGE_FILE)
             time_series_storage_file = joinpath(directory, time_series_base_name)
-            serialize(data.time_series_storage, time_series_storage_file)
+            serialize(data.time_series_manager.data_store, time_series_storage_file)
+            to_h5_file(data.time_series_manager.metadata_store, time_series_storage_file)
             json_data["time_series_storage_file"] = time_series_base_name
-            json_data["time_series_storage_type"] = string(typeof(data.time_series_storage))
+            json_data["time_series_storage_type"] =
+                string(typeof(data.time_series_manager.data_store))
         end
     end
 
@@ -769,9 +621,9 @@ function deserialize(
     time_series_read_only = false,
     time_series_directory = nothing,
     validation_descriptor_file = nothing,
+    kwargs...,
 )
     @debug "deserialize" raw _group = LOG_GROUP_SERIALIZATION
-    time_series_params = deserialize(TimeSeriesParameters, raw["time_series_params"])
 
     if haskey(raw, "time_series_storage_file")
         if !isfile(raw["time_series_storage_file"])
@@ -786,8 +638,13 @@ function deserialize(
         time_series_storage = from_file(
             Hdf5TimeSeriesStorage,
             raw["time_series_storage_file"];
-            read_only = time_series_read_only,
             directory = time_series_directory,
+            read_only = time_series_read_only,
+        )
+        time_series_metadata_store = from_h5_file(
+            TimeSeriesMetadataStore,
+            time_series_storage.file_path,
+            time_series_directory,
         )
     else
         time_series_storage = make_time_series_storage(;
@@ -796,10 +653,16 @@ function deserialize(
             ),
             directory = time_series_directory,
         )
+        time_series_metadata_store = nothing
     end
 
+    time_series_manager = TimeSeriesManager(;
+        data_store = time_series_storage,
+        read_only = time_series_read_only,
+        metadata_store = time_series_metadata_store,
+    )
     subsystems = Dict(k => Set(Base.UUID.(v)) for (k, v) in raw["subsystems"])
-    attributes = deserialize(SupplementalAttributes, raw["attributes"], time_series_storage)
+    attributes = deserialize(SupplementalAttributes, raw["attributes"], time_series_manager)
     internal = deserialize(InfrastructureSystemsInternal, raw["internal"])
     validation_descriptors = if isnothing(validation_descriptor_file)
         []
@@ -808,9 +671,8 @@ function deserialize(
     end
     @debug "deserialize" _group = LOG_GROUP_SERIALIZATION time_series_storage internal
     sys = SystemData(
-        time_series_params,
         validation_descriptors,
-        time_series_storage,
+        time_series_manager,
         subsystems,
         attributes,
         internal,
@@ -972,17 +834,30 @@ function get_masked_component(data::SystemData, uuid::Base.UUID)
 end
 
 get_forecast_initial_times(data::SystemData) =
-    get_forecast_initial_times(data.time_series_params)
-get_forecast_total_period(data::SystemData) =
-    get_forecast_total_period(data.time_series_params)
+    get_forecast_initial_times(data.time_series_manager.metadata_store)
 get_forecast_window_count(data::SystemData) =
-    get_forecast_window_count(data.time_series_params)
-get_forecast_horizon(data::SystemData) = get_forecast_horizon(data.time_series_params)
+    get_forecast_window_count(data.time_series_manager.metadata_store)
+get_forecast_horizon(data::SystemData) =
+    get_forecast_horizon(data.time_series_manager.metadata_store)
 get_forecast_initial_timestamp(data::SystemData) =
-    get_forecast_initial_timestamp(data.time_series_params)
-get_forecast_interval(data::SystemData) = get_forecast_interval(data.time_series_params)
-get_time_series_resolution(data::SystemData) =
-    get_time_series_resolution(data.time_series_params)
+    get_forecast_initial_timestamp(data.time_series_manager.metadata_store)
+get_forecast_interval(data::SystemData) =
+    get_forecast_interval(data.time_series_manager.metadata_store)
+
+list_time_series_resolutions(
+    data::SystemData;
+    time_series_type::Union{Type{<:TimeSeriesData}, Nothing} = nothing,
+) = list_time_series_resolutions(
+    data.time_series_manager.metadata_store;
+    time_series_type = time_series_type,
+)
+
+# TODO: do we need this? The old way of calculating this required a single resolution.
+# function get_forecast_total_period(data::SystemData)
+#     params = get_forecast_parameters(data.time_series_manager.metadata_store)
+#     isnothing(params) && return Dates.Second(0)
+#     return get_total_period(params.initial_timestamp, params.count, params.interval, params.horizon)
+# end
 
 clear_components!(data::SystemData) = clear_components!(data.components)
 
@@ -995,7 +870,7 @@ end
 check_component(data::SystemData, component) = check_component(data.components, component)
 
 get_compression_settings(data::SystemData) =
-    get_compression_settings(data.time_series_storage)
+    get_compression_settings(data.time_series_manager.data_store)
 
 set_name!(data::SystemData, component, name) = set_name!(data.components, component, name)
 
@@ -1010,22 +885,14 @@ function get_component_counts_by_type(data::SystemData)
     ]
 end
 
-function get_time_series_counts_by_type(data::SystemData)
-    counts = Dict{String, Int}()
-    for component in iterate_components_with_time_series(data)
-        for (type, count) in get_num_time_series_by_type(component)
-            if haskey(counts, type)
-                counts[type] += count
-            else
-                counts[type] = count
-            end
-        end
-    end
-
-    return [
-        OrderedDict("type" => x, "count" => counts[x]) for x in sort(collect(keys(counts)))
-    ]
-end
+get_num_time_series(data::SystemData) =
+    get_num_time_series(data.time_series_manager.metadata_store)
+get_time_series_counts(data::SystemData) =
+    get_time_series_counts(data.time_series_manager.metadata_store)
+get_time_series_counts_by_type(data::SystemData) =
+    get_time_series_counts_by_type(data.time_series_manager.metadata_store)
+get_time_series_summary_table(data::SystemData) =
+    get_time_series_summary_table(data.time_series_manager.metadata_store)
 
 _get_system_basename(system_file) = splitext(basename(system_file))[1]
 _get_secondary_basename(system_basename, name) = system_basename * "_" * name

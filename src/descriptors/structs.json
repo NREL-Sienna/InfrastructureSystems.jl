@@ -50,6 +50,12 @@
           "comment": "Applicable when the time series data are scaling factors. Called on the associated component to convert the values."
         },
         {
+          "name": "features",
+          "data_type": "Dict{String, Union{Bool, Int, String}}",
+          "comment": "User-defined tags that differentiate multiple time series arrays that represent the same component attribute, such as different arrays for different scenarios or years.",
+          "default": "Dict{String, Any}()"
+        },
+        {
           "name": "internal",
           "data_type": "InfrastructureSystemsInternal",
           "internal_default": "InfrastructureSystemsInternal()"
@@ -105,6 +111,12 @@
           "data_type": "Union{Nothing, Function}",
           "default": "nothing",
           "comment": "Applicable when the time series data are scaling factors. Called on the associated component to convert the values."
+        },
+        {
+          "name": "features",
+          "data_type": "Dict{String, Union{Bool, Int, String}}",
+          "comment": "User-defined tags that differentiate multiple time series arrays that represent the same component attribute, such as different arrays for different scenarios or years.",
+          "default": "Dict{String, Any}()"
         },
         {
           "name": "internal",
@@ -164,6 +176,12 @@
           "comment": "Applicable when the time series data are scaling factors. Called on the associated component to convert the values."
         },
         {
+          "name": "features",
+          "data_type": "Dict{String, Union{Bool, Int, String}}",
+          "comment": "User-defined tags that differentiate multiple time series arrays that represent the same component attribute, such as different arrays for different scenarios or years.",
+          "default": "Dict{String, Any}()"
+        },
+        {
           "name": "internal",
           "data_type": "InfrastructureSystemsInternal",
           "internal_default": "InfrastructureSystemsInternal()"
@@ -204,6 +222,12 @@
           "data_type": "Union{Nothing, Function}",
           "default": "nothing",
           "comment": "Applicable when the time series data are scaling factors. Called on the associated component to convert the values."
+        },
+        {
+          "name": "features",
+          "data_type": "Dict{String, Union{Bool, Int, String}}",
+          "comment": "User-defined tags that differentiate multiple time series arrays that represent the same component attribute, such as different arrays for different scenarios or years.",
+          "default": "Dict{String, Any}()"
         },
         {
           "name": "internal",

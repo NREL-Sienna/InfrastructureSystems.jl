@@ -159,18 +159,6 @@ function deserialize(::Type{T}, data::Dict) where {T <: InfrastructureSystemsTyp
     return deserialize_struct(T, data)
 end
 
-function deserialize_struct(::Type{TimeSeriesKey}, data::Dict)
-    vals = Dict{Symbol, Any}()
-    for field_name in fieldnames(TimeSeriesKey)
-        val = data[string(field_name)]
-        if field_name == :time_series_type
-            val = getproperty(InfrastructureSystems, Symbol(strip_module_name(val)))
-        end
-        vals[field_name] = val
-    end
-    return TimeSeriesKey(; vals...)
-end
-
 function deserialize_to_dict(::Type{T}, data::Dict) where {T}
     # Note: mostly duplicated in src/deterministic_metadata.jl
     vals = Dict{Symbol, Any}()

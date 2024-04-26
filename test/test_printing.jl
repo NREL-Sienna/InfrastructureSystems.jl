@@ -4,7 +4,7 @@
     show(io, "text/plain", sys)
     text = String(take!(io))
     @test occursin("TestComponent", text)
-    @test occursin("Time Series Summary", text)
+    @test occursin("time_series_type", text)
 end
 
 @testset "Test show_component_tables" begin
@@ -22,4 +22,11 @@ end
     text = String(take!(io))
     @test occursin("TestComponent", text)
     @test occursin("val", text)
+
+    component = first(IS.get_components(IS.TestComponent, sys))
+    @test IS.has_time_series(component)
+    io = IOBuffer()
+    IS.show_time_series(io, component)
+    text = String(take!(io))
+    @test occursin("SingleTimeSeries", text)
 end

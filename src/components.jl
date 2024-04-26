@@ -2,21 +2,21 @@ const ComponentsByType = Dict{DataType, Dict{String, <:InfrastructureSystemsComp
 
 struct Components <: InfrastructureSystemsContainer
     data::ComponentsByType
-    time_series_storage::TimeSeriesStorage
+    time_series_manager::TimeSeriesManager
     validation_descriptors::Vector
 end
 
 get_member_string(::Components) = "components"
 
 function Components(
-    time_series_storage::TimeSeriesStorage,
+    time_series_manager::TimeSeriesManager,
     validation_descriptors = nothing,
 )
     if isnothing(validation_descriptors)
         validation_descriptors = Vector()
     end
 
-    return Components(ComponentsByType(), time_series_storage, validation_descriptors)
+    return Components(ComponentsByType(), time_series_manager, validation_descriptors)
 end
 
 function _add_component!(
@@ -42,7 +42,7 @@ function _add_component!(
         throw(ArgumentError("cannot add a component with time_series: $component"))
     end
 
-    set_time_series_storage!(component, components.time_series_storage)
+    set_time_series_manager!(component, components.time_series_manager)
     components.data[T][component_name] = component
     return
 end
@@ -309,10 +309,6 @@ function iterate_components(components::Components)
     iterate_container(components)
 end
 
-function iterate_components_with_time_series(components::Components)
-    iterate_container_with_time_series(components)
-end
-
 function get_num_components(components::Components)
     return get_num_members(components)
 end
@@ -366,12 +362,12 @@ function compare_values(
     for name in fieldnames(Components)
         name in exclude && continue
         # This gets validated in SystemData.
-        name == :time_series_storage && continue
+        name == :time_series_manager && continue
         val_x = getproperty(x, name)
         val_y = getproperty(y, name)
         if !compare_values(val_x, val_y; compare_uuids = compare_uuids, exclude = exclude)
-            val_x = getfield(x, name)
-            val_y = getfield(y, name)
+            val_x = getproperty(x, name)
+            val_y = getproperty(y, name)
             @error "Components field = $name does not match" val_x val_y
             match = false
         end

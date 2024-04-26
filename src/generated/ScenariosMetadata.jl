@@ -15,6 +15,7 @@ This file is auto-generated. Do not edit.
         time_series_uuid::UUIDs.UUID
         horizon::Int
         scaling_factor_multiplier::Union{Nothing, Function}
+        features::Dict{String, Union{Bool, Int, String}}
         internal::InfrastructureSystemsInternal
     end
 
@@ -30,6 +31,7 @@ A Discrete Scenario Based time series for a particular data field in a Component
 - `time_series_uuid::UUIDs.UUID`: reference to time series data
 - `horizon::Int`: length of this time series
 - `scaling_factor_multiplier::Union{Nothing, Function}`: Applicable when the time series data are scaling factors. Called on the associated component to convert the values.
+- `features::Dict{String, Union{Bool, Int, String}}`: User-defined tags that differentiate multiple time series arrays that represent the same component attribute, such as different arrays for different scenarios or years.
 - `internal::InfrastructureSystemsInternal`
 """
 mutable struct ScenariosMetadata <: ForecastMetadata
@@ -50,15 +52,17 @@ mutable struct ScenariosMetadata <: ForecastMetadata
     horizon::Int
     "Applicable when the time series data are scaling factors. Called on the associated component to convert the values."
     scaling_factor_multiplier::Union{Nothing, Function}
+    "User-defined tags that differentiate multiple time series arrays that represent the same component attribute, such as different arrays for different scenarios or years."
+    features::Dict{String, Union{Bool, Int, String}}
     internal::InfrastructureSystemsInternal
 end
 
-function ScenariosMetadata(name, resolution, initial_timestamp, interval, scenario_count, count, time_series_uuid, horizon, scaling_factor_multiplier=nothing, )
-    ScenariosMetadata(name, resolution, initial_timestamp, interval, scenario_count, count, time_series_uuid, horizon, scaling_factor_multiplier, InfrastructureSystemsInternal(), )
+function ScenariosMetadata(name, resolution, initial_timestamp, interval, scenario_count, count, time_series_uuid, horizon, scaling_factor_multiplier=nothing, features=Dict{String, Any}(), )
+    ScenariosMetadata(name, resolution, initial_timestamp, interval, scenario_count, count, time_series_uuid, horizon, scaling_factor_multiplier, features, InfrastructureSystemsInternal(), )
 end
 
-function ScenariosMetadata(; name, resolution, initial_timestamp, interval, scenario_count, count, time_series_uuid, horizon, scaling_factor_multiplier=nothing, internal=InfrastructureSystemsInternal(), )
-    ScenariosMetadata(name, resolution, initial_timestamp, interval, scenario_count, count, time_series_uuid, horizon, scaling_factor_multiplier, internal, )
+function ScenariosMetadata(; name, resolution, initial_timestamp, interval, scenario_count, count, time_series_uuid, horizon, scaling_factor_multiplier=nothing, features=Dict{String, Any}(), internal=InfrastructureSystemsInternal(), )
+    ScenariosMetadata(name, resolution, initial_timestamp, interval, scenario_count, count, time_series_uuid, horizon, scaling_factor_multiplier, features, internal, )
 end
 
 """Get [`ScenariosMetadata`](@ref) `name`."""
@@ -79,6 +83,8 @@ get_time_series_uuid(value::ScenariosMetadata) = value.time_series_uuid
 get_horizon(value::ScenariosMetadata) = value.horizon
 """Get [`ScenariosMetadata`](@ref) `scaling_factor_multiplier`."""
 get_scaling_factor_multiplier(value::ScenariosMetadata) = value.scaling_factor_multiplier
+"""Get [`ScenariosMetadata`](@ref) `features`."""
+get_features(value::ScenariosMetadata) = value.features
 """Get [`ScenariosMetadata`](@ref) `internal`."""
 get_internal(value::ScenariosMetadata) = value.internal
 
@@ -100,5 +106,7 @@ set_time_series_uuid!(value::ScenariosMetadata, val) = value.time_series_uuid = 
 set_horizon!(value::ScenariosMetadata, val) = value.horizon = val
 """Set [`ScenariosMetadata`](@ref) `scaling_factor_multiplier`."""
 set_scaling_factor_multiplier!(value::ScenariosMetadata, val) = value.scaling_factor_multiplier = val
+"""Set [`ScenariosMetadata`](@ref) `features`."""
+set_features!(value::ScenariosMetadata, val) = value.features = val
 """Set [`ScenariosMetadata`](@ref) `internal`."""
 set_internal!(value::ScenariosMetadata, val) = value.internal = val
