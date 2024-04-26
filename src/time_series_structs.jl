@@ -1,6 +1,8 @@
 const TimeSeriesOwners = Union{InfrastructureSystemsComponent, SupplementalAttribute}
 
-@kwdef struct StaticTimeSeriesInfo <: InfrastructureSystemsType
+abstract type AbstractTimeSeriesInfo <: InfrastructureSystemsType end
+
+@kwdef struct StaticTimeSeriesInfo <: AbstractTimeSeriesInfo
     type::Type{<:TimeSeriesData}
     name::String
     initial_timestamp::Dates.DateTime
@@ -20,7 +22,7 @@ function make_time_series_info(metadata::StaticTimeSeriesMetadata)
     )
 end
 
-@kwdef struct ForecastInfo <: InfrastructureSystemsType
+@kwdef struct ForecastInfo <: AbstractTimeSeriesInfo
     type::Type{<:TimeSeriesData}
     name::String
     initial_timestamp::Dates.DateTime

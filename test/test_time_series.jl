@@ -455,6 +455,9 @@ end
             "SELECT COUNT(*) AS count FROM $(IS.METADATA_TABLE_NAME)",
         ),
     )[1].count == 4
+    for info in IS.list_time_series_info(component)
+        @test IS.get_data(IS.get_time_series(component, info)) == data
+    end
 end
 
 @testset "Test add with features with mixed types" begin
@@ -545,6 +548,21 @@ end
         component,
         ts;
         scenario = Dict("key" => "val"),
+    )
+    # Duplicate features in different order.
+    @test_throws ArgumentError IS.add_time_series!(
+        sys,
+        component,
+        ts;
+        scenario = "low",
+        model_year = "2035",
+    )
+    @test_throws ArgumentError IS.add_time_series!(
+        sys,
+        component,
+        ts;
+        model_year = "2035",
+        scenario = "low",
     )
 end
 
@@ -1039,10 +1057,10 @@ function _test_add_single_time_series_type(test_value, type_name)
         )
     data = IS.SingleTimeSeries(; data = data_series, name = "test_c")
     IS.add_time_series!(sys, component, data)
-    #ts = IS.get_time_series(IS.SingleTimeSeries, component, "test_c";)
-    #@test IS.get_data_type(ts) == type_name
-    #@test reshape(TimeSeries.values(IS.get_data(ts)), 365) == TimeSeries.values(data_series)
-    #_test_add_single_time_series_helper(component, initial_time)
+    ts = IS.get_time_series(IS.SingleTimeSeries, component, "test_c";)
+    @test IS.get_data_type(ts) == type_name
+    @test reshape(TimeSeries.values(IS.get_data(ts)), 365) == TimeSeries.values(data_series)
+    _test_add_single_time_series_helper(component, initial_time)
 end
 
 @testset "Test add SingleTimeSeries with LinearFunctionData Cost" begin

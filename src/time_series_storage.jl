@@ -11,7 +11,6 @@ All subtypes must implement:
   - get_num_time_series
   - remove_time_series!
   - serialize_time_series!
-  - replace_component_uuid!
   - Base.isempty
 """
 abstract type TimeSeriesStorage end

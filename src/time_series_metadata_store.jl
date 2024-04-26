@@ -219,7 +219,7 @@ check_consistency(::TimeSeriesMetadataStore, ::Type{<:Forecast}) = nothing
 Throw InvalidValue if the SingleTimeSeries arrays have different initial times or lengths.
 Return the initial timestamp and length as a tuple.
 """
-function check_consistency(store::TimeSeriesMetadataStore, ::Type{<:StaticTimeSeries})
+function check_consistency(store::TimeSeriesMetadataStore, ::Type{SingleTimeSeries})
     query = """
         SELECT
             DISTINCT initial_timestamp
@@ -242,6 +242,9 @@ function check_consistency(store::TimeSeriesMetadataStore, ::Type{<:StaticTimeSe
     row = table[1]
     return Dates.DateTime(row.initial_timestamp), row.length
 end
+
+# check_consistency is not implemented on StaticTimeSeries because new types may have
+# different requirments than SingleTimeSeries. Let future developers make that decision.
 
 function get_forecast_initial_times(store::TimeSeriesMetadataStore)
     params = get_forecast_parameters(store)
@@ -307,7 +310,7 @@ function get_forecast_initial_timestamp(store::TimeSeriesMetadataStore)
         """
     table = Tables.rowtable(_execute(store, query))
     return if isempty(table)
-        Dates.DateTime(Dates.Minute(0))
+        nothing
     else
         Dates.DateTime(table[1].initial_timestamp)
     end
@@ -323,7 +326,7 @@ function get_forecast_interval(store::TimeSeriesMetadataStore)
         """
     table = Tables.rowtable(_execute(store, query))
     return if isempty(table)
-        Dates.Period(Dates.Millisecond(0))
+        Dates.Millisecond(0)
     else
         Dates.Millisecond(table[1].interval_ms)
     end
@@ -359,8 +362,8 @@ function get_metadata(
     len = length(metadata_items)
     if len == 0
         if time_series_type === Deterministic
-            # This is a hack to account for the fact that we allow non-standard behavior
-            # with DeterministicSingleTimeSeries.
+            # This is a hack to account for the fact that we allow users to use
+            # Deterministic interchangeably with DeterministicSingleTimeSeries.
             try
                 return get_metadata(
                     store,
@@ -532,7 +535,7 @@ function has_metadata(
         name = name,
         features...,
     )
-    query = "SELECT COUNT(*) AS count FROM $METADATA_TABLE_NAME WHERE $where_clause"
+    query = "SELECT COUNT(*) AS count FROM $METADATA_TABLE_NAME $where_clause"
     return _execute_count(store, query) > 0
 end
 
@@ -540,7 +543,7 @@ end
 Return True if there is time series matching the UUID.
 """
 function has_time_series(store::TimeSeriesMetadataStore, time_series_uuid::Base.UUID)
-    where_clause = "time_series_uuid = '$time_series_uuid'"
+    where_clause = "WHERE time_series_uuid = '$time_series_uuid'"
     return _has_time_series(store, where_clause)
 end
 
@@ -548,7 +551,7 @@ function has_time_series(
     store::TimeSeriesMetadataStore,
     owner::TimeSeriesOwners,
 )
-    where_clause = _make_owner_where_clause(owner)
+    where_clause = "WHERE owner_uuid = '$(get_uuid(owner))'"
     return _has_time_series(store, where_clause)
 end
 
@@ -606,7 +609,7 @@ function list_matching_time_series_uuids(
         name = name,
         features...,
     )
-    query = "SELECT DISTINCT time_series_uuid FROM $METADATA_TABLE_NAME WHERE $where_clause"
+    query = "SELECT DISTINCT time_series_uuid FROM $METADATA_TABLE_NAME $where_clause"
     table = Tables.columntable(_execute(store, query))
     return Base.UUID.(table.time_series_uuid)
 end
@@ -627,7 +630,7 @@ function list_metadata(
     query = """
         SELECT json(metadata) AS metadata
         FROM $METADATA_TABLE_NAME
-        WHERE $where_clause
+        $where_clause
     """
     table = Tables.rowtable(_execute(store, query))
     return [_deserialize_metadata(x.metadata) for x in table]
@@ -696,8 +699,8 @@ function remove_metadata!(
     num_deleted = _remove_metadata!(store, where_clause)
     if num_deleted == 0
         if time_series_type === Deterministic
-            # This is a hack to account for the fact that we allow non-standard behavior
-            # with DeterministicSingleTimeSeries.
+            # This is a hack to account for the fact that we allow users to use
+            # Deterministic interchangeably with DeterministicSingleTimeSeries.
             remove_metadata!(
                 store,
                 owner;
@@ -821,7 +824,7 @@ function _execute_count(store::TimeSeriesMetadataStore, query::AbstractString)
 end
 
 function _has_time_series(store::TimeSeriesMetadataStore, where_clause::String)
-    query = "SELECT COUNT(*) AS count FROM $METADATA_TABLE_NAME WHERE $where_clause"
+    query = "SELECT COUNT(*) AS count FROM $METADATA_TABLE_NAME $where_clause"
     return _execute_count(store, query) > 0
 end
 
@@ -829,7 +832,7 @@ function _remove_metadata!(
     store::TimeSeriesMetadataStore,
     where_clause::AbstractString,
 )
-    _execute(store, "DELETE FROM $METADATA_TABLE_NAME WHERE $where_clause")
+    _execute(store, "DELETE FROM $METADATA_TABLE_NAME $where_clause")
     table = Tables.rowtable(_execute(store, "SELECT CHANGES() AS changes"))
     @assert_op length(table) == 1
     @debug "Deleted $(table[1].changes) rows from the time series metadata table" _group =
@@ -895,7 +898,7 @@ function _try_time_series_metadata_by_full_params(
         require_full_feature_match = true,
         features...,
     )
-    query = "SELECT $column FROM $METADATA_TABLE_NAME WHERE $where_clause"
+    query = "SELECT $column FROM $METADATA_TABLE_NAME $where_clause"
     return Tables.rowtable(_execute(store, query))
 end
 
@@ -956,9 +959,6 @@ function _make_features_string(; features...)
     return JSON3.write(data)
 end
 
-_make_owner_where_clause(owner::TimeSeriesOwners) =
-    "owner_uuid = '$(get_uuid(owner))'"
-
 function _make_sorted_feature_array(; features...)
     key_names = sort!(collect(string.(keys(features))))
     return [(key, features[Symbol(key)]) for key in key_names]
@@ -973,7 +973,7 @@ function _make_where_clause(
 )
     vals = String[]
     if !isnothing(owner)
-        push!(vals, _make_owner_where_clause(owner))
+        push!(vals, "owner_uuid = '$(get_uuid(owner))'")
     end
     if !isnothing(name)
         push!(vals, "name = '$name'")
@@ -990,7 +990,7 @@ function _make_where_clause(
         push!(vals, val)
     end
 
-    return "(" * join(vals, " AND ") * ")"
+    return isempty(vals) ? "" : "WHERE (" * join(vals, " AND ") * ")"
 end
 
 function _make_where_clause(owner::TimeSeriesOwners, metadata::TimeSeriesMetadata)
