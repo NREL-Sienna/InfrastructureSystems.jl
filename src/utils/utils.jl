@@ -4,6 +4,7 @@ import JSON3
 
 const HASH_FILENAME = "check.sha256"
 
+# TODO DT: possibly incorrect
 g_cached_subtypes = Dict{DataType, Vector{DataType}}()
 
 """

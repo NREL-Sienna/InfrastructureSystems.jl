@@ -4,7 +4,6 @@ Abstract type for time series storage implementations.
 
 All subtypes must implement:
 
-  - check_read_only
   - clear_time_series!
   - deserialize_time_series
   - get_compression_settings

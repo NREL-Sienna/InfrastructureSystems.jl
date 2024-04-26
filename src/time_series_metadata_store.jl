@@ -285,7 +285,7 @@ function get_forecast_window_count(store::TimeSeriesMetadataStore)
         LIMIT 1
         """
     table = Tables.rowtable(_execute(store, query))
-    return isempty(table) ? 0 : table[1].window_count
+    return isempty(table) ? nothing : table[1].window_count
 end
 
 function get_forecast_horizon(store::TimeSeriesMetadataStore)
@@ -297,7 +297,7 @@ function get_forecast_horizon(store::TimeSeriesMetadataStore)
         LIMIT 1
         """
     table = Tables.rowtable(_execute(store, query))
-    return isempty(table) ? 0 : table[1].horizon
+    return isempty(table) ? nothing : table[1].horizon
 end
 
 function get_forecast_initial_timestamp(store::TimeSeriesMetadataStore)
@@ -326,7 +326,7 @@ function get_forecast_interval(store::TimeSeriesMetadataStore)
         """
     table = Tables.rowtable(_execute(store, query))
     return if isempty(table)
-        Dates.Millisecond(0)
+        nothing
     else
         Dates.Millisecond(table[1].interval_ms)
     end
