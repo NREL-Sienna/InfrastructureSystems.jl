@@ -458,6 +458,8 @@ end
     for info in IS.list_time_series_info(component)
         @test IS.get_data(IS.get_time_series(component, info)) == data
     end
+    IS.remove_time_series!(sys, IS.SingleTimeSeries)
+    @test isempty(IS.list_time_series_info(component))
 end
 
 @testset "Test add with features with mixed types" begin

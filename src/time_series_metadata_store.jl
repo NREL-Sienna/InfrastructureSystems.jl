@@ -994,10 +994,11 @@ function _make_where_clause(
 end
 
 function _make_where_clause(owner::TimeSeriesOwners, metadata::TimeSeriesMetadata)
+    features = Dict(Symbol(k) => v for (k, v) in get_features(metadata))
     return _make_where_clause(
         owner;
         time_series_type = time_series_metadata_to_data(metadata),
         name = get_name(metadata),
-        get_features(metadata)...,
+        features...,
     )
 end
