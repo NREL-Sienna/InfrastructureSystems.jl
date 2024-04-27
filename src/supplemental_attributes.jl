@@ -1,12 +1,12 @@
 struct SupplementalAttributes <: InfrastructureSystemsContainer
     data::SupplementalAttributesContainer
-    time_series_storage::TimeSeriesStorage
+    time_series_manager::TimeSeriesManager
 end
 
 get_member_string(::SupplementalAttributes) = "supplemental attributes"
 
-function SupplementalAttributes(time_series_storage::TimeSeriesStorage)
-    return SupplementalAttributes(SupplementalAttributesContainer(), time_series_storage)
+function SupplementalAttributes(time_series_manager::TimeSeriesManager)
+    return SupplementalAttributes(SupplementalAttributesContainer(), time_series_manager)
 end
 
 function add_supplemental_attribute!(
@@ -65,9 +65,9 @@ function _add_supplemental_attribute!(
         )
     end
 
-    set_time_series_storage!(
+    set_time_series_manager!(
         supplemental_attribute,
-        supplemental_attributes.time_series_storage,
+        supplemental_attributes.time_series_manager,
     )
     supplemental_attributes.data[T][supplemental_attribute_uuid] = supplemental_attribute
     return
@@ -86,12 +86,6 @@ end
 """
 function iterate_supplemental_attributes(supplemental_attributes::SupplementalAttributes)
     iterate_container(supplemental_attributes)
-end
-
-function iterate_supplemental_attributes_with_time_series(
-    supplemental_attributes::SupplementalAttributes,
-)
-    iterate_container_with_time_series(supplemental_attributes)
 end
 
 """
@@ -126,7 +120,7 @@ function remove_supplemental_attribute!(
     if isempty(supplemental_attributes.data[T])
         pop!(supplemental_attributes.data, T)
     end
-    clear_time_series_storage!(supplemental_attribute)
+    set_time_series_manager!(supplemental_attribute, nothing)
     return
 end
 
@@ -191,7 +185,7 @@ end
 function deserialize(
     ::Type{SupplementalAttributes},
     data::Vector,
-    time_series_storage::TimeSeriesStorage,
+    time_series_manager::TimeSeriesManager,
 )
     attributes = SupplementalAttributesByType()
     for attr_dict in data
@@ -211,6 +205,6 @@ function deserialize(
 
     return SupplementalAttributes(
         SupplementalAttributesContainer(attributes),
-        time_series_storage,
+        time_series_manager,
     )
 end

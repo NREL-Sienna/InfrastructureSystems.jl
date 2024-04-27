@@ -20,65 +20,22 @@ end
 function test_add_remove(storage::IS.TimeSeriesStorage)
     name = "component1"
     name = "val"
-    component = IS.TestComponent(name, 5)
     ts = IS.SingleTimeSeries(; data = create_time_array(), name = "test")
-    IS.serialize_time_series!(storage, IS.get_uuid(component), name, ts)
+    IS.serialize_time_series!(storage, ts)
 
     ts2 = _deserialize_full(storage, ts)
     @test TimeSeries.timestamp(IS.get_data(ts2)) == TimeSeries.timestamp(IS.get_data(ts))
     @test TimeSeries.values(IS.get_data(ts2)) == TimeSeries.values(IS.get_data(ts))
 
-    component2 = IS.TestComponent("component2", 6)
-    IS.serialize_time_series!(storage, IS.get_uuid(component2), name, ts)
-
     @test IS.get_num_time_series(storage) == 1
-
-    IS.remove_time_series!(storage, IS.get_uuid(ts), IS.get_uuid(component2), name)
-
-    ## There should still be one reference to the data.
-    ts2 = _deserialize_full(storage, ts)
-    @test IS.get_data(ts2) isa TimeSeries.TimeArray
-
-    IS.remove_time_series!(storage, IS.get_uuid(ts), IS.get_uuid(component), name)
-    @test_throws ArgumentError _deserialize_full(storage, ts)
-    return IS.get_num_time_series(storage) == 0
-end
-
-function test_add_references(storage::IS.TimeSeriesStorage)
-    name = "val"
-    component1 = IS.TestComponent("component1", 5)
-    component2 = IS.TestComponent("component2", 6)
-    ts = IS.SingleTimeSeries(; data = create_time_array(), name = "test")
-    ts_uuid = IS.get_uuid(ts)
-    IS.serialize_time_series!(storage, IS.get_uuid(component1), name, ts)
-    IS.add_time_series_reference!(storage, IS.get_uuid(component2), name, ts_uuid)
-
-    # Adding duplicate references is not allowed.
-    @test_throws AssertionError IS.add_time_series_reference!(
-        storage,
-        IS.get_uuid(component2),
-        name,
-        ts_uuid,
-    )
-
-    @test IS.get_num_time_series(storage) == 1
-
-    IS.remove_time_series!(storage, ts_uuid, IS.get_uuid(component1), name)
-
-    # There should still be one reference to the data.
-    @test _deserialize_full(storage, ts) isa IS.TimeSeriesData
-
-    IS.remove_time_series!(storage, ts_uuid, IS.get_uuid(component2), name)
+    IS.remove_time_series!(storage, IS.get_uuid(ts))
     @test_throws ArgumentError _deserialize_full(storage, ts)
     return IS.get_num_time_series(storage) == 0
 end
 
 function test_get_subset(storage::IS.TimeSeriesStorage)
-    name = "component1"
-    name = "val"
-    component = IS.TestComponent(name, 1)
     ts = IS.SingleTimeSeries(; data = create_time_array(), name = "test")
-    IS.serialize_time_series!(storage, IS.get_uuid(component), name, ts)
+    IS.serialize_time_series!(storage, ts)
     ts2 = _deserialize_full(storage, ts)
 
     @test TimeSeries.timestamp(IS.get_data(ts2)) == TimeSeries.timestamp(IS.get_data(ts))
@@ -98,7 +55,7 @@ function test_get_subset(storage::IS.TimeSeriesStorage)
     data = SortedDict(initial_time1 => ones(horizon), initial_time2 => ones(horizon))
 
     ts = IS.Deterministic(; data = data, name = name, resolution = resolution)
-    IS.serialize_time_series!(storage, IS.get_uuid(component), name, ts)
+    IS.serialize_time_series!(storage, ts)
     ts_metadata = make_metadata(ts)
     rows = UnitRange(1, horizon)
     columns = UnitRange(1, 2)
@@ -126,11 +83,8 @@ function test_get_subset(storage::IS.TimeSeriesStorage)
 end
 
 function test_clear(storage::IS.TimeSeriesStorage)
-    name = "component1"
-    name = "val"
-    component = IS.TestComponent(name, 5)
     ts = IS.SingleTimeSeries(; data = create_time_array(), name = "test")
-    IS.serialize_time_series!(storage, IS.get_uuid(component), name, ts)
+    IS.serialize_time_series!(storage, ts)
 
     ts2 = _deserialize_full(storage, ts)
     @test TimeSeries.timestamp(IS.get_data(ts2)) == TimeSeries.timestamp(IS.get_data(ts))
@@ -152,15 +106,6 @@ end
     test_clear(IS.make_time_series_storage(; in_memory = false, directory = "."))
 end
 
-@testset "Test copy time series references" begin
-    for in_memory in (true, false)
-        test_add_remove(IS.make_time_series_storage(; in_memory = in_memory))
-        test_add_references(IS.make_time_series_storage(; in_memory = in_memory))
-        test_get_subset(IS.make_time_series_storage(; in_memory = in_memory))
-        test_clear(IS.make_time_series_storage(; in_memory = in_memory))
-    end
-end
-
 @testset "Test data format version" begin
     storage = IS.make_time_series_storage(; in_memory = false)
     @test IS.read_data_format_version(storage) == IS.TIME_SERIES_DATA_FORMAT_VERSION
@@ -178,12 +123,6 @@ end
                     shuffle = shuffle,
                 )
             test_add_remove(
-                IS.make_time_series_storage(;
-                    in_memory = in_memory,
-                    compression = compression,
-                ),
-            )
-            test_add_references(
                 IS.make_time_series_storage(;
                     in_memory = in_memory,
                     compression = compression,
@@ -211,9 +150,8 @@ end
         @test isempty(storage)
         name = "component1"
         name = "val"
-        component = IS.TestComponent(name, 5)
         ts = IS.SingleTimeSeries(; data = create_time_array(), name = "test")
-        IS.serialize_time_series!(storage, IS.get_uuid(component), name, ts)
+        IS.serialize_time_series!(storage, ts)
         @test !isempty(storage)
     end
 end

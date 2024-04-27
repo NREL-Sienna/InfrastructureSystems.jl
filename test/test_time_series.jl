@@ -14,7 +14,8 @@
 
     forecast = IS.Deterministic(; data = data, name = name, resolution = resolution)
     IS.add_time_series!(sys, component, forecast)
-    var1 = IS.get_time_series(IS.Deterministic, component, name; start_time = initial_time)
+    var1 =
+        IS.get_time_series(IS.Deterministic, component, name; start_time = initial_time)
     @test length(var1) == 2
     @test IS.get_horizon(var1) == horizon
     @test IS.get_initial_timestamp(var1) == initial_time
@@ -28,7 +29,8 @@
     )
     @test length(var2) == 2
 
-    var3 = IS.get_time_series(IS.Deterministic, component, name; start_time = other_time)
+    var3 =
+        IS.get_time_series(IS.Deterministic, component, name; start_time = other_time)
     @test length(var2) == 2
     # Throws errors
     @test_throws ArgumentError IS.get_time_series(
@@ -44,6 +46,12 @@
         name;
         start_time = other_time,
         count = 2,
+    )
+    @test_throws ArgumentError IS.get_time_series(
+        IS.Deterministic,
+        component,
+        name;
+        start_time = other_time + resolution,
     )
 
     count = IS.get_count(var2)
@@ -210,7 +218,12 @@ end
     @test IS.has_time_series(component)
     @test IS.get_initial_timestamp(forecast) == initial_time
     forecast_retrieved =
-        IS.get_time_series(IS.Probabilistic, component, "test"; start_time = initial_time)
+        IS.get_time_series(
+            IS.Probabilistic,
+            component,
+            "test";
+            start_time = initial_time,
+        )
     @test IS.get_initial_timestamp(forecast_retrieved) == initial_time
 
     data_ts = Dict(
@@ -311,7 +324,8 @@ end
         range(initial_time; length = 365, step = resolution),
         ones(365),
     )
-    data = IS.SingleTimeSeries(; data = data, name = "test_c")
+    ts_name = "test_c"
+    data = IS.SingleTimeSeries(; data = data, name = ts_name)
     IS.add_time_series!(sys, component, data)
 
     _test_add_single_time_series_helper(component, initial_time)
@@ -332,13 +346,326 @@ end
         len = 12,
     )
 
-    # Conflicting resolution
+    # As of PSY 4.0, multiple resolutions are supported.
     data = TimeSeries.TimeArray(
         range(initial_time; length = 365, step = Dates.Minute(5)),
         ones(365),
     )
     data = IS.SingleTimeSeries(; data = data, name = "test_d")
-    @test_throws IS.ConflictingInputsError IS.add_time_series!(sys, component, data)
+    IS.add_time_series!(sys, component, data)
+end
+
+@testset "Test add SingleTimeSeries with features" begin
+    sys = IS.SystemData()
+    name = "Component1"
+    component = IS.TestComponent(name, 5)
+    IS.add_component!(sys, component)
+
+    initial_time = Dates.DateTime("2020-09-01")
+    resolution = Dates.Hour(1)
+
+    data = TimeSeries.TimeArray(
+        range(initial_time; length = 365, step = resolution),
+        rand(365),
+    )
+    ts_name = "test_c"
+    ts = IS.SingleTimeSeries(; data = data, name = ts_name)
+    IS.add_time_series!(sys, component, ts; scenario = "low", model_year = "2030")
+    # get_time_series with partial query works if there is only 1.
+    @test IS.get_time_series(IS.SingleTimeSeries, component, ts_name).data == data
+    @test IS.get_time_series(
+        IS.SingleTimeSeries,
+        component,
+        ts_name;
+        scenario = "low",
+    ).data == data
+    @test IS.get_time_series(
+        IS.SingleTimeSeries,
+        component,
+        ts_name;
+        scenario = "low",
+        model_year = "2030",
+    ).data == data
+    @test IS.get_time_series_values(
+        IS.SingleTimeSeries,
+        component,
+        ts_name;
+        scenario = "low",
+        model_year = "2030",
+    ) == TimeSeries.values(data)
+    @test IS.get_time_series_timestamps(
+        IS.SingleTimeSeries,
+        component,
+        ts_name;
+        scenario = "low",
+        model_year = "2030",
+    ) == TimeSeries.timestamp(data)
+
+    IS.add_time_series!(sys, component, ts; scenario = "high", model_year = "2030")
+    IS.add_time_series!(sys, component, ts; scenario = "low", model_year = "2035")
+    IS.add_time_series!(sys, component, ts; scenario = "high", model_year = "2035")
+
+    @test_throws ArgumentError IS.get_time_series(
+        IS.SingleTimeSeries,
+        component,
+        ts_name,
+    )
+    @test_throws ArgumentError IS.get_time_series(
+        IS.SingleTimeSeries,
+        component,
+        ts_name,
+        scenario = "low",
+    )
+    @test IS.get_time_series(
+        IS.SingleTimeSeries,
+        component,
+        ts_name;
+        scenario = "low",
+        model_year = "2035",
+    ) isa IS.SingleTimeSeries
+    @test IS.has_time_series(component, IS.SingleTimeSeries)
+    @test IS.has_time_series(component, IS.SingleTimeSeries, ts_name)
+    @test IS.has_time_series(component, IS.SingleTimeSeries, ts_name, scenario = "low")
+    @test IS.has_time_series(
+        component,
+        IS.SingleTimeSeries,
+        ts_name,
+        model_year = "2030",
+        scenario = "low",
+    )
+    @test IS.has_time_series(
+        component,
+        IS.SingleTimeSeries,
+        ts_name,
+        model_year = "2030",
+        scenario = "low",
+    )
+    @test !IS.has_time_series(
+        component,
+        IS.SingleTimeSeries,
+        ts_name;
+        model_year = "2060",
+        scenario = "low",
+    )
+    @test length(IS.list_time_series_info(component)) == 4
+    @test IS.list_time_series_info(component)[1].type === IS.SingleTimeSeries
+    @test Tables.rowtable(
+        IS.sql(
+            sys.time_series_manager.metadata_store,
+            "SELECT COUNT(*) AS count FROM $(IS.METADATA_TABLE_NAME)",
+        ),
+    )[1].count == 4
+    for info in IS.list_time_series_info(component)
+        @test IS.get_data(IS.get_time_series(component, info)) == data
+    end
+    IS.remove_time_series!(sys, IS.SingleTimeSeries)
+    @test isempty(IS.list_time_series_info(component))
+end
+
+@testset "Test add with features with mixed types" begin
+    sys = IS.SystemData()
+    name = "Component1"
+    component = IS.TestComponent(name, 5)
+    IS.add_component!(sys, component)
+
+    initial_time = Dates.DateTime("2020-09-01")
+    resolution = Dates.Hour(1)
+
+    data = TimeSeries.TimeArray(
+        range(initial_time; length = 365, step = resolution),
+        rand(365),
+    )
+    ts_name = "test"
+    ts = IS.SingleTimeSeries(; data = data, name = ts_name)
+    IS.add_time_series!(sys, component, ts; scenario = "low", model_year = "2030")
+    @test IS.has_time_series(
+        component,
+        IS.SingleTimeSeries,
+        ts_name;
+        scenario = "low",
+        model_year = "2030",
+    )
+    @test !IS.has_time_series(
+        component,
+        IS.SingleTimeSeries,
+        ts_name;
+        scenario = "low",
+        model_year = 2030,
+    )
+    IS.add_time_series!(sys, component, ts; scenario = "low", model_year = 2030)
+    @test IS.has_time_series(
+        component,
+        IS.SingleTimeSeries,
+        ts_name;
+        scenario = "low",
+        model_year = 2030,
+    )
+    IS.add_time_series!(sys, component, ts; scenario = "low", model_year = 2035)
+    @test IS.has_time_series(
+        component,
+        IS.SingleTimeSeries,
+        ts_name;
+        scenario = "low",
+        model_year = 2035,
+    )
+    @test !IS.has_time_series(
+        component,
+        IS.SingleTimeSeries,
+        ts_name;
+        scenario = "low",
+        model_year = "2035",
+    )
+    IS.add_time_series!(sys, component, ts; scenario = "low", model_year = "2035")
+    @test IS.has_time_series(
+        component,
+        IS.SingleTimeSeries,
+        ts_name;
+        scenario = "low",
+        model_year = "2035",
+    )
+    IS.add_time_series!(sys, component, ts; scenario = "low", some_condition = true)
+    @test IS.has_time_series(component, IS.SingleTimeSeries, ts_name; some_condition = true)
+    @test !IS.has_time_series(
+        component,
+        IS.SingleTimeSeries,
+        ts_name;
+        some_condition = "true",
+    )
+    IS.add_time_series!(sys, component, ts; scenario = "low", some_condition = "false")
+    @test !IS.has_time_series(
+        component,
+        IS.SingleTimeSeries,
+        ts_name;
+        some_condition = false,
+    )
+    IS.add_time_series!(sys, component, ts; scenario = "low", some_condition = false)
+    @test IS.has_time_series(
+        component,
+        IS.SingleTimeSeries,
+        ts_name;
+        some_condition = false,
+    )
+    @test_throws MethodError IS.add_time_series!(
+        sys,
+        component,
+        ts;
+        scenario = Dict("key" => "val"),
+    )
+    # Duplicate features in different order.
+    @test_throws ArgumentError IS.add_time_series!(
+        sys,
+        component,
+        ts;
+        scenario = "low",
+        model_year = "2035",
+    )
+    @test_throws ArgumentError IS.add_time_series!(
+        sys,
+        component,
+        ts;
+        model_year = "2035",
+        scenario = "low",
+    )
+end
+
+@testset "Test add Deterministic with features" begin
+    sys = IS.SystemData()
+    name = "Component1"
+    component = IS.TestComponent(name, 5)
+    IS.add_component!(sys, component)
+
+    initial_time = Dates.DateTime("2020-09-01")
+    resolution = Dates.Hour(1)
+
+    other_time = initial_time + resolution
+    ts_name = "test"
+    horizon = 24
+    data = SortedDict(initial_time => rand(horizon), other_time => rand(horizon))
+
+    forecast = IS.Deterministic(; data = data, name = ts_name, resolution = resolution)
+    IS.add_time_series!(sys, component, forecast; scenario = "low", model_year = "2030")
+    IS.add_time_series!(
+        sys,
+        component,
+        forecast;
+        scenario = "high",
+        model_year = "2030",
+    )
+    IS.add_time_series!(sys, component, forecast; scenario = "low", model_year = "2035")
+    IS.add_time_series!(
+        sys,
+        component,
+        forecast;
+        scenario = "high",
+        model_year = "2035",
+    )
+
+    @test_throws ArgumentError IS.get_time_series(
+        IS.Deterministic,
+        component,
+        ts_name,
+    )
+    @test_throws ArgumentError IS.get_time_series(
+        IS.Deterministic,
+        component,
+        ts_name,
+        scenario = "low",
+    )
+    @test IS.get_time_series(
+        IS.Deterministic,
+        component,
+        ts_name;
+        scenario = "low",
+        model_year = "2035",
+    ) isa IS.Deterministic
+    @test length(IS.list_time_series_metadata(component)) == 4
+    @test length(
+        IS.list_time_series_metadata(component; time_series_type = IS.Deterministic),
+    ) == 4
+    @test length(
+        IS.list_time_series_metadata(
+            component;
+            time_series_type = IS.Deterministic,
+            name = ts_name,
+        ),
+    ) == 4
+    @test length(
+        IS.list_time_series_metadata(
+            component;
+            time_series_type = IS.Deterministic,
+            name = ts_name,
+            scenario = "low",
+        ),
+    ) == 2
+    @test length(
+        IS.list_time_series_metadata(
+            component;
+            time_series_type = IS.Deterministic,
+            name = ts_name,
+            scenario = "low",
+            model_year = "2035",
+        ),
+    ) == 1
+    @test IS.list_time_series_metadata(
+        component;
+        time_series_type = IS.Deterministic,
+        name = ts_name,
+        scenario = "low",
+        model_year = "2035",
+    )[1].features["model_year"] == "2035"
+    @test length(IS.list_time_series_info(component)) == 4
+    @test IS.list_time_series_info(component)[1].type === IS.Deterministic
+
+    IS.remove_time_series!(sys, IS.Deterministic, component, ts_name; scenario = "low")
+    @test length(
+        IS.list_time_series_metadata(component; time_series_type = IS.Deterministic),
+    ) == 2
+    for metadata in
+        IS.list_time_series_metadata(component; time_series_type = IS.Deterministic)
+        @test metadata.features["scenario"] == "high"
+    end
+    IS.remove_time_series!(sys, IS.Deterministic, component, ts_name)
+    @test isempty(IS.list_time_series_metadata(component))
 end
 
 @testset "Test Deterministic with a wrapped SingleTimeSeries" begin
@@ -364,7 +691,11 @@ end
             fdata[dates[i]] = ones(horizon)
         end
         bystander =
-            IS.Deterministic(; data = fdata, name = "bystander", resolution = resolution)
+            IS.Deterministic(;
+                data = fdata,
+                name = "bystander",
+                resolution = resolution,
+            )
         IS.add_time_series!(sys, component, bystander)
 
         counts = IS.get_time_series_counts(sys)
@@ -418,7 +749,8 @@ end
         last_it_index = length(dates) - 1 - Int(Dates.Minute(interval) / resolution)
         @test last_initial_time == dates[last_it_index]
         last_val_index = last_it_index + horizon - 1
-        @test TimeSeries.values(windows[exp_length]) == data[last_it_index:last_val_index]
+        @test TimeSeries.values(windows[exp_length]) ==
+              data[last_it_index:last_val_index]
 
         # Do the same thing but pass Deterministic instead.
         forecast = IS.get_time_series(IS.Deterministic, component, name)
@@ -430,14 +762,14 @@ end
         # Verify that get_time_series_multiple works with these types.
         forecasts = collect(IS.get_time_series_multiple(sys))
         @test length(forecasts) == 3
-        forecasts =
-            collect(IS.get_time_series_multiple(sys; type = IS.AbstractDeterministic))
-        @test length(forecasts) == 2
         forecasts = collect(IS.get_time_series_multiple(sys; type = IS.Deterministic))
         @test length(forecasts) == 1
         forecasts =
             collect(
-                IS.get_time_series_multiple(sys; type = IS.DeterministicSingleTimeSeries),
+                IS.get_time_series_multiple(
+                    sys;
+                    type = IS.DeterministicSingleTimeSeries,
+                ),
             )
         @test length(forecasts) == 1
         @test forecasts[1] isa IS.DeterministicSingleTimeSeries
@@ -496,6 +828,22 @@ end
             IS.DeterministicSingleTimeSeries,
             horizon,
             resolution * (horizon + 1),
+        )
+
+        # Multiple resolutions is not supported yet
+        resolution2 = Dates.Hour(1)
+        dates = create_dates("2020-01-01T00:00:00", resolution2, "2020-01-02T00:00:00")
+        data = collect(1:length(dates))
+        ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
+        name = "val2"
+        ts = IS.SingleTimeSeries(name, ta)
+        IS.add_time_series!(sys, component, ts)
+        horizon = 24
+        @test_throws IS.ConflictingInputsError IS.transform_single_time_series!(
+            sys,
+            IS.DeterministicSingleTimeSeries,
+            horizon,
+            resolution2 * (horizon + 1),
         )
 
         # Ensure that attempted removal of nonexistent types works fine
@@ -612,7 +960,11 @@ end
     resolution = Dates.Hour(1)
     horizon = 24
     dates = collect(
-        range(Dates.DateTime("2020-01-01T00:00:00"); length = horizon, step = resolution),
+        range(
+            Dates.DateTime("2020-01-01T00:00:00");
+            length = horizon,
+            step = resolution,
+        ),
     )
     data = collect(1:horizon)
     ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
@@ -642,7 +994,11 @@ end
     resolution = Dates.Hour(1)
     horizon = 24
     dates = collect(
-        range(Dates.DateTime("2020-01-01T00:00:00"); length = horizon, step = resolution),
+        range(
+            Dates.DateTime("2020-01-01T00:00:00");
+            length = horizon,
+            step = resolution,
+        ),
     )
     data = collect(1:horizon)
     ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
@@ -704,7 +1060,7 @@ function _test_add_single_time_series_type(test_value, type_name)
     data = IS.SingleTimeSeries(; data = data_series, name = "test_c")
     IS.add_time_series!(sys, component, data)
     ts = IS.get_time_series(IS.SingleTimeSeries, component, "test_c";)
-    @test IS.get_data_type(ts) == type_name
+    @test split(IS.get_data_type(ts), '.')[end] == type_name
     @test reshape(TimeSeries.values(IS.get_data(ts)), 365) == TimeSeries.values(data_series)
     _test_add_single_time_series_helper(component, initial_time)
 end
@@ -712,21 +1068,21 @@ end
 @testset "Test add SingleTimeSeries with LinearFunctionData Cost" begin
     _test_add_single_time_series_type(
         repeat([IS.LinearFunctionData(3.14, 1.23)], 365),
-        "InfrastructureSystems.LinearFunctionData",
+        "LinearFunctionData",
     )
 end
 
 @testset "Test add SingleTimeSeries with QuadraticFunctionData Cost" begin
     _test_add_single_time_series_type(
         repeat([IS.QuadraticFunctionData(999.0, 1.0, 0.5)], 365),
-        "InfrastructureSystems.QuadraticFunctionData",
+        "QuadraticFunctionData",
     )
 end
 
 @testset "Test add SingleTimeSeries with PiecewiseLinearData Cost" begin
     _test_add_single_time_series_type(
         repeat([IS.PiecewiseLinearData(repeat([(999.0, 1.0)], 5))], 365),
-        "InfrastructureSystems.PiecewiseLinearData",
+        "PiecewiseLinearData",
     )
 end
 
@@ -749,7 +1105,11 @@ end
     @test !IS.has_time_series(component)
 
     file = joinpath(FORECASTS_DIR, "ComponentsAsColumnsNoTime.json")
-    IS.add_time_series_from_file_metadata!(data, IS.InfrastructureSystemsComponent, file)
+    IS.add_time_series_from_file_metadata!(
+        data,
+        IS.InfrastructureSystemsComponent,
+        file,
+    )
     @test IS.has_time_series(component)
 
     all_time_series = get_all_time_series(data)
@@ -764,13 +1124,13 @@ end
         start_time = IS.get_initial_timestamp(time_series),
     )
     @test length(time_series) == length(time_series2)
-    @test IS.get_initial_timestamp(time_series) == IS.get_initial_timestamp(time_series2)
+    @test IS.get_initial_timestamp(time_series) ==
+          IS.get_initial_timestamp(time_series2)
 
     it = IS.get_initial_timestamp(time_series)
 
     all_time_series = get_all_time_series(data)
     @test length(collect(all_time_series)) == 1
-    @test IS.get_time_series_resolution(data) == IS.get_resolution(time_series)
 
     data = IS.SystemData()
     name = "Component1"
@@ -778,7 +1138,11 @@ end
     IS.add_component!(data, component)
     @test !IS.has_time_series(component)
     file = joinpath(FORECASTS_DIR, "ForecastPointers.json")
-    IS.add_time_series_from_file_metadata!(data, IS.InfrastructureSystemsComponent, file)
+    IS.add_time_series_from_file_metadata!(
+        data,
+        IS.InfrastructureSystemsComponent,
+        file,
+    )
     @test IS.has_time_series(component)
 
     sys = IS.SystemData()
@@ -862,7 +1226,7 @@ end
         end
     end
 
-    ts_storage = sys.time_series_storage
+    ts_storage = sys.time_series_manager.data_store
     @test ts_storage isa IS.Hdf5TimeSeriesStorage
     @test IS.get_num_time_series(ts_storage) == 1
 end
@@ -901,8 +1265,11 @@ end
     @test length(collect(IS.get_time_series_multiple(component))) == 2
     @test length(collect(IS.get_time_series_multiple(sys))) == 2
 
-    @test length(collect(IS.get_time_series_multiple(sys; type = IS.SingleTimeSeries))) == 2
-    @test length(collect(IS.get_time_series_multiple(sys; type = IS.Probabilistic))) == 0
+    @test length(
+        collect(IS.get_time_series_multiple(sys; type = IS.SingleTimeSeries)),
+    ) == 2
+    @test length(collect(IS.get_time_series_multiple(sys; type = IS.Probabilistic))) ==
+          0
 
     time_series = collect(IS.get_time_series_multiple(sys))
     @test length(time_series) == 2
@@ -911,71 +1278,8 @@ end
     @test length(collect(IS.get_time_series_multiple(sys; name = "bad_name"))) == 0
 
     filter_func = x -> TimeSeries.values(IS.get_data(x))[12] == 12
-    @test length(collect(IS.get_time_series_multiple(sys, filter_func; name = "val2"))) == 0
-end
-
-@testset "Test get_time_series_with_metadata_multiple" begin
-    sys = IS.SystemData()
-    name = "Component1"
-    component_val = 5
-    component = IS.TestComponent(name, component_val)
-    IS.add_component!(sys, component)
-    initial_time1 = Dates.DateTime("2020-01-01T00:00:00")
-    initial_time2 = Dates.DateTime("2020-01-02T00:00:00")
-
-    dates1 = collect(initial_time1:Dates.Hour(1):Dates.DateTime("2020-01-01T23:00:00"))
-    dates2 = collect(initial_time2:Dates.Hour(1):Dates.DateTime("2020-01-02T23:00:00"))
-    data1 = collect(1:24)
-    data2 = collect(25:48)
-    ta1 = TimeSeries.TimeArray(dates1, data1, [IS.get_name(component)])
-    ta2 = TimeSeries.TimeArray(dates2, data2, [IS.get_name(component)])
-    time_series1 =
-        IS.SingleTimeSeries(;
-            name = "val",
-            data = ta1,
-            scaling_factor_multiplier = IS.get_val,
-        )
-    time_series2 =
-        IS.SingleTimeSeries(;
-            name = "val2",
-            data = ta2,
-            scaling_factor_multiplier = IS.get_val,
-        )
-    IS.add_time_series!(sys, component, time_series1)
-    IS.add_time_series!(sys, component, time_series2)
-
-    @test length(collect(IS.get_time_series_with_metadata_multiple(component))) == 2
-
     @test length(
-        collect(
-            IS.get_time_series_with_metadata_multiple(
-                component;
-                type = IS.SingleTimeSeries,
-            ),
-        ),
-    ) == 2
-    @test length(
-        collect(
-            IS.get_time_series_with_metadata_multiple(component; type = IS.Probabilistic),
-        ),
-    ) == 0
-
-    @test length(
-        collect(IS.get_time_series_with_metadata_multiple(component; name = "val")),
-    ) == 1
-    @test length(
-        collect(IS.get_time_series_with_metadata_multiple(component; name = "bad_name")),
-    ) == 0
-
-    filter_func = x -> TimeSeries.values(IS.get_data(x))[12] == 12
-    @test length(
-        collect(
-            IS.get_time_series_with_metadata_multiple(
-                component,
-                filter_func;
-                name = "val2",
-            ),
-        ),
+        collect(IS.get_time_series_multiple(sys, filter_func; name = "val2")),
     ) == 0
 end
 
@@ -1005,10 +1309,15 @@ end
     @test length(get_all_time_series(data)) == 1
 
     time_series = time_series[1]
-    IS.remove_time_series!(data, typeof(time_series), component, IS.get_name(time_series))
+    IS.remove_time_series!(
+        data,
+        typeof(time_series),
+        component,
+        IS.get_name(time_series),
+    )
 
     @test length(get_all_time_series(data)) == 0
-    @test IS.get_num_time_series(data.time_series_storage) == 0
+    @test IS.get_num_time_series(data) == 0
 end
 
 @testset "Test clear_time_series" begin
@@ -1027,13 +1336,14 @@ end
     all_time_series = collect(IS.get_time_series_multiple(data))
     @test length(all_time_series) == 1
     time_series = all_time_series[1]
-    @test IS.get_num_time_series(data.time_series_storage) == 1
+    @test IS.get_num_time_series(data) == 1
 
     IS.remove_component!(data, component)
     @test length(collect(IS.get_time_series_multiple(component))) == 0
-    @test length(collect(IS.get_components(IS.InfrastructureSystemsComponent, data))) == 0
+    @test length(collect(IS.get_components(IS.InfrastructureSystemsComponent, data))) ==
+          0
     @test length(get_all_time_series(data)) == 0
-    @test IS.get_num_time_series(data.time_series_storage) == 0
+    @test IS.get_num_time_series(data) == 0
 end
 
 @testset "Test get_time_series_array" begin
@@ -1181,7 +1491,11 @@ end
     @test time_series isa IS.SingleTimeSeries
     @test IS.get_initial_timestamp(time_series) == initial_time2
     @test IS.get_name(time_series) == name2b
-    @test_throws ArgumentError IS.get_time_series(IS.SingleTimeSeries, component2, name2a)
+    @test_throws ArgumentError IS.get_time_series(
+        IS.SingleTimeSeries,
+        component2,
+        name2a,
+    )
 end
 
 @testset "Test copy time_series with transformed time series" begin
@@ -1236,11 +1550,6 @@ end
     IS.add_time_series!(sys1, component, ts)
 
     @test_throws ArgumentError IS.add_component!(sys1, component)
-end
-
-@testset "Summarize time_series" begin
-    data = create_system_data(; with_time_series = true)
-    summary(devnull, data.time_series_params)
 end
 
 @testset "Test time_series forwarding methods" begin
@@ -1425,7 +1734,6 @@ end
     sts = IS.SingleTimeSeries(; data = sts_data, name = "test_sts")
     IS.add_time_series!(sys, component, sts)
 
-    @test IS.get_time_series_resolution(sys) == resolution
     @test IS.get_forecast_window_count(sys) == 2
     @test IS.get_forecast_horizon(sys) == horizon
     @test IS.get_forecast_initial_timestamp(sys) == initial_time
@@ -1433,9 +1741,6 @@ end
     @test IS.get_forecast_initial_times(sys) == [initial_time, second_time]
     @test collect(IS.get_initial_times(forecast)) ==
           collect(IS.get_forecast_initial_times(sys))
-    @test Dates.Hour(IS.get_forecast_total_period(sys)) ==
-          Dates.Hour(second_time - initial_time) + Dates.Hour(resolution * horizon)
-    @test IS.get_forecast_total_period(sys) == IS.get_total_period(forecast)
 end
 
 # TODO something like this could be much more widespread to reduce code duplication
@@ -1470,7 +1775,8 @@ function _test_get_time_series_option_type(test_data, in_memory, extended)
     @test IS.get_count(f2) == length(test_data)
     @test IS.get_initial_timestamp(f2) == default_time_params.initial_times[1]
     for (i, window) in enumerate(IS.iterate_windows(f2))
-        @test TimeSeries.values(window) == test_data[default_time_params.initial_times[i]]
+        @test TimeSeries.values(window) ==
+              test_data[default_time_params.initial_times[i]]
     end
 
     if extended
@@ -1706,7 +2012,12 @@ end
     start_time = initial_timestamp + interval
     # Verify all permutations with defaults.
     ta2 =
-        IS.get_time_series_array(IS.Deterministic, component, name; start_time = start_time)
+        IS.get_time_series_array(
+            IS.Deterministic,
+            component,
+            name;
+            start_time = start_time,
+        )
 
     @test ta2 isa TimeSeries.TimeArray
     @test TimeSeries.timestamp(ta2) ==
@@ -1798,7 +2109,12 @@ end
     @test IS.has_time_series(component)
     @test IS.get_initial_timestamp(forecast) == initial_time
     forecast_retrieved =
-        IS.get_time_series(IS.Probabilistic, component, "test"; start_time = initial_time)
+        IS.get_time_series(
+            IS.Probabilistic,
+            component,
+            "test";
+            start_time = initial_time,
+        )
     @test IS.get_initial_timestamp(forecast_retrieved) == initial_time
     t = IS.get_time_series_array(
         IS.Probabilistic,
@@ -1843,7 +2159,12 @@ end
     forecast_retrieved =
         IS.get_time_series(IS.Scenarios, component, "test"; start_time = initial_time)
     @test IS.get_initial_timestamp(forecast_retrieved) == initial_time
-    t = IS.get_time_series_array(IS.Scenarios, component, "test"; start_time = initial_time)
+    t = IS.get_time_series_array(
+        IS.Scenarios,
+        component,
+        "test";
+        start_time = initial_time,
+    )
     @test size(t) == (24, 99)
     @test TimeSeries.values(t) == data1
 
@@ -1856,7 +2177,8 @@ end
     )
     @test size(t) == (12, 99)
     @test TimeSeries.values(t) == data1[1:12, :]
-    t_other = IS.get_time_series(IS.Scenarios, component, "test"; start_time = other_time)
+    t_other =
+        IS.get_time_series(IS.Scenarios, component, "test"; start_time = other_time)
     @test collect(keys(IS.get_data(t_other)))[1] == other_time
 end
 
@@ -1895,20 +2217,16 @@ end
     forecast = IS.Deterministic(; data = data, name = name, resolution = resolution)
     @test_throws IS.ConflictingInputsError IS.add_time_series!(sys, component, forecast)
 
-    # Conflicting resolution
+    # As of PSY 4.0, different resolutions are allowed.
     resolution2 = Dates.Minute(5)
     name = "test2"
     data = SortedDict(initial_time => ones(horizon), second_time => ones(horizon))
 
-    forecast = IS.Deterministic(; data = data, name = name, resolution = resolution2)
-    @test_throws IS.ConflictingInputsError IS.add_time_series!(sys, component, forecast)
+    forecast = IS.Deterministic(; data = data, name = name, resolution = resolution)
+    IS.add_time_series!(sys, component, forecast)
 
     # Conflicting horizon
-    name = "test2"
-    horizon2 = 23
-    data = SortedDict(initial_time => ones(horizon2), second_time => ones(horizon2))
-
-    forecast = IS.Deterministic(; data = data, name = name, resolution = resolution)
+    forecast = IS.Deterministic(; data = data, name = name, resolution = resolution2)
     @test_throws IS.ConflictingInputsError IS.add_time_series!(sys, component, forecast)
 
     # Conflicting count
@@ -1922,56 +2240,6 @@ end
 
     forecast = IS.Deterministic(; data = data, name = name, resolution = resolution)
     @test_throws IS.ConflictingInputsError IS.add_time_series!(sys, component, forecast)
-end
-
-@testset "Test get_time_series_by_key and TimeSeriesKey constructor" begin
-    sys = IS.SystemData()
-    name = "Component1"
-    component = IS.TestComponent(name, 5)
-    IS.add_component!(sys, component)
-
-    initial_time = Dates.DateTime("2020-09-01")
-    resolution = Dates.Hour(1)
-
-    other_time = initial_time + resolution
-    name = "test"
-    horizon = 24
-    data = SortedDict(initial_time => ones(horizon), other_time => ones(horizon))
-
-    forecast = IS.Deterministic(; data = data, name = name, resolution = resolution)
-    IS.add_time_series!(sys, component, forecast)
-    key = IS.TimeSeriesKey(forecast)
-    @test key == IS.TimeSeriesKey(IS.DeterministicMetadata, name)
-    @test key ==
-          IS.TimeSeriesKey(; time_series_type = IS.DeterministicMetadata, name = name)
-
-    var1 = IS.get_time_series(IS.Deterministic, component, name; start_time = initial_time)
-    var_key1 = IS.get_time_series_by_key(key, component; start_time = initial_time)
-    @test length(var1) == length(var_key1)
-    @test IS.get_horizon(var1) == horizon
-    @test IS.get_horizon(var1) == IS.get_horizon(var_key1)
-    @test IS.get_initial_timestamp(var1) == initial_time
-    @test IS.get_initial_timestamp(var1) == IS.get_initial_timestamp(var_key1)
-
-    var2 = IS.get_time_series(
-        IS.Deterministic,
-        component,
-        name;
-        start_time = initial_time,
-        count = 2,
-    )
-    var_key2 =
-        IS.get_time_series_by_key(key, component; start_time = initial_time, count = 2)
-    @test length(var2) == 2
-    @test length(var2) == length(var_key2)
-
-    # Throws errors
-    @test_throws ArgumentError IS.get_time_series_by_key(
-        key,
-        component;
-        start_time = initial_time,
-        count = 3,
-    )
 end
 
 @testset "Test copy_to_new_file! on HDF5" begin
@@ -1992,9 +2260,9 @@ end
     @test data_input == first(values((fdata)))
 
     IS.add_time_series!(sys, component, time_series)
-    orig_file = IS.get_file_path(sys.time_series_storage)
-    IS.copy_to_new_file!(sys.time_series_storage)
-    @test orig_file != IS.get_file_path(sys.time_series_storage)
+    orig_file = IS.get_file_path(sys.time_series_manager.data_store)
+    IS.copy_to_new_file!(sys.time_series_manager.data_store)
+    @test orig_file != IS.get_file_path(sys.time_series_manager.data_store)
 
     time_series2 = IS.get_time_series(IS.Deterministic, component, name)
     @test time_series2 isa IS.Deterministic
@@ -2018,7 +2286,8 @@ end
     for compression_enabled in (true, false)
         compression = IS.CompressionSettings(; enabled = compression_enabled)
         sys = IS.SystemData(; time_series_in_memory = false, compression = compression)
-        @test sys.time_series_storage.compression.enabled == compression_enabled
+        @test sys.time_series_manager.data_store.compression.enabled ==
+              compression_enabled
         name = "Component1"
         name = "val"
         component = IS.TestComponent(name, 5)
@@ -2031,10 +2300,14 @@ end
         data = SortedDict(initial_timestamp => data_input)
         for i in 1:2
             time_series =
-                IS.Deterministic(; name = "name_$i", resolution = resolution, data = data)
+                IS.Deterministic(;
+                    name = "name_$i",
+                    resolution = resolution,
+                    data = data,
+                )
             IS.add_time_series!(sys, component, time_series)
         end
-        old_file = IS.get_file_path(sys.time_series_storage)
+        old_file = IS.get_file_path(sys.time_series_manager.data_store)
         new_file, io = mktemp()
         close(io)
         IS.copy_h5_file(old_file, new_file)
@@ -2051,10 +2324,6 @@ end
                     compare_attributes(
                         fo[IS.HDF5_TS_ROOT_PATH][uuid],
                         fn[IS.HDF5_TS_ROOT_PATH][uuid],
-                    )
-                    compare_attributes(
-                        fo[IS.HDF5_TS_ROOT_PATH][uuid][IS.COMPONENT_REFERENCES_KEY],
-                        fn[IS.HDF5_TS_ROOT_PATH][uuid][IS.COMPONENT_REFERENCES_KEY],
                     )
                     old_data = fo[IS.HDF5_TS_ROOT_PATH][uuid]["data"][:, :]
                     new_data = fn[IS.HDF5_TS_ROOT_PATH][uuid]["data"][:, :]
@@ -2123,7 +2392,7 @@ end
             IS.add_time_series!(sys, component, ts1a)
             ts2a = IS.SingleTimeSeries(ts1a, name2; scaling_factor_multiplier = sfm2)
             IS.add_time_series!(sys, component, ts2a)
-            @test IS.get_num_time_series(sys.time_series_storage) == 1
+            @test IS.get_num_time_series(sys) == 1
             ts1b = IS.get_time_series(IS.SingleTimeSeries, component, name1)
             ts2b = IS.get_time_series(IS.SingleTimeSeries, component, name2)
             @test ts1b.data == ts2b.data
@@ -2164,7 +2433,10 @@ function test_forecasts_with_shared_component_fields(forecast_type)
             sfm2 = use_scaling_factor ? IS.get_val2 : nothing
             if forecast_type <: IS.Deterministic
                 data =
-                    SortedDict(initial_time => rand(horizon), other_time => rand(horizon))
+                    SortedDict(
+                        initial_time => rand(horizon),
+                        other_time => rand(horizon),
+                    )
                 forecast1a = IS.Deterministic(;
                     data = data,
                     name = name1,
@@ -2173,7 +2445,10 @@ function test_forecasts_with_shared_component_fields(forecast_type)
                 )
             elseif forecast_type <: IS.Probabilistic
                 data =
-                    Dict(initial_time => rand(horizon, 99), other_time => ones(horizon, 99))
+                    Dict(
+                        initial_time => rand(horizon, 99),
+                        other_time => ones(horizon, 99),
+                    )
                 forecast1a = IS.Probabilistic(
                     name1,
                     data,
@@ -2183,21 +2458,34 @@ function test_forecasts_with_shared_component_fields(forecast_type)
                 )
             elseif forecast_type <: IS.Scenarios
                 data =
-                    Dict(initial_time => rand(horizon, 99), other_time => ones(horizon, 99))
+                    Dict(
+                        initial_time => rand(horizon, 99),
+                        other_time => ones(horizon, 99),
+                    )
                 forecast1a =
-                    IS.Scenarios(name1, data, resolution; scaling_factor_multiplier = sfm1)
+                    IS.Scenarios(
+                        name1,
+                        data,
+                        resolution;
+                        scaling_factor_multiplier = sfm1,
+                    )
             else
                 error("Unsupported forecast type: $forecast_type")
             end
             IS.add_time_series!(sys, component, forecast1a)
-            forecast2a = forecast_type(forecast1a, name2; scaling_factor_multiplier = sfm2)
+            forecast2a =
+                forecast_type(forecast1a, name2; scaling_factor_multiplier = sfm2)
             IS.add_time_series!(sys, component, forecast2a)
-            @test IS.get_num_time_series(sys.time_series_storage) == 1
+            @test IS.get_num_time_series(sys) == 1
             forecast1b = IS.get_time_series(forecast_type, component, name1)
             forecast2b = IS.get_time_series(forecast_type, component, name2)
             @test forecast1b.data == forecast2b.data
             expected1 =
-                use_scaling_factor ? data[initial_time] * component.val : data[initial_time]
+                if use_scaling_factor
+                    data[initial_time] * component.val
+                else
+                    data[initial_time]
+                end
             expected2 = if use_scaling_factor
                 data[initial_time] * component.val2
             else
@@ -2214,14 +2502,14 @@ function test_forecasts_with_shared_component_fields(forecast_type)
                 initial_time;
             ) == expected2
             IS.remove_time_series!(sys, forecast_type, component, "val")
-            @test IS.get_num_time_series(sys.time_series_storage) == 1
+            @test IS.get_num_time_series(sys) == 1
             @test IS.get_time_series_values(
                 component,
                 forecast2b,
                 initial_time;
             ) == expected2
             IS.remove_time_series!(sys, forecast_type, component, "val2")
-            @test IS.get_num_time_series(sys.time_series_storage) == 0
+            @test IS.get_num_time_series(sys) == 0
         end
     end
 end
@@ -2244,7 +2532,7 @@ end
     ENV[IS.TIME_SERIES_DIRECTORY_ENV_VAR] = path
     try
         sys = IS.SystemData()
-        @test splitpath(sys.time_series_storage.file_path)[1] == path
+        @test splitpath(sys.time_series_manager.data_store.file_path)[1] == path
     finally
         pop!(ENV, IS.TIME_SERIES_DIRECTORY_ENV_VAR)
     end
@@ -2260,7 +2548,9 @@ end
 @testset "Test custom time series directories" begin
     @test IS._get_time_series_parent_dir(nothing) == tempdir()
     @test IS._get_time_series_parent_dir(pwd()) == pwd()
-    @test_throws ErrorException IS._get_time_series_parent_dir("/some/invalid/directory/")
+    @test_throws ErrorException IS._get_time_series_parent_dir(
+        "/some/invalid/directory/",
+    )
 
     ENV["SIENNA_TIME_SERIES_DIRECTORY"] = pwd()
     try

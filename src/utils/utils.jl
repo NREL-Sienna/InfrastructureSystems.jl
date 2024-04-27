@@ -1,5 +1,10 @@
 import InteractiveUtils
+import SHA
+import JSON3
 
+const HASH_FILENAME = "check.sha256"
+
+# TODO DT: possibly incorrect
 g_cached_subtypes = Dict{DataType, Vector{DataType}}()
 
 """
@@ -132,13 +137,13 @@ function compare_values(
     else
         for field_name in fields
             field_name in exclude && continue
-            if (T <: TimeSeriesContainer || T <: SupplementalAttributes) &&
-               field_name == :time_series_storage
+            if (T <: TimeSeriesContainer && field_name == :manager) ||
+               (T <: SupplementalAttributes && field_name == :time_series_manager)
                 # This gets validated at SystemData. Don't repeat for each component.
                 continue
             end
-            val1 = getfield(x, field_name)
-            val2 = getfield(y, field_name)
+            val1 = getproperty(x, field_name)
+            val2 = getproperty(y, field_name)
             if !isempty(fieldnames(typeof(val1)))
                 if !compare_values(
                     val1,
@@ -293,7 +298,7 @@ function compose_function_delegation_string(
     l *= ") = $m:(" * string(method.name) * ")("
     s = "p" .* string.(1:(method.nargs - 1))
 
-    s[argid] .= "getfield(" .* s[argid] .* ", :$sender_symbol)"
+    s[argid] .= "getproperty(" .* s[argid] .* ", :$sender_symbol)"
     l *= join(s, ", ") * ")"
     l = join(split(l, "#"))
     return l
@@ -412,7 +417,8 @@ function get_module(module_name)
     end
 end
 
-get_type_from_strings(module_name, type) = getfield(get_module(module_name), Symbol(type))
+get_type_from_strings(module_name, type) =
+    getproperty(get_module(module_name), Symbol(type))
 
 # This function is used instead of cp given
 # https://github.com/JuliaLang/julia/issues/30723
@@ -540,3 +546,34 @@ transform_array_for_hdf(::Vector{T}) where {T <: FunctionData} =
 
 transform_array_for_hdf(::SortedDict{Dates.DateTime, Vector{T}}) where {T <: FunctionData} =
     throw(NotImplementedError(:transform_array_for_hdf, T))
+
+to_namedtuple(val) = (; (x => getproperty(val, x) for x in fieldnames(typeof(val)))...)
+
+function compute_file_hash(path::String, files::Vector{String})
+    data = Dict("files" => [])
+    for file in files
+        file_path = joinpath(path, file)
+        # Don't put the path in the file so that we can move results directories.
+        file_info = Dict("filename" => file, "hash" => compute_sha256(file_path))
+        push!(data["files"], file_info)
+    end
+
+    open(joinpath(path, HASH_FILENAME), "w") do io
+        JSON3.write(io, data)
+    end
+end
+
+function compute_file_hash(path::String, file::String)
+    return compute_file_hash(path, [file])
+end
+
+"""
+Return the SHA 256 hash of a file.
+"""
+function compute_sha256(filename::AbstractString)
+    return open(filename) do io
+        return bytes2hex(SHA.sha256(io))
+    end
+end
+
+convert_for_path(x::Dates.DateTime) = replace(string(x), ":" => "-")

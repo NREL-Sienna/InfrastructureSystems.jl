@@ -79,7 +79,7 @@ function serialize(internal::InfrastructureSystemsInternal)
     data = Dict{String, Any}()
 
     for field in fieldnames(InfrastructureSystemsInternal)
-        val = getfield(internal, field)
+        val = getproperty(internal, field)
         # reset the units data since this is a struct related to the system the components is
         # added which is resolved later in the de-serialization.
         if val isa UnitsData
@@ -113,11 +113,11 @@ function compare_values(
             continue
         end
         if name == :ext
-            val1 = getfield(x, name)
+            val1 = getproperty(x, name)
             if val1 isa Dict && isempty(val1)
                 val1 = nothing
             end
-            val2 = getfield(y, name)
+            val2 = getproperty(y, name)
             if val2 isa Dict && isempty(val2)
                 val2 = nothing
             end
@@ -126,8 +126,8 @@ function compare_values(
                 match = false
             end
         elseif !compare_values(
-            getfield(x, name),
-            getfield(y, name);
+            getproperty(x, name),
+            getproperty(y, name);
             compare_uuids = compare_uuids,
             exclude = exclude,
         )

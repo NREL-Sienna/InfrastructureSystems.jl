@@ -1,4 +1,4 @@
-function DeterministicMetadata(ts::AbstractDeterministic)
+function DeterministicMetadata(ts::AbstractDeterministic; features...)
     return DeterministicMetadata(
         get_name(ts),
         get_resolution(ts),
@@ -9,6 +9,7 @@ function DeterministicMetadata(ts::AbstractDeterministic)
         get_horizon(ts),
         typeof(ts),
         get_scaling_factor_multiplier(ts),
+        Dict{String, Any}(string(k) => v for (k, v) in features),
     )
 end
 

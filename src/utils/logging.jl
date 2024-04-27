@@ -108,7 +108,7 @@ function _is_level_valid(tracker::LogEventTracker, level::Logging.LogLevel)
     return level in keys(tracker.events)
 end
 
-Base.@kwdef struct LoggingConfiguration
+@kwdef struct LoggingConfiguration
     console::Bool = true
     console_stream::IO = stderr
     console_level::Base.LogLevel = Logging.Error

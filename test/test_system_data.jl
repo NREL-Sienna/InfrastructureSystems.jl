@@ -11,8 +11,12 @@
     components = IS.get_components(IS.TestComponent, data)
     @test length(components) == 1
 
-    @test length(IS.get_components(x -> (IS.get_val(x) != 5), IS.TestComponent, data)) == 0
-    @test length(IS.get_components(x -> (IS.get_val(x) == 5), IS.TestComponent, data)) == 1
+    @test length(
+        IS.get_components(x -> (IS.get_val(x) != 5), IS.TestComponent, data),
+    ) == 0
+    @test length(
+        IS.get_components(x -> (IS.get_val(x) == 5), IS.TestComponent, data),
+    ) == 1
 
     i = 0
     for component in IS.iterate_components(data)
@@ -32,7 +36,8 @@
     @test isempty(data.component_uuids)
 
     IS.add_component!(data, component)
-    components = IS.get_components_by_name(IS.InfrastructureSystemsComponent, data, name)
+    components =
+        IS.get_components_by_name(IS.InfrastructureSystemsComponent, data, name)
     @test length(components) == 1
     @test components[1].name == name
 
@@ -65,7 +70,10 @@ end
     data = IS.SystemData()
     initial_time = Dates.DateTime("2020-09-01")
     resolution = Dates.Hour(1)
-    ta = TimeSeries.TimeArray(range(initial_time; length = 24, step = resolution), ones(24))
+    ta = TimeSeries.TimeArray(
+        range(initial_time; length = 24, step = resolution),
+        ones(24),
+    )
     ts = IS.SingleTimeSeries(; data = ta, name = "test")
 
     for i in 1:3
@@ -89,12 +97,21 @@ end
         data,
         "component_2",
     ) == [component]
-    @test IS.get_time_series(IS.SingleTimeSeries, component, "test") isa IS.SingleTimeSeries
+    @test IS.get_time_series(IS.SingleTimeSeries, component, "test") isa
+          IS.SingleTimeSeries
     @test IS.is_attached(component, data.masked_components)
 
     # This needs to return time series for masked components.
-    @test length(collect(IS.get_time_series_multiple(data; type = IS.SingleTimeSeries))) ==
+    @test length(
+        collect(IS.get_time_series_multiple(data; type = IS.SingleTimeSeries)),
+    ) ==
           3
+
+    IS.remove_masked_component!(
+        data,
+        IS.get_masked_component(IS.TestComponent, data, "component_2"),
+    )
+    @test isempty(IS.get_masked_components(IS.TestComponent, data))
 end
 
 @testset "Test compare_values" begin
@@ -146,9 +163,12 @@ end
 @testset "Test compression settings" begin
     none = IS.CompressionSettings(; enabled = false)
     @test IS.get_compression_settings(IS.SystemData()) == none
-    @test IS.get_compression_settings(IS.SystemData(; time_series_in_memory = true)) == none
-    settings = IS.CompressionSettings(; enabled = true, type = IS.CompressionTypes.DEFLATE)
-    @test IS.get_compression_settings(IS.SystemData(; compression = settings)) == settings
+    @test IS.get_compression_settings(IS.SystemData(; time_series_in_memory = true)) ==
+          none
+    settings =
+        IS.CompressionSettings(; enabled = true, type = IS.CompressionTypes.DEFLATE)
+    @test IS.get_compression_settings(IS.SystemData(; compression = settings)) ==
+          settings
 end
 
 @testset "Test single time series consistency" begin
@@ -169,7 +189,8 @@ end
         IS.add_time_series!(data, component, ts)
     end
 
-    returned_it, returned_len = IS.check_time_series_consistency(data, IS.SingleTimeSeries)
+    returned_it, returned_len =
+        IS.check_time_series_consistency(data, IS.SingleTimeSeries)
     @test returned_it == initial_time
     @test returned_len == len
 end
@@ -190,7 +211,10 @@ end
         IS.add_time_series!(data, component, ts)
     end
 
-    @test_throws IS.InvalidValue IS.check_time_series_consistency(data, IS.SingleTimeSeries)
+    @test_throws IS.InvalidValue IS.check_time_series_consistency(
+        data,
+        IS.SingleTimeSeries,
+    )
 end
 
 @testset "Test single time series length inconsistency" begin
@@ -212,7 +236,10 @@ end
         IS.add_time_series!(data, component, ts)
     end
 
-    @test_throws IS.InvalidValue IS.check_time_series_consistency(data, IS.SingleTimeSeries)
+    @test_throws IS.InvalidValue IS.check_time_series_consistency(
+        data,
+        IS.SingleTimeSeries,
+    )
 end
 
 @testset "Test check_components" begin
@@ -237,7 +264,10 @@ end
     data = IS.SystemData()
     initial_time = Dates.DateTime("2020-09-01")
     resolution = Dates.Hour(1)
-    ta = TimeSeries.TimeArray(range(initial_time; length = 24, step = resolution), ones(24))
+    ta = TimeSeries.TimeArray(
+        range(initial_time; length = 24, step = resolution),
+        ones(24),
+    )
     ts = IS.SingleTimeSeries(; data = ta, name = "test")
 
     for i in 1:5
@@ -262,7 +292,10 @@ end
     data = IS.SystemData()
     initial_time = Dates.DateTime("2020-09-01")
     resolution = Dates.Hour(1)
-    ta = TimeSeries.TimeArray(range(initial_time; length = 24, step = resolution), ones(24))
+    ta = TimeSeries.TimeArray(
+        range(initial_time; length = 24, step = resolution),
+        ones(24),
+    )
     ts = IS.SingleTimeSeries(; data = ta, name = "test")
 
     for i in 1:5
@@ -330,8 +363,12 @@ end
 
     # Test all permutations of abstract vs concrete, system vs component, filter vs not.
     @test length(IS.get_supplemental_attributes(IS.SupplementalAttribute, data)) == 3
-    @test length(IS.get_supplemental_attributes(IS.SupplementalAttribute, component1)) == 2
-    @test length(IS.get_supplemental_attributes(IS.SupplementalAttribute, component2)) == 2
+    @test length(
+        IS.get_supplemental_attributes(IS.SupplementalAttribute, component1),
+    ) == 2
+    @test length(
+        IS.get_supplemental_attributes(IS.SupplementalAttribute, component2),
+    ) == 2
     @test length(
         IS.get_supplemental_attributes(
             x -> x isa IS.TestSupplemental,
@@ -498,5 +535,62 @@ end
 
         ts = IS.get_time_series(IS.SingleTimeSeries, component, ts_name)
         @test ts.data == ta
+    end
+end
+
+@testset "Test list_time_series_resolutions" begin
+    sys = IS.SystemData()
+    initial_time = Dates.DateTime("2020-09-01")
+    resolution1 = Dates.Minute(5)
+    resolution2 = Dates.Hour(1)
+    len = 24
+    timestamps1 = range(initial_time; length = len, step = resolution1)
+    timestamps2 = range(initial_time; length = len, step = resolution2)
+    array1 = TimeSeries.TimeArray(timestamps1, rand(len))
+    array2 = TimeSeries.TimeArray(timestamps2, rand(len))
+    name = "component"
+    component = IS.TestComponent(name, 3)
+    IS.add_component!(sys, component)
+    ts1 = IS.SingleTimeSeries(; data = array1, name = "test1")
+    ts2 = IS.SingleTimeSeries(; data = array2, name = "test2")
+    IS.add_time_series!(sys, component, ts1)
+    IS.add_time_series!(sys, component, ts2)
+
+    other_time = initial_time + resolution2
+    horizon = 24
+    data = SortedDict(initial_time => rand(horizon), other_time => rand(horizon))
+
+    forecast = IS.Deterministic(; data = data, name = "test3", resolution = resolution2)
+    IS.add_time_series!(sys, component, forecast)
+    @test IS.list_time_series_resolutions(sys) ==
+          [Dates.Minute(5), Dates.Hour(1)]
+    @test IS.list_time_series_resolutions(
+        sys;
+        time_series_type = IS.SingleTimeSeries,
+    ) == [Dates.Minute(5), Dates.Hour(1)]
+    @test IS.list_time_series_resolutions(
+        sys;
+        time_series_type = IS.Deterministic,
+    ) == [Dates.Hour(1)]
+end
+
+@testset "Test deepcopy of system" begin
+    for in_memory in (false, true)
+        sys = IS.SystemData(; time_series_in_memory = in_memory)
+        initial_time = Dates.DateTime("2020-09-01")
+        resolution = Dates.Hour(1)
+        len = 24
+        timestamps = range(initial_time; length = len, step = resolution)
+        array = TimeSeries.TimeArray(timestamps, rand(len))
+        ts_name = "test"
+        name = "component"
+        component = IS.TestComponent(name, 3)
+        IS.add_component!(sys, component)
+        ts = IS.SingleTimeSeries(; data = array, name = ts_name)
+        IS.add_time_series!(sys, component, ts)
+        sys2 = deepcopy(sys)
+        component2 = IS.get_component(IS.TestComponent, sys2, name)
+        ts2 = IS.get_time_series(IS.SingleTimeSeries, component2, ts_name)
+        @test ts2.data == array
     end
 end

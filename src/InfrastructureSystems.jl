@@ -4,17 +4,21 @@ module InfrastructureSystems
 
 import CSV
 import DataFrames
+import DataFrames: DataFrame
 import Dates
 import JSON3
 import Logging
 import Random
 import Pkg
 import PrettyTables
+import SHA
 import StructTypes
 import TerminalLoggers: TerminalLogger, ProgressLevel
 import TimeSeries
 import TOML
 using DataStructures: OrderedDict, SortedDict
+import SQLite
+import Tables
 
 using DocStringExtensions
 
@@ -27,7 +31,7 @@ using DocStringExtensions
 # Do not add export statements.
 
 """
-Base type for any struct in the SIIP packages.
+Base type for any struct in the Sienna packages.
 All structs must implement a kwarg-only constructor to allow deserializing from a Dict.
 """
 abstract type InfrastructureSystemsType end
@@ -108,6 +112,7 @@ include("utils/generate_structs.jl")
 include("utils/lazy_dict_from_iterator.jl")
 include("utils/logging.jl")
 include("utils/stdout_redirector.jl")
+include("utils/sqlite.jl")
 include("function_data.jl")
 include("utils/utils.jl")
 include("internal.jl")
@@ -115,17 +120,11 @@ include("time_series_storage.jl")
 include("abstract_time_series.jl")
 include("forecasts.jl")
 include("static_time_series.jl")
-include("time_series_container.jl")
-include("time_series_parser.jl")
 include("containers.jl")
 include("component_uuids.jl")
-include("supplemental_attribute.jl")
-include("supplemental_attributes_container.jl")
-include("supplemental_attributes.jl")
-include("components.jl")
-include("iterators.jl")
 include("geographic_supplemental_attribute.jl")
 include("generated/includes.jl")
+include("time_series_parser.jl")
 include("single_time_series.jl")
 include("deterministic_single_time_series.jl")
 include("deterministic.jl")
@@ -134,20 +133,29 @@ include("scenarios.jl")
 include("deterministic_metadata.jl")
 include("hdf5_time_series_storage.jl")
 include("in_memory_time_series_storage.jl")
+include("time_series_structs.jl")
 include("time_series_formats.jl")
+include("time_series_metadata_store.jl")
+include("time_series_manager.jl")
+include("time_series_interface.jl")
+include("time_series_container.jl")
 include("time_series_cache.jl")
-include("time_series_parameters.jl")
 include("time_series_utils.jl")
+include("supplemental_attribute.jl")
+include("supplemental_attributes_container.jl")
+include("supplemental_attributes.jl")
+include("components.jl")
+include("iterators.jl")
 include("component.jl")
 include("results.jl")
 include("serialization.jl")
 include("system_data.jl")
 include("subsystems.jl")
-include("time_series_interface.jl")
 include("validation.jl")
 include("utils/print.jl")
 include("utils/test.jl")
 include("units.jl")
 include("deprecated.jl")
-
+include("Optimization/Optimization.jl")
+include("Simulation/Simulation.jl")
 end # module

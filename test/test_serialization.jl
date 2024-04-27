@@ -1,31 +1,23 @@
 function validate_serialization(sys::IS.SystemData; time_series_read_only = false)
-    #path, io = mktemp()
-    # For some reason files aren't getting deleted when written to /tmp. Using current dir.
-    filename = "test_system_serialization.json"
-    @info "Serializing to $filename"
-
-    try
-        if isfile(filename)
-            rm(filename)
-        end
-        IS.prepare_for_serialization_to_file!(sys, filename; force = true)
-        data = IS.serialize(sys)
-        open(filename, "w") do io
-            return JSON3.write(io, data)
-        end
-    catch
-        rm(filename)
-        rethrow()
+    directory = mktempdir()
+    filename = joinpath(directory, "test_system_serialization.json")
+    IS.prepare_for_serialization_to_file!(sys, filename; force = true)
+    data = IS.serialize(sys)
+    open(filename, "w") do io
+        JSON3.write(io, data)
     end
 
     # Make sure the code supports the files changing directories.
-    test_dir = mktempdir()
-    path = mv(filename, joinpath(test_dir, filename))
+    test_dir = mktempdir(directory)
+    path = mv(filename, joinpath(test_dir, basename(filename)))
 
-    @test haskey(data, "time_series_storage_file") == !isempty(sys.time_series_storage)
-    t_file = splitext(basename(path))[1] * "_" * IS.TIME_SERIES_STORAGE_FILE
+    @test haskey(data, "time_series_storage_file") ==
+          !isempty(sys.time_series_manager.data_store)
+    t_file =
+        joinpath(directory, splitext(basename(path))[1] * "_" * IS.TIME_SERIES_STORAGE_FILE)
     if haskey(data, "time_series_storage_file")
-        mv(t_file, joinpath(test_dir, t_file))
+        dst_file = joinpath(test_dir, basename(t_file))
+        mv(t_file, dst_file)
     else
         @test !isfile(t_file)
     end
@@ -72,16 +64,31 @@ end
           directory
 end
 
+function _make_time_series()
+    initial_time = Dates.DateTime("2020-09-01")
+    resolution = Dates.Hour(1)
+    data = TimeSeries.TimeArray(
+        range(initial_time; length = 2, step = resolution),
+        ones(2),
+    )
+    data = IS.SingleTimeSeries(; data = data, name = "ts")
+end
+
 @testset "Test JSON serialization of with read-only time series" begin
     sys = create_system_data_shared_time_series(; time_series_in_memory = false)
     sys2, result = validate_serialization(sys; time_series_read_only = true)
     @test result
+
+    component = first(IS.get_components(IS.TestComponent, sys2))
+    @test_throws ArgumentError IS.add_time_series!(sys, component, _make_time_series())
 end
 
 @testset "Test JSON serialization of with mutable time series" begin
     sys = create_system_data_shared_time_series(; time_series_in_memory = false)
     sys2, result = validate_serialization(sys; time_series_read_only = false)
     @test result
+    component = first(IS.get_components(IS.TestComponent, sys2))
+    IS.add_time_series!(sys2, component, _make_time_series())
 end
 
 @testset "Test JSON serialization with no time series" begin
