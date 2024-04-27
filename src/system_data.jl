@@ -24,7 +24,7 @@ mutable struct SystemData <: InfrastructureSystemsType
     component_uuids::Dict{Base.UUID, <:InfrastructureSystemsComponent}
     "User-defined subystems. Components can be regular or masked."
     subsystems::Dict{String, Set{Base.UUID}}
-    attributes::SupplementalAttributes
+    supplemental_attribute_manager::SupplementalAttributeManager
     time_series_manager::TimeSeriesManager
     validation_descriptors::Vector
     internal::InfrastructureSystemsInternal
@@ -56,21 +56,21 @@ function SystemData(;
         read_validation_descriptor(validation_descriptor_file)
     end
 
-    time_series_manager = TimeSeriesManager(;
+    time_series_mgr = TimeSeriesManager(;
         in_memory = time_series_in_memory,
         directory = time_series_directory,
         compression = compression,
     )
-    components = Components(time_series_manager, validation_descriptors)
-    attributes = SupplementalAttributes(time_series_manager)
-    masked_components = Components(time_series_manager, validation_descriptors)
+    components = Components(time_series_mgr, validation_descriptors)
+    supplemental_attribute_mgr = SupplementalAttributeManager(time_series_mgr)
+    masked_components = Components(time_series_mgr, validation_descriptors)
     return SystemData(
         components,
         masked_components,
         Dict{Base.UUID, InfrastructureSystemsComponent}(),
         Dict{String, Set{Base.UUID}}(),
-        attributes,
-        time_series_manager,
+        supplemental_attribute_mgr,
+        time_series_mgr,
         validation_descriptors,
         InfrastructureSystemsInternal(),
     )
@@ -80,7 +80,7 @@ function SystemData(
     validation_descriptors,
     time_series_manager,
     subsystems,
-    attributes,
+    supplemental_attribute_manager,
     internal,
 )
     components = Components(time_series_manager, validation_descriptors)
@@ -90,7 +90,7 @@ function SystemData(
         masked_components,
         Dict{Base.UUID, InfrastructureSystemsComponent}(),
         subsystems,
-        attributes,
+        supplemental_attribute_manager,
         time_series_manager,
         validation_descriptors,
         internal,
@@ -376,7 +376,6 @@ function mask_component!(
     remove_time_series = false,
 )
     remove_component!(data.components, component; remove_time_series = remove_time_series)
-    set_time_series_manager!(component, nothing)
     return add_masked_component!(
         data,
         component;
@@ -574,7 +573,7 @@ function to_dict(data::SystemData)
         :components,
         :masked_components,
         :subsystems,
-        :attributes,
+        :supplemental_attribute_manager,
         :internal,
     )
         serialized_data[string(field)] = serialize(getproperty(data, field))
@@ -662,7 +661,11 @@ function deserialize(
         metadata_store = time_series_metadata_store,
     )
     subsystems = Dict(k => Set(Base.UUID.(v)) for (k, v) in raw["subsystems"])
-    attributes = deserialize(SupplementalAttributes, raw["attributes"], time_series_manager)
+    supplemental_attribute_manager = deserialize(
+        SupplementalAttributeManager,
+        raw["supplemental_attribute_manager"],
+        time_series_manager,
+    )
     internal = deserialize(InfrastructureSystemsInternal, raw["internal"])
     validation_descriptors = if isnothing(validation_descriptor_file)
         []
@@ -674,11 +677,11 @@ function deserialize(
         validation_descriptors,
         time_series_manager,
         subsystems,
-        attributes,
+        supplemental_attribute_manager,
         internal,
     )
     attributes_by_uuid = Dict{Base.UUID, SupplementalAttribute}()
-    for attr_dict in values(attributes.data)
+    for attr_dict in values(supplemental_attribute_manager.data)
         for attr in values(attr_dict)
             uuid = get_uuid(attr)
             if haskey(attributes_by_uuid, uuid)
@@ -690,13 +693,6 @@ function deserialize(
 
     system_component_uuids = Set{Base.UUID}()
     for component in Iterators.Flatten((raw["components"], raw["masked_components"]))
-        if haskey(component, "supplemental_attributes_container")
-            component["supplemental_attributes_container"] = deserialize(
-                SupplementalAttributesContainer,
-                component["supplemental_attributes_container"],
-                attributes_by_uuid,
-            )
-        end
         push!(system_component_uuids, UUIDs.UUID(component["internal"]["uuid"]["value"]))
     end
 
@@ -712,12 +708,16 @@ function deserialize(
     return sys
 end
 
-# Redirect functions to Components and TimeSeriesContainer
+# Redirect functions to Components
 
 function add_component!(data::SystemData, component; kwargs...)
     _check_duplicate_component_uuid(data, component)
     add_component!(data.components, component; kwargs...)
     data.component_uuids[get_uuid(component)] = component
+    refs = SharedSystemReferences(;
+        time_series_manager = data.time_series_manager,
+        supplemental_attribute_manager = data.supplemental_attribute_manager)
+    set_shared_system_references!(component, refs)
     return
 end
 
@@ -729,6 +729,11 @@ function add_masked_component!(data::SystemData, component; kwargs...)
         kwargs...,
     )
     data.component_uuids[get_uuid(component)] = component
+    refs = SharedSystemReferences(;
+        time_series_manager = data.time_series_manager,
+        supplemental_attribute_manager = data.supplemental_attribute_manager,
+    )
+    set_shared_system_references!(component, refs)
     return
 end
 
@@ -797,8 +802,12 @@ get_components_by_name(::Type{T}, data::SystemData, args...) where {T} =
     get_components_by_name(T, data.components, args...)
 
 function get_components(data::SystemData, attribute::SupplementalAttribute)
-    uuids = get_component_uuids(attribute)
-    return [get_component(data, x) for x in uuids]
+    [
+        get_component(data, x) for x in list_associated_component_uuids(
+            data.supplemental_attribute_manager.associations,
+            attribute,
+        )
+    ]
 end
 
 function get_masked_components(
@@ -885,6 +894,15 @@ function get_component_counts_by_type(data::SystemData)
     ]
 end
 
+get_num_supplemental_attributes(data::SystemData) =
+    get_num_attributes(data.supplemental_attribute_manager.associations)
+get_supplemental_attribute_counts_by_type(data::SystemData) =
+    get_attribute_counts_by_type(data.supplemental_attribute_manager.associations)
+get_supplemental_attribute_summary_table(data::SystemData) =
+    get_attribute_summary_table(data.supplemental_attribute_manager.associations)
+get_num_components_with_supplemental_attributes(data::SystemData) =
+    get_num_components_with_attributes(data.supplemental_attribute_manager.associations)
+
 get_num_time_series(data::SystemData) =
     get_num_time_series(data.time_series_manager.metadata_store)
 get_time_series_counts(data::SystemData) =
@@ -898,11 +916,16 @@ _get_system_basename(system_file) = splitext(basename(system_file))[1]
 _get_secondary_basename(system_basename, name) = system_basename * "_" * name
 
 function add_supplemental_attribute!(data::SystemData, component, attribute; kwargs...)
-    if isnothing(get_component(typeof(component), data, get_name(component)))
-        throw(ArgumentError("$(summary(component)) is not attached to the system"))
-    end
-
-    return add_supplemental_attribute!(data.attributes, component, attribute; kwargs...)
+    # Note that we do not support adding attributes to masked components
+    # and this check doesn't look at those.
+    throw_if_not_attached(data.components, component)
+    add_supplemental_attribute!(
+        data.supplemental_attribute_manager,
+        component,
+        attribute;
+        kwargs...,
+    )
+    return
 end
 
 function get_supplemental_attributes(
@@ -910,65 +933,45 @@ function get_supplemental_attributes(
     ::Type{T},
     data::SystemData,
 ) where {T <: SupplementalAttribute}
-    return get_supplemental_attributes(filter_func, T, data.attributes)
+    return get_supplemental_attributes(filter_func, T, data.supplemental_attribute_manager)
 end
 
 function get_supplemental_attributes(
     ::Type{T},
     data::SystemData,
 ) where {T <: SupplementalAttribute}
-    return get_supplemental_attributes(T, data.attributes)
+    return get_supplemental_attributes(T, data.supplemental_attribute_manager)
 end
 
 function get_supplemental_attribute(data::SystemData, uuid::Base.UUID)
-    return get_supplemental_attribute(data.attributes, uuid)
+    return get_supplemental_attribute(data.supplemental_attribute_manager, uuid)
 end
 
 function iterate_supplemental_attributes(data::SystemData)
-    return iterate_supplemental_attributes(data.attributes)
+    return iterate_supplemental_attributes(data.supplemental_attribute_manager)
 end
 
-function remove_supplemental_attribute!(
+remove_supplemental_attribute!(
     data::SystemData,
     component::InfrastructureSystemsComponent,
-    attribute::SupplementalAttribute,
+    attribute::SupplementalAttribute;
+) = remove_supplemental_attribute!(
+    data.supplemental_attribute_manager,
+    component,
+    attribute,
 )
-    detach_component!(attribute, component)
-    detach_supplemental_attribute!(component, attribute)
-    if !is_attached_to_component(attribute)
-        remove_supplemental_attribute!(data.attributes, attribute)
-    end
-    return
-end
 
-function remove_supplemental_attribute!(
+remove_supplemental_attributes!(
     data::SystemData,
-    attribute::SupplementalAttribute,
-)
-    current_components_uuid = collect(get_component_uuids(attribute))
-    for c_uuid in current_components_uuid
-        component = get_component(data, c_uuid)
-        detach_component!(attribute, component)
-        detach_supplemental_attribute!(component, attribute)
-    end
-    return remove_supplemental_attribute!(data.attributes, attribute)
-end
+    type::Type{<:SupplementalAttribute};
+) = remove_supplemental_attributes!(data.supplemental_attribute_manager, type)
 
-function remove_supplemental_attributes!(
-    ::Type{T},
-    data::SystemData,
-) where {T <: SupplementalAttribute}
-    attributes = get_supplemental_attributes(T, data.attributes)
-    for attribute in attributes
-        for c_uuid in get_component_uuids(attribute)
-            component = get_component(data, c_uuid)
-            detach_component!(attribute, component)
-            detach_supplemental_attribute!(component, attribute)
-        end
-        remove_supplemental_attribute!(data.attributes, attribute)
-    end
-    return
-end
+
+"""
+Remove all supplemental attributes.
+"""
+clear_supplemental_attributes!(data::SystemData) =
+    clear_supplemental_attributes!(data.supplemental_attribute_manager)
 
 stores_time_series_in_memory(data::SystemData) =
     data.time_series_manager.data_store isa InMemoryTimeSeriesStorage

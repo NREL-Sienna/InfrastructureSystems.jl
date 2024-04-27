@@ -2,6 +2,7 @@
 const LOG_GROUP_PARSING = :Parsing
 const LOG_GROUP_RECORDER = :Recorder
 const LOG_GROUP_SERIALIZATION = :Serialization
+const LOG_GROUP_SUPPLEMENTAL_ATTRIBUTES = :SupplementalAttributes
 const LOG_GROUP_SYSTEM = :System
 const LOG_GROUP_SYSTEM_CHECKS = :SystemChecks
 const LOG_GROUP_TIME_SERIES = :TimeSeries

@@ -1,14 +1,4 @@
 """
-This function must be called when a component is removed from a system.
-"""
-function prepare_for_removal!(component::InfrastructureSystemsComponent)
-    clear_time_series!(component)
-    set_time_series_manager!(component, nothing)
-    @debug "cleared all time series data from" _group = LOG_GROUP_SYSTEM get_name(component)
-    return
-end
-
-"""
 Transform all instances of SingleTimeSeries to DeterministicSingleTimeSeries. Do nothing
 if the component does not contain any instances.
 
@@ -126,95 +116,40 @@ function assign_new_uuid_internal!(component::InfrastructureSystemsComponent)
 end
 
 """
-Attach an attribute to a component.
-"""
-function attach_supplemental_attribute!(
-    component::InfrastructureSystemsComponent,
-    attribute::T,
-) where {T <: SupplementalAttribute}
-    attribute_container = get_supplemental_attributes_container(component)
-
-    if !haskey(attribute_container, T)
-        attribute_container[T] = Dict{Base.UUID, T}()
-    end
-
-    uuid = get_uuid(attribute)
-    if haskey(attribute_container[T], uuid)
-        throw(
-            ArgumentError(
-                "Supplemental attribute $uuid is already attached to $(summary(component))",
-            ),
-        )
-    end
-    attribute_container[T][uuid] = attribute
-    @debug "SupplementalAttribute type $T with UUID $uuid) stored in component $(summary(component))" _group =
-        LOG_GROUP_SYSTEM
-    return
-end
-
-"""
 Return true if the component has supplemental attributes of the given type.
 """
 function has_supplemental_attributes(
-    ::Type{T},
     component::InfrastructureSystemsComponent,
+    ::Type{T},
 ) where {T <: SupplementalAttribute}
-    supplemental_attributes = get_supplemental_attributes_container(component)
-    if !isconcretetype(T)
-        for (k, v) in supplemental_attributes
-            if !isempty(v) && k <: T
-                return true
-            end
-        end
-    end
-    supplemental_attributes = get_supplemental_attributes_container(component)
-    !haskey(supplemental_attributes, T) && return false
-    return !isempty(supplemental_attributes[T])
+    associations = _get_supplemental_attribute_associations(component)
+    isnothing(associations) && return false
+    return has_association(associations, component, T)
 end
 
 """
 Return true if the component has supplemental attributes.
 """
 function has_supplemental_attributes(component::InfrastructureSystemsComponent)
-    container = get_supplemental_attributes_container(component)
-    return !isempty(container)
+    associations = _get_supplemental_attribute_associations(component)
+    isnothing(associations) && return false
+    return has_association(associations, component)
 end
 
 function clear_supplemental_attributes!(component::InfrastructureSystemsComponent)
-    container = get_supplemental_attributes_container(component)
-    for attributes in values(container)
-        for attribute in collect(values(attributes))
-            detach_component!(attribute, component)
-            detach_supplemental_attribute!(component, attribute)
-        end
+    mgr = _get_supplemental_attributes_manager(component)
+    isnothing(mgr) && return
+    associations = mgr.associations
+    for uuid in list_associated_supplemental_attribute_uuids(associations, component)
+        attribute = get_supplemental_attribute(mgr, uuid)
+        remove_supplemental_attribute!(mgr, component, attribute)
     end
-    empty!(container)
     @debug "Cleared attributes in $(summary(component))."
     return
 end
 
-function detach_supplemental_attribute!(
-    component::InfrastructureSystemsComponent,
-    attribute::T,
-) where {T <: SupplementalAttribute}
-    container = get_supplemental_attributes_container(component)
-    if !haskey(container, T)
-        throw(
-            ArgumentError(
-                "SupplementalAttribute of type $T is not stored in component $(summary(component))",
-            ),
-        )
-    end
-    delete!(container[T], get_uuid(attribute))
-    if isempty(container[T])
-        pop!(container, T)
-    end
-    return
-end
-
 """
-Returns an iterator of supplemental_attributes. T can be concrete or abstract.
-Call collect on the result if an array is desired.
+Return a Vector of supplemental_attributes. T can be concrete or abstract.
 
 # Arguments
 
@@ -224,31 +159,98 @@ Call collect on the result if an array is desired.
     of type T and returns a Bool. Apply this function to each component and only return components
     where the result is true.
 """
-function get_supplemental_attributes(
+function list_supplemental_attributes(
     ::Type{T},
     component::InfrastructureSystemsComponent,
 ) where {T <: SupplementalAttribute}
-    return get_supplemental_attributes(T, get_supplemental_attributes_container(component))
+    return _list_supplemental_attributes(T, component)
 end
 
-function get_supplemental_attributes(
+function list_supplemental_attributes(component::InfrastructureSystemsComponent)
+    return _list_supplemental_attributes(nothing, component)
+end
+
+function _list_supplemental_attributes(
+    supplemental_attribute_type::Union{Nothing, Type{<:SupplementalAttribute}},
+    component::InfrastructureSystemsComponent,
+)
+    mgr = _get_supplemental_attributes_manager(component)
+    attr_type = if isnothing(supplemental_attribute_type)
+        SupplementalAttribute
+    else
+        supplemental_attribute_type
+    end
+    isnothing(mgr) && return attr_type[]
+    return attr_type[
+        get_supplemental_attribute(mgr, x) for
+        x in list_associated_supplemental_attribute_uuids(
+            mgr.associations,
+            component;
+            attribute_type = supplemental_attribute_type,
+        )
+    ]
+end
+
+function list_supplemental_attributes(
     filter_func::Function,
     ::Type{T},
     component::InfrastructureSystemsComponent,
 ) where {T <: SupplementalAttribute}
-    return get_supplemental_attributes(
-        filter_func,
-        T,
-        get_supplemental_attributes_container(component),
+    return _list_supplemental_attributes(filter_func, T, component)
+end
+
+function list_supplemental_attributes(
+    filter_func::Function,
+    component::InfrastructureSystemsComponent,
+)
+    return _list_supplemental_attributes(filter_func, nothing, component)
+end
+
+function _list_supplemental_attributes(
+    filter_func::Function,
+    supplemental_attribute_type::Union{Nothing, Type{<:SupplementalAttribute}},
+    component::InfrastructureSystemsComponent,
+)
+    attr_type = if isnothing(supplemental_attribute_type)
+        SupplementalAttribute
+    else
+        supplemental_attribute_type
+    end
+    mgr = _get_supplemental_attributes_manager(component)
+    isnothing(mgr) && return [attr_type]
+    attrs = Vector{attr_type}()
+    for uuid in list_associated_supplemental_attribute_uuids(
+        mgr.associations,
+        component;
+        attribute_type = supplemental_attribute_type,
     )
+        attribute = get_supplemental_attribute(mgr, uuid)
+        if filter_func(attribute)
+            push!(attrs, attribute)
+        end
+    end
+
+    return attrs
 end
 
 function get_supplemental_attribute(
     component::InfrastructureSystemsComponent,
     uuid::Base.UUID,
 )
-    return get_supplemental_attribute(
-        get_supplemental_attributes_container(component),
-        uuid,
-    )
+    mgr = _get_supplemental_attributes_manager(component)
+    isnothing(mgr) &&
+        error("$(summary(component)) does not have supplemental attributes")
+    return get_supplemental_attribute(mgr, uuid)
+end
+
+function _get_supplemental_attributes_manager(component::InfrastructureSystemsComponent)
+    !supports_supplemental_attributes(component) && return nothing
+    isnothing(get_internal(component).shared_system_references) && return nothing
+    return get_internal(component).shared_system_references.supplemental_attribute_manager
+end
+
+function _get_supplemental_attribute_associations(component::InfrastructureSystemsComponent)
+    mgr = _get_supplemental_attributes_manager(component)
+    isnothing(mgr) && return nothing
+    return mgr.associations
 end

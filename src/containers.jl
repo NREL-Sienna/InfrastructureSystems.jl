@@ -1,11 +1,6 @@
-abstract type InfrastructureSystemsContainer end
+abstract type InfrastructureSystemsContainer <: InfrastructureSystemsType end
 
 get_display_string(x::InfrastructureSystemsContainer) = string(nameof(typeof(x)))
-
-function serialize(container::InfrastructureSystemsContainer)
-    # time_series_storage and validation_descriptors are serialized elsewhere.
-    return [serialize(x) for y in values(container.data) for x in values(y)]
-end
 
 """
 Iterates over all data in the container.

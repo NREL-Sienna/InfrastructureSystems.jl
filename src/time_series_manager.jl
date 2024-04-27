@@ -30,6 +30,8 @@ function TimeSeriesManager(;
     return TimeSeriesManager(data_store, metadata_store, read_only)
 end
 
+get_database(mgr::TimeSeriesManager) = mgr.metadata_store.db
+
 function add_time_series!(
     mgr::TimeSeriesManager,
     owner::TimeSeriesOwners,
@@ -144,7 +146,7 @@ Remove the time series data for a component.
 function remove_time_series!(
     mgr::TimeSeriesManager,
     time_series_type::Type{<:TimeSeriesData},
-    component::TimeSeriesOwners,
+    owner::TimeSeriesOwners,
     name::String;
     features...,
 )
@@ -157,7 +159,7 @@ function remove_time_series!(
     )
     remove_metadata!(
         mgr.metadata_store,
-        component;
+        owner;
         time_series_type = time_series_type,
         name = name,
         features...,
@@ -175,12 +177,12 @@ end
 
 function remove_time_series!(
     mgr::TimeSeriesManager,
-    component::InfrastructureSystemsComponent,
+    owner::TimeSeriesOwners,
     metadata::TimeSeriesMetadata,
 )
     _throw_if_read_only(mgr)
-    remove_metadata!(mgr.metadata_store, component, metadata)
-    @debug "Removed time_series metadata in $(summary(component)) $(summary(metadata))." _group =
+    remove_metadata!(mgr.metadata_store, owner, metadata)
+    @debug "Removed time_series metadata in $(summary(owner)) $(summary(metadata))." _group =
         LOG_GROUP_TIME_SERIES
     _remove_data_if_no_more_references(mgr, get_time_series_uuid(metadata))
     return

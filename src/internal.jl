@@ -13,11 +13,17 @@ end
 serialize(val::SystemUnitsSettings) = serialize_struct(val)
 deserialize(T::Type{<:SystemUnitsSettings}, val::Dict) = deserialize_struct(T, val)
 
+@kwdef mutable struct SharedSystemReferences <: InfrastructureSystemsType
+    supplemental_attribute_manager::Any = nothing
+    time_series_manager::Any = nothing
+end
+
 """
 Internal storage common to InfrastructureSystems types.
 """
 mutable struct InfrastructureSystemsInternal <: InfrastructureSystemsType
     uuid::Base.UUID
+    shared_system_references::Union{Nothing, SharedSystemReferences}
     units_info::Union{Nothing, UnitsData}
     ext::Union{Nothing, Dict{String, Any}}
 end
@@ -25,14 +31,19 @@ end
 """
 Creates InfrastructureSystemsInternal with a new UUID.
 """
-InfrastructureSystemsInternal(; uuid = make_uuid(), units_info = nothing, ext = nothing) =
-    InfrastructureSystemsInternal(uuid, units_info, ext)
+InfrastructureSystemsInternal(;
+    uuid = make_uuid(),
+    shared_system_references = nothing,
+    units_info = nothing,
+    ext = nothing,
+) =
+    InfrastructureSystemsInternal(uuid, shared_system_references, units_info, ext)
 
 """
 Creates InfrastructureSystemsInternal with an existing UUID.
 """
-InfrastructureSystemsInternal(u::UUIDs.UUID) =
-    InfrastructureSystemsInternal(u, nothing, nothing)
+InfrastructureSystemsInternal(u::Base.UUID) =
+    InfrastructureSystemsInternal(u, nothing, nothing, nothing)
 
 """
 Return a user-modifiable dictionary to store extra information.
@@ -56,9 +67,16 @@ end
 get_uuid(internal::InfrastructureSystemsInternal) = internal.uuid
 set_uuid!(internal::InfrastructureSystemsInternal, uuid) = internal.uuid = uuid
 
+function set_shared_system_references!(
+    internal::InfrastructureSystemsInternal,
+    refs::Union{Nothing, SharedSystemReferences},
+)
+    internal.shared_system_references = refs
+    return
+end
+
 get_units_info(internal::InfrastructureSystemsInternal) = internal.units_info
-set_units_info!(internal::InfrastructureSystemsInternal, value) =
-    internal.units_info = value
+set_units_info!(internal::InfrastructureSystemsInternal, val) = internal.units_info = val
 
 """
 Gets the UUID for any InfrastructureSystemsType.
@@ -84,6 +102,8 @@ function serialize(internal::InfrastructureSystemsInternal)
         # added which is resolved later in the de-serialization.
         if val isa UnitsData
             val = nothing
+        elseif field == :shared_system_references
+            continue
         else
             val = serialize(val)
         end
@@ -109,7 +129,8 @@ function compare_values(
 )
     match = true
     for name in fieldnames(InfrastructureSystemsInternal)
-        if name in exclude || (name == :uuid && !compare_uuids)
+        if name in exclude || (name == :uuid && !compare_uuids) ||
+           name == :shared_system_references
             continue
         end
         if name == :ext

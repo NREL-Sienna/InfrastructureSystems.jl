@@ -33,9 +33,8 @@ deserialize the system.
 
 ## Instructions
 
- 1. Add an instance of `InfrastructureSystems.TimeSeriesContainer` to the component struct.
- 2. Implement the method `InfrastructureSystems.get_time_series_container` for the
-    component. It must return the `TimeSeriesContainer` object.
+ 1. Ensure that `supports_time_series(::MyComponent)` returns true for the struct. It may
+    be implemented on a supertype of the struct.
 
 ## Data Format
 

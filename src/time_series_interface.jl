@@ -3,20 +3,10 @@ Return the TimeSeriesManager or nothing if the component/attribute does not supp
 series.
 """
 function get_time_series_manager(owner::TimeSeriesOwners)
-    container = get_time_series_container(owner)
-    isnothing(container) && return nothing
-    return get_time_series_manager(container)
-end
-
-function set_time_series_manager!(
-    owner::TimeSeriesOwners,
-    time_series_manager::Union{Nothing, TimeSeriesManager},
-)
-    container = get_time_series_container(owner)
-    if !isnothing(container)
-        set_time_series_manager!(container, time_series_manager)
-    end
-    return
+    !supports_time_series(owner) && return nothing
+    refs = get_internal(owner).shared_system_references
+    isnothing(refs) && return nothing
+    return refs.time_series_manager
 end
 
 function get_time_series_storage(owner::TimeSeriesOwners)
@@ -364,7 +354,9 @@ end
 Return true if the component or supplemental attribute has time series data.
 """
 function has_time_series(owner::TimeSeriesOwners)
-    return has_time_series(get_time_series_manager(owner), owner)
+    mgr = get_time_series_manager(owner)
+    isnothing(mgr) && return false
+    return has_time_series(mgr, owner)
 end
 
 """
@@ -388,19 +380,6 @@ function has_time_series(
     mgr = get_time_series_manager(val)
     isnothing(mgr) && return false
     return has_time_series(mgr.metadata_store, val, T, name; features...)
-end
-
-"""
-Return true if the component or supplemental attribute supports time series data.
-"""
-function supports_time_series(owner::TimeSeriesOwners)
-    return !isnothing(get_time_series_container(owner))
-end
-
-function throw_if_does_not_support_time_series(owner::TimeSeriesOwners)
-    if !supports_time_series(owner)
-        throw(ArgumentError("$(summary(owner)) does not support time series"))
-    end
 end
 
 """
@@ -498,6 +477,28 @@ function clear_time_series!(owner::TimeSeriesOwners)
         clear_time_series!(mgr, owner)
     end
     return
+end
+
+"""
+This function must be called when a component or attribute is removed from a system.
+"""
+function prepare_for_removal!(owner::TimeSeriesOwners)
+    clear_time_series!(owner)
+    set_shared_system_references!(owner, nothing)
+    @debug "cleared all time series data from" _group = LOG_GROUP_SYSTEM summary(owner)
+    return
+end
+
+set_shared_system_references!(
+    owner::TimeSeriesOwners,
+    refs::Union{Nothing, SharedSystemReferences},
+) =
+    set_shared_system_references!(get_internal(owner), refs)
+
+function throw_if_does_not_support_time_series(owner::TimeSeriesOwners)
+    if !supports_time_series(owner)
+        throw(ArgumentError("$(summary(owner)) does not support time series"))
+    end
 end
 
 """

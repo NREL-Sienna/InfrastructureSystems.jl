@@ -56,33 +56,52 @@ function Base.show(io::IO, data::SystemData)
     show(io, data.components)
     println(io, "\n")
     show_time_series_data(io, data)
+    show_supplemental_attributes_data(io, data)
 end
 
 function Base.show(io::IO, ::MIME"text/plain", data::SystemData)
     show(io, MIME"text/plain"(), data.components)
     println(io, "\n")
-    show(io, MIME"text/plain"(), data.attributes)
+    show(io, MIME"text/plain"(), data.supplemental_attribute_manager)
     println(io, "\n")
     show_time_series_data(io, data; backend = Val(:auto))
+    show_supplemental_attributes_data(io, data; backend = Val(:auto))
 end
 
 function Base.show(io::IO, ::MIME"text/html", data::SystemData)
     show(io, MIME"text/html"(), data.components)
     println(io, "\n")
-    show(io, MIME"text/html"(), data.attributes)
+    show(io, MIME"text/html"(), data.supplemental_attribute_manager)
     println(io, "\n")
     show_time_series_data(io, data; backend = Val(:html), standalone = false)
+    show_supplemental_attributes_data(io, data; backend = Val(:html), standalone = false)
 end
 
 function show_time_series_data(io::IO, data::SystemData; kwargs...)
     table = get_time_series_summary_table(data)
-    PrettyTables.pretty_table(
-        io,
-        table;
-        title = "Time Series Summary",
-        alignment = :l,
-        kwargs...,
-    )
+    if !isempty(table)
+        PrettyTables.pretty_table(
+            io,
+            table;
+            title = "Time Series Summary",
+            alignment = :l,
+            kwargs...,
+        )
+    end
+    return
+end
+
+function show_supplemental_attributes_data(io::IO, data::SystemData; kwargs...)
+    table = get_supplemental_attribute_summary_table(data)
+    if !isempty(table)
+        PrettyTables.pretty_table(
+            io,
+            table;
+            title = "Supplemental Attribute Summary",
+            alignment = :l,
+            kwargs...,
+        )
+    end
     return
 end
 
@@ -97,8 +116,8 @@ end
 function Base.show(io::IO, ::MIME"text/plain", ist::InfrastructureSystemsComponent)
     print(io, summary(ist), ":")
     for name in fieldnames(typeof(ist))
-        obj = getproperty(ist, name)
-        if obj isa InfrastructureSystemsInternal || obj isa TimeSeriesContainer
+        obj = getfield(ist, name)
+        if obj isa InfrastructureSystemsInternal
             continue
         elseif obj isa InfrastructureSystemsType
             val = summary(getproperty(ist, name))
@@ -106,10 +125,6 @@ function Base.show(io::IO, ::MIME"text/plain", ist::InfrastructureSystemsCompone
             val = summary(getproperty(ist, name))
         else
             val = getproperty(ist, name)
-        end
-        # Not allowed to print `nothing`
-        if isnothing(val)
-            val = "nothing"
         end
         print(io, "\n   ", name, ": ", val)
     end
@@ -119,7 +134,7 @@ function Base.show(io::IO, ist::InfrastructureSystemsComponent)
     print(io, strip_module_name(typeof(ist)), "(")
     is_first = true
     for (name, field_type) in zip(fieldnames(typeof(ist)), fieldtypes(typeof(ist)))
-        if field_type <: TimeSeriesContainer || field_type <: InfrastructureSystemsInternal
+        if field_type <: InfrastructureSystemsInternal
             continue
         else
             val = getproperty(ist, name)
@@ -133,6 +148,15 @@ function Base.show(io::IO, ist::InfrastructureSystemsComponent)
     end
     print(io, ")")
     return
+end
+
+function Base.show(io::IO, ::MIME"text/plain", internal::InfrastructureSystemsInternal)
+    print(io, summary(internal), ":")
+    for name in fieldnames(typeof(internal))
+        name == :shared_system_references && continue
+        val = getproperty(internal, name)
+        print(io, "\n   ", name, ": ", val)
+    end
 end
 
 function Base.show(io::IO, ::MIME"text/plain", it::FlattenIteratorWrapper)
@@ -238,10 +262,8 @@ function show_components(
                 # This logic enables application of system units in PowerSystems through
                 # its getter functions.
                 val = Base.getproperty(component, column)
-                if val isa TimeSeriesContainer
-                    continue
-                elseif val isa InfrastructureSystemsType ||
-                       val isa Vector{<:InfrastructureSystemsComponent}
+                if val isa InfrastructureSystemsType ||
+                   val isa Vector{<:InfrastructureSystemsComponent}
                     val = summary(val)
                 elseif hasproperty(parent, getter_name)
                     getter_func = Base.getproperty(parent, getter_name)
@@ -264,6 +286,35 @@ function show_components(
     return
 end
 
+"""
+Show a table with supplemental attributes attached to the component.
+"""
+function show_supplemental_attributes(component::InfrastructureSystemsComponent)
+    show_supplemental_attributes(stdout, component)
+end
+
+function show_supplemental_attributes(io::IO, component::InfrastructureSystemsComponent)
+    data_by_type = Dict{Any, Vector{OrderedDict{String, Any}}}()
+    for attribute in list_supplemental_attributes(component)
+        if !haskey(data_by_type, typeof(attribute))
+            data_by_type[typeof(attribute)] = Vector{OrderedDict{String, Any}}()
+        end
+        data = OrderedDict{String, Any}()
+        for field in fieldnames(typeof(attribute))
+            if field != :internal
+                data[string(field)] = Base.getproperty(attribute, field)
+            end
+        end
+        push!(data_by_type[typeof(attribute)], data)
+    end
+    for (type, rows) in data_by_type
+        PrettyTables.pretty_table(io, DataFrame(rows); title = string(nameof(type)))
+    end
+end
+
+"""
+Show a table with time series data attached to the component.
+"""
 function show_time_series(owner::TimeSeriesOwners)
     show_time_series(stdout, owner)
 end
