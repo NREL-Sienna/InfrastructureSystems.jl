@@ -39,9 +39,9 @@ get_proportional_term(fd::QuadraticFunctionData) = fd.proportional_term
 get_constant_term(fd::QuadraticFunctionData) = fd.constant_term
 
 function _validate_piecewise_x(x_coords)
-    (length(x_coords) >= 2) ||
+    (length(x_coords) < 2) &&
         throw(ArgumentError("Must specify at least two x-coordinates"))
-    issorted(x_coords) ||
+    !issorted(x_coords) &&
         throw(ArgumentError("Piecewise x-coordinates must be ascending, got $x_coords"))
 end
 
@@ -138,12 +138,20 @@ quantities (x, dy/dx), such as (MW, \$/MWh).
     y_coords::Vector{Float64}
 
     function PiecewiseStepData(x_coords, y_coords)
+        if length(y_coords) == length(x_coords)
+            # To make the lengths match for HDF serialization, we prepend NaN to y_coords
+            isnan(first(y_coords)) && return PiecewiseStepData(x_coords, y_coords[2:end])
+            # To leave x_coords[1] undefined, must explicitly pass in NaN
+        end
         _validate_piecewise_x(x_coords)
-        (length(y_coords) == length(x_coords) - 1) ||
+        (length(y_coords) != length(x_coords) - 1) &&
             throw(ArgumentError("Must specify one fewer y-coordinates than x-coordinates"))
         return new(x_coords, y_coords)
     end
 end
+
+# For HDF deserialization
+PiecewiseStepData(data::AbstractMatrix) = PiecewiseStepData(data[:, 1], data[:, 2])
 
 "Get the x-coordinates of the points that define the piecewise data"
 get_x_coords(data::PiecewiseStepData) = data.x_coords
@@ -222,7 +230,8 @@ get_raw_data(fd::QuadraticFunctionData) =
 get_raw_data(fd::PiecewiseLinearData) = Tuple.(get_points(fd))
 function get_raw_data(fd::PiecewiseStepData)
     x_coords = get_x_coords(fd)
-    return vcat((x_coords[1], NaN), collect(zip(x_coords[2:end], get_y_coords(fd))))  # Using NaN for type simplicity
+    y_coords = vcat(NaN, get_y_coords(fd))  # Using NaN for type simplicity
+    return hcat(x_coords, y_coords)
 end
 
 """
@@ -236,7 +245,7 @@ get_raw_data_type(::Union{QuadraticFunctionData, Type{QuadraticFunctionData}}) =
 get_raw_data_type(::Union{PiecewiseLinearData, Type{PiecewiseLinearData}}) =
     Vector{Tuple{Float64, Float64}}
 get_raw_data_type(::Union{PiecewiseStepData, Type{PiecewiseStepData}}) =
-    Vector{Tuple{Float64, Float64}}
+    Matrix{Float64}
 
 "Losslessly convert `LinearFunctionData` to `QuadraticFunctionData`"
 QuadraticFunctionData(data::LinearFunctionData) =

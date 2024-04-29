@@ -127,7 +127,7 @@ end
         (5.0, 1.0),
         (2.0, 3.0, 4.0),
         [(1.0, 1.0), (3.0, 5.0), (5.0, 10.0)],
-        [(1.0, NaN), (3.0, 2.0), (5.0, 2.5)],
+        [1.0 NaN; 3.0 2.0; 5.0 2.5],
     ]
     for (fd, answer) in zip(get_test_function_data(), raw_data_answers)
         @test IS.get_raw_data_type(fd) == typeof(answer)

@@ -559,7 +559,7 @@ function retransform_hdf_array(
     T::Union{Type{LinearFunctionData}, Type{QuadraticFunctionData}},
 )
     length_req = fieldcount(get_raw_data_type(T))
-    (size(data)[end] == length_req) || throw(
+    (size(data)[end] != length_req) && throw(
         ArgumentError(
             "Last dimension of data must have length $length_req, got size $(size(data))",
         ),
@@ -569,12 +569,12 @@ function retransform_hdf_array(
     return map(x -> T(x...), eachslice(data; dims = dims_to_keep))  # PERF possibly preallocation would be better
 end
 
-retransform_hdf_array(data::Array, T::Type{PiecewiseLinearData}) =
-    T.(retransform_hdf_array(data, Vector{NamedTuple}))
+retransform_hdf_array(data::Array, ::Type{PiecewiseLinearData}) =
+    PiecewiseLinearData.(retransform_hdf_array(data, Vector{NamedTuple}))
 
-function retransform_hdf_array(data::Array, T::Type{<:Vector{<:Union{Tuple, NamedTuple}}})
+function retransform_hdf_array(data::Array, ::Type{<:Vector{<:Union{Tuple, NamedTuple}}})
     length_req = 2
-    (size(data)[end] == length_req) || throw(
+    (size(data)[end] != length_req) && throw(
         ArgumentError(
             "Last dimension of data must have length $length_req, got size $(size(data))",
         ),
@@ -585,6 +585,20 @@ function retransform_hdf_array(data::Array, T::Type{<:Vector{<:Union{Tuple, Name
         x -> [Tuple(pair) for pair in eachrow(x)],
         eachslice(data; dims = dims_to_keep),
     )  # PERF possibly preallocation would be better
+end
+
+retransform_hdf_array(data::Array, ::Type{PiecewiseStepData}) =
+    PiecewiseStepData.(retransform_hdf_array(data, Matrix))
+
+function retransform_hdf_array(data::Array, ::Type{Matrix})
+    length_req = 2
+    (size(data)[end] != length_req) && throw(
+        ArgumentError(
+            "Last dimension of data must have length $length_req, got size $(size(data))",
+        ),
+    )
+    dims_to_keep = Tuple(1:(ndims(data) - 2))
+    return eachslice(data; dims = dims_to_keep)
 end
 
 function deserialize_time_series(
