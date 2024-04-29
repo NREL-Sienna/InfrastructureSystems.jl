@@ -267,10 +267,9 @@ Return a String for the data type of the forecast data, this implementation avoi
 """
 get_data_type(ts::TimeSeriesData) = get_type_label(eltype_data(ts))
 
-# Can define new methods for new types if the default doesn't work for them
 get_type_label(::Type{CONSTANT}) = "CONSTANT"
 get_type_label(::Type{<:Integer}) = get_type_label(CONSTANT)
-get_type_label(data_type::Type{<:Any}) = string(data_type)  # temporary, see below
+get_type_label(data_type::Type{<:Any}) = string(nameof(data_type))
 
 function _write_time_series_attributes!(
     ts::T,
@@ -291,33 +290,11 @@ function _read_time_series_attributes(path)
     )
 end
 
-_TYPE_DICT = Dict("CONSTANT" => CONSTANT)  # Special cases that shouldn't get parsed as Julia types
+_TYPE_DICT = Dict("CONSTANT" => CONSTANT)  # Special cases that shouldn't get parsed as IS types
 
-# TODO hacky and temporary, will be replaced when attributes are stored elsewhere
-function parse_type(type_str)
-    haskey(_TYPE_DICT, type_str) && return _TYPE_DICT[type_str]
-
-    # If the type string has a module name embedded, use that
-    check_for_module = split(type_str, '.')
-    if length(check_for_module) > 1
-        my_module = getproperty(Main, Symbol(join(check_for_module[1:(end - 1)], '.')))
-    else
-        my_module = Main
-    end
-    rest = check_for_module[end]
-
-    # Split by things you might find in a parametric type, remove empty trailing string
-    splitted = filter(!=(""), split(rest, ['{', ',', '}']))
-    primary_type = getproperty(my_module, Symbol(first(splitted)))
-    (length(splitted) == 1) && return primary_type
-    (length(splitted) > 2) && throw(
-        NotImplementedError(
-            :parse_type,
-            "parametric types with more than one parameter, got $type_str",
-        ),
-    )
-    return primary_type{getproperty(Main, Symbol(splitted[2]))}
-end
+# A different approach would be needed to support time series containing non-IS types
+parse_type(type_str) =
+    get(_TYPE_DICT, type_str, getproperty(InfrastructureSystems, Symbol(type_str)))
 
 function _read_time_series_type(path)
     module_str = HDF5.read(HDF5.attributes(path)["module"])
