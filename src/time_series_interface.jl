@@ -124,6 +124,15 @@ function get_time_series_multiple(
     end
 end
 
+function get_time_series_uuid(
+    ::Type{T},
+    component::InfrastructureSystemsComponent,
+    name::AbstractString,
+) where {T <: TimeSeriesData}
+    metadata = get_time_series_metadata(T, component, name)
+    return get_time_series_uuid(metadata)
+end
+
 function get_time_series_metadata(
     ::Type{T},
     owner::TimeSeriesOwners,
