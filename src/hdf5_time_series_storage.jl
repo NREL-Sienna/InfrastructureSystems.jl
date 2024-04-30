@@ -799,7 +799,7 @@ function compare_values(
             @error "UUIDs don't match" uuid_x uuid_y
             return false
         end
-        if data_x != data_y
+        if !isequal(data_x, data_y)
             @error "data doesn't match" data_x data_y
             return false
         end
