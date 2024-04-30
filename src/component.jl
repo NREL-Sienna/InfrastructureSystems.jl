@@ -159,18 +159,18 @@ Return a Vector of supplemental_attributes. T can be concrete or abstract.
     of type T and returns a Bool. Apply this function to each component and only return components
     where the result is true.
 """
-function list_supplemental_attributes(
+function get_supplemental_attributes(
     ::Type{T},
     component::InfrastructureSystemsComponent,
 ) where {T <: SupplementalAttribute}
-    return _list_supplemental_attributes(T, component)
+    return _get_supplemental_attributes(T, component)
 end
 
-function list_supplemental_attributes(component::InfrastructureSystemsComponent)
-    return _list_supplemental_attributes(nothing, component)
+function get_supplemental_attributes(component::InfrastructureSystemsComponent)
+    return _get_supplemental_attributes(nothing, component)
 end
 
-function _list_supplemental_attributes(
+function _get_supplemental_attributes(
     supplemental_attribute_type::Union{Nothing, Type{<:SupplementalAttribute}},
     component::InfrastructureSystemsComponent,
 )
@@ -191,22 +191,22 @@ function _list_supplemental_attributes(
     ]
 end
 
-function list_supplemental_attributes(
+function get_supplemental_attributes(
     filter_func::Function,
     ::Type{T},
     component::InfrastructureSystemsComponent,
 ) where {T <: SupplementalAttribute}
-    return _list_supplemental_attributes(filter_func, T, component)
+    return _get_supplemental_attributes(filter_func, T, component)
 end
 
-function list_supplemental_attributes(
+function get_supplemental_attributes(
     filter_func::Function,
     component::InfrastructureSystemsComponent,
 )
-    return _list_supplemental_attributes(filter_func, nothing, component)
+    return _get_supplemental_attributes(filter_func, nothing, component)
 end
 
-function _list_supplemental_attributes(
+function _get_supplemental_attributes(
     filter_func::Function,
     supplemental_attribute_type::Union{Nothing, Type{<:SupplementalAttribute}},
     component::InfrastructureSystemsComponent,

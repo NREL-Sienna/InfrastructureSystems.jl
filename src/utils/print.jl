@@ -295,7 +295,7 @@ end
 
 function show_supplemental_attributes(io::IO, component::InfrastructureSystemsComponent)
     data_by_type = Dict{Any, Vector{OrderedDict{String, Any}}}()
-    for attribute in list_supplemental_attributes(component)
+    for attribute in get_supplemental_attributes(component)
         if !haskey(data_by_type, typeof(attribute))
             data_by_type[typeof(attribute)] = Vector{OrderedDict{String, Any}}()
         end
