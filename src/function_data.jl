@@ -18,23 +18,27 @@ LinearFunctionData(proportional_term) = LinearFunctionData(proportional_term, 0.
 get_proportional_term(fd::LinearFunctionData) = fd.proportional_term
 get_constant_term(fd::LinearFunctionData) = fd.constant_term
 
-function transform_array_for_hdf(data::Vector{LinearFunctionData})
-    transformed_data = Vector{NTuple{2, Float64}}(undef, length(data))
+function _transform_linear_vector_for_hdf(data::Vector{LinearFunctionData})
+    transfd_data = Vector{NTuple{2, Float64}}(undef, length(data))
     for (ix, fd) in enumerate(data)
-        transformed_data[ix] = (get_proportional_term(fd), get_constant_term(fd))
+        transfd_data[ix] = (get_proportional_term(fd), get_constant_term(fd))
     end
-    return transform_array_for_hdf(transformed_data)
+    return transfd_data
+end
+
+function transform_array_for_hdf(data::Vector{LinearFunctionData})
+    return transform_array_for_hdf(_transform_linear_vector_for_hdf(data))
 end
 
 function transform_array_for_hdf(
     data::SortedDict{Dates.DateTime, Vector{LinearFunctionData}},
 )
-    transformed_data =
+    transfd_data =
         sizehint!(SortedDict{Dates.DateTime, Vector{NTuple{2, Float64}}}(), length(data))
     for (k, fd) in data
-        transformed_data[k] = (get_proportional_term(fd), get_constant_term(fd))
+        transfd_data[k] = _transform_linear_vector_for_hdf(fd)
     end
-    return transform_array_for_hdf(transformed_data)
+    return transform_array_for_hdf(transfd_data)
 end
 
 """
@@ -57,25 +61,27 @@ get_quadratic_term(fd::QuadraticFunctionData) = fd.quadratic_term
 get_proportional_term(fd::QuadraticFunctionData) = fd.proportional_term
 get_constant_term(fd::QuadraticFunctionData) = fd.constant_term
 
-function transform_array_for_hdf(data::Vector{QuadraticFunctionData})
-    transformed_data = Vector{NTuple{3, Float64}}(undef, length(data))
+function _transform_quadratic_vector_for_hdf(data::Vector{LinearFunctionData})
+    transfd_data = Vector{NTuple{3, Float64}}(undef, length(data))
     for (ix, fd) in enumerate(data)
-        transformed_data[ix] =
-            (get_quadratic_term(fd), get_proportional_term(fd), get_constant_term(fd))
+        transfd_data[ix] = (get_quadratic_term(fd), get_proportional_term(fd), get_constant_term(fd))
     end
-    return transform_array_for_hdf(transformed_data)
+    return transfd_data
+end
+
+function transform_array_for_hdf(data::Vector{QuadraticFunctionData})
+    return transform_array_for_hdf(_transform_quadratic_vector_for_hdf(data))
 end
 
 function transform_array_for_hdf(
     data::SortedDict{Dates.DateTime, Vector{QuadraticFunctionData}},
 )
-    transformed_data =
+    transfd_data =
         sizehint!(SortedDict{Dates.DateTime, Vector{NTuple{3, Float64}}}(), length(data))
     for (k, fd) in data
-        transformed_data[k] =
-            (get_quadratic_term(fd), get_proportional_term(fd), get_constant_term(fd))
+        transfd_data[k] = _transform_quadratic_vector_for_hdf(fd)
     end
-    return transform_array_for_hdf(transformed_data)
+    return transform_array_for_hdf(transfd_data)
 end
 
 function _validate_piecewise_x(x_coords)
@@ -157,25 +163,29 @@ function get_slopes(pwl::PiecewiseLinearData)
     return _get_slopes(get_points(pwl))
 end
 
-function transform_array_for_hdf(data::Vector{PiecewiseLinearData})
-    transformed_data = Vector{Vector{NTuple{2, Float64}}}(undef, length(data))
+function _transform_pwl_linear_vector_for_hdf(data::Vector{PiecewiseLinearData})
+    transfd_data = Vector{Vector{NTuple{2, Float64}}}(undef, length(data))
     for (ix, fd) in enumerate(data)
-        transformed_data[ix] = NTuple{2, Float64}.(get_points(fd))
+        transfd_data[ix] = NTuple{2, Float64}.(get_points(fd))
     end
-    return transform_array_for_hdf(transformed_data)
+    return transfd_data
+end
+
+function transform_array_for_hdf(data::Vector{PiecewiseLinearData})
+    return transform_array_for_hdf(_transform_pwl_linear_vector_for_hdf(data))
 end
 
 function transform_array_for_hdf(
     data::SortedDict{Dates.DateTime, Vector{PiecewiseLinearData}},
 )
-    transformed_data = sizehint!(
+    transfd_data = sizehint!(
         SortedDict{Dates.DateTime, Vector{Vector{Tuple{Float64, Float64}}}}(),
         length(data),
     )
     for (k, fd) in data
-        transformed_data[k] = NTuple{2, Float64}.(get_points(fd))
+        transfd_data[k] = _transform_pwl_linear_vector_for_hdf(fd)
     end
-    return transform_array_for_hdf(transformed_data)
+    return transform_array_for_hdf(transfd_data)
 end
 
 """
@@ -234,29 +244,31 @@ function running_sum(data::PiecewiseStepData)
     return points
 end
 
-function transform_array_for_hdf(data::Vector{PiecewiseStepData})
-    transformed_data = Vector{Matrix{Float64}}(undef, length(data))
+function _transform_pwl_step_vector_hdf(data::Vector{PiecewiseStepData})
+    transfd_data = Vector{Matrix{Float64}}(undef, length(data))
     for (ix, fd) in enumerate(data)
         x_coords = get_x_coords(fd)
         y_coords = vcat(NaN, get_y_coords(fd))
-        transformed_data[ix] = hcat(x_coords, y_coords)
+        transfd_data[ix] = hcat(x_coords, y_coords)
     end
-    return transform_array_for_hdf(transformed_data)
+    return transfd_data
+end
+
+function transform_array_for_hdf(data::Vector{PiecewiseStepData})
+    return transform_array_for_hdf(_transform_pwl_step_vector_hdf(data))
 end
 
 function transform_array_for_hdf(
     data::SortedDict{Dates.DateTime, Vector{PiecewiseStepData}},
 )
-    transformed_data = sizehint!(
+    transfd_data = sizehint!(
         SortedDict{Dates.DateTime, Vector{Matrix{Float64}}}(),
         length(data),
     )
     for (k, fd) in data
-        x_coords = get_x_coords(fd)
-        y_coords = vcat(NaN, get_y_coords(fd))
-        transformed_data[k] = hcat(x_coords, y_coords)
+        transfd_data[k] = _transform_pwl_step_vector_hdf(fd)
     end
-    return transform_array_for_hdf(transformed_data)
+    return transform_array_for_hdf(transfd_data)
 end
 
 """
