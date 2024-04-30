@@ -13,7 +13,7 @@ function DeterministicMetadata(ts::AbstractDeterministic; features...)
     )
 end
 
-function serialize(::Type{<:T}) where {T <: AbstractDeterministic}
+function serialize(::Type{T}) where {T <: TimeSeriesData}
     # This currently cannot be done for all InfrastructureSystemsTypes.
     # Some are encoded directly as strings.
     @debug "serialize" _group = LOG_GROUP_SERIALIZATION T

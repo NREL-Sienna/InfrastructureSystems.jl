@@ -57,7 +57,7 @@ attributes.
     forecast_count::Int
 end
 
-# TODO: This is now only used in PSY. Consider moving.
+# TODO: This is now only temporarily being used in PSY and will soon be removed.
 @kwdef struct TimeSeriesKey <: InfrastructureSystemsType
     time_series_type::Type{<:TimeSeriesData}
     name::String
@@ -72,7 +72,13 @@ function deserialize_struct(::Type{TimeSeriesKey}, data::Dict)
     for field_name in fieldnames(TimeSeriesKey)
         val = data[string(field_name)]
         if field_name == :time_series_type
-            val = getproperty(InfrastructureSystems, Symbol(strip_module_name(val)))
+            if val isa Dict && haskey(val, METADATA_KEY)
+                metadata = get_serialization_metadata(val)
+                type = get_type_from_serialization_metadata(metadata)
+                val = type
+            else
+                val = getproperty(InfrastructureSystems, Symbol(strip_module_name(val)))
+            end
         end
         vals[field_name] = val
     end

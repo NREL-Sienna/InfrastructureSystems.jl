@@ -474,7 +474,8 @@ end
 
 @testset "Test bulk add of time series" begin
     for in_memory in (false, true)
-        sys = IS.SystemData()
+        sys = IS.SystemData(; time_series_in_memory = in_memory)
+        @test IS.stores_time_series_in_memory(sys) == in_memory
         initial_time = Dates.DateTime("2020-09-01")
         resolution = Dates.Hour(1)
         len = 24
@@ -513,7 +514,7 @@ end
     end
 
     for in_memory in (false, true)
-        sys = IS.SystemData()
+        sys = IS.SystemData(; time_series_in_memory = in_memory)
         initial_time = Dates.DateTime("2020-09-01")
         resolution = Dates.Hour(1)
         len = 24

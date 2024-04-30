@@ -969,3 +969,6 @@ function remove_supplemental_attributes!(
     end
     return
 end
+
+stores_time_series_in_memory(data::SystemData) =
+    data.time_series_manager.data_store isa InMemoryTimeSeriesStorage

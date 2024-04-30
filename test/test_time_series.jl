@@ -2561,3 +2561,23 @@ end
         pop!(ENV, "SIENNA_TIME_SERIES_DIRECTORY")
     end
 end
+
+@testset "Test get_time_series_uuid" begin
+    sys = IS.SystemData()
+    name = "Component1"
+    component = IS.TestComponent(name, 5)
+    IS.add_component!(sys, component)
+
+    initial_time = Dates.DateTime("2020-09-01")
+    resolution = Dates.Hour(1)
+
+    data = TimeSeries.TimeArray(
+        range(initial_time; length = 365, step = resolution),
+        rand(365),
+    )
+    ts_name = "test"
+    ts = IS.SingleTimeSeries(; data = data, name = ts_name)
+    uuid = IS.get_uuid(ts)
+    IS.add_time_series!(sys, component, ts)
+    ts2 = IS.get_time_series_uuid(IS.SingleTimeSeries, component, ts_name)
+end
