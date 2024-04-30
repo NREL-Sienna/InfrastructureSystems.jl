@@ -363,6 +363,7 @@ function deserialize_time_series(
     rows::UnitRange,
     columns::UnitRange,
 ) where {T <: StaticTimeSeries}
+    @assert_op columns == 1:1
     _deserialize_time_series(T, storage, metadata, rows, columns, storage.file)
 end
 
@@ -462,7 +463,7 @@ end
 function get_hdf_array(
     dataset,
     ::Type{<:CONSTANT},
-    metadata::ForecastMetadata,
+    metadata::TimeSeriesMetadata,
     rows::UnitRange{Int},
     columns::UnitRange{Int},
 )
@@ -486,7 +487,7 @@ end
 function get_hdf_array(
     dataset,
     T,
-    metadata::TimeSeriesMetadata,  # TODO should this be `ForecastMetadata`?
+    metadata::TimeSeriesMetadata,
     rows::UnitRange{Int},
     columns::UnitRange{Int},
 )

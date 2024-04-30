@@ -70,6 +70,7 @@ function deserialize_time_series(
     rows::UnitRange,
     columns::UnitRange,
 ) where {T <: StaticTimeSeries}
+    @assert_op columns == 1:1
     uuid = get_time_series_uuid(ts_metadata)
     if !haskey(storage.data, uuid)
         throw(ArgumentError("$uuid is not stored"))
