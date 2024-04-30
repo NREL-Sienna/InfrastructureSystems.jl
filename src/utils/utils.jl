@@ -480,7 +480,9 @@ function transform_array_for_hdf(data::Vector{T}) where {T <: Tuple}
     return t_lin_cost
 end
 
-transform_array_for_hdf(data::SortedDict{Dates.DateTime, <:Vector{T}}) where {T <: FunctionData} =
+transform_array_for_hdf(
+    data::SortedDict{Dates.DateTime, <:Vector{T}},
+) where {T <: FunctionData} =
     transform_array_for_hdf(
         SortedDict{Dates.DateTime, Vector{get_raw_data_type(T)}}(
             k => get_raw_data.(v) for (k, v) in data
@@ -563,14 +565,14 @@ function transform_array_for_hdf(
     n_points = size(first(first(costs)), 1)
     for cost in costs
         (length(cost) != rows || !all(size.(cost, 1) .== n_points)) &&
-        throw(
-            ArgumentError(
-                "Only supported for the case where each element has the same length",
-            ),
-        )
+            throw(
+                ArgumentError(
+                    "Only supported for the case where each element has the same length",
+                ),
+            )
     end
     @assert_op size(first(first(costs)), 2) == 2  # should be just (x, y)
-    
+
     combined_cost = Array{Float64}(undef, rows, cols, n_points, 2)
     for r in 1:rows, (c, ca) in enumerate(costs)
         combined_cost[r, c, :, :] = ca[r]

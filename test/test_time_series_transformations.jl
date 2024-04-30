@@ -18,7 +18,11 @@ test_inner_round_trip(data::SortedDict{Dates.DateTime, <:Vector}) =
     _test_inner_round_trip_common(data, hcat(values(data)...))
 
 # Do a full serialization and deserialization to make sure subsetting works properly
-function test_outer_round_trip(data::TimeSeries.TimeArray, storage::IS.TimeSeriesStorage, rows::UnitRange)
+function test_outer_round_trip(
+    data::TimeSeries.TimeArray,
+    storage::IS.TimeSeriesStorage,
+    rows::UnitRange,
+)
     ts = IS.SingleTimeSeries(; data = data, name = "test")
     ts_metadata = IS.SingleTimeSeriesMetadata(ts)
     IS.serialize_time_series!(storage, ts)
@@ -28,16 +32,22 @@ function test_outer_round_trip(data::TimeSeries.TimeArray, storage::IS.TimeSerie
     @test IS.get_data(ts_subset) == IS.get_data(ts)[rows]
 end
 
-function test_outer_round_trip(data::SortedDict{Dates.DateTime, <:Vector}, storage::IS.TimeSeriesStorage, rows::UnitRange, columns::UnitRange)
+function test_outer_round_trip(
+    data::SortedDict{Dates.DateTime, <:Vector},
+    storage::IS.TimeSeriesStorage,
+    rows::UnitRange,
+    columns::UnitRange,
+)
     resolution = -(collect(keys(data))[2:-1:1]...)
     ts = IS.Deterministic(; data = data, name = "test", resolution = resolution)
     ts_metadata = IS.DeterministicMetadata(ts)
     IS.serialize_time_series!(storage, ts)
-    ts_subset = IS.deserialize_time_series(IS.Deterministic, storage, ts_metadata, rows, columns)
+    ts_subset =
+        IS.deserialize_time_series(IS.Deterministic, storage, ts_metadata, rows, columns)
     @test IS.get_horizon(ts_subset) == length(rows)
     @test IS.get_count(ts_subset) == length(columns)
     @test collect(values(IS.get_data(ts_subset))) ==
-        [sub[rows] for sub in collect(values(IS.get_data(ts)))[columns]]
+          [sub[rows] for sub in collect(values(IS.get_data(ts)))[columns]]
 end
 
 # TEST DATA/RESOURCES
@@ -46,11 +56,11 @@ tst_gen_storage() = IS.make_time_series_storage(; in_memory = true)
 tst_test_dates = [Dates.DateTime("2023-01-01"), Dates.DateTime("2024-01-01")]
 
 tst_gen_test_date_series(l) =
-    collect(range(start = Dates.Date("2024-01-01"), step = Dates.Day(1), length = l))
+    collect(range(; start = Dates.Date("2024-01-01"), step = Dates.Day(1), length = l))
 
 tst_gen_piecewise_linear(start, n) = [
-        IS.PiecewiseLinearData([(i, i + 1), (i + 2, i + 3), (i + 4, i + 5)])
-        for i::Float64 in start:6:(start + 6 * (n - 1))]
+    IS.PiecewiseLinearData([(i, i + 1), (i + 2, i + 3), (i + 4, i + 5)])
+    for i::Float64 in start:6:(start + 6 * (n - 1))]
 
 tst_gen_piecewise_step(start, n) = [
     IS.PiecewiseStepData([i, i + 1, i + 2], [i + 3, i + 4])
