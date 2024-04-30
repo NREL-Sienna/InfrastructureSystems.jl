@@ -135,7 +135,4 @@ end
     for (fd, answer) in zip(get_test_function_data(), raw_data_answers)
         @test IS.get_raw_data_type(typeof(fd)) == typeof(answer)
     end
-    for (fd, answer) in zip(get_test_function_data(), raw_data_answers)
-        @test isequal(IS.get_raw_data(fd), answer)  # isequal rather than == for NaN handling
-    end
 end

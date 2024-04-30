@@ -18,6 +18,29 @@ LinearFunctionData(proportional_term) = LinearFunctionData(proportional_term, 0.
 get_proportional_term(fd::LinearFunctionData) = fd.proportional_term
 get_constant_term(fd::LinearFunctionData) = fd.constant_term
 
+function _transform_linear_vector_for_hdf(data::Vector{LinearFunctionData})
+    transfd_data = Vector{NTuple{2, Float64}}(undef, length(data))
+    for (ix, fd) in enumerate(data)
+        transfd_data[ix] = (get_proportional_term(fd), get_constant_term(fd))
+    end
+    return transfd_data
+end
+
+function transform_array_for_hdf(data::Vector{LinearFunctionData})
+    return transform_array_for_hdf(_transform_linear_vector_for_hdf(data))
+end
+
+function transform_array_for_hdf(
+    data::SortedDict{Dates.DateTime, Vector{LinearFunctionData}},
+)
+    transfd_data =
+        sizehint!(SortedDict{Dates.DateTime, Vector{NTuple{2, Float64}}}(), length(data))
+    for (k, fd) in data
+        transfd_data[k] = _transform_linear_vector_for_hdf(fd)
+    end
+    return transform_array_for_hdf(transfd_data)
+end
+
 """
 Structure to represent the underlying data of quadratic functions. Principally used for the
 representation of cost functions
@@ -37,6 +60,30 @@ end
 get_quadratic_term(fd::QuadraticFunctionData) = fd.quadratic_term
 get_proportional_term(fd::QuadraticFunctionData) = fd.proportional_term
 get_constant_term(fd::QuadraticFunctionData) = fd.constant_term
+
+function _transform_quadratic_vector_for_hdf(data::Vector{QuadraticFunctionData})
+    transfd_data = Vector{NTuple{3, Float64}}(undef, length(data))
+    for (ix, fd) in enumerate(data)
+        transfd_data[ix] =
+            (get_quadratic_term(fd), get_proportional_term(fd), get_constant_term(fd))
+    end
+    return transfd_data
+end
+
+function transform_array_for_hdf(data::Vector{QuadraticFunctionData})
+    return transform_array_for_hdf(_transform_quadratic_vector_for_hdf(data))
+end
+
+function transform_array_for_hdf(
+    data::SortedDict{Dates.DateTime, Vector{QuadraticFunctionData}},
+)
+    transfd_data =
+        sizehint!(SortedDict{Dates.DateTime, Vector{NTuple{3, Float64}}}(), length(data))
+    for (k, fd) in data
+        transfd_data[k] = _transform_quadratic_vector_for_hdf(fd)
+    end
+    return transform_array_for_hdf(transfd_data)
+end
 
 function _validate_piecewise_x(x_coords)
     (length(x_coords) < 2) &&
@@ -117,6 +164,31 @@ function get_slopes(pwl::PiecewiseLinearData)
     return _get_slopes(get_points(pwl))
 end
 
+function _transform_pwl_linear_vector_for_hdf(data::Vector{PiecewiseLinearData})
+    transfd_data = Vector{Vector{NTuple{2, Float64}}}(undef, length(data))
+    for (ix, fd) in enumerate(data)
+        transfd_data[ix] = NTuple{2, Float64}.(get_points(fd))
+    end
+    return transfd_data
+end
+
+function transform_array_for_hdf(data::Vector{PiecewiseLinearData})
+    return transform_array_for_hdf(_transform_pwl_linear_vector_for_hdf(data))
+end
+
+function transform_array_for_hdf(
+    data::SortedDict{Dates.DateTime, Vector{PiecewiseLinearData}},
+)
+    transfd_data = sizehint!(
+        SortedDict{Dates.DateTime, Vector{Vector{Tuple{Float64, Float64}}}}(),
+        length(data),
+    )
+    for (k, fd) in data
+        transfd_data[k] = _transform_pwl_linear_vector_for_hdf(fd)
+    end
+    return transform_array_for_hdf(transfd_data)
+end
+
 """
 Structure to represent a step function as a series of endpoint x-coordinates and segment
 y-coordinates: two x-coordinates and one y-coordinate defines a single segment, three
@@ -173,6 +245,33 @@ function running_sum(data::PiecewiseStepData)
     return points
 end
 
+function _transform_pwl_step_vector_hdf(data::Vector{PiecewiseStepData})
+    transfd_data = Vector{Matrix{Float64}}(undef, length(data))
+    for (ix, fd) in enumerate(data)
+        x_coords = get_x_coords(fd)
+        y_coords = vcat(NaN, get_y_coords(fd))
+        transfd_data[ix] = hcat(x_coords, y_coords)
+    end
+    return transfd_data
+end
+
+function transform_array_for_hdf(data::Vector{PiecewiseStepData})
+    return transform_array_for_hdf(_transform_pwl_step_vector_hdf(data))
+end
+
+function transform_array_for_hdf(
+    data::SortedDict{Dates.DateTime, Vector{PiecewiseStepData}},
+)
+    transfd_data = sizehint!(
+        SortedDict{Dates.DateTime, Vector{Matrix{Float64}}}(),
+        length(data),
+    )
+    for (k, fd) in data
+        transfd_data[k] = _transform_pwl_step_vector_hdf(fd)
+    end
+    return transform_array_for_hdf(transfd_data)
+end
+
 """
 Calculates the x-length of each segment of a piecewise curve.
 """
@@ -219,20 +318,6 @@ deserialize(::Type{FunctionData}, val::Dict) =
 # FunctionData support fetching "raw data" to support cases where we might want to store
 # their data in a different container in its most purely numerical form, such as in
 # PowerSimulations.
-
-"""
-Get a bare numerical representation of the data represented by the FunctionData
-"""
-function get_raw_data end
-get_raw_data(fd::LinearFunctionData) = (get_proportional_term(fd), get_constant_term(fd))
-get_raw_data(fd::QuadraticFunctionData) =
-    (get_quadratic_term(fd), get_proportional_term(fd), get_constant_term(fd))
-get_raw_data(fd::PiecewiseLinearData) = Tuple.(get_points(fd))
-function get_raw_data(fd::PiecewiseStepData)
-    x_coords = get_x_coords(fd)
-    y_coords = vcat(NaN, get_y_coords(fd))  # Using NaN for type simplicity
-    return hcat(x_coords, y_coords)
-end
 
 """
 Get from a subtype or instance of FunctionData the type of data its get_raw_data method returns
