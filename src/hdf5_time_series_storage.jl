@@ -265,12 +265,11 @@ end
 """
 Return a String for the data type of the forecast data, this implementation avoids the use of `eval` on arbitrary code stored in HDF dataset.
 """
-function get_data_type(ts::TimeSeriesData)
-    data_type = eltype_data(ts)
-    ((data_type <: CONSTANT) || (data_type <: Integer)) && (return "CONSTANT")
-    (data_type <: FunctionData) && (return string(nameof(data_type)))
-    error("$data_type is not supported in forecast data")
-end
+get_data_type(ts::TimeSeriesData) = get_type_label(eltype_data(ts))
+
+get_type_label(::Type{CONSTANT}) = "CONSTANT"
+get_type_label(::Type{<:Integer}) = get_type_label(CONSTANT)
+get_type_label(data_type::Type{<:Any}) = string(nameof(data_type))
 
 function _write_time_series_attributes!(
     ts::T,
@@ -287,21 +286,15 @@ function _read_time_series_attributes(path)
     return Dict(
         "type" => _read_time_series_type(path),
         "dataset_size" => size(path["data"]),
-        "data_type" => _TYPE_DICT[HDF5.read(HDF5.attributes(path)["data_type"])],
+        "data_type" => parse_type(HDF5.read(HDF5.attributes(path)["data_type"])),
     )
 end
 
-# TODO I suspect this could be designed better using reflection even without the security risks of eval discussed above
-const _TYPE_DICT = Dict(
-    string(nameof(st)) => st for st in [
-        LinearFunctionData,
-        QuadraticFunctionData,
-        PolynomialFunctionData,
-        PiecewiseLinearPointData,
-        PiecewiseLinearSlopeData,
-    ]
-)
-_TYPE_DICT["CONSTANT"] = CONSTANT
+_TYPE_DICT = Dict("CONSTANT" => CONSTANT)  # Special cases that shouldn't get parsed as IS types
+
+# A different approach would be needed to support time series containing non-IS types
+parse_type(type_str) =
+    get(_TYPE_DICT, type_str, getproperty(InfrastructureSystems, Symbol(type_str)))
 
 function _read_time_series_type(path)
     module_str = HDF5.read(HDF5.attributes(path)["module"])
@@ -370,6 +363,7 @@ function deserialize_time_series(
     rows::UnitRange,
     columns::UnitRange,
 ) where {T <: StaticTimeSeries}
+    @assert_op columns == 1:1
     _deserialize_time_series(T, storage, metadata, rows, columns, storage.file)
 end
 
@@ -469,7 +463,7 @@ end
 function get_hdf_array(
     dataset,
     ::Type{<:CONSTANT},
-    metadata::ForecastMetadata,
+    metadata::TimeSeriesMetadata,
     rows::UnitRange{Int},
     columns::UnitRange{Int},
 )
@@ -492,35 +486,21 @@ end
 
 function get_hdf_array(
     dataset,
-    ::Type{LinearFunctionData},
+    T,
     metadata::TimeSeriesMetadata,
     rows::UnitRange{Int},
     columns::UnitRange{Int},
 )
-    data = get_hdf_array(dataset, CONSTANT, metadata, rows, columns)
-    return SortedDict{Dates.DateTime, Vector{LinearFunctionData}}(
-        k => LinearFunctionData.(v) for (k, v) in data
-    )
-end
-
-_quadratic_from_tuple((a, b)::Tuple{Float64, Float64}) = QuadraticFunctionData(a, b, 0.0)
-
-function get_hdf_array(
-    dataset,
-    type::Type{QuadraticFunctionData},
-    metadata::ForecastMetadata,
-    rows::UnitRange{Int},
-    columns::UnitRange{Int},
-)
-    data = SortedDict{Dates.DateTime, Vector{QuadraticFunctionData}}()
+    data = SortedDict{Dates.DateTime, Vector{T}}()
     resolution = get_resolution(metadata)
     initial_timestamp = get_initial_timestamp(metadata) + resolution * (rows.start - 1)
     interval = get_interval(metadata)
     start_time = initial_timestamp + interval * (columns.start - 1)
+    colons = repeat([:], ndims(dataset) - 2)
     if length(columns) == 1
-        data[start_time] = retransform_hdf_array(dataset[rows, columns.start, :], type)
+        data[start_time] = retransform_hdf_array(dataset[rows, columns.start, colons...], T)
     else
-        data_read = retransform_hdf_array(dataset[rows, columns, :], type)
+        data_read = retransform_hdf_array(dataset[rows, columns, colons...], T)
         for (i, it) in
             enumerate(range(start_time; length = length(columns), step = interval))
             data[it] = @view data_read[1:length(rows), i]
@@ -531,44 +511,20 @@ end
 
 function get_hdf_array(
     dataset,
-    type::Type{PiecewiseLinearPointData},
-    metadata::ForecastMetadata,
-    rows::UnitRange{Int},
-    columns::UnitRange{Int},
-)
-    data = SortedDict{Dates.DateTime, Vector{PiecewiseLinearPointData}}()
-    resolution = get_resolution(metadata)
-    initial_timestamp = get_initial_timestamp(metadata) + resolution * (rows.start - 1)
-    interval = get_interval(metadata)
-    start_time = initial_timestamp + interval * (columns.start - 1)
-    if length(columns) == 1
-        data[start_time] = retransform_hdf_array(dataset[rows, columns.start, :, :], type)
-    else
-        data_read = retransform_hdf_array(dataset[rows, columns, :, :], type)
-        for (i, it) in
-            enumerate(range(start_time; length = length(columns), step = interval))
-            data[it] = @view data_read[1:length(rows), i]
-        end
-    end
-    return data
-end
-
-function get_hdf_array(
-    dataset,
-    type::Union{Type{<:CONSTANT}, Type{LinearFunctionData}},
+    type::Type{<:CONSTANT},
     rows::UnitRange{Int},
 )
     data = retransform_hdf_array(dataset[rows], type)
     return data
 end
 
-function get_hdf_array(dataset, type::Type{QuadraticFunctionData}, rows::UnitRange{Int})
-    data = retransform_hdf_array(dataset[rows, :, :], type)
-    return data
-end
-
-function get_hdf_array(dataset, type::Type{PiecewiseLinearPointData}, rows::UnitRange{Int})
-    data = retransform_hdf_array(dataset[rows, :, :, :], type)
+function get_hdf_array(
+    dataset,
+    T,
+    rows::UnitRange{Int},
+)
+    colons = repeat([:], ndims(dataset) - 1)
+    data = retransform_hdf_array(dataset[rows, colons...], T)
     return data
 end
 
@@ -576,70 +532,51 @@ function retransform_hdf_array(data::Array, ::Type{<:CONSTANT})
     return data
 end
 
-function retransform_hdf_array(data::Array, ::Type{LinearFunctionData})
-    return LinearFunctionData.(data)
+function retransform_hdf_array(
+    data::Array,
+    T::Union{Type{LinearFunctionData}, Type{QuadraticFunctionData}},
+)
+    length_req = fieldcount(get_raw_data_type(T))
+    (size(data)[end] != length_req) && throw(
+        ArgumentError(
+            "Last dimension of data must have length $length_req, got size $(size(data))",
+        ),
+    )
+    dims_to_keep = Tuple(1:(ndims(data) - 1))
+    # Pop off the last dimension and call the constructor on that data
+    return map(x -> T(x...), eachslice(data; dims = dims_to_keep))  # PERF possibly preallocation would be better
 end
 
-function retransform_hdf_array(data::Array, T::Type{QuadraticFunctionData})
-    row, column, tuple_length = get_data_dims(data, T)
-    if isnothing(column)
-        t_data = Array{Tuple{Float64, Float64}}(undef, row)
-        for r in 1:row
-            t_data[r] = tuple(data[r, 1:tuple_length]...)
-        end
-    else
-        t_data = Array{Tuple{Float64, Float64}}(undef, row, column)
-        for r in 1:row, c in 1:column
-            t_data[r, c] = tuple(data[r, c, 1:tuple_length]...)
-        end
-    end
-    return _quadratic_from_tuple.(t_data)
+retransform_hdf_array(data::Array, ::Type{PiecewiseLinearData}) =
+    PiecewiseLinearData.(retransform_hdf_array(data, Vector{NamedTuple}))
+
+function retransform_hdf_array(data::Array, ::Type{<:Vector{<:Union{Tuple, NamedTuple}}})
+    length_req = 2
+    (size(data)[end] != length_req) && throw(
+        ArgumentError(
+            "Last dimension of data must have length $length_req, got size $(size(data))",
+        ),
+    )
+    dims_to_keep = Tuple(1:(ndims(data) - 2))
+    # Pop off the last dimension and call the constructor on that data
+    return map(
+        x -> [Tuple(pair) for pair in eachrow(x)],
+        eachslice(data; dims = dims_to_keep),
+    )  # PERF possibly preallocation would be better
 end
 
-function retransform_hdf_array(data::Array, T::Type{PiecewiseLinearPointData})
-    row, column, tuple_length, array_length = get_data_dims(data, T)
-    if isnothing(column)
-        t_data = Array{Vector{Tuple{Float64, Float64}}}(undef, row)
-        for r in 1:row
-            tuple_array = Array{Tuple{Float64, Float64}}(undef, array_length)
-            for l in 1:array_length
-                tuple_array[l] = tuple(data[r, 1:tuple_length, l]...)
-            end
-            t_data[r] = tuple_array
-        end
-    else
-        t_data = Array{Vector{Tuple{Float64, Float64}}}(undef, row, column)
-        for r in 1:row, c in 1:column
-            tuple_array = Array{Tuple{Float64, Float64}}(undef, array_length)
-            for l in 1:array_length
-                tuple_array[l] = tuple(data[r, c, 1:tuple_length, l]...)
-            end
-            t_data[r, c] = tuple_array
-        end
-    end
-    return PiecewiseLinearPointData.(t_data)
-end
+retransform_hdf_array(data::Array, ::Type{PiecewiseStepData}) =
+    PiecewiseStepData.(retransform_hdf_array(data, Matrix))
 
-function get_data_dims(data::Array, ::Type{QuadraticFunctionData})
-    if length(size(data)) == 2
-        row, tuple_length = size(data)
-        return (row, nothing, tuple_length)
-    elseif length(size(data)) == 3
-        return size(data)
-    else
-        error("Hdf data array is $(length(size(data)))-D array, expected 2-D or 3-D array.")
-    end
-end
-
-function get_data_dims(data::Array, ::Type{PiecewiseLinearPointData})
-    if length(size(data)) == 3
-        row, tuple_length, array_length = size(data)
-        return (row, nothing, tuple_length, array_length)
-    elseif length(size(data)) == 4
-        return size(data)
-    else
-        error("Hdf data array is $(length(size(data)))-D array, expected 3-D or 4-D array.")
-    end
+function retransform_hdf_array(data::Array, ::Type{Matrix})
+    length_req = 2
+    (size(data)[end] != length_req) && throw(
+        ArgumentError(
+            "Last dimension of data must have length $length_req, got size $(size(data))",
+        ),
+    )
+    dims_to_keep = Tuple(1:(ndims(data) - 2))
+    return eachslice(data; dims = dims_to_keep)
 end
 
 function deserialize_time_series(

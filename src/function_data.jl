@@ -2,21 +2,25 @@ abstract type FunctionData end
 
 """
 Structure to represent the underlying data of linear functions. Principally used for
-the representation of cost functions `f(x) = proportional_term*x`.
+the representation of cost functions `f(x) = proportional_term*x + constant_term`.
 
 # Arguments
- - `proportional_term::Float64`: the proportional term in the function
-   `f(x) = proportional_term*x`
+ - `proportional_term::Float64`: the proportional term in the represented function
+ - `constant_term::Float64`: the constant term in the represented function
 """
-struct LinearFunctionData <: FunctionData
+@kwdef struct LinearFunctionData <: FunctionData
     proportional_term::Float64
+    constant_term::Float64
 end
 
+LinearFunctionData(proportional_term) = LinearFunctionData(proportional_term, 0.0)
+
 get_proportional_term(fd::LinearFunctionData) = fd.proportional_term
+get_constant_term(fd::LinearFunctionData) = fd.constant_term
 
 """
-Structure to represent the underlying data of quadratic polynomial functions. Principally
-used for the representation of cost functions
+Structure to represent the underlying data of quadratic functions. Principally used for the
+representation of cost functions
 `f(x) = quadratic_term*x^2 + proportional_term*x + constant_term`.
 
 # Arguments
@@ -24,7 +28,7 @@ used for the representation of cost functions
  - `proportional_term::Float64`: the proportional term in the represented function
  - `constant_term::Float64`: the constant term in the represented function
 """
-struct QuadraticFunctionData <: FunctionData
+@kwdef struct QuadraticFunctionData <: FunctionData
     quadratic_term::Float64
     proportional_term::Float64
     constant_term::Float64
@@ -34,51 +38,35 @@ get_quadratic_term(fd::QuadraticFunctionData) = fd.quadratic_term
 get_proportional_term(fd::QuadraticFunctionData) = fd.proportional_term
 get_constant_term(fd::QuadraticFunctionData) = fd.constant_term
 
-"""
-Structure to represent the underlying data of higher order polynomials. Principally used for
-the representation of cost functions where
-`f(x) = sum_{i in keys(coefficients)} coefficients[i]*x^i`.
-
-# Arguments
- - `coefficients::Dict{Int, Float64}`: values are coefficients, keys are degrees to which
-   the coefficients apply (0 for the constant term, 2 for the squared term, etc.)
-"""
-struct PolynomialFunctionData <: FunctionData
-    coefficients::Dict{Int, Float64}
-end
-
-get_coefficients(fd::PolynomialFunctionData) = fd.coefficients
-
 function _validate_piecewise_x(x_coords)
-    # TODO currently there exist cases where we are constructing a PiecewiseLinearPointData
-    # with only one point (e.g., `calculate_variable_cost` within
-    # `power_system_table_data.jl`) -- what does this represent?
-    # (length(x_coords) >= 2) ||
-    #     throw(ArgumentError("Must specify at least two x-coordinates"))
-    issorted(x_coords) || throw(ArgumentError("Piecewise x-coordinates must be ascending"))
+    (length(x_coords) < 2) &&
+        throw(ArgumentError("Must specify at least two x-coordinates"))
+    !issorted(x_coords) &&
+        throw(ArgumentError("Piecewise x-coordinates must be ascending, got $x_coords"))
 end
 
 """
-Structure to represent  pointwise piecewise linear data. Principally used for the
-representation of cost functions where the points store quantities (x, y), such as (MW, \$).
-The curve starts at the first point given, not the origin.
+Structure to represent piecewise linear data as a series of points: two points define one
+segment, three points define two segments, etc. The curve starts at the first point given,
+not the origin. Principally used for the representation of cost functions where the points
+store quantities (x, y), such as (MW, \$/h).
 
 # Arguments
- - `points::Vector{XY_COORDS}`: the points that define the function
+ - `points::Vector{@NamedTuple{x::Float64, y::Float64}}`: the points that define the function
 """
-struct PiecewiseLinearPointData <: FunctionData
+@kwdef struct PiecewiseLinearData <: FunctionData
     points::Vector{XY_COORDS}
 
-    function PiecewiseLinearPointData(points::Vector{<:NamedTuple{(:x, :y)}})
+    function PiecewiseLinearData(points::Vector{<:NamedTuple{(:x, :y)}})
         _validate_piecewise_x(first.(points))
         return new(points)
     end
 end
 
-function PiecewiseLinearPointData(points::Vector{<:NamedTuple})
+function PiecewiseLinearData(points::Vector{<:NamedTuple})
     throw(
         ArgumentError(
-            "If constructing PiecewiseLinearPointData with NamedTuples, points must have type Vector{<:NamedTuple{(:x, :y)}}; got $(typeof(points))",
+            "If constructing PiecewiseLinearData with NamedTuples, points must have type Vector{<:NamedTuple{(:x, :y)}}; got $(typeof(points))",
         ),
     )
 end
@@ -89,22 +77,25 @@ function _convert_to_xy_coords(point)
         (keys(point) == Set(["x", "y"])) && return (x = point["x"], y = point["y"])
         throw(
             ArgumentError(
-                "If constructing PiecewiseLinearPointData with dictionaries, keys must be [\"x\", \"y\"]; got $(collect(keys(point)))",
+                "If constructing PiecewiseLinearData with dictionaries, keys must be [\"x\", \"y\"]; got $(collect(keys(point)))",
             ),
         )
     end
     return NamedTuple{(:x, :y)}(point)
 end
 
-function PiecewiseLinearPointData(points::Vector)
-    PiecewiseLinearPointData(_convert_to_xy_coords.(points))
+function PiecewiseLinearData(points::Vector)
+    PiecewiseLinearData(_convert_to_xy_coords.(points))
 end
 
 "Get the points that define the piecewise data"
-get_points(data::PiecewiseLinearPointData) = data.points
+get_points(data::PiecewiseLinearData) = data.points
 
 "Get the x-coordinates of the points that define the piecewise data"
-get_x_coords(data::PiecewiseLinearPointData) = first.(get_points(data))
+get_x_coords(data::PiecewiseLinearData) = [p.x for p in get_points(data)]
+
+"Get the y-coordinates of the points that define the PiecewiseLinearData"
+get_y_coords(data::PiecewiseLinearData) = [p.y for p in get_points(data)]
 
 function _get_slopes(vc::Vector{XY_COORDS})
     slopes = Vector{Float64}(undef, length(vc) - 1)
@@ -119,52 +110,60 @@ end
 _get_x_lengths(x_coords) = x_coords[2:end] .- x_coords[1:(end - 1)]
 
 """
-Calculates the slopes of the line segments defined by the PiecewiseLinearPointData,
+Calculates the slopes of the line segments defined by the PiecewiseLinearData,
 returning one fewer slope than the number of underlying points.
 """
-function get_slopes(pwl::PiecewiseLinearPointData)
+function get_slopes(pwl::PiecewiseLinearData)
     return _get_slopes(get_points(pwl))
 end
 
 """
-Structure to represent the underlying data of slope piecewise linear data. Principally used
-for the representation of cost functions where the points store quantities (x, dy/dx), such
-as (MW, \$/MW).
+Structure to represent a step function as a series of endpoint x-coordinates and segment
+y-coordinates: two x-coordinates and one y-coordinate defines a single segment, three
+x-coordinates and two y-coordinates define two segments, etc. This can be useful to
+represent the derivative of a [PiecewiseLinearData](@ref), where the y-coordinates of this
+step function represent the slopes of that piecewise linear function, so there is also an
+optional field `c` that can be used to store the initial y-value of that piecewise linear
+function. Principally used for the representation of cost functions where the points store
+quantities (x, dy/dx), such as (MW, \$/MWh).
 
 # Arguments
  - `x_coords::Vector{Float64}`: the x-coordinates of the endpoints of the segments
- - `y0::Float64`: the y-coordinate of the data at the first x-coordinate
- - `slopes::Vector{Float64}`: the slopes of the segments: `slopes[1]` is the slope between
-   `x_coords[1]` and `x_coords[2]`, etc.
+ - `y_coords::Vector{Float64}`: the y-coordinates of the segments: `y_coords[1]` is the y-value between
+ `x_coords[1]` and `x_coords[2]`, etc. Must have one fewer elements than `x_coords`.
+ - `c::Union{Nothing, Float64}`: optional, the value to use for the integral from 0 to `x_coords[1]` of this function
 """
-struct PiecewiseLinearSlopeData <: FunctionData
+@kwdef struct PiecewiseStepData <: FunctionData
     x_coords::Vector{Float64}
-    y0::Float64
-    slopes::Vector{Float64}
+    y_coords::Vector{Float64}
 
-    function PiecewiseLinearSlopeData(x_coords, y0, slopes)
+    function PiecewiseStepData(x_coords, y_coords)
+        if length(y_coords) == length(x_coords)
+            # To make the lengths match for HDF serialization, we prepend NaN to y_coords
+            isnan(first(y_coords)) && return PiecewiseStepData(x_coords, y_coords[2:end])
+            # To leave x_coords[1] undefined, must explicitly pass in NaN
+        end
         _validate_piecewise_x(x_coords)
-        (length(slopes) == length(x_coords) - 1) ||
-            throw(ArgumentError("Must specify one fewer slope than x-coordinates"))
-        return new(x_coords, y0, slopes)
+        (length(y_coords) != length(x_coords) - 1) &&
+            throw(ArgumentError("Must specify one fewer y-coordinates than x-coordinates"))
+        return new(x_coords, y_coords)
     end
 end
 
-"Get the slopes that define the PiecewiseLinearSlopeData"
-get_slopes(data::PiecewiseLinearSlopeData) = data.slopes
+# For HDF deserialization
+PiecewiseStepData(data::AbstractMatrix) = PiecewiseStepData(data[:, 1], data[:, 2])
 
 "Get the x-coordinates of the points that define the piecewise data"
-get_x_coords(data::PiecewiseLinearSlopeData) = data.x_coords
+get_x_coords(data::PiecewiseStepData) = data.x_coords
 
-"Get the y-coordinate of the data at the first x-coordinate"
-get_y0(data::PiecewiseLinearSlopeData) = data.y0
+"Get the y-coordinates of the segments in the PiecewiseStepData"
+get_y_coords(data::PiecewiseStepData) = data.y_coords
 
-"Calculate the endpoints of the segments in the PiecewiseLinearSlopeData"
-function get_points(data::PiecewiseLinearSlopeData)
-    slopes = get_slopes(data)
+function running_sum(data::PiecewiseStepData)
+    slopes = get_y_coords(data)
     x_coords = get_x_coords(data)
     points = Vector{XY_COORDS}(undef, length(x_coords))
-    running_y = get_y0(data)
+    running_y = 0
     points[1] = (x = x_coords[1], y = running_y)
     for (i, (prev_slope, this_x, dx)) in
         enumerate(zip(slopes, x_coords[2:end], get_x_lengths(data)))
@@ -177,28 +176,22 @@ end
 """
 Calculates the x-length of each segment of a piecewise curve.
 """
-function get_x_lengths(
-    pwl::Union{PiecewiseLinearPointData, PiecewiseLinearSlopeData},
-)
+function get_x_lengths(pwl::Union{PiecewiseLinearData, PiecewiseStepData})
     return _get_x_lengths(get_x_coords(pwl))
 end
 
-Base.length(pwl::Union{PiecewiseLinearPointData, PiecewiseLinearSlopeData}) =
+Base.length(pwl::Union{PiecewiseLinearData, PiecewiseStepData}) =
     length(get_x_coords(pwl)) - 1
 
-Base.getindex(pwl::PiecewiseLinearPointData, ix::Int) =
+Base.getindex(pwl::PiecewiseLinearData, ix::Int) =
     getindex(get_points(pwl), ix)
 
-Base.:(==)(a::PiecewiseLinearPointData, b::PiecewiseLinearPointData) =
+Base.:(==)(a::PiecewiseLinearData, b::PiecewiseLinearData) =
     get_points(a) == get_points(b)
 
-Base.:(==)(a::PiecewiseLinearSlopeData, b::PiecewiseLinearSlopeData) =
+Base.:(==)(a::PiecewiseStepData, b::PiecewiseStepData) =
     (get_x_coords(a) == get_x_coords(b)) &&
-    (get_y0(a) == get_y0(b)) &&
-    (get_slopes(a) == get_slopes(b))
-
-Base.:(==)(a::PolynomialFunctionData, b::PolynomialFunctionData) =
-    get_coefficients(a) == get_coefficients(b)
+    (get_y_coords(a) == get_y_coords(b))
 
 function _slope_convexity_check(slopes::Vector{Float64})
     for ix in 1:(length(slopes) - 1)
@@ -213,33 +206,10 @@ end
 """
 Returns True/False depending on the convexity of the underlying data
 """
-is_convex(pwl::Union{PiecewiseLinearPointData, PiecewiseLinearSlopeData}) =
+is_convex(pwl::PiecewiseLinearData) =
     _slope_convexity_check(get_slopes(pwl))
 
-# kwargs-only constructors for deserialization
-LinearFunctionData(; proportional_term) = LinearFunctionData(proportional_term)
-
-QuadraticFunctionData(; quadratic_term, proportional_term, constant_term) =
-    QuadraticFunctionData(quadratic_term, proportional_term, constant_term)
-
-PolynomialFunctionData(; coefficients) = PolynomialFunctionData(coefficients)
-
-PiecewiseLinearPointData(; points) = PiecewiseLinearPointData(points)
-
-PiecewiseLinearSlopeData(; x_coords, y0, slopes) =
-    PiecewiseLinearSlopeData(x_coords, y0, slopes)
-
 serialize(val::FunctionData) = serialize_struct(val)
-
-function deserialize_struct(T::Type{PolynomialFunctionData}, val::Dict)
-    data = deserialize_to_dict(T, val)
-    data[Symbol("coefficients")] =
-        Dict(
-            (k isa String ? parse(Int, k) : k, v)
-            for (k, v) in data[Symbol("coefficients")]
-        )
-    return T(; data...)
-end
 
 deserialize(T::Type{<:FunctionData}, val::Dict) = deserialize_struct(T, val)
 
@@ -254,27 +224,39 @@ deserialize(::Type{FunctionData}, val::Dict) =
 Get a bare numerical representation of the data represented by the FunctionData
 """
 function get_raw_data end
-get_raw_data(fd::LinearFunctionData) = get_proportional_term(fd)
+get_raw_data(fd::LinearFunctionData) = (get_proportional_term(fd), get_constant_term(fd))
 get_raw_data(fd::QuadraticFunctionData) =
     (get_quadratic_term(fd), get_proportional_term(fd), get_constant_term(fd))
-get_raw_data(fd::PolynomialFunctionData) =
-    sort([(degree, coeff) for (degree, coeff) in get_coefficients(fd)]; by = first)
-get_raw_data(fd::PiecewiseLinearPointData) = Tuple.(get_points(fd))
-function get_raw_data(fd::PiecewiseLinearSlopeData)
+get_raw_data(fd::PiecewiseLinearData) = Tuple.(get_points(fd))
+function get_raw_data(fd::PiecewiseStepData)
     x_coords = get_x_coords(fd)
-    return vcat((x_coords[1], get_y0(fd)), collect(zip(x_coords[2:end], get_slopes(fd))))
+    y_coords = vcat(NaN, get_y_coords(fd))  # Using NaN for type simplicity
+    return hcat(x_coords, y_coords)
 end
 
 """
-Get from a subtype of FunctionData the type of data its get_raw_data method returns
+Get from a subtype or instance of FunctionData the type of data its get_raw_data method returns
 """
 function get_raw_data_type end
-get_raw_data_type(::Union{LinearFunctionData, Type{LinearFunctionData}}) = Float64
+get_raw_data_type(::Union{LinearFunctionData, Type{LinearFunctionData}}) =
+    NTuple{2, Float64}
 get_raw_data_type(::Union{QuadraticFunctionData, Type{QuadraticFunctionData}}) =
     NTuple{3, Float64}
-get_raw_data_type(::Union{PolynomialFunctionData, Type{PolynomialFunctionData}}) =
-    Vector{Tuple{Int, Float64}}
-get_raw_data_type(::Union{PiecewiseLinearPointData, Type{PiecewiseLinearPointData}}) =
+get_raw_data_type(::Union{PiecewiseLinearData, Type{PiecewiseLinearData}}) =
     Vector{Tuple{Float64, Float64}}
-get_raw_data_type(::Union{PiecewiseLinearSlopeData, Type{PiecewiseLinearSlopeData}}) =
-    Vector{Tuple{Float64, Float64}}
+get_raw_data_type(::Union{PiecewiseStepData, Type{PiecewiseStepData}}) =
+    Matrix{Float64}
+
+"Losslessly convert `LinearFunctionData` to `QuadraticFunctionData`"
+QuadraticFunctionData(data::LinearFunctionData) =
+    QuadraticFunctionData(0, get_proportional_term(data), get_constant_term(data))
+
+"Losslessly convert `LinearFunctionData` to `QuadraticFunctionData`"
+Base.convert(::Type{QuadraticFunctionData}, data::LinearFunctionData) =
+    QuadraticFunctionData(data)
+
+"Get a `LinearFunctionData` representing the function `f(x) = 0`"
+Base.zero(::Union{LinearFunctionData, Type{LinearFunctionData}}) = LinearFunctionData(0, 0)
+
+"Get a `FunctionData` representing the function `f(x) = 0`"
+Base.zero(::Type{FunctionData}) = Base.zero(LinearFunctionData)

@@ -138,12 +138,12 @@ end
     other_time = initial_time + resolution
     name = "test"
     horizon = 24
-    linear_cost = repeat([IS.LinearFunctionData(3.14)], 24)
+    linear_cost = repeat([IS.LinearFunctionData(3.14, 1.23)], 24)
     data_linear = SortedDict(initial_time => linear_cost, other_time => linear_cost)
-    polynomial_cost = repeat([IS.QuadraticFunctionData(999.0, 1.0, 0.0)], 24)
+    polynomial_cost = repeat([IS.QuadraticFunctionData(999.0, 1.0, 0.5)], 24)
     data_polynomial =
         SortedDict(initial_time => polynomial_cost, other_time => polynomial_cost)
-    pwl_cost = repeat([IS.PiecewiseLinearPointData(repeat([(999.0, 1.0)], 5))], 24)
+    pwl_cost = repeat([IS.PiecewiseLinearData(repeat([(999.0, 1.0)], 5))], 24)
     data_pwl = SortedDict(initial_time => pwl_cost, other_time => pwl_cost)
     for d in [data_linear, data_polynomial, data_pwl]
         @testset "Add deterministic from $(typeof(d))" begin
@@ -1060,29 +1060,29 @@ function _test_add_single_time_series_type(test_value, type_name)
     data = IS.SingleTimeSeries(; data = data_series, name = "test_c")
     IS.add_time_series!(sys, component, data)
     ts = IS.get_time_series(IS.SingleTimeSeries, component, "test_c";)
-    @test IS.get_data_type(ts) == type_name
+    @test split(IS.get_data_type(ts), '.')[end] == type_name
     @test reshape(TimeSeries.values(IS.get_data(ts)), 365) == TimeSeries.values(data_series)
     _test_add_single_time_series_helper(component, initial_time)
 end
 
 @testset "Test add SingleTimeSeries with LinearFunctionData Cost" begin
     _test_add_single_time_series_type(
-        repeat([IS.LinearFunctionData(3.14)], 365),
+        repeat([IS.LinearFunctionData(3.14, 1.23)], 365),
         "LinearFunctionData",
     )
 end
 
 @testset "Test add SingleTimeSeries with QuadraticFunctionData Cost" begin
     _test_add_single_time_series_type(
-        repeat([IS.QuadraticFunctionData(999.0, 1.0, 0.0)], 365),
+        repeat([IS.QuadraticFunctionData(999.0, 1.0, 0.5)], 365),
         "QuadraticFunctionData",
     )
 end
 
-@testset "Test add SingleTimeSeries with PiecewiseLinearPointData Cost" begin
+@testset "Test add SingleTimeSeries with PiecewiseLinearData Cost" begin
     _test_add_single_time_series_type(
-        repeat([IS.PiecewiseLinearPointData(repeat([(999.0, 1.0)], 5))], 365),
-        "PiecewiseLinearPointData",
+        repeat([IS.PiecewiseLinearData(repeat([(999.0, 1.0)], 5))], 365),
+        "PiecewiseLinearData",
     )
 end
 
@@ -1857,7 +1857,7 @@ end
     for in_memory in (true, false)
         _test_get_time_series_option_type(
             SortedDict{Dates.DateTime, Vector{IS.LinearFunctionData}}(
-                it => repeat([IS.LinearFunctionData(3.14 * i)], 24) for
+                it => repeat([IS.LinearFunctionData(3.14 * i, 1.23 * i)], 24) for
                 (i, it) in enumerate(default_time_params.initial_times)
             ), in_memory, true)
     end
@@ -1867,18 +1867,18 @@ end
     for in_memory in (true, false)
         _test_get_time_series_option_type(
             SortedDict{Dates.DateTime, Vector{IS.QuadraticFunctionData}}(
-                it => repeat([IS.QuadraticFunctionData(999.0, 1.0 * i, 0.0)], 24) for
+                it => repeat([IS.QuadraticFunctionData(999.0, 1.0 * i, 1.23)], 24) for
                 (i, it) in enumerate(default_time_params.initial_times)
             ), in_memory, true)
     end
 end
 
-@testset "Test get_time_series options for PiecewiseLinearPointData Cost" begin
+@testset "Test get_time_series options for PiecewiseLinearData Cost" begin
     for in_memory in (true, false)
         _test_get_time_series_option_type(
-            SortedDict{Dates.DateTime, Vector{IS.PiecewiseLinearPointData}}(
+            SortedDict{Dates.DateTime, Vector{IS.PiecewiseLinearData}}(
                 it => repeat(
-                    [IS.PiecewiseLinearPointData(repeat([(999.0, 1.0 * i)], 5))],
+                    [IS.PiecewiseLinearData(repeat([(999.0, 1.0 * i)], 5))],
                     24,
                 ) for
                 (i, it) in enumerate(default_time_params.initial_times)

@@ -222,6 +222,7 @@ compare_values(::Type{T}, ::Type{T}; kwargs...) where {T} = true
 compare_values(::Type{T}, ::Type{U}; kwargs...) where {T, U} = false
 
 # Copied from https://discourse.julialang.org/t/encapsulating-enum-access-via-dot-syntax/11785/10
+# Some InfrastructureSystems-specific modifications
 """
 Macro to wrap Enum in a module to keep the top level scope clean.
 
@@ -247,6 +248,7 @@ macro scoped_enum(T, args...)
         :(
             module $(Symbol("$(T)Module"))
             using JSON3
+            import InfrastructureSystems
             export $T
             struct $T
                 value::Int64
@@ -263,6 +265,10 @@ macro scoped_enum(T, args...)
                 print(io, string($T, ".", string(e), " = ", e.value))
             Base.propertynames(::Type{$T}) = $([x.args[1] for x in args])
             JSON3.StructType(::Type{$T}) = JSON3.StructTypes.StringType()
+
+            InfrastructureSystems.serialize(val::$T) = Base.string(val)
+            InfrastructureSystems.deserialize(::Type{$T}, val) =
+                JSON3.StructTypes.constructfrom($T, val)
 
             Base.convert(::Type{$T}, val::Integer) = $T(val)
             Base.isless(val::$T, other::$T) = isless(val.value, other.value)
@@ -461,109 +467,118 @@ function transform_array_for_hdf(data::Vector{<:Real})
     return data
 end
 
-transform_array_for_hdf(data::SortedDict{Dates.DateTime, Vector{LinearFunctionData}}) =
-    transform_array_for_hdf(
-        SortedDict{Dates.DateTime, Vector{CONSTANT}}(
-            k => get_proportional_term.(v) for (k, v) in data
-        ),
-    )
+transform_array_for_hdf(data::Vector{<:FunctionData}) =
+    transform_array_for_hdf(get_raw_data.(data))
 
-transform_array_for_hdf(data::Vector{LinearFunctionData}) =
-    transform_array_for_hdf(get_proportional_term.(data))
-
-transform_array_for_hdf(data::Vector{PolynomialFunctionData}) =
-    throw(ArgumentError("Not yet implemented for PolynomialFunctionData"))
-
-transform_array_for_hdf(data::SortedDict{Dates.DateTime, Vector{PolynomialFunctionData}}) =
-    throw(ArgumentError("Not yet implemented for PolynomialFunctionData"))
-
-function transform_array_for_hdf(
-    data::SortedDict{Dates.DateTime, Vector{QuadraticFunctionData}},
-)
-    all(get_constant_term.(vcat(values(data)...)) .== 0) ||
-        throw(
-            ArgumentError(
-                "Not yet implemented for nonzero constant term ($(get_constant_term.(vcat(values(data)...))))",
-            ),
-        )
-    data = SortedDict(
-        k =>
-            [(get_quadratic_term(q), (get_proportional_term(q))) for q in v] for
-        (k, v) in data
-    )
-    lin_cost = hcat(values(data)...)
-    rows, cols = size(lin_cost)
-    @assert_op length(first(lin_cost)) == 2
-    t_lin_cost = Array{Float64}(undef, rows, cols, 2)
-    for r in 1:rows, c in 1:cols
-        tuple = lin_cost[r, c]
-        for (i, value) in enumerate(tuple)
-            t_lin_cost[r, c, i] = value
-        end
+function transform_array_for_hdf(data::Vector{T}) where {T <: Tuple}
+    rows = length(data)
+    degree = fieldcount(T)  # 2 for linear, 3 for quadratic
+    t_lin_cost = Array{Float64}(undef, rows, degree)
+    for r in 1:rows
+        t_lin_cost[r, :] = collect(data[r])
     end
     return t_lin_cost
-end
-
-function transform_array_for_hdf(data::Vector{QuadraticFunctionData})
-    all(get_constant_term.(data) .== 0) ||
-        throw(ArgumentError("Not yet implemented for nonzero constant term"))
-    data = [(get_quadratic_term(q), (get_proportional_term(q))) for q in data]
-    rows = length(data)
-    @assert_op length(first(data)) == 2
-    t_lin_cost = Array{Float64}(undef, rows, 1, 2)
-    for r in 1:rows
-        tuple = data[r]
-        for (i, value) in enumerate(tuple)
-            t_lin_cost[r, 1, i] = value
-        end
-    end
-    return t_lin_cost
-end
-
-function transform_array_for_hdf(
-    data::SortedDict{Dates.DateTime, Vector{PiecewiseLinearPointData}},
-)
-    quad_cost = hcat([get_points.(v) for v in values(data)]...)
-    rows, cols = size(quad_cost)
-    tuple_length = length(first(quad_cost))
-    @assert_op length(first(first(quad_cost))) == 2
-    t_quad_cost = Array{Float64}(undef, rows, cols, 2, tuple_length)
-    for r in 1:rows, c in 1:cols
-        tuple_array = quad_cost[r, c]
-        for (j, tuple) in enumerate(tuple_array)
-            for (i, value) in enumerate(tuple)
-                t_quad_cost[r, c, i, j] = value
-            end
-        end
-    end
-    return t_quad_cost
-end
-
-# TODO: old code here does not properly handle data with different numbers of points
-# TODO: remove duplication
-function transform_array_for_hdf(data::Vector{PiecewiseLinearPointData})
-    data = get_points.(data)
-    rows = length(data)
-    tuple_length = length(first(data))
-    @assert_op length(first(first(data))) == 2
-    t_quad_cost = Array{Float64}(undef, rows, 1, 2, tuple_length)
-    for r in 1:rows
-        tuple_array = data[r, 1]
-        for (j, tuple) in enumerate(tuple_array)
-            for (i, value) in enumerate(tuple)
-                t_quad_cost[r, 1, i, j] = value
-            end
-        end
-    end
-    return t_quad_cost
 end
 
 transform_array_for_hdf(
-    data::SortedDict{Dates.DateTime, Vector{T}}) where {T <: FunctionData} =
-    throw(ArgumentError("Not currently implemented for $T"))
+    data::SortedDict{Dates.DateTime, <:Vector{T}},
+) where {T <: FunctionData} =
+    transform_array_for_hdf(
+        SortedDict{Dates.DateTime, Vector{get_raw_data_type(T)}}(
+            k => get_raw_data.(v) for (k, v) in data
+        ),
+    )
 
-transform_array_for_hdf(data::Vector{T}) where {T <: FunctionData} =
-    throw(ArgumentError("Not currently implemented for $T"))
+function transform_array_for_hdf(
+    data::SortedDict{Dates.DateTime, Vector{T}},
+) where {T <: Tuple}
+    lin_cost = hcat(values(data)...)
+    rows, cols = size(lin_cost)
+    degree = fieldcount(T)  # 2 for linear, 3 for quadratic
+    t_lin_cost = Array{Float64}(undef, rows, cols, degree)
+    for r in 1:rows, c in 1:cols
+        t_lin_cost[r, c, :] = collect(lin_cost[r, c])
+    end
+    return t_lin_cost
+end
+
+function transform_array_for_hdf(data::Vector{<:Vector{<:Tuple}})
+    rows = length(data)
+    n_points = length(first(data))
+    !all(length.(data) .== n_points) &&
+        throw(
+            ArgumentError(
+                "Only supported for the case where each element has the same length",
+            ),
+        )
+    @assert_op length(first(first(data))) == 2  # should be just (x, y)
+    t_quad_cost = Array{Float64}(undef, rows, n_points, 2)
+    for r in 1:rows, t in 1:n_points
+        t_quad_cost[r, t, :] = collect(data[r][t])
+    end
+    return t_quad_cost
+end
+
+function transform_array_for_hdf(
+    data::SortedDict{Dates.DateTime, Vector{Vector{Tuple{Float64, Float64}}}},
+)
+    quad_cost = hcat(values(data)...)
+    rows, cols = size(quad_cost)
+    n_points = length(quad_cost[1, 1])
+    !all(length.(quad_cost) .== n_points) &&
+        throw(
+            ArgumentError(
+                "Only supported for the case where each element has the same length",
+            ),
+        )
+    @assert_op length(first(quad_cost[1, 1])) == 2  # should be just (x, y)
+    t_quad_cost = Array{Float64}(undef, rows, cols, n_points, 2)
+    for r in 1:rows, c in 1:cols, t in 1:n_points
+        t_quad_cost[r, c, t, :] = collect(quad_cost[r, c][t])
+    end
+    return t_quad_cost
+end
+
+function transform_array_for_hdf(data::Vector{<:Matrix})
+    rows = length(data)
+    n_points = size(first(data), 1)
+    !all(size.(data, 1) .== n_points) &&
+        throw(
+            ArgumentError(
+                "Only supported for the case where each element has the same length",
+            ),
+        )
+    @assert_op size(first(data), 2) == 2  # should be just (x, y)
+    combined_cost = Array{Float64}(undef, rows, n_points, 2)
+    for r in 1:rows
+        combined_cost[r, :, :] = data[r]
+    end
+    return combined_cost
+end
+
+function transform_array_for_hdf(
+    data::SortedDict{Dates.DateTime, <:Vector{<:Matrix}},
+)
+    cols = length(data)
+    costs = values(data)
+    rows = length(first(costs))
+    n_points = size(first(first(costs)), 1)
+    for cost in costs
+        (length(cost) != rows || !all(size.(cost, 1) .== n_points)) &&
+            throw(
+                ArgumentError(
+                    "Only supported for the case where each element has the same length",
+                ),
+            )
+    end
+    @assert_op size(first(first(costs)), 2) == 2  # should be just (x, y)
+
+    combined_cost = Array{Float64}(undef, rows, cols, n_points, 2)
+    for r in 1:rows, (c, ca) in enumerate(costs)
+        combined_cost[r, c, :, :] = ca[r]
+    end
+    return combined_cost
+end
 
 to_namedtuple(val) = (; (x => getproperty(val, x) for x in fieldnames(typeof(val)))...)
 
