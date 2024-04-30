@@ -716,7 +716,8 @@ function add_component!(data::SystemData, component; kwargs...)
     data.component_uuids[get_uuid(component)] = component
     refs = SharedSystemReferences(;
         time_series_manager = data.time_series_manager,
-        supplemental_attribute_manager = data.supplemental_attribute_manager)
+        supplemental_attribute_manager = data.supplemental_attribute_manager,
+    )
     set_shared_system_references!(component, refs)
     return
 end
@@ -965,7 +966,6 @@ remove_supplemental_attributes!(
     data::SystemData,
     type::Type{<:SupplementalAttribute};
 ) = remove_supplemental_attributes!(data.supplemental_attribute_manager, type)
-
 
 """
 Remove all supplemental attributes.

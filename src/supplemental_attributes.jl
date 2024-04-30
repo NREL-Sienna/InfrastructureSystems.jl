@@ -89,8 +89,8 @@ function is_attached(attribute::SupplementalAttribute, mgr::SupplementalAttribut
     isnothing(_attribute) && return false
 
     if attribute !== _attribute
-        @warn "A attribute with the same UUUID as $(summary(attribute)) is stored in the " *
-              "system but is not the same instance."
+        @warn "An attribute with the same UUUID as $(summary(attribute)) is stored in " *
+              "the system but is not the same instance."
         return false
     end
 
@@ -124,7 +124,7 @@ end
 """
 Removes all supplemental_attributes from the system.
 
-Ignores whethere attributes are attached to components.
+Ignores whether attributes are attached to components.
 """
 function clear_supplemental_attributes!(mgr::SupplementalAttributeManager)
     for type in collect(keys(mgr.data))
@@ -177,7 +177,7 @@ end
 """
 Remove all supplemental_attributes of type T.
 
-Ignores whethere attributes are attached to components.
+Ignores whether attributes are attached to components.
 
 Throws ArgumentError if the type is not stored.
 """
@@ -234,7 +234,7 @@ function get_supplemental_attribute(mgr::SupplementalAttributeManager, uuid::Bas
         end
     end
 
-    throw(ArgumentError("No attribute with UUID=$uuid is stored"))
+    throw(ArgumentError("No attribute with UUID = $uuid is stored"))
 end
 
 function serialize(mgr::SupplementalAttributeManager)
@@ -270,6 +270,6 @@ function deserialize(
         time_series_manager,
     )
 
-    from_records!(mgr.associations, data["associations"])
+    load_records!(mgr.associations, data["associations"])
     return mgr
 end

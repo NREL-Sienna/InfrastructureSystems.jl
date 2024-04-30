@@ -139,8 +139,7 @@ end
 function clear_supplemental_attributes!(component::InfrastructureSystemsComponent)
     mgr = _get_supplemental_attributes_manager(component)
     isnothing(mgr) && return
-    associations = mgr.associations
-    for uuid in list_associated_supplemental_attribute_uuids(associations, component)
+    for uuid in list_associated_supplemental_attribute_uuids(mgr.associations, component)
         attribute = get_supplemental_attribute(mgr, uuid)
         remove_supplemental_attribute!(mgr, component, attribute)
     end

@@ -311,13 +311,9 @@ end
 """
 Add records to the database. Expects output from [`to_records`](@ref).
 """
-function from_records!(associations::SupplementalAttributeAssociations, records)
+function load_records!(associations::SupplementalAttributeAssociations, records)
     isempty(records) && return
 
-    # SQLite/DBInterface wants this data by column instead of by row,
-    # which seems unusual for SQLite (row-based).
-    # The documentation is unclear and there are no examples.
-    # One test in SQLite.jl calls executemany like this.
     columns = ("attribute_uuid", "attribute_type", "component_uuid", "component_type")
     num_rows = length(records)
     num_columns = length(columns)
