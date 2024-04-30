@@ -61,7 +61,7 @@ get_quadratic_term(fd::QuadraticFunctionData) = fd.quadratic_term
 get_proportional_term(fd::QuadraticFunctionData) = fd.proportional_term
 get_constant_term(fd::QuadraticFunctionData) = fd.constant_term
 
-function _transform_quadratic_vector_for_hdf(data::Vector{LinearFunctionData})
+function _transform_quadratic_vector_for_hdf(data::Vector{QuadraticFunctionData})
     transfd_data = Vector{NTuple{3, Float64}}(undef, length(data))
     for (ix, fd) in enumerate(data)
         transfd_data[ix] = (get_quadratic_term(fd), get_proportional_term(fd), get_constant_term(fd))
