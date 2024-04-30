@@ -467,9 +467,6 @@ function transform_array_for_hdf(data::Vector{<:Real})
     return data
 end
 
-transform_array_for_hdf(data::Vector{<:FunctionData}) =
-    transform_array_for_hdf(get_raw_data.(data))
-
 function transform_array_for_hdf(data::Vector{T}) where {T <: Tuple}
     rows = length(data)
     degree = fieldcount(T)  # 2 for linear, 3 for quadratic
@@ -479,15 +476,6 @@ function transform_array_for_hdf(data::Vector{T}) where {T <: Tuple}
     end
     return t_lin_cost
 end
-
-transform_array_for_hdf(
-    data::SortedDict{Dates.DateTime, <:Vector{T}},
-) where {T <: FunctionData} =
-    transform_array_for_hdf(
-        SortedDict{Dates.DateTime, Vector{get_raw_data_type(T)}}(
-            k => get_raw_data.(v) for (k, v) in data
-        ),
-    )
 
 function transform_array_for_hdf(
     data::SortedDict{Dates.DateTime, Vector{T}},
