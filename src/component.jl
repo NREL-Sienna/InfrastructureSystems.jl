@@ -171,21 +171,16 @@ function get_supplemental_attributes(
 end
 
 function get_supplemental_attributes(component::InfrastructureSystemsComponent)
-    return _get_supplemental_attributes(nothing, component)
+    return _get_supplemental_attributes(SupplementalAttribute, component)
 end
 
 function _get_supplemental_attributes(
-    supplemental_attribute_type::Union{Nothing, Type{<:SupplementalAttribute}},
+    supplemental_attribute_type::Type{<:SupplementalAttribute},
     component::InfrastructureSystemsComponent,
 )
     mgr = _get_supplemental_attributes_manager(component)
-    attr_type = if isnothing(supplemental_attribute_type)
-        SupplementalAttribute
-    else
-        supplemental_attribute_type
-    end
-    isnothing(mgr) && return attr_type[]
-    return attr_type[
+    isnothing(mgr) && return supplemental_attribute_type[]
+    return supplemental_attribute_type[
         get_supplemental_attribute(mgr, x) for
         x in list_associated_supplemental_attribute_uuids(
             mgr.associations,
@@ -207,22 +202,17 @@ function get_supplemental_attributes(
     filter_func::Function,
     component::InfrastructureSystemsComponent,
 )
-    return _get_supplemental_attributes(filter_func, nothing, component)
+    return _get_supplemental_attributes(filter_func, SupplementalAttribute, component)
 end
 
 function _get_supplemental_attributes(
     filter_func::Function,
-    supplemental_attribute_type::Union{Nothing, Type{<:SupplementalAttribute}},
+    supplemental_attribute_type::Type{<:SupplementalAttribute},
     component::InfrastructureSystemsComponent,
 )
-    attr_type = if isnothing(supplemental_attribute_type)
-        SupplementalAttribute
-    else
-        supplemental_attribute_type
-    end
     mgr = _get_supplemental_attributes_manager(component)
-    isnothing(mgr) && return [attr_type]
-    attrs = Vector{attr_type}()
+    isnothing(mgr) && return [supplemental_attribute_type]
+    attrs = Vector{supplemental_attribute_type}()
     for uuid in list_associated_supplemental_attribute_uuids(
         mgr.associations,
         component;

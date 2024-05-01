@@ -13,7 +13,7 @@ end
 serialize(val::SystemUnitsSettings) = serialize_struct(val)
 deserialize(T::Type{<:SystemUnitsSettings}, val::Dict) = deserialize_struct(T, val)
 
-@kwdef mutable struct SharedSystemReferences <: InfrastructureSystemsType
+@kwdef struct SharedSystemReferences <: InfrastructureSystemsType
     supplemental_attribute_manager::Any = nothing
     time_series_manager::Any = nothing
 end

@@ -90,7 +90,7 @@ Drop the supplemental attribute associations table.
 """
 function drop_table(associations::SupplementalAttributeAssociations)
     _execute(associations, "DROP TABLE IF EXISTS $SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME")
-    @debug "Dropped the table $SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME" _group =
+    @debug "Dropped the table $SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME (if it existed)" _group =
         LOG_GROUP_SUPPLEMENTAL_ATTRIBUTES
     return
 end
