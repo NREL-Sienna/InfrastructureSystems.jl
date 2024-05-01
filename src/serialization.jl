@@ -209,11 +209,22 @@ function deserialize(::Type{T}, data::Dict) where {T <: NamedTuple}
     return T(key = data[string(key)] for key in fieldnames(T))
 end
 
-function deserialize(
-    ::Type{T},
-    data::Union{Nothing, Dict},
-) where {T <: Union{Nothing, NamedTuple}}
-    return isnothing(data) ? nothing : deserialize(T.b, data)
+# Some types that definitely won't be deserialized from Dicts
+const _NOT_FROM_DICT = Union{Nothing, Real, String}
+
+# If deserializing into a Union of some _NOT_FROM_DICT and something else (e.g., a
+# NamedTuple) and we are given a Dict as input data, pick the something else. NOTE: it would
+# be great to do this purely using the type system. I found ways to do subsets of the task
+# this way that worked, but they all made `detect_unbound_args` complain. I'm not convinced
+# this isn't a bug/incompleteness in `detect_unbound_args`.
+function deserialize(T::Union, data::Dict)
+    # This seems to be the least sketchy way to get all the types in a Union, at least
+    # better than the also undocumented T.a and T.b, see
+    # https://github.com/JuliaLang/julia/issues/53193
+    types_within = Base.uniontypes(T)
+    maybe_from_dict = filter(x -> !(x <: _NOT_FROM_DICT), types_within)
+    (length(maybe_from_dict) == 1) && (return deserialize(first(maybe_from_dict), data))
+    throw(ArgumentError("Cannot pick which of union type $T to deserialize to"))
 end
 
 function deserialize(::Type{T}, data::Array) where {T <: Vector{<:Tuple}}

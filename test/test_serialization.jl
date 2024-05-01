@@ -48,6 +48,18 @@ function validate_serialization(sys::IS.SystemData; time_series_read_only = fals
     end
 end
 
+@testset "Test deserialization type matching" begin
+    nt_data = Dict("max" => 1.1, "min" => 0.9)
+    nt_type = @NamedTuple{min::Float64, max::Float64}
+    nt_result = (min = 0.9, max = 1.1)
+    @test IS.deserialize(Union{Float64, nt_type}, nt_data) == nt_result
+    @test IS.deserialize(Union{Float64, nt_type}, 4.0) == 4.0
+    @test IS.deserialize(Union{Nothing, nt_type}, nt_data) == nt_result
+    @test IS.deserialize(Union{Nothing, nt_type}, nothing) === nothing
+    @test IS.deserialize(Union{Float64, Dict}, nt_data) == nt_data
+    @test_throws ArgumentError IS.deserialize(Union{nt_type, Dict}, nt_data)
+end
+
 @testset "Test JSON serialization of system data" begin
     for in_memory in (true, false)
         sys = create_system_data_shared_time_series(; time_series_in_memory = in_memory)
