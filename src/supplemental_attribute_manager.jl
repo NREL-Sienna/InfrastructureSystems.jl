@@ -1,5 +1,3 @@
-# TODO DT before merge, rename file to supplemental_attribute_manager.jl
-
 const SupplementalAttributesByType =
     Dict{DataType, Dict{Base.UUID, <:SupplementalAttribute}}
 
