@@ -308,6 +308,9 @@ Returns True/False depending on the convexity of the underlying data
 is_convex(pwl::PiecewiseLinearData) =
     _slope_convexity_check(get_slopes(pwl))
 
+is_convex(pwl::PiecewiseStepData) =
+    _slope_convexity_check(get_y_coords(pwl))
+
 serialize(val::FunctionData) = serialize_struct(val)
 
 deserialize(T::Type{<:FunctionData}, val::Dict) = deserialize_struct(T, val)
