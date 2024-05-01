@@ -127,6 +127,11 @@ function has_supplemental_attributes(
     return has_association(associations, component, T)
 end
 
+has_supplemental_attributes(
+    T::Type{<:SupplementalAttribute},
+    x::InfrastructureSystemsComponent,
+) = has_supplemental_attributes(x, T)
+
 """
 Return true if the component has supplemental attributes.
 """

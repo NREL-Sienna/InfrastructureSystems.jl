@@ -382,6 +382,18 @@ function has_time_series(
     return has_time_series(mgr.metadata_store, val, T, name; features...)
 end
 
+has_time_series(
+    T::Type{<:TimeSeriesData},
+    owner::TimeSeriesOwners,
+) = has_time_series(owner, T)
+
+has_time_series(
+    T::Type{<:TimeSeriesData},
+    owner::TimeSeriesOwners,
+    name::AbstractString;
+    features...,
+) = has_time_series(owner, T, name; features...)
+
 """
 Efficiently add all time_series in one component to another by copying the underlying
 references.

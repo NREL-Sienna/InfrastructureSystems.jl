@@ -17,6 +17,7 @@
     @test length(
         IS.get_components(x -> (IS.get_val(x) == 5), IS.TestComponent, data),
     ) == 1
+    @test IS.has_component(data, IS.TestComponent, name)
 
     i = 0
     for component in IS.iterate_components(data)

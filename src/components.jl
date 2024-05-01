@@ -191,10 +191,10 @@ end
 Check to see if a component exists.
 """
 function has_component(
-    ::Type{T},
     components::Components,
+    T::Type{<:InfrastructureSystemsComponent},
     name::AbstractString,
-) where {T <: InfrastructureSystemsComponent}
+)
     !isconcretetype(T) && return !isempty(get_components_by_name(T, components, name))
     !haskey(components.data, T) && return false
     return haskey(components.data[T], name)
@@ -213,7 +213,7 @@ function get_component(
     ::Type{T},
     components::Components,
     name::AbstractString,
-)::Union{T, Nothing} where {T <: InfrastructureSystemsComponent}
+) where {T <: InfrastructureSystemsComponent}
     if !isconcretetype(T)
         components = get_components_by_name(T, components, name)
         if length(components) > 1

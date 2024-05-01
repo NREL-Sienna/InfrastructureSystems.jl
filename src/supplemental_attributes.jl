@@ -63,7 +63,7 @@ function _attach_attribute!(
     if !allow_existing_time_series && has_time_series(attribute)
         throw(
             ArgumentError(
-                "cannot add an attribute with time_series: $attribute",
+                "cannot add an attribute with time_series: $(summary(attribute))",
             ),
         )
     end

@@ -765,6 +765,15 @@ function get_component(data::SystemData, uuid::Base.UUID)
     return component
 end
 
+"""
+Check to see if a component exists.
+"""
+has_component(
+    data::SystemData,
+    T::Type{<:InfrastructureSystemsComponent},
+    name::AbstractString,
+) = has_component(data.components, T, name)
+
 function has_component(data::SystemData, component::InfrastructureSystemsComponent)
     return get_uuid(component) in keys(data.component_uuids)
 end
