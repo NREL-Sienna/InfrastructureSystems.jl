@@ -17,6 +17,7 @@
     @test length(
         IS.get_components(x -> (IS.get_val(x) == 5), IS.TestComponent, data),
     ) == 1
+    @test IS.has_component(data, IS.TestComponent, name)
 
     i = 0
     for component in IS.iterate_components(data)
@@ -309,32 +310,31 @@ end
 
     for c in IS.get_components(IS.TestComponent, data)
         @test IS.has_supplemental_attributes(c)
-        @test IS.has_supplemental_attributes(IS.GeographicInfo, c)
+        @test IS.has_supplemental_attributes(c, IS.GeographicInfo)
     end
 
-    @test length(IS.get_supplemental_attributes(IS.GeographicInfo, data)) == 5
+    @test length(collect(IS.get_supplemental_attributes(IS.GeographicInfo, data))) == 5
 
-    i = 0
-    for component in IS.iterate_supplemental_attributes(data)
-        i += 1
-    end
-    @test i == 5
+    all_attributes = collect(IS.iterate_supplemental_attributes(data))
+    @test length(all_attributes) == 5
 
     attributes = IS.get_supplemental_attributes(IS.GeographicInfo, data)
     io = IOBuffer()
     show(io, "text/plain", attributes)
     output = String(take!(io))
-    expected = "GeographicInfo: $i"
+    expected = "GeographicInfo: $(length(all_attributes))"
     @test occursin(expected, output)
 
-    attribute_removed = collect(attributes)[1]
-    IS.remove_supplemental_attribute!(data, attribute_removed)
+    component = IS.get_component(IS.TestComponent, data, "component_1")
+    attribute_removed =
+        IS.get_supplemental_attributes(IS.GeographicInfo, component)[1]
+    IS.remove_supplemental_attribute!(data, component, attribute_removed)
 
     attributes = IS.get_supplemental_attributes(IS.GeographicInfo, data)
     @test length(attributes) == 4
     @test IS.get_uuid(attribute_removed) ∉ IS.get_uuid.(attributes)
 
-    IS.remove_supplemental_attributes!(IS.GeographicInfo, data)
+    IS.remove_supplemental_attributes!(data, IS.GeographicInfo)
     attributes = IS.get_supplemental_attributes(IS.GeographicInfo, data)
     @test length(attributes) == 0
 end
@@ -359,16 +359,12 @@ end
     IS.add_supplemental_attribute!(data, component2, geo_supplemental_attribute)
     IS.add_supplemental_attribute!(data, component1, attr1)
     IS.add_supplemental_attribute!(data, component2, attr2)
-    @test IS.get_num_supplemental_attributes(data.attributes) == 3
+    @test IS.get_num_supplemental_attributes(data) == 3
 
     # Test all permutations of abstract vs concrete, system vs component, filter vs not.
     @test length(IS.get_supplemental_attributes(IS.SupplementalAttribute, data)) == 3
-    @test length(
-        IS.get_supplemental_attributes(IS.SupplementalAttribute, component1),
-    ) == 2
-    @test length(
-        IS.get_supplemental_attributes(IS.SupplementalAttribute, component2),
-    ) == 2
+    @test length(IS.get_supplemental_attributes(IS.SupplementalAttribute, component1)) == 2
+    @test length(IS.get_supplemental_attributes(component1)) == 2
     @test length(
         IS.get_supplemental_attributes(
             x -> x isa IS.TestSupplemental,
@@ -376,23 +372,29 @@ end
             data,
         ),
     ) == 2
+
     @test length(
         IS.get_supplemental_attributes(
             x -> x isa IS.TestSupplemental,
-            IS.SupplementalAttribute,
             component1,
         ),
     ) == 1
     @test length(
         IS.get_supplemental_attributes(
             x -> x isa IS.TestSupplemental,
-            IS.SupplementalAttribute,
+            IS.TestSupplemental,
             component2,
         ),
     ) == 1
     @test length(IS.get_supplemental_attributes(IS.TestSupplemental, data)) == 2
     @test length(IS.get_supplemental_attributes(IS.GeographicInfo, data)) == 1
-    @test length(IS.get_supplemental_attributes(IS.GeographicInfo, component1)) == 1
+    @test length(
+        IS.get_supplemental_attributes(
+            IS.GeographicInfo,
+            component1,
+        ),
+    ) == 1
+    @test length(IS.get_supplemental_attributes(component1)) == 2
     @test length(IS.get_supplemental_attributes(IS.TestSupplemental, component1)) == 1
     @test length(IS.get_supplemental_attributes(IS.TestSupplemental, component2)) == 1
     @test length(
@@ -424,8 +426,7 @@ end
     ) == 0
     @test length(
         IS.get_supplemental_attributes(
-            x -> x.value == 2.0,
-            IS.TestSupplemental,
+            x -> x isa IS.TestSupplemental && x.value == 2.0,
             component2,
         ),
     ) == 1

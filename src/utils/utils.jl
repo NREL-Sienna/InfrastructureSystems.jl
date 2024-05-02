@@ -4,12 +4,14 @@ import JSON3
 
 const HASH_FILENAME = "check.sha256"
 
-# TODO DT: possibly incorrect
 g_cached_subtypes = Dict{DataType, Vector{DataType}}()
 
 """
-Returns an array of all concrete subtypes of T.
+Returns an array of all concrete subtypes of T. Caches the values for faster lookup on
+repeated calls.
+
 Note that this does not find parameterized types.
+It will also not find types dynamically added after the first call of given type.
 """
 function get_all_concrete_subtypes(::Type{T}) where {T}
     if haskey(g_cached_subtypes, T)
@@ -137,11 +139,6 @@ function compare_values(
     else
         for field_name in fields
             field_name in exclude && continue
-            if (T <: TimeSeriesContainer && field_name == :manager) ||
-               (T <: SupplementalAttributes && field_name == :time_series_manager)
-                # This gets validated at SystemData. Don't repeat for each component.
-                continue
-            end
             val1 = getproperty(x, field_name)
             val2 = getproperty(y, field_name)
             if !isempty(fieldnames(typeof(val1)))

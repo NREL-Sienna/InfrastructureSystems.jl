@@ -37,3 +37,22 @@ function backup(
         end
     end
 end
+
+"""
+Wrapper around SQLite.DBInterface.execute to provide debug log messages.
+"""
+function execute(db::SQLite.DB, query::AbstractString, log_group::Symbol)
+    @debug "Execute SQL" _group = log_group query
+    return SQLite.DBInterface.execute(db, query)
+end
+
+"""
+Run a query to find a count. The query must produce a column called count with one row.
+"""
+function execute_count(db::SQLite.DB, query::AbstractString, log_group::Symbol)
+    for row in Tables.rows(execute(db, query, log_group))
+        return row.count
+    end
+
+    error("Bug: unexpectedly did not receive any rows")
+end

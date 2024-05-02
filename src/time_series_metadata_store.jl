@@ -809,19 +809,9 @@ function _create_row(
     )
 end
 
-function _execute(store::TimeSeriesMetadataStore, query::AbstractString)
-    @debug "Run SQL" query _group = LOG_GROUP_TIME_SERIES
-    res = SQLite.DBInterface.execute(store.db, query)
-    return res
-end
-
-function _execute_count(store::TimeSeriesMetadataStore, query::AbstractString)
-    for row in Tables.rows(_execute(store, query))
-        return row.count
-    end
-
-    error("Bug: unexpectedly did not receive any rows")
-end
+_execute(s::TimeSeriesMetadataStore, q) = execute(s.db, q, LOG_GROUP_TIME_SERIES)
+_execute_count(s::TimeSeriesMetadataStore, q) =
+    execute_count(s.db, q, LOG_GROUP_TIME_SERIES)
 
 function _has_time_series(store::TimeSeriesMetadataStore, where_clause::String)
     query = "SELECT COUNT(*) AS count FROM $METADATA_TABLE_NAME $where_clause"

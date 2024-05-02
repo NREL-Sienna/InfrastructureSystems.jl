@@ -31,6 +31,20 @@ get_ext(c::MyComponent) = InfrastructureSystems.get_ext(c.ext)
 clear_ext!(c::MyComponent) = InfrastructureSystems.clear_ext(c.ext)
 ```
 
+  2. Implement this function with `true` or `false` depending on whether your component type
+     will support time series data. The default method returns `false`.
+
+```julia
+supports_time_series(::MyComponent) = true
+```
+
+  3. Implement this function with `true` or `false` depending on whether your component type
+     will support supplemental attributes. The default method returns `true`.
+
+```julia
+supports_supplemental_attributes(::MyComponent) = true
+```
+
 *Notes*:
 
   - [`InfrastructureSystems.get_uuid`](@ref) with argument `obj::InfrastructureSystemsComponent`
@@ -45,9 +59,9 @@ Implement these methods for every struct.
   - `get_internal(c::MyComponent)::InfrastructureSystemsInternal`
   - `get_name(c::MyComponent)::String`
 
-If the struct stores time series data:
+If the struct supports time series (default is false):
 
-  - `get_time_series_container(c::MyComponent)::TimeSeriesContainer`
+  - `supports_time_series(::MyComponent) = true`
 
 ## Component Container
 

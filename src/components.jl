@@ -19,6 +19,11 @@ function Components(
     return Components(ComponentsByType(), time_series_manager, validation_descriptors)
 end
 
+function serialize(components::Components)
+    # time_series_storage and validation_descriptors are serialized elsewhere.
+    return [serialize(x) for y in values(components.data) for x in values(y)]
+end
+
 function _add_component!(
     components::Components,
     component::T;
@@ -42,7 +47,6 @@ function _add_component!(
         throw(ArgumentError("cannot add a component with time_series: $component"))
     end
 
-    set_time_series_manager!(component, components.time_series_manager)
     components.data[T][component_name] = component
     return
 end
@@ -187,10 +191,10 @@ end
 Check to see if a component exists.
 """
 function has_component(
-    ::Type{T},
     components::Components,
+    T::Type{<:InfrastructureSystemsComponent},
     name::AbstractString,
-) where {T <: InfrastructureSystemsComponent}
+)
     !isconcretetype(T) && return !isempty(get_components_by_name(T, components, name))
     !haskey(components.data, T) && return false
     return haskey(components.data[T], name)
@@ -209,7 +213,7 @@ function get_component(
     ::Type{T},
     components::Components,
     name::AbstractString,
-)::Union{T, Nothing} where {T <: InfrastructureSystemsComponent}
+) where {T <: InfrastructureSystemsComponent}
     if !isconcretetype(T)
         components = get_components_by_name(T, components, name)
         if length(components) > 1
@@ -306,19 +310,35 @@ end
 See also: [`get_components`](@ref)
 """
 function iterate_components(components::Components)
-    iterate_container(components)
+    return iterate_container(components)
 end
 
 function get_num_components(components::Components)
     return get_num_members(components)
 end
 
-function is_attached(
-    component::T,
+function is_attached(component::InfrastructureSystemsComponent, components::Components)
+    T = typeof(component)
+    !haskey(components.data, T) && return false
+    _component = get(components.data[T], get_name(component), nothing)
+    isnothing(_component) && return false
+
+    if component !== _component
+        @warn "A component with the same name as $(summary(component)) is stored in the " *
+              "system but is not the same instance."
+        return false
+    end
+
+    return true
+end
+
+function throw_if_not_attached(
     components::Components,
-) where {T <: InfrastructureSystemsComponent}
-    !in(T, keys(components.data)) && return false
-    return get_name(component) in keys(components.data[T])
+    component::InfrastructureSystemsComponent,
+)
+    if !is_attached(component, components)
+        throw(ArgumentError("$(summary(component)) is not attached to the system"))
+    end
 end
 
 function set_name!(
@@ -326,10 +346,7 @@ function set_name!(
     component::T,
     name,
 ) where {T <: InfrastructureSystemsComponent}
-    if !is_attached(component, components)
-        throw(ArgumentError("$(summary(component)) is not attached to the system"))
-    end
-
+    throw_if_not_attached(components, component)
     if haskey(components.data[T], name)
         throw(ArgumentError("A component of type $T and name = $name is already stored"))
     end

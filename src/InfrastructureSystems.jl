@@ -44,11 +44,6 @@ Required interface functions for subtypes:
   - get_name()
   - get_internal()
 
-Optional interface functions:
-
-  - get_time_series_container()
-  - get_supplemental_attributes_container()
-
 Subtypes may contain time series.
 """
 abstract type InfrastructureSystemsComponent <: InfrastructureSystemsType end
@@ -67,33 +62,21 @@ Required interface functions for subtypes:
 
 Optional interface functions:
 
-  - get_time_series_container()
-  - get_component_uuids()
-    Required if the struct does not include the field component_uuids.
   - get_uuid()
 
 Subtypes may contain time series. Which requires
 
-  - get_time_series_container()
+  - supports_time_series(::SupplementalAttribute)
 
 All subtypes must include an instance of ComponentUUIDs in order to track
 components attached to each attribute.
 """
 abstract type SupplementalAttribute <: InfrastructureSystemsType end
 
-"""
-Return the internal time_series storage container or nothing, if the type doesn't store
-time series.
-
-Subtypes need to implement this method if they store time series.
-"""
-function get_time_series_container(value::InfrastructureSystemsComponent)
-    return nothing
-end
-
-set_time_series_container!(value::InfrastructureSystemsComponent, _) = nothing
-
 get_name(value::InfrastructureSystemsComponent) = value.name
+supports_supplemental_attributes(::InfrastructureSystemsComponent) = true
+supports_time_series(::InfrastructureSystemsComponent) = false
+supports_time_series(::SupplementalAttribute) = false
 
 function set_name_internal!(value::InfrastructureSystemsComponent, name)
     value.name = name
@@ -138,12 +121,10 @@ include("time_series_formats.jl")
 include("time_series_metadata_store.jl")
 include("time_series_manager.jl")
 include("time_series_interface.jl")
-include("time_series_container.jl")
 include("time_series_cache.jl")
 include("time_series_utils.jl")
-include("supplemental_attribute.jl")
-include("supplemental_attributes_container.jl")
-include("supplemental_attributes.jl")
+include("supplemental_attribute_associations.jl")
+include("supplemental_attribute_manager.jl")
 include("components.jl")
 include("iterators.jl")
 include("component.jl")
