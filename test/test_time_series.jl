@@ -2242,10 +2242,9 @@ end
     @test_throws IS.ConflictingInputsError IS.add_time_series!(sys, component, forecast)
 end
 
-@testset "Test copy_to_new_file! on HDF5" begin
+@testset "Test deepcopy on HDF5" begin
     sys = IS.SystemData(; time_series_in_memory = false)
     name = "Component1"
-    name = "val"
     component = IS.TestComponent(name, 5)
     IS.add_component!(sys, component)
 
@@ -2260,11 +2259,13 @@ end
     @test data_input == first(values((fdata)))
 
     IS.add_time_series!(sys, component, time_series)
+    new_sys = deepcopy(sys)
     orig_file = IS.get_file_path(sys.time_series_manager.data_store)
-    IS.copy_to_new_file!(sys.time_series_manager.data_store)
-    @test orig_file != IS.get_file_path(sys.time_series_manager.data_store)
+    new_file = IS.get_file_path(new_sys.time_series_manager.data_store)
+    @test orig_file != new_file
 
-    time_series2 = IS.get_time_series(IS.Deterministic, component, name)
+    component2 = IS.get_component(IS.TestComponent, sys, name)
+    time_series2 = IS.get_time_series(IS.Deterministic, component2, name)
     @test time_series2 isa IS.Deterministic
     fdata2 = IS.get_data(time_series2)
     @test initial_timestamp == first(keys((fdata2)))

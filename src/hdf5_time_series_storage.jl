@@ -17,6 +17,7 @@ mutable struct Hdf5TimeSeriesStorage <: TimeSeriesStorage
     file_path::String
     compression::CompressionSettings
     file::Union{Nothing, HDF5.File}
+    # If you add any fields, ensure they are managed in deepcopy_internal below.
 end
 
 """
@@ -148,27 +149,23 @@ function _isempty(storage::Hdf5TimeSeriesStorage, file::HDF5.File)
     return isempty(keys(root))
 end
 
-"""
-Copy the time series data to a new file. This should get called when the system is
-undergoing a deepcopy.
-
-# Arguments
-
-  - `storage::Hdf5TimeSeriesStorage`: storage instance
-  - `directory::String`: If nothing, use the directory specified by the environment variable
-     SIENNA_TIME_SERIES_DIRECTORY or the system tempdir.
-"""
-function copy_to_new_file!(storage::Hdf5TimeSeriesStorage, directory = nothing)
-    directory = _get_time_series_parent_dir(directory)
-
+function Base.deepcopy_internal(storage::Hdf5TimeSeriesStorage, dict::IdDict)
     if !isnothing(storage.file) && isopen(storage.file)
         error("This operation is not allowed when the HDF5 file handle is open.")
     end
+    if haskey(dict, storage)
+        return dict[storage]
+    end
+
+    directory = _get_time_series_parent_dir(dirname(storage.file_path))
     filename, io = mktemp(directory)
     close(io)
     copy_h5_file(get_file_path(storage), filename)
-    storage.file_path = filename
-    return
+    new_compression = deepcopy(storage.compression)
+    new_storage = Hdf5TimeSeriesStorage(filename, new_compression, nothing)
+    dict[storage.compression] = new_compression
+    dict[storage] = new_storage
+    return new_storage
 end
 
 """

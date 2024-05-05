@@ -62,7 +62,7 @@ function SystemData(;
         compression = compression,
     )
     components = Components(time_series_mgr, validation_descriptors)
-    supplemental_attribute_mgr = SupplementalAttributeManager(time_series_mgr)
+    supplemental_attribute_mgr = SupplementalAttributeManager()
     masked_components = Components(time_series_mgr, validation_descriptors)
     return SystemData(
         components,
@@ -934,6 +934,13 @@ function add_supplemental_attribute!(data::SystemData, component, attribute; kwa
         component,
         attribute;
         kwargs...,
+    )
+    set_shared_system_references!(
+        attribute,
+        SharedSystemReferences(;
+            supplemental_attribute_manager = data.supplemental_attribute_manager,
+            time_series_manager = data.time_series_manager,
+        ),
     )
     return
 end

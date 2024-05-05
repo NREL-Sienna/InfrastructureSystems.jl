@@ -39,11 +39,16 @@ function backup(
 end
 
 """
-Wrapper around SQLite.DBInterface.execute to provide debug log messages.
+Wrapper around SQLite.DBInterface.execute to provide log messages.
 """
 function execute(db::SQLite.DB, query::AbstractString, log_group::Symbol)
     @debug "Execute SQL" _group = log_group query
-    return SQLite.DBInterface.execute(db, query)
+    try
+        return SQLite.DBInterface.execute(db, query)
+    catch
+        @error "Failed to send SQL query" query
+        rethrow()
+    end
 end
 
 """
