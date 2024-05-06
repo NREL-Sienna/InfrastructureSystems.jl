@@ -1,5 +1,5 @@
 @testset "Test add_supplemental_attribute" begin
-    mgr = IS.SupplementalAttributeManager(IS.TimeSeriesManager(; in_memory = true))
+    mgr = IS.SupplementalAttributeManager()
     geo_supplemental_attribute = IS.GeographicInfo()
     component = IS.TestComponent("component1", 5)
     IS.add_supplemental_attribute!(mgr, component, geo_supplemental_attribute)
@@ -32,7 +32,7 @@ end
 end
 
 @testset "Test remove_supplemental_attribute" begin
-    mgr = IS.SupplementalAttributeManager(IS.TimeSeriesManager(; in_memory = true))
+    mgr = IS.SupplementalAttributeManager()
     geo_supplemental_attribute = IS.GeographicInfo()
     component = IS.TestComponent("component1", 5)
     IS.add_supplemental_attribute!(mgr, component, geo_supplemental_attribute)
@@ -72,7 +72,7 @@ end
 end
 
 @testset "Test iterate_SupplementalAttributeManager" begin
-    mgr = IS.SupplementalAttributeManager(IS.TimeSeriesManager(; in_memory = true))
+    mgr = IS.SupplementalAttributeManager()
     geo_supplemental_attribute = IS.GeographicInfo()
     component = IS.TestComponent("component1", 5)
     IS.add_supplemental_attribute!(mgr, component, geo_supplemental_attribute)
@@ -80,7 +80,7 @@ end
 end
 
 @testset "Summarize SupplementalAttributeManager" begin
-    mgr = IS.SupplementalAttributeManager(IS.TimeSeriesManager(; in_memory = true))
+    mgr = IS.SupplementalAttributeManager()
     geo_supplemental_attribute = IS.GeographicInfo()
     component = IS.TestComponent("component1", 5)
     IS.add_supplemental_attribute!(mgr, component, geo_supplemental_attribute)

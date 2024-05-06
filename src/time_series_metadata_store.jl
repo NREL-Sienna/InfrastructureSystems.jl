@@ -3,6 +3,7 @@ const DB_FILENAME = "time_series_metadata.db"
 
 mutable struct TimeSeriesMetadataStore
     db::SQLite.DB
+    # If you add any fields, ensure they are managed in deepcopy_internal below.
 end
 
 """
@@ -99,6 +100,18 @@ function _create_indexes!(store::TimeSeriesMetadataStore)
         unique = false,
     )
     return
+end
+
+function Base.deepcopy_internal(store::TimeSeriesMetadataStore, dict::IdDict)
+    if haskey(dict, store)
+        return dict[store]
+    end
+
+    new_db = SQLite.DB()
+    backup(new_db, store.db)
+    new_store = TimeSeriesMetadataStore(new_db)
+    dict[store] = new_store
+    return new_store
 end
 
 """

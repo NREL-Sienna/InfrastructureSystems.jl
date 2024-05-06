@@ -30,8 +30,6 @@ function TimeSeriesManager(;
     return TimeSeriesManager(data_store, metadata_store, read_only)
 end
 
-get_database(mgr::TimeSeriesManager) = mgr.metadata_store.db
-
 function add_time_series!(
     mgr::TimeSeriesManager,
     owner::TimeSeriesOwners,
@@ -93,24 +91,6 @@ end
 has_time_series(mgr::TimeSeriesManager, component::TimeSeriesOwners) =
     has_time_series(mgr.metadata_store, component)
 has_time_series(::Nothing, component::TimeSeriesOwners) = false
-
-function Base.deepcopy_internal(mgr::TimeSeriesManager, dict::IdDict)
-    if haskey(dict, mgr)
-        return dict[mgr]
-    end
-    data_store = deepcopy(mgr.data_store)
-    if mgr.data_store isa Hdf5TimeSeriesStorage
-        copy_to_new_file!(data_store, dirname(mgr.data_store.file_path))
-    end
-
-    new_db_file = backup_to_temp(mgr.metadata_store)
-    metadata_store = TimeSeriesMetadataStore(new_db_file)
-    new_mgr = TimeSeriesManager(data_store, metadata_store, mgr.read_only)
-    dict[mgr] = new_mgr
-    dict[mgr.data_store] = new_mgr.data_store
-    dict[mgr.metadata_store] = new_mgr.metadata_store
-    return new_mgr
-end
 
 get_metadata(
     mgr::TimeSeriesManager,

@@ -1,21 +1,40 @@
 const SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME = "supplemental_attributes"
 
+# Design note:
+# Supplemental attributes and time series are stored in independent SQLite databases.
+# Ideally, they would be different tables in the same database. This is not practical
+# because of requirements set by the team for serialization output files.
+#
+# Background:
+#   - Time series metadata is always persisted as a SQLite file during serialization.
+#   - That SQLite file is written as an HDF5 dataset in the time series data file.
+#   - The result of serialization is system.json, system_metadata.json, and
+#     system_time_series.h5.
+#   - If there is no time series in the system, then there is no extra file: only
+#     system.json and system_metadata.json.
+#
+# If we persist supplemental attribute associations to a SQLite file and there is no time
+# series, serialization would produce an extra file. The team was strongly opposed to this
+# and set a requirement that those associations must be written to the system JSON file.
+#
+# Rather than try to manage the complexities of temporarily sharing a database across
+# serialization and deepcopy operations, this design keeps them separate in order to 
+# simplifiy the code. The supplemental attribute database is always ephemeral.
+
 mutable struct SupplementalAttributeAssociations
     db::SQLite.DB
+    # If you add any fields, ensure they are managed in deepcopy_internal below.
 end
 
 """
 Construct a new SupplementalAttributeAssociations with an in-memory database.
 """
-function SupplementalAttributeAssociations(db::SQLite.DB, initialize::Bool)
-    associations = SupplementalAttributeAssociations(db)
-    if initialize
-        drop_table(associations)
-        _create_attribute_associations_table!(associations)
-        _create_indexes!(associations)
-        @debug "Initialized new supplemental attributes association table" _group =
-            LOG_GROUP_SUPPLEMENTAL_ATTRIBUTES
-    end
+function SupplementalAttributeAssociations()
+    associations = SupplementalAttributeAssociations(SQLite.DB())
+    _create_attribute_associations_table!(associations)
+    _create_indexes!(associations)
+    @debug "Initialized new supplemental attributes association table" _group =
+        LOG_GROUP_SUPPLEMENTAL_ATTRIBUTES
     return associations
 end
 
@@ -57,6 +76,17 @@ function _create_indexes!(associations::SupplementalAttributeAssociations)
         unique = false,
     )
     return
+end
+
+function Base.deepcopy_internal(val::SupplementalAttributeAssociations, dict::IdDict)
+    if haskey(dict, val)
+        return dict[val]
+    end
+    new_db = SQLite.DB()
+    backup(new_db, val.db)
+    new_associations = SupplementalAttributeAssociations(new_db)
+    dict[val] = new_associations
+    return new_associations
 end
 
 """

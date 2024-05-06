@@ -3,27 +3,15 @@ const SupplementalAttributesByType =
 
 struct SupplementalAttributeManager <: InfrastructureSystemsContainer
     data::SupplementalAttributesByType
-    time_series_manager::TimeSeriesManager
     associations::SupplementalAttributeAssociations
 end
 
-function SupplementalAttributeManager(
-    data::SupplementalAttributesByType,
-    time_series_manager::TimeSeriesManager,
-)
-    return SupplementalAttributeManager(
-        data,
-        time_series_manager,
-        SupplementalAttributeAssociations(get_database(time_series_manager), true),
-    )
+function SupplementalAttributeManager(data::SupplementalAttributesByType)
+    return SupplementalAttributeManager(data, SupplementalAttributeAssociations())
 end
 
-function SupplementalAttributeManager(time_series_manager::TimeSeriesManager)
-    return SupplementalAttributeManager(
-        SupplementalAttributesByType(),
-        time_series_manager,
-        SupplementalAttributeAssociations(get_database(time_series_manager), true),
-    )
+function SupplementalAttributeManager()
+    return SupplementalAttributeManager(SupplementalAttributesByType())
 end
 
 get_member_string(::SupplementalAttributeManager) = "supplemental attributes"
@@ -70,13 +58,6 @@ function _attach_attribute!(
     if !haskey(mgr.data, T)
         mgr.data[T] = Dict{Base.UUID, T}()
     end
-    set_shared_system_references!(
-        attribute,
-        SharedSystemReferences(;
-            supplemental_attribute_manager = mgr,
-            time_series_manager = mgr.time_series_manager,
-        ),
-    )
     mgr.data[T][get_uuid(attribute)] = attribute
 end
 
@@ -263,11 +244,7 @@ function deserialize(
         @debug "Deserialized $(summary(attr))" _group = LOG_GROUP_SERIALIZATION
     end
 
-    mgr = SupplementalAttributeManager(
-        SupplementalAttributesByType(attributes),
-        time_series_manager,
-    )
-
+    mgr = SupplementalAttributeManager(SupplementalAttributesByType(attributes))
     load_records!(mgr.associations, data["associations"])
     return mgr
 end
