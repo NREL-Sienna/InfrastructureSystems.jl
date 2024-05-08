@@ -2599,7 +2599,6 @@ end
         12,
         Dict("scenario" => "high"),
     )
-    data = IS.serialize(key)
-    key2 = IS.deserialize(IS.StaticTimeSeriesKey, data)
+    key2 = IS.deserialize(IS.StaticTimeSeriesKey, IS.serialize(key))
     @test key2 isa IS.StaticTimeSeriesKey
 end

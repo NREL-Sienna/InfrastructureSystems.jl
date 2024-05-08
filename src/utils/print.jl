@@ -329,7 +329,7 @@ function show_time_series(io::IO, owner::TimeSeriesOwners)
         end
         data = OrderedDict{String, Any}()
         for (fname, ftype) in zip(fieldnames(typeof(key)), fieldtypes(typeof(key)))
-            if ftype <: TimeSeriesData
+            if ftype <: Type{<:TimeSeriesData}
                 data[string(fname)] = string(nameof(Base.getproperty(key, fname)))
             else
                 data[string(fname)] = Base.getproperty(key, fname)
