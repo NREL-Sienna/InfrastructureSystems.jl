@@ -269,7 +269,7 @@ Removes all time series of a particular type from a System.
 function remove_time_series!(data::SystemData, ::Type{T}) where {T <: TimeSeriesData}
     _throw_if_read_only(data.time_series_manager)
     for component in iterate_components_with_time_series(data; time_series_type = T)
-        for ts_metadata in list_time_series_metadata(component; time_series_type = T)
+        for ts_metadata in get_time_series_metadata(component; time_series_type = T)
             remove_time_series!(data, component, ts_metadata)
         end
     end
@@ -466,7 +466,7 @@ function transform_single_time_series!(
     horizon::Int,
     interval::Dates.Period,
 ) where {T <: DeterministicSingleTimeSeries}
-    resolutions = list_time_series_resolutions(data; time_series_type = SingleTimeSeries)
+    resolutions = get_time_series_resolutions(data; time_series_type = SingleTimeSeries)
     if length(resolutions) > 1
         # TODO: This needs to support an alternate method where horizon is expressed as a
         # Period (horizon * resolution)
@@ -869,10 +869,10 @@ get_forecast_initial_timestamp(data::SystemData) =
 get_forecast_interval(data::SystemData) =
     get_forecast_interval(data.time_series_manager.metadata_store)
 
-list_time_series_resolutions(
+get_time_series_resolutions(
     data::SystemData;
     time_series_type::Union{Type{<:TimeSeriesData}, Nothing} = nothing,
-) = list_time_series_resolutions(
+) = get_time_series_resolutions(
     data.time_series_manager.metadata_store;
     time_series_type = time_series_type,
 )

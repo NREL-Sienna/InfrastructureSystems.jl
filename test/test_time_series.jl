@@ -451,8 +451,8 @@ end
         model_year = "2060",
         scenario = "low",
     )
-    @test length(IS.list_time_series_keys(component)) == 4
-    @test IS.get_time_series_type(IS.list_time_series_keys(component)[1]) ===
+    @test length(IS.get_time_series_keys(component)) == 4
+    @test IS.get_time_series_type(IS.get_time_series_keys(component)[1]) ===
           IS.SingleTimeSeries
     @test Tables.rowtable(
         IS.sql(
@@ -460,11 +460,11 @@ end
             "SELECT COUNT(*) AS count FROM $(IS.METADATA_TABLE_NAME)",
         ),
     )[1].count == 4
-    for key in IS.list_time_series_keys(component)
+    for key in IS.get_time_series_keys(component)
         @test IS.get_data(IS.get_time_series(component, key)) == data
     end
     IS.remove_time_series!(sys, IS.SingleTimeSeries)
-    @test isempty(IS.list_time_series_keys(component))
+    @test isempty(IS.get_time_series_keys(component))
 end
 
 @testset "Test add with features with mixed types" begin
@@ -623,19 +623,19 @@ end
         scenario = "low",
         model_year = "2035",
     ) isa IS.Deterministic
-    @test length(IS.list_time_series_metadata(component)) == 4
+    @test length(IS.get_time_series_metadata(component)) == 4
     @test length(
-        IS.list_time_series_metadata(component; time_series_type = IS.Deterministic),
+        IS.get_time_series_metadata(component; time_series_type = IS.Deterministic),
     ) == 4
     @test length(
-        IS.list_time_series_metadata(
+        IS.get_time_series_metadata(
             component;
             time_series_type = IS.Deterministic,
             name = ts_name,
         ),
     ) == 4
     @test length(
-        IS.list_time_series_metadata(
+        IS.get_time_series_metadata(
             component;
             time_series_type = IS.Deterministic,
             name = ts_name,
@@ -643,7 +643,7 @@ end
         ),
     ) == 2
     @test length(
-        IS.list_time_series_metadata(
+        IS.get_time_series_metadata(
             component;
             time_series_type = IS.Deterministic,
             name = ts_name,
@@ -651,27 +651,27 @@ end
             model_year = "2035",
         ),
     ) == 1
-    @test IS.list_time_series_metadata(
+    @test IS.get_time_series_metadata(
         component;
         time_series_type = IS.Deterministic,
         name = ts_name,
         scenario = "low",
         model_year = "2035",
     )[1].features["model_year"] == "2035"
-    @test length(IS.list_time_series_keys(component)) == 4
-    @test IS.get_time_series_type(IS.list_time_series_keys(component)[1]) ===
+    @test length(IS.get_time_series_keys(component)) == 4
+    @test IS.get_time_series_type(IS.get_time_series_keys(component)[1]) ===
           IS.Deterministic
 
     IS.remove_time_series!(sys, IS.Deterministic, component, ts_name; scenario = "low")
     @test length(
-        IS.list_time_series_metadata(component; time_series_type = IS.Deterministic),
+        IS.get_time_series_metadata(component; time_series_type = IS.Deterministic),
     ) == 2
     for metadata in
-        IS.list_time_series_metadata(component; time_series_type = IS.Deterministic)
+        IS.get_time_series_metadata(component; time_series_type = IS.Deterministic)
         @test metadata.features["scenario"] == "high"
     end
     IS.remove_time_series!(sys, IS.Deterministic, component, ts_name)
-    @test isempty(IS.list_time_series_metadata(component))
+    @test isempty(IS.get_time_series_metadata(component))
 end
 
 @testset "Test Deterministic with a wrapped SingleTimeSeries" begin

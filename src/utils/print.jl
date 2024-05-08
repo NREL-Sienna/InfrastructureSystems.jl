@@ -322,7 +322,7 @@ end
 
 function show_time_series(io::IO, owner::TimeSeriesOwners)
     data_by_type = Dict{Any, Vector{OrderedDict{String, Any}}}()
-    for key in list_time_series_keys(owner)
+    for key in get_time_series_keys(owner)
         ts_type = get_time_series_type(key)
         if !haskey(data_by_type, ts_type)
             data_by_type[ts_type] = Vector{OrderedDict{String, Any}}()

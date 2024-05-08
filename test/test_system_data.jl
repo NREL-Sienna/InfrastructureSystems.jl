@@ -540,7 +540,7 @@ end
     end
 end
 
-@testset "Test list_time_series_resolutions" begin
+@testset "Test get_time_series_resolutions" begin
     sys = IS.SystemData()
     initial_time = Dates.DateTime("2020-09-01")
     resolution1 = Dates.Minute(5)
@@ -564,13 +564,13 @@ end
 
     forecast = IS.Deterministic(; data = data, name = "test3", resolution = resolution2)
     IS.add_time_series!(sys, component, forecast)
-    @test IS.list_time_series_resolutions(sys) ==
+    @test IS.get_time_series_resolutions(sys) ==
           [Dates.Minute(5), Dates.Hour(1)]
-    @test IS.list_time_series_resolutions(
+    @test IS.get_time_series_resolutions(
         sys;
         time_series_type = IS.SingleTimeSeries,
     ) == [Dates.Minute(5), Dates.Hour(1)]
-    @test IS.list_time_series_resolutions(
+    @test IS.get_time_series_resolutions(
         sys;
         time_series_type = IS.Deterministic,
     ) == [Dates.Hour(1)]
