@@ -674,8 +674,8 @@ end
 Return information about each time series array attached to the owner.
 This information can be used to call get_time_series.
 """
-function list_time_series_info(store::TimeSeriesMetadataStore, owner::TimeSeriesOwners)
-    return [make_time_series_info(x) for x in list_metadata(store, owner)]
+function list_time_series_keys(store::TimeSeriesMetadataStore, owner::TimeSeriesOwners)
+    return [make_time_series_key(x) for x in list_metadata(store, owner)]
 end
 
 """

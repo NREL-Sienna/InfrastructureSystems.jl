@@ -13,7 +13,11 @@
     data = SortedDict(initial_time => ones(horizon), other_time => ones(horizon))
 
     forecast = IS.Deterministic(; data = data, name = name, resolution = resolution)
-    IS.add_time_series!(sys, component, forecast)
+    key = IS.add_time_series!(sys, component, forecast)
+    @test key isa IS.ForecastKey
+    @test key.name == name
+    @test key.horizon == horizon
+    @test key.resolution == resolution
     var1 =
         IS.get_time_series(IS.Deterministic, component, name; start_time = initial_time)
     @test length(var1) == 2
@@ -447,19 +451,20 @@ end
         model_year = "2060",
         scenario = "low",
     )
-    @test length(IS.list_time_series_info(component)) == 4
-    @test IS.list_time_series_info(component)[1].type === IS.SingleTimeSeries
+    @test length(IS.list_time_series_keys(component)) == 4
+    @test IS.get_time_series_type(IS.list_time_series_keys(component)[1]) ===
+          IS.SingleTimeSeries
     @test Tables.rowtable(
         IS.sql(
             sys.time_series_manager.metadata_store,
             "SELECT COUNT(*) AS count FROM $(IS.METADATA_TABLE_NAME)",
         ),
     )[1].count == 4
-    for info in IS.list_time_series_info(component)
-        @test IS.get_data(IS.get_time_series(component, info)) == data
+    for key in IS.list_time_series_keys(component)
+        @test IS.get_data(IS.get_time_series(component, key)) == data
     end
     IS.remove_time_series!(sys, IS.SingleTimeSeries)
-    @test isempty(IS.list_time_series_info(component))
+    @test isempty(IS.list_time_series_keys(component))
 end
 
 @testset "Test add with features with mixed types" begin
@@ -653,8 +658,9 @@ end
         scenario = "low",
         model_year = "2035",
     )[1].features["model_year"] == "2035"
-    @test length(IS.list_time_series_info(component)) == 4
-    @test IS.list_time_series_info(component)[1].type === IS.Deterministic
+    @test length(IS.list_time_series_keys(component)) == 4
+    @test IS.get_time_series_type(IS.list_time_series_keys(component)[1]) ===
+          IS.Deterministic
 
     IS.remove_time_series!(sys, IS.Deterministic, component, ts_name; scenario = "low")
     @test length(
@@ -1105,11 +1111,12 @@ end
     @test !IS.has_time_series(component)
 
     file = joinpath(FORECASTS_DIR, "ComponentsAsColumnsNoTime.json")
-    IS.add_time_series_from_file_metadata!(
+    res = IS.add_time_series_from_file_metadata!(
         data,
         IS.InfrastructureSystemsComponent,
         file,
     )
+    @test !isempty(res) && first(res) isa IS.StaticTimeSeriesKey
     @test IS.has_time_series(component)
 
     all_time_series = get_all_time_series(data)
@@ -2581,4 +2588,18 @@ end
     uuid = IS.get_uuid(ts)
     IS.add_time_series!(sys, component, ts)
     ts2 = IS.get_time_series_uuid(IS.SingleTimeSeries, component, ts_name)
+end
+
+@testset "Test serialization of time series keys" begin
+    key = IS.StaticTimeSeriesKey(
+        IS.SingleTimeSeries,
+        "test",
+        Dates.now(),
+        Dates.Hour(1),
+        12,
+        Dict("scenario" => "high"),
+    )
+    data = IS.serialize(key)
+    key2 = IS.deserialize(IS.StaticTimeSeriesKey, data)
+    @test key2 isa IS.StaticTimeSeriesKey
 end

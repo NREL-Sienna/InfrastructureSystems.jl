@@ -128,6 +128,7 @@ function Base.show(io::IO, ::MIME"text/plain", ist::InfrastructureSystemsCompone
         end
         print(io, "\n   ", name, ": ", val)
     end
+    print(io, "\n   ", "has_time_series", ": ", string(has_time_series(ist)))
 end
 
 function Base.show(io::IO, ist::InfrastructureSystemsComponent)
@@ -321,19 +322,20 @@ end
 
 function show_time_series(io::IO, owner::TimeSeriesOwners)
     data_by_type = Dict{Any, Vector{OrderedDict{String, Any}}}()
-    for info in list_time_series_info(owner)
-        if !haskey(data_by_type, info.type)
-            data_by_type[info.type] = Vector{OrderedDict{String, Any}}()
+    for key in list_time_series_keys(owner)
+        ts_type = get_time_series_type(key)
+        if !haskey(data_by_type, ts_type)
+            data_by_type[ts_type] = Vector{OrderedDict{String, Any}}()
         end
         data = OrderedDict{String, Any}()
-        for field in fieldnames(typeof(info))
-            if field == :type
-                data[string(field)] = string(nameof(Base.getproperty(info, field)))
+        for (fname, ftype) in zip(fieldnames(typeof(key)), fieldtypes(typeof(key)))
+            if ftype <: TimeSeriesData
+                data[string(fname)] = string(nameof(Base.getproperty(key, fname)))
             else
-                data[string(field)] = Base.getproperty(info, field)
+                data[string(fname)] = Base.getproperty(key, fname)
             end
         end
-        push!(data_by_type[info.type], data)
+        push!(data_by_type[ts_type], data)
     end
     for rows in values(data_by_type)
         PrettyTables.pretty_table(io, DataFrame(rows))

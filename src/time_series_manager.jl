@@ -69,7 +69,8 @@ function add_time_series!(
     end
     @debug "Added $(summary(metadata)) to $(summary(owner)) " _group =
         LOG_GROUP_TIME_SERIES
-    return
+
+    return make_time_series_key(metadata)
 end
 
 function clear_time_series!(mgr::TimeSeriesManager)
