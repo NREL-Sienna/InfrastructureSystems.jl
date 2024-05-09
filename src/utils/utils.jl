@@ -595,3 +595,31 @@ function compute_sha256(filename::AbstractString)
 end
 
 convert_for_path(x::Dates.DateTime) = replace(string(x), ":" => "-")
+
+"""
+For `a` and `b`, instances of the same concrete type, iterate over all the fields, compare
+`a`'s value to `b`'s using `cmp_op`, and reduce to one value using `reduce_op` with an
+initialization value of `init`.
+"""
+function compare_over_fields(cmp_op, reduce_op, init, a::T, b::T) where {T}
+    comps = (cmp_op(getfield(a, name), getfield(b, name)) for name in fieldnames(T))
+    return reduce(reduce_op, comps; init = init)
+end
+
+"Compute the conjunction of the `==` values of all the fields in `a` and `b`"
+double_equals_from_fields(a::T, b::T) where {T} =
+    compare_over_fields(==, &, true, a, b)
+
+"Compute the conjunction of the `isequal` values of all the fields in `a` and `b`"
+isequal_from_fields(a::T, b::T) where {T} =
+    compare_over_fields(isequal, &, true, a, b)
+
+"Compute a hash of the instance `a` by combining hashes of all its fields"
+hash_from_fields(a) = hash_from_fields(a, zero(UInt))
+
+function hash_from_fields(a, h::UInt)
+    for field in sort(collect(fieldnames(typeof(a))))
+        h = hash(getfield(a, field), h)
+    end
+    return h
+end

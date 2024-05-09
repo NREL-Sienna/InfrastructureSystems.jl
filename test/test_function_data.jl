@@ -5,6 +5,22 @@ get_test_function_data() = [
     IS.PiecewiseStepData([1, 3, 5], [2, 2.5]),
 ]
 
+# Dictionary by type and whether we want NaNs
+get_more_test_function_data() = Dict(
+    (IS.LinearFunctionData, false) => IS.LinearFunctionData(1.0, 2.0),
+    (IS.LinearFunctionData, true) => IS.LinearFunctionData(1.0, NaN),
+    (IS.QuadraticFunctionData, false) => IS.QuadraticFunctionData(2.0, 3.0, 4.0),
+    (IS.QuadraticFunctionData, true) => IS.QuadraticFunctionData(2.0, 3.0, NaN),
+    (IS.PiecewiseLinearData, false) =>
+        IS.PiecewiseLinearData([(1.0, 1.0), (3.0, 5.0), (5.0, 10.0)]),
+    (IS.PiecewiseLinearData, true) =>
+        IS.PiecewiseLinearData([(NaN, 1.0), (3.0, 5.0), (5.0, 10.0)]),
+    (IS.PiecewiseStepData, false) =>
+        IS.PiecewiseStepData([1.0, 3.0, 5.0], [2.0, 2.5]),
+    (IS.PiecewiseStepData, true) =>
+        IS.PiecewiseStepData([NaN, 3.0, 5.0], [2.0, 2.5]),
+)
+
 @testset "Test FunctionData constructors" begin
     @test all(isa.(get_test_function_data(), IS.FunctionData))
     @test IS.LinearFunctionData(5) isa IS.FunctionData
@@ -141,5 +157,22 @@ end
     end
     for (fd, answer) in zip(get_test_function_data(), raw_data_answers)
         @test IS.get_raw_data_type(typeof(fd)) == typeof(answer)
+    end
+end
+
+@testset "Test equality with NaN" begin
+    examples_1 = get_more_test_function_data()
+    examples_2 = get_more_test_function_data()
+
+    # Value-equal function data should be == except when containing NaN since NaN != NaN;
+    # value-equal function data should be isequal even when containing NaN; hash equality
+    # should correspond with isequal
+    for my_type in IS.get_all_concrete_subtypes(IS.FunctionData)
+        @test examples_1[(my_type, false)] == examples_2[(my_type, false)]
+        @test examples_1[(my_type, true)] != examples_2[(my_type, true)]
+        @test isequal(examples_1[(my_type, false)], examples_2[(my_type, false)])
+        @test isequal(examples_1[(my_type, true)], examples_2[(my_type, true)])
+        @test hash(examples_1[(my_type, false)]) == hash(examples_2[(my_type, false)])
+        @test hash(examples_1[(my_type, true)]) == hash(examples_2[(my_type, true)])
     end
 end

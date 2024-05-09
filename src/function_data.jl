@@ -88,8 +88,10 @@ end
 function _validate_piecewise_x(x_coords)
     (length(x_coords) < 2) &&
         throw(ArgumentError("Must specify at least two x-coordinates"))
-    !issorted(x_coords) &&
+    # This could be generalized to allow NaNs in more places
+    if !(issorted(x_coords) || (isnan(first(x_coords)) && issorted(x_coords[2:end])))
         throw(ArgumentError("Piecewise x-coordinates must be ascending, got $x_coords"))
+    end
 end
 
 """
@@ -285,12 +287,11 @@ Base.length(pwl::Union{PiecewiseLinearData, PiecewiseStepData}) =
 Base.getindex(pwl::PiecewiseLinearData, ix::Int) =
     getindex(get_points(pwl), ix)
 
-Base.:(==)(a::PiecewiseLinearData, b::PiecewiseLinearData) =
-    get_points(a) == get_points(b)
+Base.:(==)(a::T, b::T) where T <: FunctionData = double_equals_from_fields(a, b)
 
-Base.:(==)(a::PiecewiseStepData, b::PiecewiseStepData) =
-    (get_x_coords(a) == get_x_coords(b)) &&
-    (get_y_coords(a) == get_y_coords(b))
+Base.isequal(a::T, b::T) where T <: FunctionData = isequal_from_fields(a, b)
+
+Base.hash(a::FunctionData) = hash_from_fields(a)
 
 function _slope_convexity_check(slopes::Vector{Float64})
     for ix in 1:(length(slopes) - 1)
