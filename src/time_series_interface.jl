@@ -53,16 +53,16 @@ end
 
 function get_time_series(
     owner::TimeSeriesOwners,
-    info::AbstractTimeSeriesInfo,
+    key::TimeSeriesKey,
     start_time::Union{Nothing, Dates.DateTime} = nothing,
     len::Union{Nothing, Int} = nothing,
     count::Union{Nothing, Int} = nothing,
 )
-    features = Dict{Symbol, Any}(Symbol(k) => v for (k, v) in info.features)
+    features = Dict{Symbol, Any}(Symbol(k) => v for (k, v) in key.features)
     return get_time_series(
-        info.type,
+        get_time_series_type(key),
         owner,
-        info.name;
+        get_name(key);
         start_time = start_time,
         len = len,
         count = count,
@@ -431,7 +431,7 @@ function copy_time_series!(
     mgr = get_time_series_manager(dst)
     @assert !isnothing(mgr)
 
-    for ts_metadata in list_time_series_metadata(src)
+    for ts_metadata in get_time_series_metadata(src)
         name = get_name(ts_metadata)
         new_name = name
         if !isnothing(name_mapping)
@@ -460,13 +460,13 @@ function copy_time_series!(
     end
 end
 
-function list_time_series_info(owner::TimeSeriesOwners)
+function get_time_series_keys(owner::TimeSeriesOwners)
     mgr = get_time_series_manager(owner)
     isnothing(mgr) && return []
-    return list_time_series_info(mgr.metadata_store, owner)
+    return get_time_series_keys(mgr.metadata_store, owner)
 end
 
-function list_time_series_metadata(
+function get_time_series_metadata(
     owner::TimeSeriesOwners;
     time_series_type::Union{Type{<:TimeSeriesData}, Nothing} = nothing,
     name::Union{String, Nothing} = nothing,

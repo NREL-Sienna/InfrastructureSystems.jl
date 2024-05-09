@@ -149,15 +149,17 @@ function add_time_series_from_file_metadata!(
     file_metadata::Vector{TimeSeriesFileMetadata};
     resolution = nothing,
 ) where {T <: InfrastructureSystemsComponent}
+    ts_keys = Vector{TimeSeriesKey}(undef, length(file_metadata))
     open_time_series_store!(data, "r+") do
         cache = TimeSeriesParsingCache()
-        for metadata in file_metadata
+        for (i, metadata) in enumerate(file_metadata)
             if resolution === nothing || metadata.resolution == resolution
-                add_time_series_from_file_metadata_internal!(data, T, cache, metadata)
+                ts_keys[i] =
+                    add_time_series_from_file_metadata_internal!(data, T, cache, metadata)
             end
         end
     end
-    return
+    return ts_keys
 end
 
 """
@@ -179,7 +181,7 @@ function add_time_series!(
     features...,
 )
     _validate(data, owner)
-    add_time_series!(
+    return add_time_series!(
         data.time_series_manager,
         owner,
         time_series;
@@ -208,14 +210,19 @@ function add_time_series!(
     time_series::TimeSeriesData;
     features...,
 )
+    key = nothing
     for component in components
-        add_time_series!(
+        # Component information is not embedded into the key and so it will always be the
+        # same.
+        key = add_time_series!(
             data,
             component,
             time_series;
             features...,
         )
     end
+
+    return key
 end
 
 function add_time_series_from_file_metadata_internal!(
@@ -227,8 +234,7 @@ function add_time_series_from_file_metadata_internal!(
     set_component!(file_metadata, data, InfrastructureSystems)
     component = file_metadata.component
     time_series = make_time_series!(cache, file_metadata)
-    add_time_series!(data, component, time_series)
-    return
+    return add_time_series!(data, component, time_series)
 end
 
 """
@@ -263,7 +269,7 @@ Removes all time series of a particular type from a System.
 function remove_time_series!(data::SystemData, ::Type{T}) where {T <: TimeSeriesData}
     _throw_if_read_only(data.time_series_manager)
     for component in iterate_components_with_time_series(data; time_series_type = T)
-        for ts_metadata in list_time_series_metadata(component; time_series_type = T)
+        for ts_metadata in get_time_series_metadata(component; time_series_type = T)
             remove_time_series!(data, component, ts_metadata)
         end
     end
@@ -460,7 +466,7 @@ function transform_single_time_series!(
     horizon::Int,
     interval::Dates.Period,
 ) where {T <: DeterministicSingleTimeSeries}
-    resolutions = list_time_series_resolutions(data; time_series_type = SingleTimeSeries)
+    resolutions = get_time_series_resolutions(data; time_series_type = SingleTimeSeries)
     if length(resolutions) > 1
         # TODO: This needs to support an alternate method where horizon is expressed as a
         # Period (horizon * resolution)
@@ -863,10 +869,10 @@ get_forecast_initial_timestamp(data::SystemData) =
 get_forecast_interval(data::SystemData) =
     get_forecast_interval(data.time_series_manager.metadata_store)
 
-list_time_series_resolutions(
+get_time_series_resolutions(
     data::SystemData;
     time_series_type::Union{Type{<:TimeSeriesData}, Nothing} = nothing,
-) = list_time_series_resolutions(
+) = get_time_series_resolutions(
     data.time_series_manager.metadata_store;
     time_series_type = time_series_type,
 )

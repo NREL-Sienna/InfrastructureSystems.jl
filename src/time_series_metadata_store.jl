@@ -589,7 +589,7 @@ has_time_series(
 Return a sorted Vector of distinct resolutions for all time series of the given type
 (or all types).
 """
-function list_time_series_resolutions(
+function get_time_series_resolutions(
     store::TimeSeriesMetadataStore;
     time_series_type::Union{Type{<:TimeSeriesData}, Nothing} = nothing,
 )
@@ -674,8 +674,8 @@ end
 Return information about each time series array attached to the owner.
 This information can be used to call get_time_series.
 """
-function list_time_series_info(store::TimeSeriesMetadataStore, owner::TimeSeriesOwners)
-    return [make_time_series_info(x) for x in list_metadata(store, owner)]
+function get_time_series_keys(store::TimeSeriesMetadataStore, owner::TimeSeriesOwners)
+    return [make_time_series_key(x) for x in list_metadata(store, owner)]
 end
 
 """

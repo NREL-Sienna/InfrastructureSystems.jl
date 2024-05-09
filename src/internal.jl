@@ -142,6 +142,10 @@ function compare_values(
             if val2 isa Dict && isempty(val2)
                 val2 = nothing
             end
+            if isnothing(val1) && val2 isa Dict &&
+               collect(keys(val2)) == [SERIALIZATION_METADATA_KEY]
+                continue
+            end
             if !compare_values(val1, val2; compare_uuids = compare_uuids, exclude = exclude)
                 @error "ext does not match" val1 val2
                 match = false

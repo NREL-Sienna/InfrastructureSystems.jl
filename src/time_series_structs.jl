@@ -1,9 +1,31 @@
 const TimeSeriesOwners = Union{InfrastructureSystemsComponent, SupplementalAttribute}
 
-abstract type AbstractTimeSeriesInfo <: InfrastructureSystemsType end
+# Required methods:
+# - get_name
+# - get_time_series_type
+# The default methods rely on the field names name and time_series_type.
+abstract type TimeSeriesKey <: InfrastructureSystemsType end
 
-@kwdef struct StaticTimeSeriesInfo <: AbstractTimeSeriesInfo
-    type::Type{<:TimeSeriesData}
+get_name(key::TimeSeriesKey) = key.name
+get_time_series_type(key::TimeSeriesKey) = key.time_series_type
+
+function deserialize_struct(T::Type{<:TimeSeriesKey}, data::Dict)
+    vals = Dict{Symbol, Any}()
+    for (field_name, field_type) in zip(fieldnames(T), fieldtypes(T))
+        val = data[string(field_name)]
+        if field_type <: Type{<:TimeSeriesData}
+            metadata = get_serialization_metadata(val)
+            val = get_type_from_serialization_metadata(metadata)
+        else
+            val = deserialize(field_type, val)
+        end
+        vals[field_name] = val
+    end
+    return T(; vals...)
+end
+
+@kwdef struct StaticTimeSeriesKey <: TimeSeriesKey
+    time_series_type::Type{<:StaticTimeSeries}
     name::String
     initial_timestamp::Dates.DateTime
     resolution::Dates.Period
@@ -11,9 +33,9 @@ abstract type AbstractTimeSeriesInfo <: InfrastructureSystemsType end
     features::Dict{String, Any}
 end
 
-function make_time_series_info(metadata::StaticTimeSeriesMetadata)
-    return StaticTimeSeriesInfo(;
-        type = time_series_metadata_to_data(metadata),
+function make_time_series_key(metadata::StaticTimeSeriesMetadata)
+    return StaticTimeSeriesKey(;
+        time_series_type = time_series_metadata_to_data(metadata),
         name = get_name(metadata),
         initial_timestamp = get_initial_timestamp(metadata),
         resolution = get_resolution(metadata),
@@ -22,8 +44,8 @@ function make_time_series_info(metadata::StaticTimeSeriesMetadata)
     )
 end
 
-@kwdef struct ForecastInfo <: AbstractTimeSeriesInfo
-    type::Type{<:TimeSeriesData}
+@kwdef struct ForecastKey <: TimeSeriesKey
+    time_series_type::Type{<:Forecast}
     name::String
     initial_timestamp::Dates.DateTime
     resolution::Dates.Period
@@ -33,9 +55,9 @@ end
     features::Dict{String, Any}
 end
 
-function make_time_series_info(metadata::ForecastMetadata)
-    return ForecastInfo(;
-        type = time_series_metadata_to_data(metadata),
+function make_time_series_key(metadata::ForecastMetadata)
+    return ForecastKey(;
+        time_series_type = time_series_metadata_to_data(metadata),
         name = get_name(metadata),
         initial_timestamp = get_initial_timestamp(metadata),
         resolution = get_resolution(metadata),
@@ -55,32 +77,4 @@ attributes.
     supplemental_attributes_with_time_series::Int
     static_time_series_count::Int
     forecast_count::Int
-end
-
-# TODO: This is now only temporarily being used in PSY and will soon be removed.
-@kwdef struct TimeSeriesKey <: InfrastructureSystemsType
-    time_series_type::Type{<:TimeSeriesData}
-    name::String
-end
-
-function TimeSeriesKey(data::TimeSeriesData)
-    return TimeSeriesKey(typeof(data), get_name(data))
-end
-
-function deserialize_struct(::Type{TimeSeriesKey}, data::Dict)
-    vals = Dict{Symbol, Any}()
-    for field_name in fieldnames(TimeSeriesKey)
-        val = data[string(field_name)]
-        if field_name == :time_series_type
-            if val isa Dict && haskey(val, METADATA_KEY)
-                metadata = get_serialization_metadata(val)
-                type = get_type_from_serialization_metadata(metadata)
-                val = type
-            else
-                val = getproperty(InfrastructureSystems, Symbol(strip_module_name(val)))
-            end
-        end
-        vals[field_name] = val
-    end
-    return TimeSeriesKey(; vals...)
 end
