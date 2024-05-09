@@ -148,7 +148,7 @@ serialize(val::Base.RefValue{T}) where {T} = serialize(val[])
 # The default implementation allows any scalar type (or collection of scalar types) to
 # work. The JSON library must be able to encode and decode anything passed here.
 
-serialize(val::T) where {T} = val
+serialize(val::T) where {T} = deepcopy(val)
 
 """
 Deserialize an object from standard types stored in non-Julia formats, such as JSON, into
@@ -194,7 +194,7 @@ end
 
 function deserialize(::Type{T}, data::Any) where {T}
     @debug "deserialize Any" _group = LOG_GROUP_SERIALIZATION T data
-    return data
+    return deepcopy(data)
 end
 
 function deserialize(::Type{T}, data::Array) where {T <: Tuple}
