@@ -2600,5 +2600,12 @@ end
         Dict("scenario" => "high"),
     )
     key2 = IS.deserialize(IS.StaticTimeSeriesKey, IS.serialize(key))
-    @test key2 isa IS.StaticTimeSeriesKey
+    @test key2 !== key
+    for field in fieldnames(IS.StaticTimeSeriesKey)
+        if field == :features
+            @test key2.features["scenario"] == key.features["scenario"]
+        else
+            @test getproperty(key2, field) == getproperty(key, field)
+        end
+    end
 end
