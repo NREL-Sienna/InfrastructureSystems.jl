@@ -205,3 +205,11 @@ end
     @test length(IS.get_subsystems(sys2)) == 2
     @test IS.get_assigned_subsystems(sys2, components[4]) == ["subsystem_2"]
 end
+
+@testset "Test serialization of deserialized system" begin
+    sys = create_system_data(; with_time_series = true, with_supplemental_attributes = true)
+    sys2, result = validate_serialization(sys)
+    @test result
+    _, result = validate_serialization(sys2)
+    @test result
+end

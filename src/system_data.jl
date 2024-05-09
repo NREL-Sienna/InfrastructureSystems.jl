@@ -592,31 +592,46 @@ end
 function serialize(data::SystemData)
     @debug "serialize SystemData" _group = LOG_GROUP_SERIALIZATION
     json_data = to_dict(data)
-
     ext = get_ext(data.internal)
-    metadata = get(ext, SERIALIZATION_METADATA_KEY, Dict{String, Any}())
-    if haskey(metadata, "serialization_directory")
-        directory = metadata["serialization_directory"]
-        base = metadata["basename"]
-
-        if isempty(data.time_series_manager.data_store)
-            json_data["time_series_compression_enabled"] =
-                get_compression_settings(data.time_series_manager.data_store).enabled
-            json_data["time_series_in_memory"] =
-                data.time_series_manager.data_store isa InMemoryTimeSeriesStorage
-        else
-            time_series_base_name = _get_secondary_basename(base, TIME_SERIES_STORAGE_FILE)
-            time_series_storage_file = joinpath(directory, time_series_base_name)
-            serialize(data.time_series_manager.data_store, time_series_storage_file)
-            to_h5_file(data.time_series_manager.metadata_store, time_series_storage_file)
-            json_data["time_series_storage_file"] = time_series_base_name
-            json_data["time_series_storage_type"] =
-                string(typeof(data.time_series_manager.data_store))
-        end
-    end
-
+    # This key will exist if the user is serializing to a file but not if the
+    # user is serializing to a string.
     pop!(ext, SERIALIZATION_METADATA_KEY, nothing)
     isempty(ext) && clear_ext!(data.internal)
+
+    if json_data["internal"]["ext"] isa Dict
+        if (
+            haskey(json_data["internal"]["ext"], SERIALIZATION_METADATA_KEY) &&
+            haskey(
+                json_data["internal"]["ext"][SERIALIZATION_METADATA_KEY],
+                "serialization_directory",
+            )
+        )
+            metadata = json_data["internal"]["ext"][SERIALIZATION_METADATA_KEY]
+            directory = metadata["serialization_directory"]
+            base = metadata["basename"]
+
+            if isempty(data.time_series_manager.data_store)
+                json_data["time_series_compression_enabled"] =
+                    get_compression_settings(data.time_series_manager.data_store).enabled
+                json_data["time_series_in_memory"] =
+                    data.time_series_manager.data_store isa InMemoryTimeSeriesStorage
+            else
+                time_series_base_name =
+                    _get_secondary_basename(base, TIME_SERIES_STORAGE_FILE)
+                time_series_storage_file = joinpath(directory, time_series_base_name)
+                serialize(data.time_series_manager.data_store, time_series_storage_file)
+                to_h5_file(
+                    data.time_series_manager.metadata_store,
+                    time_series_storage_file,
+                )
+                json_data["time_series_storage_file"] = time_series_base_name
+                json_data["time_series_storage_type"] =
+                    string(typeof(data.time_series_manager.data_store))
+            end
+        end
+        pop!(json_data["internal"]["ext"], SERIALIZATION_METADATA_KEY, nothing)
+    end
+
     return json_data
 end
 
