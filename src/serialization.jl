@@ -209,8 +209,8 @@ function deserialize(::Type{T}, data::Dict) where {T <: NamedTuple}
     return T(key = data[string(key)] for key in fieldnames(T))
 end
 
-# Some types that definitely won't be deserialized from Dicts
-const _NOT_FROM_DICT = Union{Nothing, Real, AbstractString}
+# Some types that definitely won't be deserialized from raw Dicts
+const _NOT_FROM_DICT = Union{Nothing, Real, AbstractString, TimeSeriesKey}
 
 # If deserializing into a Union of some _NOT_FROM_DICT and something else (e.g., a
 # NamedTuple) and we are given a Dict as input data, pick the something else. NOTE: it would
