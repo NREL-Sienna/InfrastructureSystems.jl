@@ -85,7 +85,7 @@ function transform_array_for_hdf(
     return transform_array_for_hdf(transfd_data)
 end
 
-function _validate_piecewise_x(x_coords)
+function _validate_piecewise_x(x_coords::Vector)
     (length(x_coords) < 2) &&
         throw(ArgumentError("Must specify at least two x-coordinates"))
     # This could be generalized to allow NaNs in more places

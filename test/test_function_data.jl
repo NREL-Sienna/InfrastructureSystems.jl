@@ -170,9 +170,12 @@ end
     for my_type in IS.get_all_concrete_subtypes(IS.FunctionData)
         @test examples_1[(my_type, false)] == examples_2[(my_type, false)]
         @test examples_1[(my_type, true)] != examples_2[(my_type, true)]
+        @test examples_1[(my_type, false)] != examples_2[(my_type, true)]
         @test isequal(examples_1[(my_type, false)], examples_2[(my_type, false)])
         @test isequal(examples_1[(my_type, true)], examples_2[(my_type, true)])
+        @test !isequal(examples_1[(my_type, false)], examples_2[(my_type, true)])
         @test hash(examples_1[(my_type, false)]) == hash(examples_2[(my_type, false)])
         @test hash(examples_1[(my_type, true)]) == hash(examples_2[(my_type, true)])
+        @test hash(examples_1[(my_type, false)]) != hash(examples_2[(my_type, true)])
     end
 end

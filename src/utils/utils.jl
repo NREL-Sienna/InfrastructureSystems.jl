@@ -618,7 +618,7 @@ isequal_from_fields(a::T, b::T) where {T} =
 hash_from_fields(a) = hash_from_fields(a, zero(UInt))
 
 function hash_from_fields(a, h::UInt)
-    for field in sort(collect(fieldnames(typeof(a))))
+    for field in sort!(collect(fieldnames(typeof(a))))
         h = hash(getfield(a, field), h)
     end
     return h
