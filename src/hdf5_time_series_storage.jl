@@ -266,6 +266,8 @@ get_data_type(ts::TimeSeriesData) = get_type_label(eltype_data(ts))
 
 get_type_label(::Type{CONSTANT}) = "CONSTANT"
 get_type_label(::Type{<:Integer}) = get_type_label(CONSTANT)
+# A hopefully temporary hack to keep track of the number of fields in a tuple
+get_type_label(T::Type{<:Tuple{Vararg{Float64}}}) = "FLOATTUPLE " * string(fieldcount(T))
 get_type_label(data_type::Type{<:Any}) = string(nameof(data_type))
 
 function _write_time_series_attributes!(
@@ -287,11 +289,13 @@ function _read_time_series_attributes(path)
     )
 end
 
-_TYPE_DICT = Dict("CONSTANT" => CONSTANT)  # Special cases that shouldn't get parsed as IS types
-
 # A different approach would be needed to support time series containing non-IS types
-parse_type(type_str) =
-    get(_TYPE_DICT, type_str, getproperty(InfrastructureSystems, Symbol(type_str)))
+function parse_type(type_str)
+    type_str == "CONSTANT" && return CONSTANT
+    startswith(type_str, "FLOATTUPLE ") &&  # See above, hopefully temporary hack
+        return NTuple{parse(Int, (last(split(type_str, " ")))), Float64}
+    return getproperty(InfrastructureSystems, Symbol(type_str))
+end
 
 function _read_time_series_type(path)
     module_str = HDF5.read(HDF5.attributes(path)["module"])
@@ -542,6 +546,21 @@ function retransform_hdf_array(
     dims_to_keep = Tuple(1:(ndims(data) - 1))
     # Pop off the last dimension and call the constructor on that data
     return map(x -> T(x...), eachslice(data; dims = dims_to_keep))  # PERF possibly preallocation would be better
+end
+
+function retransform_hdf_array(
+    data::Array,
+    T::Union{Type{<:Tuple}},
+)
+    length_req = fieldcount(T)
+    (size(data)[end] != length_req) && throw(
+        ArgumentError(
+            "Last dimension of data must have length $length_req, got size $(size(data))",
+        ),
+    )
+    dims_to_keep = Tuple(1:(ndims(data) - 1))
+    # Pop off the last dimension and call the constructor on that data
+    return map(T, eachslice(data; dims = dims_to_keep))  # PERF possibly preallocation would be better
 end
 
 retransform_hdf_array(data::Array, ::Type{PiecewiseLinearData}) =
