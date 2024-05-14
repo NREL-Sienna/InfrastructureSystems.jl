@@ -35,7 +35,7 @@
         },
         {
           "name": "horizon",
-          "data_type": "Int",
+          "data_type": "Dates.Period",
           "comment": "length of this time series"
         },
         {
@@ -103,7 +103,7 @@
         },
         {
           "name": "horizon",
-          "data_type": "Int",
+          "data_type": "Dates.Period",
           "comment": "length of this time series"
         },
         {
@@ -166,7 +166,7 @@
         },
         {
           "name": "horizon",
-          "data_type": "Int",
+          "data_type": "Dates.Period",
           "comment": "length of this time series"
         },
         {
@@ -235,8 +235,7 @@
           "internal_default": "InfrastructureSystemsInternal()"
         }
       ],
-      "supertype": "StaticTimeSeriesMetadata",
-      "custom_code": "get_horizon(val::SingleTimeSeriesMetadata) = get_length(val)"
+      "supertype": "StaticTimeSeriesMetadata"
     }
   ],
   "struct_validation_descriptors": []

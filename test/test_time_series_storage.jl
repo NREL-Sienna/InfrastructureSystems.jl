@@ -51,13 +51,16 @@ function test_get_subset(storage::IS.TimeSeriesStorage)
     resolution = Dates.Hour(1)
     initial_time2 = initial_time1 + resolution
     name = "test"
-    horizon = 24
-    data = SortedDict(initial_time1 => ones(horizon), initial_time2 => ones(horizon))
+    horizon_count = 24
+    data = SortedDict(
+        initial_time1 => ones(horizon_count),
+        initial_time2 => ones(horizon_count),
+    )
 
     ts = IS.Deterministic(; data = data, name = name, resolution = resolution)
     IS.serialize_time_series!(storage, ts)
     ts_metadata = make_metadata(ts)
-    rows = UnitRange(1, horizon)
+    rows = UnitRange(1, horizon_count)
     columns = UnitRange(1, 2)
     ts2 = IS.deserialize_time_series(IS.Deterministic, storage, ts_metadata, rows, columns)
     @test collect(IS.get_initial_times(ts2)) == collect(IS.get_initial_times(ts))
@@ -67,7 +70,7 @@ function test_get_subset(storage::IS.TimeSeriesStorage)
     columns = UnitRange(1, 2)
     ts_subset =
         IS.deserialize_time_series(IS.Deterministic, storage, ts_metadata, rows, columns)
-    @test IS.get_horizon(ts_subset) == length(rows)
+    @test IS.get_horizon_count(ts_subset) == length(rows)
     @test IS.get_count(ts_subset) == columns.stop
     @test IS.get_initial_timestamp(ts_subset) ==
           initial_time1 + resolution * (rows.start - 1)
@@ -76,7 +79,7 @@ function test_get_subset(storage::IS.TimeSeriesStorage)
     columns = UnitRange(1, 1)
     ts_subset =
         IS.deserialize_time_series(IS.Deterministic, storage, ts_metadata, rows, columns)
-    @test IS.get_horizon(ts_subset) == length(rows)
+    @test IS.get_horizon_count(ts_subset) == length(rows)
     @test IS.get_count(ts_subset) == columns.stop
     @test IS.get_initial_timestamp(ts_subset) ==
           initial_time1 + resolution * (rows.start - 1)

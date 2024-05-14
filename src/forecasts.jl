@@ -1,8 +1,7 @@
 abstract type Forecast <: TimeSeriesData end
 
 # Subtypes of Forecast must implement
-# - get_count
-# - get_horizon
+# - get_horizon_count
 # - get_initial_times
 # - get_initial_timestamp
 # - get_name
@@ -22,14 +21,12 @@ end
 
 # This method requires that the forecast type implement a `get_data` method like
 # Deterministic.
-function get_count_common(forecast)
+function get_count(forecast::Forecast)
     return length(get_data(forecast))
 end
 
-# This method requires that the forecast type implement a `get_data` method like
-# Deterministic. Allows for optimized execution.
-function get_horizon_common(forecast)
-    return length(first(values(get_data(forecast))))
+function get_horizon(forecast::Forecast)
+    return get_horizon_count(forecast) * get_resolution(forecast)
 end
 
 """
@@ -56,6 +53,16 @@ function get_total_period(f::Forecast)
         get_horizon(f),
         get_resolution(f),
     )
+end
+
+function get_horizon_count(horizon::Dates.Period, resolution::Dates.Period)
+    if horizon % resolution != Dates.Millisecond(0)
+        error(
+            "horizon is not evenly divisible by resolution: horizon = $horizon " *
+            "resolution = $resolution",
+        )
+    end
+    return horizon ÷ resolution
 end
 
 """
@@ -88,8 +95,8 @@ function make_time_array(
 end
 
 function make_timestamps(forecast::Forecast, initial_time::Dates.DateTime, len = nothing)
-    if len === nothing
-        len = get_horizon(forecast)
+    if isnothing(len)
+        len = get_horizon_count(forecast)
     end
 
     return range(initial_time; length = len, step = get_resolution(forecast))
@@ -120,9 +127,9 @@ function get_window_common(
     initial_time::Dates.DateTime;
     len::Union{Nothing, Int} = nothing,
 )
-    horizon = get_horizon(forecast)
-    if len === nothing
-        len = horizon
+    horizon_count = get_horizon_count(forecast)
+    if isnothing(len)
+        len = horizon_count
     end
 
     data = get_data(forecast)[initial_time]

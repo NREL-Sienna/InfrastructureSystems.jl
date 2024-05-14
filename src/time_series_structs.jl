@@ -49,7 +49,7 @@ end
     name::String
     initial_timestamp::Dates.DateTime
     resolution::Dates.Period
-    horizon::Int
+    horizon::Dates.Period
     interval::Dates.Period
     count::Int
     features::Dict{String, Any}

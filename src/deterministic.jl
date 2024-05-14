@@ -281,10 +281,12 @@ Set [`Deterministic`](@ref) `internal`.
 """
 set_internal!(value::Deterministic, val) = value.internal = val
 
+function get_horizon_count(forecast::Deterministic)
+    return length(first(values(get_data(forecast))))
+end
+
 # TODO handle typing here in a more principled fashion
 eltype_data(forecast::Deterministic) = eltype_data_common(forecast)
-get_count(forecast::Deterministic) = get_count_common(forecast)
-get_horizon(forecast::Deterministic) = get_horizon_common(forecast)
 get_initial_times(forecast::Deterministic) = get_initial_times_common(forecast)
 get_initial_timestamp(forecast::Deterministic) = get_initial_timestamp_common(forecast)
 get_interval(forecast::Deterministic) = get_interval_common(forecast)
@@ -298,7 +300,7 @@ function make_time_array(forecast::Deterministic)
     timestamps = range(
         get_initial_timestamp(forecast);
         step = get_resolution(forecast),
-        length = get_horizon(forecast),
+        length = get_horizon_count(forecast),
     )
     data = first(values(get_data(forecast)))
     return TimeSeries.TimeArray(timestamps, data)

@@ -198,13 +198,17 @@ function _check_time_series_params(mgr::TimeSeriesManager, ts::Forecast)
             resolution = get_resolution(ts),
         ),
     )
-    horizon = get_horizon(ts)
-    if horizon < 2
-        throw(ArgumentError("horizon must be at least 2: $horizon"))
+    horizon_count = get_horizon_count(ts)
+    if horizon_count < 2
+        throw(ArgumentError("horizon must be at least 2: $horizon_count"))
     end
     for window in iterate_windows(ts)
-        if size(window)[1] != horizon
-            throw(ConflictingInputsError("length mismatch: $(size(window)[1]) $horizon"))
+        if size(window)[1] != horizon_count
+            throw(
+                ConflictingInputsError(
+                    "length mismatch: $(size(window)[1]) $horizon_count",
+                ),
+            )
         end
     end
 end

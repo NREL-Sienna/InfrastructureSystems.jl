@@ -13,7 +13,7 @@ This file is auto-generated. Do not edit.
         scenario_count::Int64
         count::Int
         time_series_uuid::UUIDs.UUID
-        horizon::Int
+        horizon::Dates.Period
         scaling_factor_multiplier::Union{Nothing, Function}
         features::Dict{String, Union{Bool, Int, String}}
         internal::InfrastructureSystemsInternal
@@ -29,7 +29,7 @@ A Discrete Scenario Based time series for a particular data field in a Component
 - `scenario_count::Int64`: Number of scenarios
 - `count::Int`: number of forecast windows
 - `time_series_uuid::UUIDs.UUID`: reference to time series data
-- `horizon::Int`: length of this time series
+- `horizon::Dates.Period`: length of this time series
 - `scaling_factor_multiplier::Union{Nothing, Function}`: Applicable when the time series data are scaling factors. Called on the associated component to convert the values.
 - `features::Dict{String, Union{Bool, Int, String}}`: User-defined tags that differentiate multiple time series arrays that represent the same component attribute, such as different arrays for different scenarios or years.
 - `internal::InfrastructureSystemsInternal`
@@ -49,7 +49,7 @@ mutable struct ScenariosMetadata <: ForecastMetadata
     "reference to time series data"
     time_series_uuid::UUIDs.UUID
     "length of this time series"
-    horizon::Int
+    horizon::Dates.Period
     "Applicable when the time series data are scaling factors. Called on the associated component to convert the values."
     scaling_factor_multiplier::Union{Nothing, Function}
     "User-defined tags that differentiate multiple time series arrays that represent the same component attribute, such as different arrays for different scenarios or years."

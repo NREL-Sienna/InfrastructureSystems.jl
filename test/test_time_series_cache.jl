@@ -192,7 +192,8 @@ end
     name = "val"
     ts = IS.SingleTimeSeries(name, ta)
     IS.add_time_series!(sys, component, ts)
-    horizon = 24
+    horizon_count = 24
+    horizon = horizon_count * resolution
     interval = Dates.Hour(1)
     IS.transform_single_time_series!(
         sys,
@@ -219,10 +220,10 @@ end
     interval = Dates.Hour(1)
     resolution = Dates.Hour(1)
     name = "test"
-    horizon = 24
+    horizon_count = 24
     data = SortedDict{Dates.DateTime, Matrix{Float64}}()
     for (i, it) in enumerate(range(initial_time; step = interval, length = 100))
-        data[it] = ones(horizon, 99) * i
+        data[it] = ones(horizon_count, 99) * i
     end
     sys = IS.SystemData()
     component_name = "Component1"

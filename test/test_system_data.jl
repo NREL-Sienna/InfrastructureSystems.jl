@@ -559,8 +559,9 @@ end
     IS.add_time_series!(sys, component, ts2)
 
     other_time = initial_time + resolution2
-    horizon = 24
-    data = SortedDict(initial_time => rand(horizon), other_time => rand(horizon))
+    horizon_count = 24
+    data =
+        SortedDict(initial_time => rand(horizon_count), other_time => rand(horizon_count))
 
     forecast = IS.Deterministic(; data = data, name = "test3", resolution = resolution2)
     IS.add_time_series!(sys, component, forecast)

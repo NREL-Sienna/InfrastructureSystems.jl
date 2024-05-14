@@ -12,7 +12,7 @@ This file is auto-generated. Do not edit.
         interval::Dates.Period
         count::Int
         time_series_uuid::UUIDs.UUID
-        horizon::Int
+        horizon::Dates.Period
         time_series_type::Type{<:AbstractDeterministic}
         scaling_factor_multiplier::Union{Nothing, Function}
         features::Dict{String, Union{Bool, Int, String}}
@@ -28,7 +28,7 @@ A deterministic forecast for a particular data field in a Component.
 - `interval::Dates.Period`: time step between forecast windows
 - `count::Int`: number of forecast windows
 - `time_series_uuid::UUIDs.UUID`: reference to time series data
-- `horizon::Int`: length of this time series
+- `horizon::Dates.Period`: length of this time series
 - `time_series_type::Type{<:AbstractDeterministic}`: Type of the time series data associated with this metadata.
 - `scaling_factor_multiplier::Union{Nothing, Function}`: Applicable when the time series data are scaling factors. Called on the associated component to convert the values.
 - `features::Dict{String, Union{Bool, Int, String}}`: User-defined tags that differentiate multiple time series arrays that represent the same component attribute, such as different arrays for different scenarios or years.
@@ -47,7 +47,7 @@ mutable struct DeterministicMetadata <: ForecastMetadata
     "reference to time series data"
     time_series_uuid::UUIDs.UUID
     "length of this time series"
-    horizon::Int
+    horizon::Dates.Period
     "Type of the time series data associated with this metadata."
     time_series_type::Type{<:AbstractDeterministic}
     "Applicable when the time series data are scaling factors. Called on the associated component to convert the values."

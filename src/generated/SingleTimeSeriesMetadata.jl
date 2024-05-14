@@ -86,5 +86,3 @@ set_scaling_factor_multiplier!(value::SingleTimeSeriesMetadata, val) = value.sca
 set_features!(value::SingleTimeSeriesMetadata, val) = value.features = val
 """Set [`SingleTimeSeriesMetadata`](@ref) `internal`."""
 set_internal!(value::SingleTimeSeriesMetadata, val) = value.internal = val
-
-get_horizon(val::SingleTimeSeriesMetadata) = get_length(val)

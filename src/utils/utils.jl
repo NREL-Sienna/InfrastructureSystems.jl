@@ -448,11 +448,12 @@ function get_total_period(
     initial_timestamp::Dates.DateTime,
     count::Int,
     interval::Dates.Period,
-    horizon::Int,
+    horizon::Dates.Period,
     resolution::Dates.Period,
 )
+    horizon_count = get_horizon_count(horizon, resolution)
     last_it = initial_timestamp + interval * count
-    last_timestamp = last_it + resolution * (horizon - 1)
+    last_timestamp = last_it + resolution * (horizon_count - 1)
     return last_timestamp - initial_timestamp
 end
 

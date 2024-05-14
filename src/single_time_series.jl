@@ -377,7 +377,7 @@ function SingleTimeSeriesMetadata(ts_metadata::DeterministicMetadata)
         resolution = get_resolution(ts_metadata),
         initial_timestamp = get_initial_timestamp(ts_metadata),
         time_series_uuid = get_time_series_uuid(ts_metadata),
-        length = get_count(ts_metadata) * get_horizon(ts_metadata),
+        length = get_count(ts_metadata) * get_horizon_count(ts_metadata),
         scaling_factor_multiplier = get_scaling_factor_multiplier(ts_metadata),
         internal = get_internal(ts_metadata),
     )

@@ -586,7 +586,7 @@ end
 
 function _get_rows(start_time, len, ts_metadata::ForecastMetadata)
     if len === nothing
-        len = get_horizon(ts_metadata)
+        len = get_horizon_count(ts_metadata)
     end
 
     return UnitRange(1, len)
@@ -648,12 +648,18 @@ function _get_last_user_start_timestamp(forecast::ForecastMetadata)
            (get_count(forecast) - 1) * get_interval(forecast)
 end
 
-function get_forecast_window_count(initial_timestamp, interval, resolution, len, horizon)
+function get_forecast_window_count(
+    initial_timestamp::Dates.DateTime,
+    interval::Dates.Period,
+    resolution::Dates.Period,
+    len::Int,
+    horizon_count::Int,
+)
     if interval == Dates.Second(0)
         count = 1
     else
         last_timestamp = initial_timestamp + resolution * (len - 1)
-        last_initial_time = last_timestamp - resolution * (horizon - 1)
+        last_initial_time = last_timestamp - resolution * (horizon_count - 1)
 
         # Reduce last_initial_time to the nearest interval if necessary.
         diff =

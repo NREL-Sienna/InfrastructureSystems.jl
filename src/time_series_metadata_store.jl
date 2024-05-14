@@ -56,8 +56,7 @@ function _create_metadata_table!(store::TimeSeriesMetadataStore)
         "time_series_category TEXT NOT NULL",
         "initial_timestamp TEXT NOT NULL",
         "resolution_ms INTEGER NOT NULL",
-        "horizon INTEGER",
-        "horizon_time_ms INTEGER",
+        "horizon_ms INTEGER",
         "interval_ms INTEGER",
         "window_count INTEGER",
         "length INTEGER",
@@ -213,13 +212,11 @@ function check_params_compatibility(
         )
     end
 
-    horizon_as_time = params.horizon * params.resolution
-    store_horizon_as_time = store_params.horizon * store_params.resolution
-    if horizon_as_time != store_horizon_as_time
+    if params.horizon != store_params.horizon
         throw(
             ConflictingInputsError(
-                "forecast horizon $(horizon_as_time) " *
-                "does not match system horizon $(store_horizon_as_time)",
+                "forecast horizon $(params.horizon) " *
+                "does not match system horizon $(store_params.horizon)",
             ),
         )
     end
@@ -268,20 +265,20 @@ end
 function get_forecast_parameters(store::TimeSeriesMetadataStore)
     query = """
         SELECT
-            horizon
+            horizon_ms
             ,initial_timestamp
             ,interval_ms
             ,resolution_ms
             ,window_count
         FROM $METADATA_TABLE_NAME
-        WHERE horizon IS NOT NULL
+        WHERE horizon_ms IS NOT NULL
         LIMIT 1
         """
     table = Tables.rowtable(_execute(store, query))
     isempty(table) && return nothing
     row = table[1]
     return ForecastParameters(;
-        horizon = row.horizon,
+        horizon = row.horizon_ms,
         initial_timestamp = Dates.DateTime(row.initial_timestamp),
         interval = Dates.Millisecond(row.interval_ms),
         count = row.window_count,
@@ -304,13 +301,13 @@ end
 function get_forecast_horizon(store::TimeSeriesMetadataStore)
     query = """
         SELECT
-            horizon
+            horizon_ms
         FROM $METADATA_TABLE_NAME
-        WHERE horizon IS NOT NULL
+        WHERE horizon_ms IS NOT NULL
         LIMIT 1
         """
     table = Tables.rowtable(_execute(store, query))
-    return isempty(table) ? nothing : table[1].horizon
+    return isempty(table) ? nothing : Dates.Millisecond(table[1].horizon_ms)
 end
 
 function get_forecast_initial_timestamp(store::TimeSeriesMetadataStore)
@@ -318,7 +315,7 @@ function get_forecast_initial_timestamp(store::TimeSeriesMetadataStore)
         SELECT
             initial_timestamp
         FROM $METADATA_TABLE_NAME
-        WHERE horizon IS NOT NULL
+        WHERE horizon_ms IS NOT NULL
         LIMIT 1
         """
     table = Tables.rowtable(_execute(store, query))
@@ -616,8 +613,7 @@ function list_matching_time_series_uuids(
     name::Union{String, Nothing} = nothing,
     features...,
 )
-    where_clause = _make_where_clause(
-        nothing;
+    where_clause = _make_where_clause(;
         time_series_type = time_series_type,
         name = name,
         features...,
@@ -647,6 +643,36 @@ function list_metadata(
     """
     table = Tables.rowtable(_execute(store, query))
     return [_deserialize_metadata(x.metadata) for x in table]
+end
+
+"""
+Return a Vector of NamedTuple of owner UUID and time series metadata matching the inputs. 
+"""
+function list_metadata_with_owner_uuid(
+    store::TimeSeriesMetadataStore,
+    owner_type::Type{<:TimeSeriesOwners};
+    time_series_type::Union{Type{<:TimeSeriesData}, Nothing} = nothing,
+    name::Union{String, Nothing} = nothing,
+    features...,
+)
+    where_clause = _make_where_clause(
+        owner_type;
+        time_series_type = time_series_type,
+        name = name,
+        features...,
+    )
+    query = """
+        SELECT owner_uuid, json(metadata) AS metadata
+        FROM $METADATA_TABLE_NAME
+        $where_clause
+    """
+    table = Tables.rowtable(_execute(store, query))
+    return [
+        (
+            owner_uuid = Base.UUID(x.owner_uuid),
+            metadata = _deserialize_metadata(x.metadata),
+        ) for x in table
+    ]
 end
 
 function list_owner_uuids_with_time_series(
@@ -779,8 +805,7 @@ function _create_row(
         ts_category,
         string(get_initial_timestamp(metadata)),
         Dates.Millisecond(get_resolution(metadata)).value,
-        get_horizon(metadata),
-        Dates.Millisecond(get_horizon(metadata) * get_resolution(metadata)).value,
+        Dates.Millisecond(get_horizon(metadata)),
         Dates.Millisecond(get_interval(metadata)).value,
         get_count(metadata),
         missing,
@@ -808,7 +833,6 @@ function _create_row(
         ts_category,
         string(get_initial_timestamp(metadata)),
         Dates.Millisecond(get_resolution(metadata)).value,
-        missing,
         missing,
         missing,
         missing,
@@ -968,15 +992,47 @@ function _make_sorted_feature_array(; features...)
 end
 
 function _make_where_clause(
-    owner::Union{TimeSeriesOwners, Nothing};
+    owner_type::Type{<:TimeSeriesOwners};
+    time_series_type::Union{Type{<:TimeSeriesData}, Nothing} = nothing,
+    name::Union{String, Nothing} = nothing,
+    require_full_feature_match = false,
+    features...,
+)
+    return _make_where_clause(;
+        owner_clause = "owner_category = '$(_get_owner_category(owner_type))'",
+        time_series_type = time_series_type,
+        name = name,
+        require_full_feature_match = require_full_feature_match,
+        features...,
+    )
+end
+
+function _make_where_clause(
+    owner::TimeSeriesOwners;
+    time_series_type::Union{Type{<:TimeSeriesData}, Nothing} = nothing,
+    name::Union{String, Nothing} = nothing,
+    require_full_feature_match = false,
+    features...,
+)
+    return _make_where_clause(;
+        owner_clause = "owner_uuid = '$(get_uuid(owner))'",
+        time_series_type = time_series_type,
+        name = name,
+        require_full_feature_match = require_full_feature_match,
+        features...,
+    )
+end
+
+function _make_where_clause(;
+    owner_clause::Union{String, Nothing} = nothing,
     time_series_type::Union{Type{<:TimeSeriesData}, Nothing} = nothing,
     name::Union{String, Nothing} = nothing,
     require_full_feature_match = false,
     features...,
 )
     vals = String[]
-    if !isnothing(owner)
-        push!(vals, "owner_uuid = '$(get_uuid(owner))'")
+    if !isnothing(owner_clause)
+        push!(vals, owner_clause)
     end
     if !isnothing(name)
         push!(vals, "name = '$name'")
