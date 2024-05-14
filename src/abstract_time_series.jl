@@ -12,7 +12,11 @@ abstract type StaticTimeSeriesMetadata <: TimeSeriesMetadata end
 get_count(ts::StaticTimeSeriesMetadata) = 1
 get_initial_timestamp(ts::StaticTimeSeriesMetadata) = get_initial_timestamp(ts)
 Base.length(ts::StaticTimeSeriesMetadata) = get_length(ts)
-Base.length(ts::ForecastMetadata) = get_horizon(ts)
+Base.length(ts::ForecastMetadata) = get_horizon_count(ts)
+
+function get_horizon_count(metadata::ForecastMetadata)
+    return get_horizon_count(get_horizon(metadata), get_resolution(metadata))
+end
 
 """
 Abstract type for time series stored in the system.
@@ -32,7 +36,7 @@ abstract type AbstractTimeSeriesParameters <: InfrastructureSystemsType end
 struct StaticTimeSeriesParameters <: AbstractTimeSeriesParameters end
 
 @kwdef struct ForecastParameters <: AbstractTimeSeriesParameters
-    horizon::Int
+    horizon::Dates.Period
     initial_timestamp::Dates.DateTime
     interval::Dates.Period
     count::Int

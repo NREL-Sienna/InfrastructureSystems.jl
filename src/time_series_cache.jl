@@ -204,7 +204,7 @@ struct ForecastCache{T <: TimeSeriesData, U <: InfrastructureSystemsComponent} <
        TimeSeriesCache
     common::TimeSeriesCacheCommon{T, U}
     in_memory_count::Int
-    horizon::Int
+    horizon_count::Int
 end
 
 """
@@ -212,7 +212,7 @@ Construct ForecastCache to automatically control caching of forecast data.
 Maintains some count of forecast windows in memory based on `cache_size_bytes`.
 
 Call Base.iterate or [`get_next_time_series_array!`](@ref) to retrieve data. Each iteration
-will return a TimeSeries.TimeArray covering one forecast window of length ``horizon``.
+will return a TimeSeries.TimeArray covering one forecast window of length `horizon_count`.
 
 # Arguments
 
@@ -220,7 +220,7 @@ will return a TimeSeries.TimeArray covering one forecast window of length ``hori
   - `component::InfrastructureSystemsComponent`: component
   - `name::AbstractString`: forecast name
   - `start_time::Union{Nothing, Dates.DateTime} = nothing`: forecast start time
-  - `horizon::Union{Nothing, Int} = nothing`: forecast horizon
+  - `horizon_count::Union{Nothing, Int} = nothing`: forecast horizon count
   - `cache_size_bytes = TIME_SERIES_CACHE_SIZE_BYTES`: maximum size of data to keep in memory
   - `ignore_scaling_factors = false`: controls whether to ignore `scaling_factor_multiplier`
     in the time series instance
@@ -230,7 +230,7 @@ function ForecastCache(
     component::InfrastructureSystemsComponent,
     name::AbstractString;
     start_time::Union{Nothing, Dates.DateTime} = nothing,
-    horizon::Union{Nothing, Int} = nothing,
+    horizon_count::Union{Nothing, Int} = nothing,
     cache_size_bytes = TIME_SERIES_CACHE_SIZE_BYTES,
     ignore_scaling_factors = false,
 ) where {T <: Forecast}
@@ -239,8 +239,8 @@ function ForecastCache(
     if start_time === nothing
         start_time = initial_timestamp
     end
-    if horizon === nothing
-        horizon = get_horizon(ts_metadata)
+    if isnothing(horizon_count)
+        horizon_count = get_horizon_count(ts_metadata)
     end
 
     # Get one instance to assess data size.
@@ -249,9 +249,14 @@ function ForecastCache(
         component,
         name;
         start_time = start_time,
-        len = get_horizon(ts_metadata),
+        len = get_horizon_count(ts_metadata),
     )
-    vals = get_time_series_values(component, ts, start_time; len = get_horizon(ts_metadata))
+    vals = get_time_series_values(
+        component,
+        ts,
+        start_time;
+        len = get_horizon_count(ts_metadata),
+    )
     row_size = _get_row_size(vals)
 
     count = get_count(ts_metadata)
@@ -261,7 +266,7 @@ function ForecastCache(
             Dates.Millisecond(get_interval(ts_metadata))
     end
 
-    window_size = row_size * horizon
+    window_size = row_size * horizon_count
     in_memory_count = minimum((cache_size_bytes ÷ window_size, count))
     @debug "ForecastCache" _group = LOG_GROUP_TIME_SERIES row_size window_size in_memory_count
 
@@ -276,7 +281,7 @@ function ForecastCache(
             ignore_scaling_factors = ignore_scaling_factors,
         ),
         in_memory_count,
-        horizon,
+        horizon_count,
     )
 end
 
@@ -284,7 +289,7 @@ function _get_count(cache::ForecastCache)
     return minimum((cache.in_memory_count, _get_length_remaining(cache)))
 end
 
-_get_length(c::ForecastCache) = c.horizon
+_get_length(c::ForecastCache) = c.horizon_count
 
 function _update!(cache::ForecastCache)
     if _get_length_remaining(cache) == 0
@@ -458,7 +463,7 @@ function make_time_series_cache(
     component,
     name,
     initial_time,
-    horizon::Int;
+    horizon_count::Int;
     ignore_scaling_factors = true,
 ) where {T <: AbstractDeterministic}
     return ForecastCache(
@@ -466,7 +471,7 @@ function make_time_series_cache(
         component,
         name;
         start_time = initial_time,
-        horizon = horizon,
+        horizon_count = horizon_count,
         ignore_scaling_factors = ignore_scaling_factors,
     )
 end
@@ -476,7 +481,7 @@ function make_time_series_cache(
     component,
     name,
     initial_time,
-    horizon::Int;
+    horizon_count::Int;
     ignore_scaling_factors = true,
 )
     return ForecastCache(
@@ -484,7 +489,7 @@ function make_time_series_cache(
         component,
         name;
         start_time = initial_time,
-        horizon = horizon,
+        horizon_count = horizon_count,
         ignore_scaling_factors = ignore_scaling_factors,
     )
 end

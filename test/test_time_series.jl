@@ -9,19 +9,20 @@
 
     other_time = initial_time + resolution
     name = "test"
-    horizon = 24
-    data = SortedDict(initial_time => ones(horizon), other_time => ones(horizon))
+    horizon_count = 24
+    data =
+        SortedDict(initial_time => rand(horizon_count), other_time => rand(horizon_count))
 
     forecast = IS.Deterministic(; data = data, name = name, resolution = resolution)
     key = IS.add_time_series!(sys, component, forecast)
     @test key isa IS.ForecastKey
     @test key.name == name
-    @test key.horizon == horizon
+    @test key.horizon == horizon_count * resolution
     @test key.resolution == resolution
     var1 =
         IS.get_time_series(IS.Deterministic, component, name; start_time = initial_time)
     @test length(var1) == 2
-    @test IS.get_horizon(var1) == horizon
+    @test IS.get_horizon_count(var1) == horizon_count
     @test IS.get_initial_timestamp(var1) == initial_time
 
     var2 = IS.get_time_series(
@@ -89,8 +90,8 @@ end
     resolution = Dates.Hour(1)
     other_time = initial_time + resolution
     name = "test"
-    horizon = 24
-    data = Dict(initial_time => ones(horizon), other_time => ones(horizon))
+    horizon_count = 24
+    data = Dict(initial_time => rand(horizon_count), other_time => rand(horizon_count))
     sys = IS.SystemData()
     component_name = "Component1"
     component = IS.TestComponent(component_name, 5)
@@ -102,12 +103,12 @@ end
 
     data_ts = Dict(
         initial_time => TimeSeries.TimeArray(
-            range(initial_time; length = horizon, step = resolution),
-            ones(horizon),
+            range(initial_time; length = horizon_count, step = resolution),
+            rand(horizon_count),
         ),
         other_time => TimeSeries.TimeArray(
-            range(other_time; length = horizon, step = resolution),
-            ones(horizon),
+            range(other_time; length = horizon_count, step = resolution),
+            rand(horizon_count),
         ),
     )
     sys = IS.SystemData()
@@ -121,12 +122,12 @@ end
 
     data_ts_two_cols = Dict(
         initial_time => TimeSeries.TimeArray(
-            range(initial_time; length = horizon, step = resolution),
-            ones(horizon, 2),
+            range(initial_time; length = horizon_count, step = resolution),
+            rand(horizon_count, 2),
         ),
         other_time => TimeSeries.TimeArray(
-            range(other_time; length = horizon, step = resolution),
-            ones(horizon, 2),
+            range(other_time; length = horizon_count, step = resolution),
+            rand(horizon_count, 2),
         ),
     )
     sys = IS.SystemData()
@@ -136,12 +137,56 @@ end
     @test_throws ArgumentError IS.Deterministic(name, data_ts_two_cols)
 end
 
+@testset "Test add Deterministic with different resolutions" begin
+    sys = IS.SystemData()
+    name = "Component1"
+    component = IS.TestComponent(name, 5)
+    IS.add_component!(sys, component)
+
+    initial_time = Dates.DateTime("2020-09-01")
+    resolution1 = Dates.Minute(5)
+    other_time1 = initial_time + resolution1
+    horizon_count1 = 24
+    resolution2 = Dates.Minute(10)
+    other_time2 = initial_time + resolution2
+    horizon_count2 = 12
+
+    name1 = "test1"
+    data1 = SortedDict(
+        initial_time => rand(horizon_count1),
+        other_time1 => rand(horizon_count1),
+    )
+    name2 = "test2"
+    data2 = SortedDict(
+        initial_time => rand(horizon_count2),
+        other_time2 => rand(horizon_count2),
+    )
+
+    forecast1 = IS.Deterministic(; data = data1, name = name1, resolution = resolution1)
+    forecast2 = IS.Deterministic(; data = data2, name = name2, resolution = resolution2)
+    key1 = IS.add_time_series!(sys, component, forecast1)
+    key2 = IS.add_time_series!(sys, component, forecast2)
+    @test key1.horizon == horizon_count1 * resolution1
+    @test key2.horizon == horizon_count2 * resolution2
+
+    resolution3 = Dates.Minute(11)
+    other_time3 = initial_time + resolution3
+    horizon_count3 = 13
+    name3 = "test3"
+    data3 = SortedDict(
+        initial_time => rand(horizon_count3),
+        other_time3 => rand(horizon_count3),
+    )
+    forecast3 = IS.Deterministic(; data = data3, name = name3, resolution = resolution3)
+    @test_throws IS.ConflictingInputsError IS.add_time_series!(sys, component, forecast3)
+end
+
 @testset "Test add Deterministic Cost Timeseries" begin
     initial_time = Dates.DateTime("2020-09-01")
     resolution = Dates.Hour(1)
     other_time = initial_time + resolution
     name = "test"
-    horizon = 24
+    horizon_count = 24
     linear_cost = repeat([IS.LinearFunctionData(3.14, 1.23)], 24)
     data_linear = SortedDict(initial_time => linear_cost, other_time => linear_cost)
     polynomial_cost = repeat([IS.QuadraticFunctionData(999.0, 1.0, 0.5)], 24)
@@ -164,31 +209,31 @@ end
 
     data_ts_linear = Dict(
         initial_time => TimeSeries.TimeArray(
-            range(initial_time; length = horizon, step = resolution),
+            range(initial_time; length = horizon_count, step = resolution),
             linear_cost,
         ),
         other_time => TimeSeries.TimeArray(
-            range(other_time; length = horizon, step = resolution),
+            range(other_time; length = horizon_count, step = resolution),
             linear_cost,
         ),
     )
     data_ts_polynomial = Dict(
         initial_time => TimeSeries.TimeArray(
-            range(initial_time; length = horizon, step = resolution),
+            range(initial_time; length = horizon_count, step = resolution),
             polynomial_cost,
         ),
         other_time => TimeSeries.TimeArray(
-            range(other_time; length = horizon, step = resolution),
+            range(other_time; length = horizon_count, step = resolution),
             polynomial_cost,
         ),
     )
     data_ts_pwl = Dict(
         initial_time => TimeSeries.TimeArray(
-            range(initial_time; length = horizon, step = resolution),
+            range(initial_time; length = horizon_count, step = resolution),
             pwl_cost,
         ),
         other_time => TimeSeries.TimeArray(
-            range(other_time; length = horizon, step = resolution),
+            range(other_time; length = horizon_count, step = resolution),
             pwl_cost,
         ),
     )
@@ -211,8 +256,9 @@ end
     resolution = Dates.Hour(1)
     other_time = initial_time + resolution
     name = "test"
-    horizon = 24
-    data_vec = Dict(initial_time => ones(horizon, 99), other_time => ones(horizon, 99))
+    horizon_count = 24
+    data_vec =
+        Dict(initial_time => ones(horizon_count, 99), other_time => ones(horizon_count, 99))
     sys = IS.SystemData()
     component_name = "Component1"
     component = IS.TestComponent(component_name, 5)
@@ -232,12 +278,12 @@ end
 
     data_ts = Dict(
         initial_time => TimeSeries.TimeArray(
-            range(initial_time; length = horizon, step = resolution),
-            ones(horizon, 99),
+            range(initial_time; length = horizon_count, step = resolution),
+            ones(horizon_count, 99),
         ),
         other_time => TimeSeries.TimeArray(
-            range(other_time; length = horizon, step = resolution),
-            ones(horizon, 99),
+            range(other_time; length = horizon_count, step = resolution),
+            ones(horizon_count, 99),
         ),
     )
     sys = IS.SystemData()
@@ -255,8 +301,9 @@ end
     resolution = Dates.Hour(1)
     other_time = initial_time + resolution
     name = "test"
-    horizon = 24
-    data_vec = Dict(initial_time => ones(horizon, 99), other_time => ones(horizon, 99))
+    horizon_count = 24
+    data_vec =
+        Dict(initial_time => ones(horizon_count, 99), other_time => ones(horizon_count, 99))
     sys = IS.SystemData()
     component_name = "Component1"
     component = IS.TestComponent(component_name, 5)
@@ -271,12 +318,12 @@ end
 
     data_ts = Dict(
         initial_time => TimeSeries.TimeArray(
-            range(initial_time; length = horizon, step = resolution),
-            ones(horizon, 2),
+            range(initial_time; length = horizon_count, step = resolution),
+            ones(horizon_count, 2),
         ),
         other_time => TimeSeries.TimeArray(
-            range(other_time; length = horizon, step = resolution),
-            ones(horizon, 2),
+            range(other_time; length = horizon_count, step = resolution),
+            ones(horizon_count, 2),
         ),
     )
     sys = IS.SystemData()
@@ -584,8 +631,9 @@ end
 
     other_time = initial_time + resolution
     ts_name = "test"
-    horizon = 24
-    data = SortedDict(initial_time => rand(horizon), other_time => rand(horizon))
+    horizon_count = 24
+    data =
+        SortedDict(initial_time => rand(horizon_count), other_time => rand(horizon_count))
 
     forecast = IS.Deterministic(; data = data, name = ts_name, resolution = resolution)
     IS.add_time_series!(sys, component, forecast; scenario = "low", model_year = "2030")
@@ -677,6 +725,15 @@ end
 @testset "Test Deterministic with a wrapped SingleTimeSeries" begin
     for in_memory in (true, false)
         sys = IS.SystemData(; time_series_in_memory = in_memory)
+
+        # This is allowed when there are no time series.
+        IS.transform_single_time_series!(
+            sys,
+            IS.DeterministicSingleTimeSeries,
+            Dates.Hour(24),
+            Dates.Hour(24),
+        )
+
         component = IS.TestComponent("Component1", 5)
         IS.add_component!(sys, component)
 
@@ -687,14 +744,15 @@ end
         name = "val"
         ts = IS.SingleTimeSeries(name, ta)
         IS.add_time_series!(sys, component, ts)
-        horizon = 6
+        horizon_count = 6
+        horizon = horizon_count * resolution
         verify_show(sys)
 
         # Create a Deterministic as a bystander.
         forecast_count = 46
         fdata = SortedDict{Dates.DateTime, Vector{Float64}}()
         for i in 1:forecast_count
-            fdata[dates[i]] = ones(horizon)
+            fdata[dates[i]] = ones(horizon_count)
         end
         bystander =
             IS.Deterministic(;
@@ -741,11 +799,12 @@ end
 
         # Get the transformed forecast.
         forecast = IS.get_time_series(IS.DeterministicSingleTimeSeries, component, name)
+        @test IS.get_horizon(forecast) == horizon
         @test IS.get_interval(forecast) == interval
         window = IS.get_window(forecast, dates[1])
         @test window isa TimeSeries.TimeArray
-        @test TimeSeries.timestamp(window) == TimeSeries.timestamp(ta[1:horizon])
-        @test TimeSeries.values(window) == TimeSeries.values(ta[1:horizon])
+        @test TimeSeries.timestamp(window) == TimeSeries.timestamp(ta[1:horizon_count])
+        @test TimeSeries.values(window) == TimeSeries.values(ta[1:horizon_count])
 
         windows = collect(IS.iterate_windows(forecast))
         # Note that there is an extra 5 minutes being truncated.
@@ -754,7 +813,7 @@ end
         last_initial_time = dates[end - 1] - interval
         last_it_index = length(dates) - 1 - Int(Dates.Minute(interval) / resolution)
         @test last_initial_time == dates[last_it_index]
-        last_val_index = last_it_index + horizon - 1
+        last_val_index = last_it_index + horizon_count - 1
         @test TimeSeries.values(windows[exp_length]) ==
               data[last_it_index:last_val_index]
 
@@ -762,8 +821,8 @@ end
         forecast = IS.get_time_series(IS.Deterministic, component, name)
         window = IS.get_window(forecast, dates[1])
         @test window isa TimeSeries.TimeArray
-        @test TimeSeries.timestamp(window) == TimeSeries.timestamp(ta[1:horizon])
-        @test TimeSeries.values(window) == TimeSeries.values(ta[1:horizon])
+        @test TimeSeries.timestamp(window) == TimeSeries.timestamp(ta[1:horizon_count])
+        @test TimeSeries.values(window) == TimeSeries.values(ta[1:horizon_count])
 
         # Verify that get_time_series_multiple works with these types.
         forecasts = collect(IS.get_time_series_multiple(sys))
@@ -792,7 +851,7 @@ end
             IS.Deterministic,
             component,
             name;
-            len = horizon - 1,
+            len = horizon_count - 1,
         )
         # Already stored.
         @test IS.transform_single_time_series!(
@@ -805,18 +864,18 @@ end
         @test_throws IS.ConflictingInputsError IS.transform_single_time_series!(
             sys,
             IS.DeterministicSingleTimeSeries,
-            1000, # horizon is longer than single time series
+            1000 * resolution, # horizon is longer than single time series
             interval,
         )
 
         # The next test is not compatible with the bystander.
         IS.remove_time_series!(sys, IS.Deterministic, component, "bystander")
 
-        # Good but different horizon
+        # Good but different horizon count
         @test IS.transform_single_time_series!(
             sys,
             IS.DeterministicSingleTimeSeries,
-            12,
+            12 * resolution,
             interval,
         ) === nothing
 
@@ -824,7 +883,7 @@ end
         @test IS.transform_single_time_series!(
             sys,
             IS.DeterministicSingleTimeSeries,
-            2,
+            2 * resolution,
             Dates.Minute(10),
         ) === nothing
 
@@ -833,7 +892,7 @@ end
             sys,
             IS.DeterministicSingleTimeSeries,
             horizon,
-            resolution * (horizon + 1),
+            resolution * (horizon_count + 1),
         )
 
         # Multiple resolutions is not supported yet
@@ -844,12 +903,13 @@ end
         name = "val2"
         ts = IS.SingleTimeSeries(name, ta)
         IS.add_time_series!(sys, component, ts)
-        horizon = 24
+        horizon_count = 24
+        horizon = horizon_count * resolution
         @test_throws IS.ConflictingInputsError IS.transform_single_time_series!(
             sys,
             IS.DeterministicSingleTimeSeries,
             horizon,
-            resolution2 * (horizon + 1),
+            resolution2 * (horizon_count + 1),
         )
 
         # Ensure that attempted removal of nonexistent types works fine
@@ -857,6 +917,121 @@ end
         IS.remove_time_series!(sys, IS.Probabilistic)
         @test counts === IS.get_time_series_counts(sys)
     end
+end
+
+function _create_multi_resolution_horizon_count_system()
+    resolution1 = Dates.Minute(5)
+    resolution2 = Dates.Minute(10)
+    horizon = 6 * resolution2
+    interval = Dates.Minute(30)
+    sys = IS.SystemData(; time_series_in_memory = true)
+    component = IS.TestComponent("Component1", 5)
+    IS.add_component!(sys, component)
+
+    dates1 = create_dates("2020-01-01T00:00:00", resolution1, "2020-01-01T23:00:00")
+    data1 = rand(length(dates1))
+    ta1 = TimeSeries.TimeArray(dates1, data1, [IS.get_name(component)])
+    name1 = "val1"
+    ts1 = IS.SingleTimeSeries(name1, ta1)
+
+    dates2 = create_dates("2020-01-01T00:00:00", resolution2, "2020-01-01T23:10:00")
+    data2 = rand(length(dates2))
+    ta2 = TimeSeries.TimeArray(dates2, data2, [IS.get_name(component)])
+    name2 = "val2"
+    ts2 = IS.SingleTimeSeries(name2, ta2)
+
+    IS.add_time_series!(sys, component, ts1)
+    IS.add_time_series!(sys, component, ts2)
+
+    attr = IS.TestSupplemental(; value = 3.0)
+    IS.add_supplemental_attribute!(sys, component, attr)
+    resolution_sa = Dates.Hour(1)
+    dates_sa = create_dates("2021-01-01T00:00:00", resolution_sa, "2021-01-01T23:00:00")
+    data_sa = rand(length(dates_sa))
+    ta_sa = TimeSeries.TimeArray(dates_sa, data_sa, [IS.get_name(component)])
+    name_sa = "val_sa"
+    ts_sa = IS.SingleTimeSeries(name_sa, ta_sa)
+    IS.add_time_series!(sys, attr, ts_sa)
+
+    return sys, component, attr, resolution1, resolution2, horizon, interval
+end
+
+@testset "Test multi-DTS with mixed resolutions valid" begin
+    sys, component, attr, resolution1, resolution2, horizon, interval =
+        _create_multi_resolution_horizon_count_system()
+    IS.transform_single_time_series!(
+        sys,
+        IS.DeterministicSingleTimeSeries,
+        horizon,
+        interval,
+    )
+    ts1b = IS.get_time_series(IS.DeterministicSingleTimeSeries, component, "val1")
+    @test IS.get_horizon(ts1b) == horizon
+    @test IS.get_horizon_count(ts1b) == horizon ÷ resolution1
+    ts2b = IS.get_time_series(IS.DeterministicSingleTimeSeries, component, "val2")
+    @test IS.get_horizon(ts2b) == horizon
+    @test IS.get_horizon_count(ts2b) == horizon ÷ resolution2
+    @test !IS.has_time_series(attr, IS.DeterministicSingleTimeSeries)
+end
+
+@testset "Test multi-DTS with mixed resolutions invalid resolution" begin
+    sys, component, attr, resolution1, resolution2, horizon, interval =
+        _create_multi_resolution_horizon_count_system()
+    resolution3 = Dates.Minute(13)
+    dates3 = create_dates("2020-01-01T00:00:00", resolution3, "2020-01-01T23:00:00")
+    data3 = rand(length(dates3))
+    ta3 = TimeSeries.TimeArray(dates3, data3, [IS.get_name(component)])
+    name3 = "val3"
+    ts3 = IS.SingleTimeSeries(name3, ta3)
+    IS.add_time_series!(sys, component, ts3)
+    @test_throws "not evenly divisible" IS.transform_single_time_series!(
+        sys,
+        IS.DeterministicSingleTimeSeries,
+        horizon,
+        interval,
+    )
+    @test !IS.has_time_series(component, IS.DeterministicSingleTimeSeries)
+    @test !IS.has_time_series(attr, IS.DeterministicSingleTimeSeries)
+end
+
+@testset "Test multi-DTS with mixed resolutions invalid window count" begin
+    sys, component, attr, resolution1, resolution2, horizon, interval =
+        _create_multi_resolution_horizon_count_system()
+    resolution3 = Dates.Minute(10)
+    dates3 = create_dates("2020-01-01T00:00:00", resolution3, "2020-01-02T00:00:00")
+    data3 = rand(length(dates3))
+    ta3 = TimeSeries.TimeArray(dates3, data3, [IS.get_name(component)])
+    name3 = "val3"
+    ts3 = IS.SingleTimeSeries(name3, ta3)
+    IS.add_time_series!(sys, component, ts3)
+    @test_throws "different values for count" IS.transform_single_time_series!(
+        sys,
+        IS.DeterministicSingleTimeSeries,
+        horizon,
+        interval,
+    )
+    @test !IS.has_time_series(component, IS.DeterministicSingleTimeSeries)
+    @test !IS.has_time_series(attr, IS.DeterministicSingleTimeSeries)
+end
+
+@testset "Test multi-DTS with mixed resolutions invalid initial timestamp" begin
+    sys, component, attr, resolution1, resolution2, horizon, interval =
+        _create_multi_resolution_horizon_count_system()
+    resolution3 = Dates.Minute(10)
+    dates3 = create_dates("2020-01-01T01:00:00", resolution3, "2020-01-02T00:10:00")
+    data3 = rand(length(dates3))
+    ta3 = TimeSeries.TimeArray(dates3, data3, [IS.get_name(component)])
+    name3 = "val3"
+    ts3 = IS.SingleTimeSeries(name3, ta3)
+    IS.add_time_series!(sys, component, ts3)
+    @test_throws "different initial timestamps" IS.transform_single_time_series!(
+        sys,
+        IS.DeterministicSingleTimeSeries,
+        horizon,
+        interval,
+    )
+    !IS.has_time_series(component, IS.DeterministicSingleTimeSeries)
+    @test !IS.has_time_series(attr, IS.DeterministicSingleTimeSeries)
 end
 
 @testset "Test Deterministic with a wrapped SingleTimeSeries different offsets" begin
@@ -879,7 +1054,8 @@ end
         IS.add_time_series!(sys, component, ts1)
         IS.add_time_series!(sys, component, ts2)
 
-        horizon = 1
+        horizon_count = 1
+        horizon = horizon_count * resolution
         interval = Dates.Hour(1)
         @test_throws IS.ConflictingInputsError IS.transform_single_time_series!(
             sys,
@@ -906,7 +1082,8 @@ end
         IS.add_time_series!(sys, component, ts)
         push!(ts_names, name)
     end
-    horizon = 6
+    horizon_count = 6
+    horizon = horizon_count * resolution
 
     interval = Dates.Minute(30)
     IS.transform_single_time_series!(
@@ -935,7 +1112,8 @@ end
         name = "val"
         ts = IS.SingleTimeSeries(name, ta)
         IS.add_time_series!(sys, component, ts)
-        horizon = 6
+        horizon_count = 6
+        horizon = horizon_count * resolution
 
         interval = Dates.Minute(30)
         IS.transform_single_time_series!(
@@ -964,21 +1142,22 @@ end
     IS.add_component!(sys, component)
 
     resolution = Dates.Hour(1)
-    horizon = 24
+    horizon_count = 24
+    horizon = horizon_count * resolution
     dates = collect(
         range(
             Dates.DateTime("2020-01-01T00:00:00");
-            length = horizon,
+            length = horizon_count,
             step = resolution,
         ),
     )
-    data = collect(1:horizon)
+    data = collect(1:horizon_count)
     ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
     name = "val"
     ts = IS.SingleTimeSeries(name, ta)
     IS.add_time_series!(sys, component, ts)
 
-    interval = Dates.Hour(horizon)
+    interval = Dates.Hour(horizon_count)
     IS.transform_single_time_series!(
         sys,
         IS.DeterministicSingleTimeSeries,
@@ -998,15 +1177,16 @@ end
     IS.add_component!(sys, component)
 
     resolution = Dates.Hour(1)
-    horizon = 24
+    horizon_count = 24
+    horizon = horizon_count * resolution
     dates = collect(
         range(
             Dates.DateTime("2020-01-01T00:00:00");
-            length = horizon,
+            length = horizon_count,
             step = resolution,
         ),
     )
-    data = collect(1:horizon)
+    data = collect(1:horizon_count)
     ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
     name = "val"
     ts = IS.SingleTimeSeries(name, ta)
@@ -1038,7 +1218,8 @@ end
     name = "val"
     ts = IS.SingleTimeSeries(name, ta)
     IS.add_time_series!(sys, component, ts)
-    horizon = 6
+    horizon_count = 6
+    horizon = horizon_count * resolution
     interval = Dates.Minute(10)
     IS.transform_single_time_series!(
         sys,
@@ -1518,7 +1699,8 @@ end
     name = "val"
     ts = IS.SingleTimeSeries(name, ta)
     IS.add_time_series!(sys, component, ts)
-    horizon = 6
+    horizon_count = 6
+    horizon = horizon_count * resolution
     interval = Dates.Minute(10)
     IS.transform_single_time_series!(
         sys,
@@ -1634,10 +1816,11 @@ end
         IS.add_component!(sys, component)
 
         initial_timestamp = Dates.DateTime("2020-01-01T00:00:00")
-        horizon = 24
         resolution = Dates.Hour(1)
+        horizon_count = 24
+        horizon = horizon_count * resolution
         scenario_count = 2
-        data_input = rand(horizon, scenario_count)
+        data_input = rand(horizon_count, scenario_count)
         data = SortedDict(initial_timestamp => data_input)
         time_series = IS.Scenarios(;
             name = name,
@@ -1669,10 +1852,11 @@ end
         IS.add_component!(sys, component)
 
         initial_timestamp = Dates.DateTime("2020-01-01T00:00:00")
-        horizon = 24
         resolution = Dates.Hour(1)
+        horizon_count = 24
+        horizon = horizon_count * resolution
         percentiles = 1:99
-        data_input = rand(horizon, length(percentiles))
+        data_input = rand(horizon_count, length(percentiles))
         data = SortedDict(initial_timestamp => data_input)
         time_series = IS.Probabilistic(;
             name = name,
@@ -1727,8 +1911,10 @@ end
     initial_time = Dates.DateTime("2020-09-01")
     second_time = initial_time + resolution
     name = "test_forecast"
-    horizon = 24
-    data = SortedDict(initial_time => ones(horizon), second_time => ones(horizon))
+    horizon_count = 24
+    horizon = horizon_count * resolution
+    data =
+        SortedDict(initial_time => ones(horizon_count), second_time => ones(horizon_count))
 
     forecast = IS.Deterministic(; data = data, name = name, resolution = resolution)
     IS.add_time_series!(sys, component, forecast)
@@ -1757,7 +1943,7 @@ default_time_params = (
     initial_times = collect(
         range(Dates.DateTime("2020-09-01"); length = 24, step = Dates.Hour(1)),
     ),
-    horizon = 24,
+    horizon_count = 24,
 )
 
 function _test_get_time_series_option_type(test_data, in_memory, extended)
@@ -1799,7 +1985,7 @@ function _test_get_time_series_option_type(test_data, in_memory, extended)
         )
         @test IS.get_initial_timestamp(f2) == it
         @test IS.get_count(f2) == count
-        @test IS.get_horizon(f2) == default_time_params.horizon
+        @test IS.get_horizon_count(f2) == default_time_params.horizon_count
         for (i, window) in enumerate(IS.iterate_windows(f2))
             @test TimeSeries.values(window) ==
                   test_data[default_time_params.initial_times[i + offset - 1]]
@@ -1818,7 +2004,7 @@ function _test_get_time_series_option_type(test_data, in_memory, extended)
     )
     @test IS.get_initial_timestamp(f2) == it
     @test IS.get_count(f2) == count
-    @test IS.get_horizon(f2) == default_time_params.horizon
+    @test IS.get_horizon_count(f2) == default_time_params.horizon_count
     for (i, window) in enumerate(IS.iterate_windows(f2))
         @test TimeSeries.values(window) ==
               test_data[default_time_params.initial_times[i + offset - 1]]
@@ -1830,14 +2016,14 @@ function _test_get_time_series_option_type(test_data, in_memory, extended)
         name;
         start_time = it,
         count = count,
-        len = default_time_params.horizon - 1,
+        len = default_time_params.horizon_count - 1,
     )
     @test IS.get_initial_timestamp(f2) == it
     @test IS.get_count(f2) == count
-    @test IS.get_horizon(f2) == default_time_params.horizon - 1
+    @test IS.get_horizon_count(f2) == default_time_params.horizon_count - 1
     for (i, window) in enumerate(IS.iterate_windows(f2))
         @test TimeSeries.values(window) ==
-              test_data[default_time_params.initial_times[i + offset - 1]][1:(default_time_params.horizon - 1)]
+              test_data[default_time_params.initial_times[i + offset - 1]][1:(default_time_params.horizon_count - 1)]
     end
 
     @test_throws ArgumentError IS.get_time_series(
@@ -1851,7 +2037,7 @@ end
     for in_memory in (true, false)
         _test_get_time_series_option_type(
             SortedDict(
-                it => ones(default_time_params.horizon) * i for
+                it => ones(default_time_params.horizon_count) * i for
                 (i, it) in enumerate(default_time_params.initial_times)
             ),
             in_memory,
@@ -2010,8 +2196,8 @@ end
     initial_timestamp = Dates.DateTime("2020-09-01")
     initial_times = collect(range(initial_timestamp; length = 2, step = interval))
     name = "test"
-    horizon = 24
-    data = SortedDict(it => ones(horizon) * i for (i, it) in enumerate(initial_times))
+    horizon_count = 24
+    data = SortedDict(it => ones(horizon_count) * i for (i, it) in enumerate(initial_times))
 
     forecast =
         IS.Deterministic(name, data, resolution; scaling_factor_multiplier = IS.get_val)
@@ -2028,7 +2214,7 @@ end
 
     @test ta2 isa TimeSeries.TimeArray
     @test TimeSeries.timestamp(ta2) ==
-          collect(range(start_time; length = horizon, step = resolution))
+          collect(range(start_time; length = horizon_count, step = resolution))
     @test TimeSeries.timestamp(ta2) == IS.get_time_series_timestamps(
         IS.Deterministic,
         component,
@@ -2103,9 +2289,9 @@ end
     resolution = Dates.Hour(1)
     other_time = initial_time + resolution
     name = "test"
-    horizon = 24
-    data1 = rand(horizon, 99)
-    data2 = rand(horizon, 99)
+    horizon_count = 24
+    data1 = rand(horizon_count, 99)
+    data2 = rand(horizon_count, 99)
     data_vec = Dict(initial_time => data1, other_time => data2)
     sys = IS.SystemData()
     component_name = "Component1"
@@ -2151,9 +2337,9 @@ end
     resolution = Dates.Hour(1)
     other_time = initial_time + resolution
     name = "test"
-    horizon = 24
-    data1 = rand(horizon, 99)
-    data2 = rand(horizon, 99)
+    horizon_count = 24
+    data1 = rand(horizon_count, 99)
+    data2 = rand(horizon_count, 99)
     data_vec = Dict(initial_time => data1, other_time => data2)
     sys = IS.SystemData()
     component_name = "Component1"
@@ -2199,7 +2385,7 @@ end
     initial_time = Dates.DateTime("2020-09-01")
     second_time = initial_time + resolution
     name = "test"
-    horizon = 24
+    horizon_count = 24
 
     # Horizon must be greater than 1.
     bad_data = SortedDict(initial_time => ones(1), second_time => ones(1))
@@ -2212,14 +2398,16 @@ end
     @test_throws DimensionMismatch IS.add_time_series!(sys, component, forecast)
 
     # Set baseline parameters for the rest of the tests.
-    data = SortedDict(initial_time => ones(horizon), second_time => ones(horizon))
+    data =
+        SortedDict(initial_time => ones(horizon_count), second_time => ones(horizon_count))
     forecast = IS.Deterministic(; data = data, name = name, resolution = resolution)
     IS.add_time_series!(sys, component, forecast)
 
     # Conflicting initial time
     initial_time2 = Dates.DateTime("2020-09-02")
     name = "test2"
-    data = SortedDict(initial_time2 => ones(horizon), second_time => ones(horizon))
+    data =
+        SortedDict(initial_time2 => ones(horizon_count), second_time => ones(horizon_count))
 
     forecast = IS.Deterministic(; data = data, name = name, resolution = resolution)
     @test_throws IS.ConflictingInputsError IS.add_time_series!(sys, component, forecast)
@@ -2227,7 +2415,8 @@ end
     # As of PSY 4.0, different resolutions are allowed.
     resolution2 = Dates.Minute(5)
     name = "test2"
-    data = SortedDict(initial_time => ones(horizon), second_time => ones(horizon))
+    data =
+        SortedDict(initial_time => ones(horizon_count), second_time => ones(horizon_count))
 
     forecast = IS.Deterministic(; data = data, name = name, resolution = resolution)
     IS.add_time_series!(sys, component, forecast)
@@ -2240,9 +2429,9 @@ end
     name = "test3"
     third_time = second_time + resolution
     data = SortedDict(
-        initial_time => ones(horizon),
-        second_time => ones(horizon),
-        third_time => ones(horizon),
+        initial_time => ones(horizon_count),
+        second_time => ones(horizon_count),
+        third_time => ones(horizon_count),
     )
 
     forecast = IS.Deterministic(; data = data, name = name, resolution = resolution)
@@ -2256,9 +2445,9 @@ end
     IS.add_component!(sys, component)
 
     initial_timestamp = Dates.DateTime("2020-01-01T00:00:00")
-    horizon = 24
+    horizon_count = 24
     resolution = Dates.Hour(1)
-    data_input = rand(horizon)
+    data_input = rand(horizon_count)
     data = SortedDict(initial_timestamp => data_input)
     time_series = IS.Deterministic(; name = name, resolution = resolution, data = data)
     fdata = IS.get_data(time_series)
@@ -2302,9 +2491,9 @@ end
         IS.add_component!(sys, component)
 
         initial_timestamp = Dates.DateTime("2020-01-01T00:00:00")
-        horizon = 24
+        horizon_count = 24
         resolution = Dates.Hour(1)
-        data_input = rand(horizon)
+        data_input = rand(horizon_count)
         data = SortedDict(initial_timestamp => data_input)
         for i in 1:2
             time_series =
@@ -2436,14 +2625,14 @@ function test_forecasts_with_shared_component_fields(forecast_type)
             other_time = initial_time + resolution
             name1 = "val"
             name2 = "val2"
-            horizon = 24
+            horizon_count = 24
             sfm1 = use_scaling_factor ? IS.get_val : nothing
             sfm2 = use_scaling_factor ? IS.get_val2 : nothing
             if forecast_type <: IS.Deterministic
                 data =
                     SortedDict(
-                        initial_time => rand(horizon),
-                        other_time => rand(horizon),
+                        initial_time => rand(horizon_count),
+                        other_time => rand(horizon_count),
                     )
                 forecast1a = IS.Deterministic(;
                     data = data,
@@ -2454,8 +2643,8 @@ function test_forecasts_with_shared_component_fields(forecast_type)
             elseif forecast_type <: IS.Probabilistic
                 data =
                     Dict(
-                        initial_time => rand(horizon, 99),
-                        other_time => ones(horizon, 99),
+                        initial_time => rand(horizon_count, 99),
+                        other_time => ones(horizon_count, 99),
                     )
                 forecast1a = IS.Probabilistic(
                     name1,
@@ -2467,8 +2656,8 @@ function test_forecasts_with_shared_component_fields(forecast_type)
             elseif forecast_type <: IS.Scenarios
                 data =
                     Dict(
-                        initial_time => rand(horizon, 99),
-                        other_time => ones(horizon, 99),
+                        initial_time => rand(horizon_count, 99),
+                        other_time => ones(horizon_count, 99),
                     )
                 forecast1a =
                     IS.Scenarios(
@@ -2608,4 +2797,29 @@ end
             @test getproperty(key2, field) == getproperty(key, field)
         end
     end
+end
+
+@testset "Test get_total_period" begin
+    sys = IS.SystemData()
+    name = "Component1"
+    component = IS.TestComponent(name, 5)
+    IS.add_component!(sys, component)
+
+    initial_time = Dates.DateTime("2020-09-01")
+    resolution = Dates.Hour(1)
+
+    other_time = initial_time + resolution
+    name = "test"
+    horizon_count = 24
+    data =
+        SortedDict(initial_time => rand(horizon_count), other_time => rand(horizon_count))
+
+    forecast = IS.Deterministic(; data = data, name = name, resolution = resolution)
+    IS.add_time_series!(sys, component, forecast)
+    @test IS.get_forecast_total_period(sys) ==
+          other_time + horizon_count * resolution - initial_time
+end
+
+@testset "Test forecast utils" begin
+    @test_throws ErrorException IS.get_horizon_count(Dates.Hour(1), Dates.Minute(33))
 end

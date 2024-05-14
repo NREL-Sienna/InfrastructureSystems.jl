@@ -188,17 +188,17 @@ end
 function get_array_for_hdf(forecast::Scenarios)
     interval_count = get_count(forecast)
     scenario_count = get_scenario_count(forecast)
-    horizon = get_horizon(forecast)
+    horizon_count = get_horizon_count(forecast)
     data = get_data(forecast)
 
-    data_for_hdf = Array{Float64, 3}(undef, scenario_count, horizon, interval_count)
+    data_for_hdf = Array{Float64, 3}(undef, scenario_count, horizon_count, interval_count)
     for (ix, f) in enumerate(values(data))
         data_for_hdf[:, :, ix] = transpose(f)
     end
     return data_for_hdf
 end
 
-function get_horizon(forecast::Scenarios)
+function get_horizon_count(forecast::Scenarios)
     return size(first(values(get_data(forecast))))[1]
 end
 
@@ -255,7 +255,6 @@ set_internal!(value::Scenarios, val) = value.internal = val
 
 # TODO see Deterministic
 eltype_data(forecast::Scenarios) = eltype_data_common(forecast)
-get_count(forecast::Scenarios) = get_count_common(forecast)
 get_initial_times(forecast::Scenarios) = get_initial_times_common(forecast)
 get_initial_timestamp(forecast::Scenarios) = get_initial_timestamp_common(forecast)
 get_interval(forecast::Scenarios) = get_interval_common(forecast)

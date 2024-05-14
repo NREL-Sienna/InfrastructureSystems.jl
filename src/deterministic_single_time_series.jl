@@ -27,7 +27,7 @@ mutable struct DeterministicSingleTimeSeries <: AbstractDeterministic
     "number of forecast windows"
     count::Int
     "length of this time series"
-    horizon::Int
+    horizon::Dates.Period
 end
 
 function DeterministicSingleTimeSeries(;
@@ -100,6 +100,8 @@ function get_array_for_hdf(forecast::DeterministicSingleTimeSeries)
 end
 
 get_resolution(val::DeterministicSingleTimeSeries) = get_resolution(val.single_time_series)
+get_horizon_count(val::DeterministicSingleTimeSeries) =
+    get_horizon_count(get_horizon(val), get_resolution(val))
 
 function get_window(
     forecast::DeterministicSingleTimeSeries,
@@ -112,8 +114,8 @@ function get_window(
         throw(ArgumentError("initial_time=$initial_time is not on a window boundary"))
     end
 
-    if len === nothing
-        len = forecast.horizon
+    if isnothing(len)
+        len = get_horizon_count(forecast)
     end
 
     ta = get_data(forecast.single_time_series)
@@ -147,9 +149,10 @@ function deserialize_deterministic_from_single_time_series(
 )
     @debug "deserializing a SingleTimeSeries" _group = LOG_GROUP_TIME_SERIES
     horizon = get_horizon(ts_metadata)
+    horizon_count = get_horizon_count(ts_metadata)
     interval = get_interval(ts_metadata)
     resolution = get_resolution(ts_metadata)
-    if length(rows) != horizon
+    if length(rows) != horizon_count
         throw(
             ArgumentError(
                 "Transforming SingleTimeSeries to Deterministic requires a full horizon: $rows",
@@ -158,7 +161,13 @@ function deserialize_deterministic_from_single_time_series(
     end
 
     sts_rows =
-        _translate_deterministic_offsets(horizon, interval, resolution, columns, last_index)
+        _translate_deterministic_offsets(
+            horizon_count,
+            interval,
+            resolution,
+            columns,
+            last_index,
+        )
     sts = deserialize_time_series(
         SingleTimeSeries,
         storage,

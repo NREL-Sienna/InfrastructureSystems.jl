@@ -44,7 +44,7 @@ function test_outer_round_trip(
     IS.serialize_time_series!(storage, ts)
     ts_subset =
         IS.deserialize_time_series(IS.Deterministic, storage, ts_metadata, rows, columns)
-    @test IS.get_horizon(ts_subset) == length(rows)
+    @test IS.get_horizon_count(ts_subset) == length(rows)
     @test IS.get_count(ts_subset) == length(columns)
     @test collect(values(IS.get_data(ts_subset))) ==
           [sub[rows] for sub in collect(values(IS.get_data(ts)))[columns]]

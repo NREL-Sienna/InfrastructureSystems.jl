@@ -281,23 +281,22 @@ set_internal!(value::Probabilistic, val) = value.internal = val
 function get_array_for_hdf(forecast::Probabilistic)
     interval_count = get_count(forecast)
     percentile_count = length(get_percentiles(forecast))
-    horizon = get_horizon(forecast)
+    horizon_count = get_horizon_count(forecast)
     data = get_data(forecast)
 
-    data_for_hdf = Array{Float64, 3}(undef, percentile_count, horizon, interval_count)
+    data_for_hdf = Array{Float64, 3}(undef, percentile_count, horizon_count, interval_count)
     for (ix, f) in enumerate(values(data))
         data_for_hdf[:, :, ix] = transpose(f)
     end
     return data_for_hdf
 end
 
-function get_horizon(forecast::Probabilistic)
+function get_horizon_count(forecast::Probabilistic)
     return size(first(values(get_data(forecast))))[1]
 end
 
 # TODO see Deterministic
 eltype_data(forecast::Probabilistic) = eltype_data_common(forecast)
-get_count(forecast::Probabilistic) = get_count_common(forecast)
 get_initial_times(forecast::Probabilistic) = get_initial_times_common(forecast)
 get_initial_timestamp(forecast::Probabilistic) = get_initial_timestamp_common(forecast)
 get_interval(forecast::Probabilistic) = get_interval_common(forecast)

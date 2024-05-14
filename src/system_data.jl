@@ -456,50 +456,168 @@ check_time_series_consistency(data::SystemData, ts_type) =
 
 """
 Transform all instances of SingleTimeSeries to DeterministicSingleTimeSeries.
+If all SingleTimeSeries instances cannot be transformed then none will be.
 
 Any existing DeterministicSingleTimeSeries forecasts will be deleted even if the inputs are
 invalid.
 """
 function transform_single_time_series!(
     data::SystemData,
-    ::Type{T},
-    horizon::Int,
+    ::Type{<:DeterministicSingleTimeSeries},
+    horizon::Dates.Period,
     interval::Dates.Period,
-) where {T <: DeterministicSingleTimeSeries}
-    resolutions = get_time_series_resolutions(data; time_series_type = SingleTimeSeries)
-    if length(resolutions) > 1
-        # TODO: This needs to support an alternate method where horizon is expressed as a
-        # Period (horizon * resolution)
+)
+    remove_time_series!(data, DeterministicSingleTimeSeries)
+    items = _check_transform_single_time_series(
+        data,
+        DeterministicSingleTimeSeries,
+        horizon,
+        interval,
+    )
+
+    if isempty(items)
+        @warn "There are no SingleTimeSeries arrays to transform"
+        return
+    end
+
+    if length(items) > 1
+        params1 = items[1].params
+        for item in items[2:end]
+            params = item.params
+            if params.count != params1.count
+                msg =
+                    "transform_single_time_series! with horizon = $horizon and " *
+                    "interval = $interval will produce Deterministic forecasts with " *
+                    "different values for count: $(params.count) $(params1.count)"
+                throw(ConflictingInputsError(msg))
+            end
+            if params.initial_timestamp != params1.initial_timestamp
+                msg =
+                    "transform_single_time_series! is not supported when " *
+                    "SingleTimeSeries have different initial timestamps: " *
+                    "$(params.initial_timestamp) $(params1.initial_timestamp)"
+                throw(ConflictingInputsError(msg))
+            end
+        end
+    end
+
+    for item in items
+        metadata = item.metadata
+        params = item.params
+        component = item.component
+        new_metadata = DeterministicMetadata(;
+            name = get_name(metadata),
+            resolution = get_resolution(metadata),
+            initial_timestamp = params.initial_timestamp,
+            interval = params.interval,
+            count = params.count,
+            time_series_uuid = get_time_series_uuid(metadata),
+            horizon = params.horizon,
+            time_series_type = DeterministicSingleTimeSeries,
+            scaling_factor_multiplier = get_scaling_factor_multiplier(metadata),
+            internal = get_internal(metadata),
+        )
+        try
+            add_metadata!(data.time_series_manager.metadata_store, component, new_metadata)
+        catch
+            # This shouldn't be needed, but just in case there is a bug, remove all
+            # DeterministicSingleTimeSeries to keep our guarantee.
+            remove_time_series!(data, DeterministicSingleTimeSeries)
+            rethrow()
+        end
+    end
+end
+
+"""
+Check that all existing SingleTimeSeries can be converted to DeterministicSingleTimeSeries
+with the given horizon and interval.
+
+Throw ConflictingInputsError if any time series cannot be converted.
+
+Return a Vector of NamedTuple of component, time series metadata, and forecast parameters
+for all matches. 
+"""
+function _check_transform_single_time_series(
+    data::SystemData,
+    ::Type{DeterministicSingleTimeSeries},
+    horizon::Dates.Period,
+    interval::Dates.Period,
+)
+    items = list_metadata_with_owner_uuid(
+        data.time_series_manager.metadata_store,
+        InfrastructureSystemsComponent;
+        time_series_type = SingleTimeSeries,
+    )
+    components_with_params_and_metadata = Vector(undef, length(items))
+    for (i, item) in enumerate(items)
+        params = _check_single_time_series_transformed_parameters(
+            item.metadata,
+            DeterministicSingleTimeSeries,
+            horizon,
+            interval,
+        )
+        component = get_component(data, item.owner_uuid)
+        check_params_compatibility(data.time_series_manager.metadata_store, params)
+        components_with_params_and_metadata[i] =
+            (component = component, params = params, metadata = item.metadata)
+    end
+
+    return components_with_params_and_metadata
+end
+
+function _check_single_time_series_transformed_parameters(
+    metadata::SingleTimeSeriesMetadata,
+    ::Type{DeterministicSingleTimeSeries},
+    desired_horizon::Dates.Period,
+    desired_interval::Dates.Period,
+)
+    resolution = get_resolution(metadata)
+    len = length(metadata)
+    max_horizon = len * resolution
+    if desired_horizon > max_horizon
         throw(
             ConflictingInputsError(
-                "transform_single_time_series! is not yet supported when there is more than " *
-                "one resolution: $resolutions",
+                "desired horizon = $desired_horizon is greater than max horizon = $max_horizon",
             ),
         )
     end
 
-    remove_time_series!(data, DeterministicSingleTimeSeries)
-    for (i, uuid) in enumerate(
-        list_owner_uuids_with_time_series(
-            data.time_series_manager.metadata_store,
-            InfrastructureSystemsComponent;
-            time_series_type = SingleTimeSeries,
-        ),
-    )
-        component = get_component(data, uuid)
-        if i == 1
-            params = get_single_time_series_transformed_parameters(
-                component,
-                T,
-                horizon,
-                interval,
-            )
-            # This will throw if there is another forecast type with conflicting parameters.
-            check_params_compatibility(data.time_series_manager.metadata_store, params)
-        end
-
-        transform_single_time_series_internal!(component, T, horizon, interval)
+    if desired_horizon % resolution != Dates.Millisecond(0)
+        throw(
+            ConflictingInputsError(
+                "desired horizon = $desired_horizon is not evenly divisible by resolution = $resolution",
+            ),
+        )
     end
+
+    horizon_count = get_horizon_count(desired_horizon, resolution)
+    max_interval = desired_horizon
+    if len == horizon_count && desired_interval == max_interval
+        desired_interval = Dates.Second(0)
+        @warn "There is only one forecast window. Setting interval = $desired_interval"
+    elseif desired_interval > max_interval
+        throw(
+            ConflictingInputsError(
+                "interval = $desired_interval is bigger than the max of $max_interval",
+            ),
+        )
+    end
+
+    initial_timestamp = get_initial_timestamp(metadata)
+    count = get_forecast_window_count(
+        initial_timestamp,
+        desired_interval,
+        resolution,
+        len,
+        horizon_count,
+    )
+    return ForecastParameters(;
+        initial_timestamp = initial_timestamp,
+        count = count,
+        horizon = desired_horizon,
+        interval = desired_interval,
+        resolution = resolution,
+    )
 end
 
 """
@@ -892,12 +1010,17 @@ get_time_series_resolutions(
     time_series_type = time_series_type,
 )
 
-# TODO: do we need this? The old way of calculating this required a single resolution.
-# function get_forecast_total_period(data::SystemData)
-#     params = get_forecast_parameters(data.time_series_manager.metadata_store)
-#     isnothing(params) && return Dates.Second(0)
-#     return get_total_period(params.initial_timestamp, params.count, params.interval, params.horizon)
-# end
+function get_forecast_total_period(data::SystemData)
+    params = get_forecast_parameters(data.time_series_manager.metadata_store)
+    isnothing(params) && return Dates.Second(0)
+    return get_total_period(
+        params.initial_timestamp,
+        params.count,
+        params.interval,
+        params.horizon,
+        params.resolution,
+    )
+end
 
 clear_components!(data::SystemData) = clear_components!(data.components)
 
