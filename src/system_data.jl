@@ -154,8 +154,10 @@ function add_time_series_from_file_metadata!(
         cache = TimeSeriesParsingCache()
         for (i, metadata) in enumerate(file_metadata)
             if resolution === nothing || metadata.resolution == resolution
-                ts_keys[i] =
-                    add_time_series_from_file_metadata_internal!(data, T, cache, metadata)
+                key = add_time_series_from_file_metadata_internal!(data, T, cache, metadata)
+                if !isnothing(key)
+                    ts_keys[i] = key
+                end
             end
         end
     end
