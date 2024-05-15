@@ -804,7 +804,11 @@ function deserialize(
     subsystems = Dict(k => Set(Base.UUID.(v)) for (k, v) in raw["subsystems"])
     supplemental_attribute_manager = deserialize(
         SupplementalAttributeManager,
-        raw["supplemental_attribute_manager"],
+        get(
+            raw,
+            "supplemental_attribute_manager",
+            Dict("attributes" => [], "associations" => []),
+        ),
         time_series_manager,
     )
     internal = deserialize(InfrastructureSystemsInternal, raw["internal"])
