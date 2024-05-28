@@ -1,6 +1,6 @@
 # InfrastructureSystems.jl
 
-![Master - CI](https://github.com/NREL-Sienna/InfrastructureSystems.jl/workflows/Master%20-%20CI/badge.svg)
+[![Main - CI](https://github.com/NREL-Sienna/InfrastructureSystems.jl/actions/workflows/main-tests.yml/badge.svg)](https://github.com/NREL-Sienna/InfrastructureSystems.jl/actions/workflows/main-tests.yml)
 [![codecov](https://codecov.io/gh/NREL-Sienna/InfrastructureSystems.jl/graph/badge.svg?token=I73yjxYxgn)](https://codecov.io/gh/NREL-Sienna/InfrastructureSystems.jl)
 [![Documentation](https://github.com/NREL-Sienna/InfrastructureSystems.jl/workflows/Documentation/badge.svg)](https://nrel-sienna.github.io/InfrastructureSystems.jl/stable/)
 [![DOI](https://zenodo.org/badge/202787784.svg)](https://zenodo.org/badge/latestdoi/202787784)
