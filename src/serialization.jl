@@ -39,7 +39,7 @@ function to_json(obj::T; pretty = false, indent = 2) where {T <: InfrastructureS
             return JSON3.write(serialize(obj))
         end
     catch e
-        @error "Failed to serialize $obj"
+        @error "Failed to serialize $(summary(obj))"
         rethrow(e)
     end
 end
