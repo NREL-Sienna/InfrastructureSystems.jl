@@ -30,12 +30,17 @@ end
 Serializes a InfrastructureSystemsType to a JSON string.
 """
 function to_json(obj::T; pretty = false, indent = 2) where {T <: InfrastructureSystemsType}
-    if pretty
-        io = IOBuffer()
-        JSON3.pretty(io, serialize(obj), JSON3.AlignmentContext(; indent = indent))
-        return take!(io)
-    else
-        return JSON3.write(serialize(obj))
+    try
+        if pretty
+            io = IOBuffer()
+            JSON3.pretty(io, serialize(obj), JSON3.AlignmentContext(; indent = indent))
+            return take!(io)
+        else
+            return JSON3.write(serialize(obj))
+        end
+    catch e
+        @error "Failed to serialize $obj"
+        rethrow(e)
     end
 end
 
