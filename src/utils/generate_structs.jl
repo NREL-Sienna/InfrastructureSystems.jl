@@ -1,7 +1,7 @@
 
 import Mustache
 
-template = """
+const STRUCT_TEMPLATE = """
 #=
 This file is auto-generated. Do not edit.
 =#
@@ -198,7 +198,7 @@ function generate_structs(directory, data::Vector; print_results = true)
 
         filename = joinpath(directory, item["struct_name"] * ".jl")
         open(filename, "w") do io
-            write(io, strip(Mustache.render(template, item)))
+            write(io, strip(Mustache.render(STRUCT_TEMPLATE, item)))
             write(io, "\n")
             push!(struct_names, item["struct_name"])
         end
