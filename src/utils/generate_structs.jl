@@ -19,7 +19,7 @@ This file is auto-generated. Do not edit.
 
 # Arguments
 {{#parameters}}
-- `{{name}}::{{{data_type}}}`:{{#default}} (default: `{{{default}}}`){{/default}}{{#comment}} {{{comment}}}{{/comment}}{{#valid_range}}, validation range: `{{{valid_range}}}`{{/valid_range}}{{#validation_action}}, action if invalid: `{{{validation_action}}}`{{/validation_action}}
+- `{{name}}::{{{data_type}}}`:{{#default}} (default: `{{{default}}}`){{/default}}{{#comment}} {{{comment}}}{{/comment}}{{#valid_range}}, validation range: `{{{valid_range}}}`{{/valid_range}}
 {{/parameters}}
 \"\"\"
 mutable struct {{struct_name}}{{#parametric}}{T <: {{parametric}}}{{/parametric}} <: {{supertype}}
