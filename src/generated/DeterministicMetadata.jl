@@ -23,16 +23,16 @@ A deterministic forecast for a particular data field in a Component.
 
 # Arguments
 - `name::String`: user-defined name
-- `resolution::Dates.Period`
+- `resolution::Dates.Period`:
 - `initial_timestamp::Dates.DateTime`: time series availability time
 - `interval::Dates.Period`: time step between forecast windows
 - `count::Int`: number of forecast windows
 - `time_series_uuid::UUIDs.UUID`: reference to time series data
 - `horizon::Dates.Period`: length of this time series
 - `time_series_type::Type{<:AbstractDeterministic}`: Type of the time series data associated with this metadata.
-- `scaling_factor_multiplier::Union{Nothing, Function}`: Applicable when the time series data are scaling factors. Called on the associated component to convert the values.
-- `features::Dict{String, Union{Bool, Int, String}}`: User-defined tags that differentiate multiple time series arrays that represent the same component attribute, such as different arrays for different scenarios or years.
-- `internal::InfrastructureSystemsInternal`
+- `scaling_factor_multiplier::Union{Nothing, Function}`: (default: `nothing`) Applicable when the time series data are scaling factors. Called on the associated component to convert the values.
+- `features::Dict{String, Union{Bool, Int, String}}`: (default: `Dict{String, Any}()`) User-defined tags that differentiate multiple time series arrays that represent the same component attribute, such as different arrays for different scenarios or years.
+- `internal::InfrastructureSystemsInternal`:
 """
 mutable struct DeterministicMetadata <: ForecastMetadata
     "user-defined name"
