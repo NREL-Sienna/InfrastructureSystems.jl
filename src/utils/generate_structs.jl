@@ -19,7 +19,7 @@ This file is auto-generated. Do not edit.
 
 # Arguments
 {{#parameters}}
-- `{{name}}::{{{data_type}}}`{{#comment}}: {{{comment}}}{{/comment}}{{#valid_range}}, validation range: `{{{valid_range}}}`{{/valid_range}}{{#validation_action}}, action if invalid: `{{{validation_action}}}`{{/validation_action}}
+- `{{name}}::{{{data_type}}}`:{{#default}} (default: `{{{default}}}`){{/default}}{{#comment}} {{{comment}}}{{/comment}}{{#valid_range}}, validation range: `{{{valid_range}}}`{{/valid_range}}
 {{/parameters}}
 \"\"\"
 mutable struct {{struct_name}}{{#parametric}}{T <: {{parametric}}}{{/parametric}} <: {{supertype}}
@@ -121,6 +121,9 @@ function generate_structs(directory, data::Vector; print_results = true)
                 elseif typeof(param["valid_range"]) == String
                     param["valid_range"] = param["valid_range"]
                 end
+            end
+            if haskey(param, "default")
+                param["default"] = string(param["default"])
             end
             push!(parameters, param)
 
