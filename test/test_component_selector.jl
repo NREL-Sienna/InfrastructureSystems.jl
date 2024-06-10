@@ -27,6 +27,8 @@ sort_name(x) = sort(collect(x); by = IS.get_name)
     @test IS.subtype_to_string(IS.TestComponent) == "TestComponent"
     @test IS.component_to_qualified_string(IS.TestComponent, "Component1") ==
           "TestComponent__Component1"
+    @test IS.component_to_qualified_string(IS.TestComponent("Component1", 11)) ==
+          "TestComponent__Component1"
 end
 
 @testset "Test SingleComponentSelector" begin
