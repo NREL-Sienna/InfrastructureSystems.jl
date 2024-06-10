@@ -153,7 +153,7 @@ function get_subselectors(e::SubtypeComponentSelector, sys::Components)
 end
 
 function get_components(e::SubtypeComponentSelector, sys::Components)
-    return get_components(e.component_subtype, sys.data)
+    return get_components(e.component_subtype, sys)
 end
 
 # FilterComponentSelector
@@ -195,7 +195,7 @@ function get_subselectors(e::FilterComponentSelector, sys::Components)
 end
 
 function get_components(e::FilterComponentSelector, sys::Components)
-    return get_components(e.filter_fn, e.component_subtype, sys.data)
+    return get_components(e.filter_fn, e.component_subtype, sys)
 end
 
 # Naming
