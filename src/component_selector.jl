@@ -44,11 +44,17 @@ creation time.
 # Override this if you define a ComponentSelector subtype with no name field
 get_name(e::ComponentSelector) = (e.name !== nothing) ? e.name : default_name(e)
 
-# Make all get_components below that take a Components also work with a SystemData
+# Make all get_components, get_subselectors below that take a Components also work with a SystemData
 """
 Get the components of the collection that make up the ComponentSelector.
 """
 get_components(e::ComponentSelector, sys::SystemData) = get_components(e, sys.components)
+
+"""
+Get the sub-selectors that make up the ComponentSelectorSet.
+"""
+get_subselectors(e::ComponentSelectorSet, sys::SystemData) =
+    get_subselectors(e, sys.components)
 
 # CONCRETE SUBTYPE IMPLEMENTATIONS
 # SingleComponentSelector

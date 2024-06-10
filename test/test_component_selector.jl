@@ -66,3 +66,43 @@ end
         @test IS.get_name(first(the_components)) == "Component1"
     end
 end
+
+@testset "Test ListComponentSelector" begin
+    @testset for test_sys in [cstest_make_components(), cstest_make_system_data()]
+        comp_ent_1 = IS.select_components(IS.TestComponent, "Component1")
+        comp_ent_2 = IS.select_components(IS.AdditionalTestComponent, "Component3")
+        test_list_ent = IS.ListComponentSelector((comp_ent_1, comp_ent_2), nothing)
+        named_test_list_ent = IS.ListComponentSelector((comp_ent_1, comp_ent_2), "TwoComps")
+
+        # Equality
+        @test IS.ListComponentSelector((comp_ent_1, comp_ent_2), nothing) == test_list_ent
+        @test IS.ListComponentSelector((comp_ent_1, comp_ent_2), "TwoComps") ==
+              named_test_list_ent
+
+        # Construction
+        @test IS.select_components(comp_ent_1, comp_ent_2;) == test_list_ent
+        @test IS.select_components(comp_ent_1, comp_ent_2; name = "TwoComps") ==
+              named_test_list_ent
+
+        # Naming
+        @test IS.get_name(test_list_ent) ==
+              "[TestComponent__Component1, AdditionalTestComponent__Component3]"
+        @test IS.get_name(named_test_list_ent) == "TwoComps"
+
+        # Contents
+        @test collect(IS.get_components(IS.select_components(), test_sys)) ==
+              Vector{IS.InfrastructureSystemsComponent}()
+        the_components = collect(IS.get_components(test_list_ent, test_sys))
+        @test length(the_components) == 2
+        @test IS.get_component(IS.TestComponent, test_sys, "Component1") in the_components
+        @test IS.get_component(IS.AdditionalTestComponent, test_sys, "Component3") in
+              the_components
+
+        @test collect(IS.get_subselectors(IS.select_components(), test_sys)) ==
+              Vector{IS.InfrastructureSystemsComponent}()
+        the_subselectors = collect(IS.get_subselectors(test_list_ent, test_sys))
+        @test length(the_subselectors) == 2
+        @test comp_ent_1 in the_subselectors
+        @test comp_ent_2 in the_subselectors
+    end
+end
