@@ -1,13 +1,33 @@
 # TODO add a kwarg and testing for filtering on is_available
 
 # ABSTRACT TYPE DEFINITIONS
-"The basic type for all ComponentSelectors."
+"""The basic type for all ComponentSelectors.
+
+Concrete subtypes MUST implement:
+ - `get_components`
+ - `get_name`, or use the default by implementing `default_name` and having a `name` field
+
+Concrete subtypes MAY implement:
+ - The factory method `select_components` (make sure your signature does not conflict with
+   an existing one)
+ - `default_name`
+"""
 abstract type ComponentSelector end
 
-"ComponentSelectors that are not composed of other ComponentSelectors."
+"""
+ComponentSelectors that are not composed of other ComponentSelectors.
+
+The interface is the same as for `ComponentSelector` except `get_components` MUST return
+zero or one components
+"""
 abstract type ComponentSelectorElement <: ComponentSelector end
 
-"ComponentSelectors that are composed of other ComponentSelectors."
+"""
+ComponentSelectors that are composed of other ComponentSelectors.
+
+The interface is that of `ComponentSelector` plus concrete subtypes MUST implement
+`get_subselectors`
+"""
 abstract type ComponentSelectorSet <: ComponentSelector end
 
 # COMMON COMPONENTSELECTOR INFRASTRUCTURE
