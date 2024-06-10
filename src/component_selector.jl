@@ -1,5 +1,3 @@
-# TODO add a kwarg and testing for filtering on is_available
-
 # ABSTRACT TYPE DEFINITIONS
 """The basic type for all ComponentSelectors.
 
