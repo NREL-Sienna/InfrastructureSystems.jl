@@ -47,6 +47,8 @@ component_to_qualified_string(
     component_subtype::Type{<:InfrastructureSystemsComponent},
     component_name::AbstractString,
 ) = subtype_to_string(component_subtype) * NAME_DELIMETER * component_name
+component_to_qualified_string(component::InfrastructureSystemsComponent) =
+    component_to_qualified_string(typeof(component), get_name(component))
 
 # Generic implementations/generic docstrings for simple functions with many methods
 """
