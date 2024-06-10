@@ -1,5 +1,6 @@
 # TODO add a kwarg and testing for filtering on is_available
 
+# ABSTRACT TYPE DEFINITIONS
 "The basic type for all ComponentSelectors."
 abstract type ComponentSelector end
 
@@ -9,15 +10,19 @@ abstract type ComponentSelectorElement <: ComponentSelector end
 "ComponentSelectors that are composed of other ComponentSelectors."
 abstract type ComponentSelectorSet <: ComponentSelector end
 
+# COMMON COMPONENTSELECTOR INFRASTRUCTURE
 # TODO perhaps put this elsewhere; it is also referenced in metrics.jl
 "Delimeter to use when constructing fully-qualified names."
 const NAME_DELIMETER::String = "__"
 
-"Canonical way to turn a Component subtype into a unique string."
+"Canonical way to turn an InfrastructureSystemsComponent subtype into a unique string."
 subtype_to_string(subtype::Type{<:InfrastructureSystemsComponent}) =
     strip_module_name(subtype)
 
-"Canonical way to turn a Component specification/instance into a unique-per-System string."
+"""
+Canonical way to turn an InfrastructureSystemsComponent specification/instance into a
+unique-per-container string.
+"""
 component_to_qualified_string(
     component_subtype::Type{<:InfrastructureSystemsComponent},
     component_name::AbstractString,
@@ -39,11 +44,13 @@ creation time.
 # Override this if you define a ComponentSelector subtype with no name field
 get_name(e::ComponentSelector) = (e.name !== nothing) ? e.name : default_name(e)
 
+# Make all get_components below that take a Components also work with a SystemData
 """
-Get the components of the System that make up the ComponentSelector.
+Get the components of the collection that make up the ComponentSelector.
 """
-function get_components end
+get_components(e::ComponentSelector, sys::SystemData) = get_components(e, sys.components)
 
+# CONCRETE SUBTYPE IMPLEMENTATIONS
 # SingleComponentSelector
 "ComponentSelector that wraps a single Component."
 struct SingleComponentSelector <: ComponentSelectorElement
@@ -54,8 +61,8 @@ end
 
 # Construction
 """
-Make a ComponentSelector pointing to a Component with the given subtype and name. Optionally
-provide a name for the ComponentSelector.
+Make a ComponentSelector pointing to an InfrastructureSystemsComponent with the given
+subtype and name. Optionally provide a name for the ComponentSelector.
 """
 select_components(
     component_subtype::Type{<:InfrastructureSystemsComponent},
@@ -63,8 +70,8 @@ select_components(
     name::Union{String, Nothing} = nothing,
 ) = SingleComponentSelector(component_subtype, component_name, name)
 """
-Construct a ComponentSelector from a Component reference, pointing to Components in any
-System with the given Component's subtype and name.
+Construct a ComponentSelector from an InfrastructureSystemsComponent reference, pointing to Components in any
+collection with the given Component's subtype and name.
 """
 select_components(
     component_ref::InfrastructureSystemsComponent,
@@ -75,6 +82,12 @@ select_components(
 # Naming
 default_name(e::SingleComponentSelector) =
     component_to_qualified_string(e.component_subtype, e.component_name)
+
+# Contents
+function get_components(e::SingleComponentSelector, sys::Components)
+    com = get_component(e.component_subtype, sys, e.component_name)
+    return (com === nothing) ? [] : [com]
+end
 
 # ListComponentSelector
 "ComponentSelectorSet represented by a list of other ComponentSelectors."
@@ -95,6 +108,16 @@ select_components(content::ComponentSelector...; name::Union{String, Nothing} = 
 
 # Naming
 default_name(e::ListComponentSelector) = "[$(join(get_name.(e.content), ", "))]"
+
+# Contents
+function get_subselectors(e::ListComponentSelector, sys::Components)
+    return e.content
+end
+
+function get_components(e::ListComponentSelector, sys::Components)
+    sub_components = Iterators.map(x -> get_components(x, sys), e.content)
+    return Iterators.flatten(sub_components)
+end
 
 # SubtypeComponentSelector
 "ComponentSelectorSet represented by a subtype of Component."
@@ -117,6 +140,15 @@ select_components(
 
 # Naming
 default_name(e::SubtypeComponentSelector) = subtype_to_string(e.component_subtype)
+
+# Contents
+function get_subselectors(e::SubtypeComponentSelector, sys::Components)
+    return Iterators.map(select_components, get_components(e, sys))
+end
+
+function get_components(e::SubtypeComponentSelector, sys::Components)
+    return get_components(e.component_subtype, sys.data)
+end
 
 # FilterComponentSelector
 "ComponentSelectorSet represented by a filter function and a subtype of Component."
@@ -149,6 +181,15 @@ function select_components(
     # fail). Core.compiler.return_type does not seem to be stable enough to rely on. The
     # IsDef.jl library looks interesting.
     return FilterComponentSelector(filter_fn, component_subtype, name)
+end
+
+# Contents
+function get_subselectors(e::FilterComponentSelector, sys::Components)
+    return Iterators.map(select_components, get_components(e, sys))
+end
+
+function get_components(e::FilterComponentSelector, sys::Components)
+    return get_components(e.filter_fn, e.component_subtype, sys.data)
 end
 
 # Naming
