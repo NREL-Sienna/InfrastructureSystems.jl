@@ -6,7 +6,7 @@
     )
     io = IOBuffer()
     for mime in ("text/plain", "text/html")
-        show(io, "text/plain", sys)
+        show(io, mime, sys)
         text = String(take!(io))
         @test occursin("TestComponent", text)
         @test occursin("time_series_type", text)
