@@ -347,7 +347,7 @@ function load_records!(associations::SupplementalAttributeAssociations, records)
     columns = ("attribute_uuid", "attribute_type", "component_uuid", "component_type")
     num_rows = length(records)
     num_columns = length(columns)
-    data = Dict(x => Vector{String}(undef, num_rows) for x in columns)
+    data = OrderedDict(x => Vector{String}(undef, num_rows) for x in columns)
     for (i, record) in enumerate(records)
         for column in columns
             data[column][i] = record[column]

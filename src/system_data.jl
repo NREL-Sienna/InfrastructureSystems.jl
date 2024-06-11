@@ -482,9 +482,11 @@ function transform_single_time_series!(
         return
     end
 
-    if length(items) > 1
-        params1 = items[1].params
-        for item in items[2:end]
+    all_metadata = Vector{DeterministicMetadata}(undef, length(items))
+    components = Vector{InfrastructureSystemsComponent}(undef, length(items))
+    for (i, item) in enumerate(items)
+        if i > 1
+            params1 = items[1].params
             params = item.params
             if params.count != params1.count
                 msg =
@@ -501,12 +503,8 @@ function transform_single_time_series!(
                 throw(ConflictingInputsError(msg))
             end
         end
-    end
-
-    for item in items
         metadata = item.metadata
         params = item.params
-        component = item.component
         new_metadata = DeterministicMetadata(;
             name = get_name(metadata),
             resolution = get_resolution(metadata),
@@ -519,15 +517,19 @@ function transform_single_time_series!(
             scaling_factor_multiplier = get_scaling_factor_multiplier(metadata),
             internal = get_internal(metadata),
         )
-        try
-            add_metadata!(data.time_series_manager.metadata_store, component, new_metadata)
-        catch
-            # This shouldn't be needed, but just in case there is a bug, remove all
-            # DeterministicSingleTimeSeries to keep our guarantee.
-            remove_time_series!(data, DeterministicSingleTimeSeries)
-            rethrow()
-        end
+        all_metadata[i] = new_metadata
+        components[i] = item.component
     end
+
+    try
+        add_metadata!(data.time_series_manager.metadata_store, components, all_metadata)
+    catch
+        # This shouldn't be needed, but just in case there is a bug, remove all
+        # DeterministicSingleTimeSeries to keep our guarantee.
+        remove_time_series!(data, DeterministicSingleTimeSeries)
+        rethrow()
+    end
+    return
 end
 
 """
@@ -550,6 +552,7 @@ function _check_transform_single_time_series(
         InfrastructureSystemsComponent;
         time_series_type = SingleTimeSeries,
     )
+    system_params = get_forecast_parameters(data.time_series_manager.metadata_store)
     components_with_params_and_metadata = Vector(undef, length(items))
     for (i, item) in enumerate(items)
         params = _check_single_time_series_transformed_parameters(
@@ -558,8 +561,8 @@ function _check_transform_single_time_series(
             horizon,
             interval,
         )
+        check_params_compatibility(system_params, params)
         component = get_component(data, item.owner_uuid)
-        check_params_compatibility(data.time_series_manager.metadata_store, params)
         components_with_params_and_metadata[i] =
             (component = component, params = params, metadata = item.metadata)
     end

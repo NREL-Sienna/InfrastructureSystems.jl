@@ -42,3 +42,36 @@ struct StaticTimeSeriesParameters <: AbstractTimeSeriesParameters end
     count::Int
     resolution::Dates.Period
 end
+
+check_params_compatibility(::Nothing, forecast_params::ForecastParameters) = nothing
+
+function check_params_compatibility(
+    system_params::ForecastParameters,
+    forecast_params::ForecastParameters,
+)
+    if forecast_params.count != system_params.count
+        throw(
+            ConflictingInputsError(
+                "forecast count $(forecast_params.count) does not match system count $(system_params.count)",
+            ),
+        )
+    end
+
+    if forecast_params.initial_timestamp != system_params.initial_timestamp
+        throw(
+            ConflictingInputsError(
+                "forecast initial_timestamp $(forecast_params.initial_timestamp) does not match system " *
+                "initial_timestamp $(system_params.initial_timestamp)",
+            ),
+        )
+    end
+
+    if forecast_params.horizon != system_params.horizon
+        throw(
+            ConflictingInputsError(
+                "forecast horizon $(forecast_params.horizon) " *
+                "does not match system horizon $(system_params.horizon)",
+            ),
+        )
+    end
+end
