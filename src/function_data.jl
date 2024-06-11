@@ -41,6 +41,12 @@ function transform_array_for_hdf(
     return transform_array_for_hdf(transfd_data)
 end
 
+Base.show(io::IO, ::MIME"text/plain", fd::LinearFunctionData) =
+    print(
+        io,
+        "$(typeof(fd)) representing function f(x) = $(fd.proportional_term) x + $(fd.constant_term)",
+    )
+
 """
 Structure to represent the underlying data of quadratic functions. Principally used for the
 representation of cost functions
@@ -93,6 +99,12 @@ function _validate_piecewise_x(x_coords::Vector)
         throw(ArgumentError("Piecewise x-coordinates must be ascending, got $x_coords"))
     end
 end
+
+Base.show(io::IO, ::MIME"text/plain", fd::QuadraticFunctionData) =
+    print(
+        io,
+        "$(typeof(fd)) representing function f(x) = $(fd.quadratic_term) x^2 + $(fd.proportional_term) x + $(fd.constant_term)",
+    )
 
 """
 Structure to represent piecewise linear data as a series of points: two points define one
@@ -191,6 +203,16 @@ function transform_array_for_hdf(
     return transform_array_for_hdf(transfd_data)
 end
 
+function Base.show(io::IO, ::MIME"text/plain", fd::PiecewiseLinearData)
+    print(
+        io,
+        "$(typeof(fd)) representing piecewise linear function y = f(x) connecting points:",
+    )
+    for point in fd.points
+        print(io, "\n  $point")
+    end
+end
+
 """
 Structure to represent a step function as a series of endpoint x-coordinates and segment
 y-coordinates: two x-coordinates and one y-coordinate defines a single segment, three
@@ -272,6 +294,13 @@ function transform_array_for_hdf(
         transfd_data[k] = _transform_pwl_step_vector_hdf(fd)
     end
     return transform_array_for_hdf(transfd_data)
+end
+
+function Base.show(io::IO, ::MIME"text/plain", fd::PiecewiseStepData)
+    print(io, "$(typeof(fd)) representing step (piecewise constant) function f(x) =")
+    for (y, x1, x2) in zip(fd.y_coords, fd.x_coords[1:(end - 1)], fd.x_coords[2:end])
+        print(io, "\n  $y for x in [$x1, $x2)")
+    end
 end
 
 """
