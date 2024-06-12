@@ -41,11 +41,10 @@ function transform_array_for_hdf(
     return transform_array_for_hdf(transfd_data)
 end
 
-Base.show(io::IO, ::MIME"text/plain", fd::LinearFunctionData) =
-    print(
-        io,
-        "$(typeof(fd)) representing function f(x) = $(fd.proportional_term) x + $(fd.constant_term)",
-    )
+function Base.show(io::IO, ::MIME"text/plain", fd::LinearFunctionData)
+    get(io, :compact, false)::Bool || print(io, "$(typeof(fd)) representing function ")
+    print(io, "f(x) = $(fd.proportional_term) x + $(fd.constant_term)")
+end
 
 """
 Structure to represent the underlying data of quadratic functions. Principally used for the
@@ -100,11 +99,13 @@ function _validate_piecewise_x(x_coords::Vector)
     end
 end
 
-Base.show(io::IO, ::MIME"text/plain", fd::QuadraticFunctionData) =
+function Base.show(io::IO, ::MIME"text/plain", fd::QuadraticFunctionData)
+    get(io, :compact, false)::Bool || print(io, "$(typeof(fd)) representing function ")
     print(
         io,
-        "$(typeof(fd)) representing function f(x) = $(fd.quadratic_term) x^2 + $(fd.proportional_term) x + $(fd.constant_term)",
+        "f(x) = $(fd.quadratic_term) x^2 + $(fd.proportional_term) x + $(fd.constant_term)",
     )
+end
 
 """
 Structure to represent piecewise linear data as a series of points: two points define one
@@ -204,10 +205,12 @@ function transform_array_for_hdf(
 end
 
 function Base.show(io::IO, ::MIME"text/plain", fd::PiecewiseLinearData)
-    print(
-        io,
-        "$(typeof(fd)) representing piecewise linear function y = f(x) connecting points:",
-    )
+    if get(io, :compact, false)::Bool
+        print(io, "piecewise linear ")
+    else
+        print(io, "$(typeof(fd)) representing piecewise linear function ")
+    end
+    print(io, "y = f(x) connecting points:")
     for point in fd.points
         print(io, "\n  $point")
     end
@@ -297,7 +300,9 @@ function transform_array_for_hdf(
 end
 
 function Base.show(io::IO, ::MIME"text/plain", fd::PiecewiseStepData)
-    print(io, "$(typeof(fd)) representing step (piecewise constant) function f(x) =")
+    get(io, :compact, false)::Bool ||
+        print(io, "$(typeof(fd)) representing step (piecewise constant) function ")
+    print(io, "f(x) =")
     for (y, x1, x2) in zip(fd.y_coords, fd.x_coords[1:(end - 1)], fd.x_coords[2:end])
         print(io, "\n  $y for x in [$x1, $x2)")
     end
