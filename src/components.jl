@@ -201,6 +201,23 @@ function has_component(
 end
 
 """
+Check to see if a component exists.
+"""
+function has_components(
+    components::Components,
+    T::Type{<:InfrastructureSystemsComponent},
+)
+    if !isconcretetype(T)
+        for key in keys(components.data)
+            if key <: T
+                return true
+            end
+        end
+    end
+    return haskey(components.data, T)
+end
+
+"""
 Get the component of type T with name. Returns nothing if no component matches. If T is an abstract
 type then the names of components across all subtypes of T must be unique.
 
