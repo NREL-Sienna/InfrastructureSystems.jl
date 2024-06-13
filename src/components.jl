@@ -188,7 +188,7 @@ function _remove_component!(
 end
 
 """
-Check to see if a component exists.
+Check to see if a component with name exists.
 """
 function has_component(
     components::Components,
