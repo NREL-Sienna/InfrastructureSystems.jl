@@ -188,7 +188,7 @@ function _remove_component!(
 end
 
 """
-Check to see if a component exists.
+Check to see if a component with name exists.
 """
 function has_component(
     components::Components,
@@ -198,6 +198,23 @@ function has_component(
     !isconcretetype(T) && return !isempty(get_components_by_name(T, components, name))
     !haskey(components.data, T) && return false
     return haskey(components.data[T], name)
+end
+
+"""
+Check to see if a component if the given type exists.
+"""
+function has_components(
+    components::Components,
+    T::Type{<:InfrastructureSystemsComponent},
+)
+    if !isconcretetype(T)
+        for key in keys(components.data)
+            if key <: T
+                return true
+            end
+        end
+    end
+    return haskey(components.data, T)
 end
 
 """
