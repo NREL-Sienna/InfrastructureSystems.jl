@@ -37,40 +37,44 @@ function add_time_series!(
     skip_if_present = false,
     features...,
 )
-    _throw_if_read_only(mgr)
-    throw_if_does_not_support_time_series(owner)
-    _check_time_series_params(mgr, time_series)
-    metadata_type = time_series_data_to_metadata(typeof(time_series))
-    metadata = metadata_type(time_series; features...)
-    data_exists = has_time_series(mgr.metadata_store, get_uuid(time_series))
-    metadata_exists = has_metadata(mgr.metadata_store, owner, metadata)
-
-    if metadata_exists && !skip_if_present
-        msg = if isempty(features)
-            "$(summary(metadata)) is already stored"
-        else
-            fmsg = join(["$k = $v" for (k, v) in features], ", ")
-            "$(summary(metadata)) with features $fmsg is already stored"
+    TimerOutputs.@timeit SYSTEM_TIMERS "add_time_series" begin
+        TimerOutputs.@timeit SYSTEM_TIMERS "add_time_series checks" begin
+            _throw_if_read_only(mgr)
+            throw_if_does_not_support_time_series(owner)
+            _check_time_series_params(mgr, time_series)
+            metadata_type = time_series_data_to_metadata(typeof(time_series))
+            metadata = metadata_type(time_series; features...)
+            data_exists = has_time_series(mgr.metadata_store, get_uuid(time_series))
+            metadata_exists = has_metadata(mgr.metadata_store, owner, metadata)
         end
-        throw(ArgumentError(msg))
-    end
 
-    if !data_exists
-        serialize_time_series!(mgr.data_store, time_series)
-    end
+        if metadata_exists && !skip_if_present
+            msg = if isempty(features)
+                "$(summary(metadata)) is already stored"
+            else
+                fmsg = join(["$k = $v" for (k, v) in features], ", ")
+                "$(summary(metadata)) with features $fmsg is already stored"
+            end
+            throw(ArgumentError(msg))
+        end
 
-    # Order matters. Don't add metadata unless serialize works.
-    if !metadata_exists
-        add_metadata!(
-            mgr.metadata_store,
-            owner,
-            metadata;
-        )
-    end
-    @debug "Added $(summary(metadata)) to $(summary(owner)) " _group =
-        LOG_GROUP_TIME_SERIES
+        if !data_exists
+            serialize_time_series!(mgr.data_store, time_series)
+        end
 
-    return make_time_series_key(metadata)
+        # Order matters. Don't add metadata unless serialize works.
+        if !metadata_exists
+            add_metadata!(
+                mgr.metadata_store,
+                owner,
+                metadata;
+            )
+        end
+        @debug "Added $(summary(metadata)) to $(summary(owner)) " _group =
+            LOG_GROUP_TIME_SERIES
+
+        return make_time_series_key(metadata)
+    end
 end
 
 function clear_time_series!(mgr::TimeSeriesManager)

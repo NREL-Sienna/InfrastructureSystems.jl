@@ -43,12 +43,14 @@ function get_time_series(
     count::Union{Nothing, Int} = nothing,
     features...,
 ) where {T <: TimeSeriesData}
-    ts_metadata = get_time_series_metadata(T, owner, name; features...)
-    start_time = _check_start_time(start_time, ts_metadata)
-    rows = _get_rows(start_time, len, ts_metadata)
-    columns = _get_columns(start_time, count, ts_metadata)
-    storage = get_time_series_storage(owner)
-    return deserialize_time_series(T, storage, ts_metadata, rows, columns)
+    TimerOutputs.@timeit SYSTEM_TIMERS "get_time_series" begin
+        ts_metadata = get_time_series_metadata(T, owner, name; features...)
+        start_time = _check_start_time(start_time, ts_metadata)
+        rows = _get_rows(start_time, len, ts_metadata)
+        columns = _get_columns(start_time, count, ts_metadata)
+        storage = get_time_series_storage(owner)
+        return deserialize_time_series(T, storage, ts_metadata, rows, columns)
+    end
 end
 
 """
@@ -428,6 +430,22 @@ references.
     src's multipliers.
 """
 function copy_time_series!(
+    dst::TimeSeriesOwners,
+    src::TimeSeriesOwners;
+    name_mapping::Union{Nothing, Dict{Tuple{String, String}, String}} = nothing,
+    scaling_factor_multiplier_mapping::Union{Nothing, Dict{String, String}} = nothing,
+)
+    TimerOutputs.@timeit SYSTEM_TIMERS "copy_time_series" begin
+        _copy_time_series!(
+            dst,
+            src;
+            name_mapping = name_mapping,
+            scaling_factor_multiplier_mapping = scaling_factor_multiplier_mapping,
+        )
+    end
+end
+
+function _copy_time_series!(
     dst::TimeSeriesOwners,
     src::TimeSeriesOwners;
     name_mapping::Union{Nothing, Dict{Tuple{String, String}, String}} = nothing,

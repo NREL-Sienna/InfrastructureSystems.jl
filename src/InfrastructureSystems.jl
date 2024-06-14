@@ -15,6 +15,7 @@ import SHA
 import StructTypes
 import TerminalLoggers: TerminalLogger, ProgressLevel
 import TimeSeries
+import TimerOutputs
 import TOML
 using DataStructures: OrderedDict, SortedDict
 import SQLite
@@ -87,6 +88,7 @@ set_name!(value::InfrastructureSystemsComponent, name) = set_name_internal!(valu
 get_internal(value::InfrastructureSystemsComponent) = value.internal
 
 include("common.jl")
+include("utils/timers.jl")
 include("utils/assert_op.jl")
 include("utils/recorder_events.jl")
 include("utils/flatten_iterator_wrapper.jl")

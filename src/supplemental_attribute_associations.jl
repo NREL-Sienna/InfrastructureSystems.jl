@@ -98,20 +98,22 @@ function add_association!(
     component::InfrastructureSystemsComponent,
     attribute::SupplementalAttribute,
 )
-    row = (
-        string(get_uuid(attribute)),
-        string(nameof(typeof(attribute))),
-        string(get_uuid(component)),
-        string(nameof(typeof(component))),
-    )
-    params = chop(repeat("?,", length(row)))
-    SQLite.DBInterface.execute(
-        associations.db,
-        "INSERT INTO $SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME VALUES($params)",
-        row,
-    )
-    @debug "Added association bewteen $(summary(attribute)) and $(summary(component))"
-    LOG_GROUP_SUPPLEMENTAL_ATTRIBUTES
+    TimerOutputs.@timeit SYSTEM_TIMERS "add supp attr association" begin
+        row = (
+            string(get_uuid(attribute)),
+            string(nameof(typeof(attribute))),
+            string(get_uuid(component)),
+            string(nameof(typeof(component))),
+        )
+        params = chop(repeat("?,", length(row)))
+        SQLite.DBInterface.execute(
+            associations.db,
+            "INSERT INTO $SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME VALUES($params)",
+            row,
+        )
+        @debug "Added association bewteen $(summary(attribute)) and $(summary(component))"
+        LOG_GROUP_SUPPLEMENTAL_ATTRIBUTES
+    end
     return
 end
 

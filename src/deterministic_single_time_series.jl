@@ -147,43 +147,46 @@ function deserialize_deterministic_from_single_time_series(
     columns,
     last_index,
 )
-    @debug "deserializing a SingleTimeSeries" _group = LOG_GROUP_TIME_SERIES
-    horizon = get_horizon(ts_metadata)
-    horizon_count = get_horizon_count(ts_metadata)
-    interval = get_interval(ts_metadata)
-    resolution = get_resolution(ts_metadata)
-    if length(rows) != horizon_count
-        throw(
-            ArgumentError(
-                "Transforming SingleTimeSeries to Deterministic requires a full horizon: $rows",
-            ),
+    TimerOutputs.@timeit SYSTEM_TIMERS "HDF5 deserialize DeterministicSingleTimeSeries" begin
+        @debug "deserializing a SingleTimeSeries" _group = LOG_GROUP_TIME_SERIES
+        horizon = get_horizon(ts_metadata)
+        horizon_count = get_horizon_count(ts_metadata)
+        interval = get_interval(ts_metadata)
+        resolution = get_resolution(ts_metadata)
+        if length(rows) != horizon_count
+            throw(
+                ArgumentError(
+                    "Transforming SingleTimeSeries to Deterministic requires a full horizon: $rows",
+                ),
+            )
+        end
+
+        sts_rows =
+            _translate_deterministic_offsets(
+                horizon_count,
+                interval,
+                resolution,
+                columns,
+                last_index,
+            )
+        sts = deserialize_time_series(
+            SingleTimeSeries,
+            storage,
+            SingleTimeSeriesMetadata(ts_metadata),
+            sts_rows,
+            UnitRange(1, 1),
+        )
+        initial_timestamp =
+            get_initial_timestamp(ts_metadata) +
+            (columns.start - 1) * get_interval(ts_metadata)
+        return DeterministicSingleTimeSeries(
+            sts,
+            initial_timestamp,
+            interval,
+            length(columns),
+            horizon,
         )
     end
-
-    sts_rows =
-        _translate_deterministic_offsets(
-            horizon_count,
-            interval,
-            resolution,
-            columns,
-            last_index,
-        )
-    sts = deserialize_time_series(
-        SingleTimeSeries,
-        storage,
-        SingleTimeSeriesMetadata(ts_metadata),
-        sts_rows,
-        UnitRange(1, 1),
-    )
-    initial_timestamp =
-        get_initial_timestamp(ts_metadata) + (columns.start - 1) * get_interval(ts_metadata)
-    return DeterministicSingleTimeSeries(
-        sts,
-        initial_timestamp,
-        interval,
-        length(columns),
-        horizon,
-    )
 end
 
 function _translate_deterministic_offsets(

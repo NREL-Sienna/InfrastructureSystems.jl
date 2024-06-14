@@ -121,26 +121,28 @@ function add_metadata!(
     owner::TimeSeriesOwners,
     metadata::TimeSeriesMetadata,
 )
-    owner_category = _get_owner_category(owner)
-    ts_type = time_series_metadata_to_data(metadata)
-    ts_category = _get_time_series_category(ts_type)
-    features = _make_features_string(metadata.features)
-    vals = _create_row(
-        metadata,
-        owner,
-        owner_category,
-        string(nameof(ts_type)),
-        ts_category,
-        features,
-    )
-    params = repeat("?,", length(vals) - 1) * "jsonb(?)"
-    SQLite.DBInterface.execute(
-        store.db,
-        "INSERT INTO $METADATA_TABLE_NAME VALUES($params)",
-        vals,
-    )
-    @debug "Added metadata = $metadata to $(summary(owner))" _group =
-        LOG_GROUP_TIME_SERIES
+    TimerOutputs.@timeit SYSTEM_TIMERS "add ts metadata single" begin
+        owner_category = _get_owner_category(owner)
+        ts_type = time_series_metadata_to_data(metadata)
+        ts_category = _get_time_series_category(ts_type)
+        features = _make_features_string(metadata.features)
+        vals = _create_row(
+            metadata,
+            owner,
+            owner_category,
+            string(nameof(ts_type)),
+            ts_category,
+            features,
+        )
+        params = repeat("?,", length(vals) - 1) * "jsonb(?)"
+        SQLite.DBInterface.execute(
+            store.db,
+            "INSERT INTO $METADATA_TABLE_NAME VALUES($params)",
+            vals,
+        )
+        @debug "Added metadata = $metadata to $(summary(owner))" _group =
+            LOG_GROUP_TIME_SERIES
+    end
     return
 end
 
@@ -149,57 +151,59 @@ function add_metadata!(
     owners::Vector{<:TimeSeriesOwners},
     all_metadata::Vector{<:TimeSeriesMetadata},
 )
-    @assert_op length(owners) == length(all_metadata)
-    columns = (
-        "id",
-        "time_series_uuid",
-        "time_series_type",
-        "time_series_category",
-        "initial_timestamp",
-        "resolution_ms",
-        "horizon_ms",
-        "interval_ms",
-        "window_count",
-        "length",
-        "name",
-        "owner_uuid",
-        "owner_type",
-        "owner_category",
-        "features",
-        "metadata",
-    )
-    num_rows = length(all_metadata)
-    num_columns = length(columns)
-    data = OrderedDict(x => Vector{Any}(undef, num_rows) for x in columns)
-    for i in 1:num_rows
-        owner = owners[i]
-        metadata = all_metadata[i]
-        owner_category = _get_owner_category(owner)
-        ts_type = time_series_metadata_to_data(metadata)
-        ts_category = _get_time_series_category(ts_type)
-        features = _make_features_string(metadata.features)
-        row = _create_row(
-            metadata,
-            owner,
-            owner_category,
-            string(nameof(ts_type)),
-            ts_category,
-            features,
+    TimerOutputs.@timeit SYSTEM_TIMERS "add ts metadata bulk" begin
+        @assert_op length(owners) == length(all_metadata)
+        columns = (
+            "id",
+            "time_series_uuid",
+            "time_series_type",
+            "time_series_category",
+            "initial_timestamp",
+            "resolution_ms",
+            "horizon_ms",
+            "interval_ms",
+            "window_count",
+            "length",
+            "name",
+            "owner_uuid",
+            "owner_type",
+            "owner_category",
+            "features",
+            "metadata",
         )
-        for (j, column) in enumerate(columns)
-            data[column][i] = row[j]
+        num_rows = length(all_metadata)
+        num_columns = length(columns)
+        data = OrderedDict(x => Vector{Any}(undef, num_rows) for x in columns)
+        for i in 1:num_rows
+            owner = owners[i]
+            metadata = all_metadata[i]
+            owner_category = _get_owner_category(owner)
+            ts_type = time_series_metadata_to_data(metadata)
+            ts_category = _get_time_series_category(ts_type)
+            features = _make_features_string(metadata.features)
+            row = _create_row(
+                metadata,
+                owner,
+                owner_category,
+                string(nameof(ts_type)),
+                ts_category,
+                features,
+            )
+            for (j, column) in enumerate(columns)
+                data[column][i] = row[j]
+            end
         end
-    end
 
-    params = chop(repeat("?,", num_columns))
-    SQLite.DBInterface.executemany(
-        store.db,
-        "INSERT INTO $METADATA_TABLE_NAME VALUES($params)",
-        NamedTuple(Symbol(k) => v for (k, v) in data),
-    )
-    @debug "Added $num_rows instances of time series metadata" _group =
-        LOG_GROUP_TIME_SERIES
-    return
+        params = chop(repeat("?,", num_columns))
+        SQLite.DBInterface.executemany(
+            store.db,
+            "INSERT INTO $METADATA_TABLE_NAME VALUES($params)",
+            NamedTuple(Symbol(k) => v for (k, v) in data),
+        )
+        @debug "Added $num_rows instances of time series metadata" _group =
+            LOG_GROUP_TIME_SERIES
+        return
+    end
 end
 
 """

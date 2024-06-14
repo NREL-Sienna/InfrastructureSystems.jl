@@ -149,19 +149,26 @@ function add_time_series_from_file_metadata!(
     file_metadata::Vector{TimeSeriesFileMetadata};
     resolution = nothing,
 ) where {T <: InfrastructureSystemsComponent}
-    ts_keys = Vector{TimeSeriesKey}(undef, length(file_metadata))
-    open_time_series_store!(data, "r+") do
-        cache = TimeSeriesParsingCache()
-        for (i, metadata) in enumerate(file_metadata)
-            if resolution === nothing || metadata.resolution == resolution
-                key = add_time_series_from_file_metadata_internal!(data, T, cache, metadata)
-                if !isnothing(key)
-                    ts_keys[i] = key
+    TimerOutputs.@timeit SYSTEM_TIMERS "add_time_series_from_file_metadata" begin
+        ts_keys = Vector{TimeSeriesKey}(undef, length(file_metadata))
+        open_time_series_store!(data, "r+") do
+            cache = TimeSeriesParsingCache()
+            for (i, metadata) in enumerate(file_metadata)
+                if resolution === nothing || metadata.resolution == resolution
+                    key = add_time_series_from_file_metadata_internal!(
+                        data,
+                        T,
+                        cache,
+                        metadata,
+                    )
+                    if !isnothing(key)
+                        ts_keys[i] = key
+                    end
                 end
             end
         end
+        return ts_keys
     end
-    return ts_keys
 end
 
 """
@@ -233,10 +240,12 @@ function add_time_series_from_file_metadata_internal!(
     cache::TimeSeriesParsingCache,
     file_metadata::TimeSeriesFileMetadata,
 ) where {T <: InfrastructureSystemsComponent}
-    set_component!(file_metadata, data, InfrastructureSystems)
-    component = file_metadata.component
-    time_series = make_time_series!(cache, file_metadata)
-    return add_time_series!(data, component, time_series)
+    TimerOutputs.@timeit SYSTEM_TIMERS "add_time_series_from_file_metadata_internal" begin
+        set_component!(file_metadata, data, InfrastructureSystems)
+        component = file_metadata.component
+        time_series = make_time_series!(cache, file_metadata)
+        return add_time_series!(data, component, time_series)
+    end
 end
 
 """
@@ -469,6 +478,22 @@ function transform_single_time_series!(
     horizon::Dates.Period,
     interval::Dates.Period,
 )
+    TimerOutputs.@timeit SYSTEM_TIMERS "transform_single_time_series" begin
+        _transform_single_time_series!(
+            data,
+            DeterministicSingleTimeSeries,
+            horizon,
+            interval,
+        )
+    end
+end
+
+function _transform_single_time_series!(
+    data::SystemData,
+    ::Type{<:DeterministicSingleTimeSeries},
+    horizon::Dates.Period,
+    interval::Dates.Period,
+)
     remove_time_series!(data, DeterministicSingleTimeSeries)
     items = _check_transform_single_time_series(
         data,
@@ -696,20 +721,22 @@ end
 Serialize all system and component data to a dictionary.
 """
 function to_dict(data::SystemData)
-    serialized_data = Dict{String, Any}()
-    for field in
-        (
-        :components,
-        :masked_components,
-        :subsystems,
-        :supplemental_attribute_manager,
-        :internal,
-    )
-        serialized_data[string(field)] = serialize(getproperty(data, field))
-    end
+    TimerOutputs.@timeit SYSTEM_TIMERS "system to_dict" begin
+        serialized_data = Dict{String, Any}()
+        for field in
+            (
+            :components,
+            :masked_components,
+            :subsystems,
+            :supplemental_attribute_manager,
+            :internal,
+        )
+            serialized_data[string(field)] = serialize(getproperty(data, field))
+        end
 
-    serialized_data["version_info"] = serialize_julia_info()
-    return serialized_data
+        serialized_data["version_info"] = serialize_julia_info()
+        return serialized_data
+    end
 end
 
 function serialize(data::SystemData)
