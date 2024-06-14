@@ -201,7 +201,7 @@ function has_component(
 end
 
 """
-Check to see if a component exists.
+Check to see if a component if the given type exists.
 """
 function has_components(
     components::Components,
