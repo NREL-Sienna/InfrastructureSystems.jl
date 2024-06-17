@@ -2,6 +2,7 @@
     mutable struct Deterministic <: AbstractDeterministic
         name::String
         data::SortedDict
+using Base: require
         resolution::Dates.Period
         scaling_factor_multiplier::Union{Nothing, Function}
         internal::InfrastructureSystemsInternal
@@ -28,6 +29,11 @@ mutable struct Deterministic <: AbstractDeterministic
     "Applicable when the time series data are scaling factors. Called on the associated component to convert the values."
     scaling_factor_multiplier::Union{Nothing, Function}
     internal::InfrastructureSystemsInternal
+
+    function Deterministic(name, data, resolution, scaling_factor_multiplier, internal)
+        check_forecast_data(data)
+        new(name, data, resolution, scaling_factor_multiplier, internal)
+    end
 end
 
 function Deterministic(;
@@ -38,6 +44,7 @@ function Deterministic(;
     normalization_factor = 1.0,
     internal = InfrastructureSystemsInternal(),
 )
+    # TODO DT: in one or more of these places, check for empty data.
     data = handle_normalization_factor(convert_data(data), normalization_factor)
     return Deterministic(name, data, resolution, scaling_factor_multiplier, internal)
 end

@@ -32,6 +32,11 @@ mutable struct Scenarios <: Forecast
     "Applicable when the time series data are scaling factors. Called on the associated component to convert the values."
     scaling_factor_multiplier::Union{Nothing, Function}
     internal::InfrastructureSystemsInternal
+
+    function Scenarios(name, data, scenario_count, resolution, scaling_factor_multiplier, internal)
+        check_forecast_data(data)
+        new(name, data, scenario_count, resolution, scaling_factor_multiplier, internal)
+    end
 end
 
 function Scenarios(;

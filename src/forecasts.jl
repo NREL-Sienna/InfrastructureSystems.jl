@@ -13,6 +13,15 @@ Base.length(ts::Forecast) = get_count(ts)
 
 abstract type AbstractDeterministic <: Forecast end
 
+function check_forecast_data(data::AbstractDict)
+    isempty(data) && throw(ArgumentError("Forecast data cannot be empty"))
+    required_length = length(first(values(data)))
+    required_length < 2 && throw(ArgumentError("Forecast arrays must have a length of at least 2."))
+    lengths = Set((length(x) for x in values(data)))
+    length(lengths) != 1 && throw(DimensionMismatch("All forecast arrays must have the same length"))
+    return
+end
+
 # This method requires that the forecast type implement a `get_data` method like
 # Deterministic.
 function eltype_data_common(forecast::Forecast)

@@ -2389,13 +2389,11 @@ end
 
     # Horizon must be greater than 1.
     bad_data = SortedDict(initial_time => ones(1), second_time => ones(1))
-    forecast = IS.Deterministic(; data = bad_data, name = name, resolution = resolution)
-    @test_throws ArgumentError IS.add_time_series!(sys, component, forecast)
+    @test_throws ArgumentError IS.Deterministic(; data = bad_data, name = name, resolution = resolution)
 
     # Arrays must have the same length.
     bad_data = SortedDict(initial_time => ones(2), second_time => ones(3))
-    forecast = IS.Deterministic(; data = bad_data, name = name, resolution = resolution)
-    @test_throws DimensionMismatch IS.add_time_series!(sys, component, forecast)
+    @test_throws DimensionMismatch IS.Deterministic(; data = bad_data, name = name, resolution = resolution)
 
     # Set baseline parameters for the rest of the tests.
     data =
