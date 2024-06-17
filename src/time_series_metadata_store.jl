@@ -121,7 +121,7 @@ function add_metadata!(
     owner::TimeSeriesOwners,
     metadata::TimeSeriesMetadata,
 )
-    TimerOutputs.@timeit SYSTEM_TIMERS "add ts metadata single" begin
+    TimerOutputs.@timeit_debug SYSTEM_TIMERS "add ts metadata single" begin
         owner_category = _get_owner_category(owner)
         ts_type = time_series_metadata_to_data(metadata)
         ts_category = _get_time_series_category(ts_type)
@@ -151,7 +151,7 @@ function add_metadata!(
     owners::Vector{<:TimeSeriesOwners},
     all_metadata::Vector{<:TimeSeriesMetadata},
 )
-    TimerOutputs.@timeit SYSTEM_TIMERS "add ts metadata bulk" begin
+    TimerOutputs.@timeit_debug SYSTEM_TIMERS "add ts metadata bulk" begin
         @assert_op length(owners) == length(all_metadata)
         columns = (
             "id",

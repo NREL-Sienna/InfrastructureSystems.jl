@@ -37,8 +37,8 @@ function add_time_series!(
     skip_if_present = false,
     features...,
 )
-    TimerOutputs.@timeit SYSTEM_TIMERS "add_time_series" begin
-        TimerOutputs.@timeit SYSTEM_TIMERS "add_time_series checks" begin
+    TimerOutputs.@timeit_debug SYSTEM_TIMERS "add_time_series" begin
+        TimerOutputs.@timeit_debug SYSTEM_TIMERS "add_time_series checks" begin
             _throw_if_read_only(mgr)
             throw_if_does_not_support_time_series(owner)
             _check_time_series_params(mgr, time_series)

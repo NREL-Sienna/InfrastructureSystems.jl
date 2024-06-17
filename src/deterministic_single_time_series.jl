@@ -147,7 +147,7 @@ function deserialize_deterministic_from_single_time_series(
     columns,
     last_index,
 )
-    TimerOutputs.@timeit SYSTEM_TIMERS "HDF5 deserialize DeterministicSingleTimeSeries" begin
+    TimerOutputs.@timeit_debug SYSTEM_TIMERS "HDF5 deserialize DeterministicSingleTimeSeries" begin
         @debug "deserializing a SingleTimeSeries" _group = LOG_GROUP_TIME_SERIES
         horizon = get_horizon(ts_metadata)
         horizon_count = get_horizon_count(ts_metadata)

@@ -235,7 +235,7 @@ function _serialize_time_series!(
     root = _get_root(storage, file)
     uuid = string(get_uuid(ts))
     if !haskey(root, uuid)
-        TimerOutputs.@timeit SYSTEM_TIMERS "HDF5 serialize_time_series" begin
+        TimerOutputs.@timeit_debug SYSTEM_TIMERS "HDF5 serialize_time_series" begin
             group = HDF5.create_group(root, uuid)
             data = get_array_for_hdf(ts)
             settings = storage.compression
@@ -392,7 +392,7 @@ function _deserialize_time_series(
     file::HDF5.File,
 ) where {T <: StaticTimeSeries}
     # Note that all range checks must occur at a higher level.
-    TimerOutputs.@timeit SYSTEM_TIMERS "HDF5 deserialize StaticTimeSeries" begin
+    TimerOutputs.@timeit_debug SYSTEM_TIMERS "HDF5 deserialize StaticTimeSeries" begin
         root = _get_root(storage, file)
         uuid = get_time_series_uuid(metadata)
         path = _get_time_series_path(root, uuid)
@@ -458,7 +458,7 @@ function _deserialize_time_series(
         )
     end
 
-    TimerOutputs.@timeit SYSTEM_TIMERS "HDF5 deserialize Deterministic" begin
+    TimerOutputs.@timeit_debug SYSTEM_TIMERS "HDF5 deserialize Deterministic" begin
         @assert actual_type <: T "actual_type = $actual_type T = $T"
         @debug "deserializing a Forecast" _group = LOG_GROUP_TIME_SERIES T
         attributes = _read_time_series_attributes(path)
@@ -633,7 +633,7 @@ function _deserialize_time_series(
     file::HDF5.File,
 ) where {T <: Probabilistic}
     # Note that all range checks must occur at a higher level.
-    TimerOutputs.@timeit SYSTEM_TIMERS "HDF5 deserialize Probabilistic" begin
+    TimerOutputs.@timeit_debug SYSTEM_TIMERS "HDF5 deserialize Probabilistic" begin
         total_percentiles = length(get_percentiles(metadata))
         root = _get_root(storage, file)
         uuid = get_time_series_uuid(metadata)
@@ -696,7 +696,7 @@ function _deserialize_time_series(
     file::HDF5.File,
 ) where {T <: Scenarios}
     # Note that all range checks must occur at a higher level.
-    TimerOutputs.@timeit SYSTEM_TIMERS "HDF5 deserialize Scenarios" begin
+    TimerOutputs.@timeit_debug SYSTEM_TIMERS "HDF5 deserialize Scenarios" begin
         total_scenarios = get_scenario_count(metadata)
 
         root = _get_root(storage, file)

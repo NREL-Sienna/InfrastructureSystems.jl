@@ -149,7 +149,7 @@ function add_time_series_from_file_metadata!(
     file_metadata::Vector{TimeSeriesFileMetadata};
     resolution = nothing,
 ) where {T <: InfrastructureSystemsComponent}
-    TimerOutputs.@timeit SYSTEM_TIMERS "add_time_series_from_file_metadata" begin
+    TimerOutputs.@timeit_debug SYSTEM_TIMERS "add_time_series_from_file_metadata" begin
         ts_keys = Vector{TimeSeriesKey}(undef, length(file_metadata))
         open_time_series_store!(data, "r+") do
             cache = TimeSeriesParsingCache()
@@ -240,7 +240,7 @@ function add_time_series_from_file_metadata_internal!(
     cache::TimeSeriesParsingCache,
     file_metadata::TimeSeriesFileMetadata,
 ) where {T <: InfrastructureSystemsComponent}
-    TimerOutputs.@timeit SYSTEM_TIMERS "add_time_series_from_file_metadata_internal" begin
+    TimerOutputs.@timeit_debug SYSTEM_TIMERS "add_time_series_from_file_metadata_internal" begin
         set_component!(file_metadata, data, InfrastructureSystems)
         component = file_metadata.component
         time_series = make_time_series!(cache, file_metadata)
@@ -478,7 +478,7 @@ function transform_single_time_series!(
     horizon::Dates.Period,
     interval::Dates.Period,
 )
-    TimerOutputs.@timeit SYSTEM_TIMERS "transform_single_time_series" begin
+    TimerOutputs.@timeit_debug SYSTEM_TIMERS "transform_single_time_series" begin
         _transform_single_time_series!(
             data,
             DeterministicSingleTimeSeries,
@@ -721,7 +721,7 @@ end
 Serialize all system and component data to a dictionary.
 """
 function to_dict(data::SystemData)
-    TimerOutputs.@timeit SYSTEM_TIMERS "system to_dict" begin
+    TimerOutputs.@timeit_debug SYSTEM_TIMERS "system to_dict" begin
         serialized_data = Dict{String, Any}()
         for field in
             (

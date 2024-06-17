@@ -98,7 +98,7 @@ function add_association!(
     component::InfrastructureSystemsComponent,
     attribute::SupplementalAttribute,
 )
-    TimerOutputs.@timeit SYSTEM_TIMERS "add supp attr association" begin
+    TimerOutputs.@timeit_debug SYSTEM_TIMERS "add supp attr association" begin
         row = (
             string(get_uuid(attribute)),
             string(nameof(typeof(attribute))),
