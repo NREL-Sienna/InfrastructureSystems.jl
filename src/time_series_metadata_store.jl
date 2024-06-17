@@ -194,7 +194,7 @@ function add_metadata!(
             end
         end
 
-        params = chop(repeat("?,", num_columns))
+        params = repeat("?,", num_columns - 1) * "jsonb(?)"
         SQLite.DBInterface.executemany(
             store.db,
             "INSERT INTO $METADATA_TABLE_NAME VALUES($params)",
