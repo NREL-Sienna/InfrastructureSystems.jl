@@ -41,6 +41,11 @@ function transform_array_for_hdf(
     return transform_array_for_hdf(transfd_data)
 end
 
+function Base.show(io::IO, ::MIME"text/plain", fd::LinearFunctionData)
+    get(io, :compact, false)::Bool || print(io, "$(typeof(fd)) representing function ")
+    print(io, "f(x) = $(fd.proportional_term) x + $(fd.constant_term)")
+end
+
 """
 Structure to represent the underlying data of quadratic functions. Principally used for the
 representation of cost functions
@@ -92,6 +97,14 @@ function _validate_piecewise_x(x_coords::Vector)
     if !(issorted(x_coords) || (isnan(first(x_coords)) && issorted(x_coords[2:end])))
         throw(ArgumentError("Piecewise x-coordinates must be ascending, got $x_coords"))
     end
+end
+
+function Base.show(io::IO, ::MIME"text/plain", fd::QuadraticFunctionData)
+    get(io, :compact, false)::Bool || print(io, "$(typeof(fd)) representing function ")
+    print(
+        io,
+        "f(x) = $(fd.quadratic_term) x^2 + $(fd.proportional_term) x + $(fd.constant_term)",
+    )
 end
 
 """
@@ -191,6 +204,18 @@ function transform_array_for_hdf(
     return transform_array_for_hdf(transfd_data)
 end
 
+function Base.show(io::IO, ::MIME"text/plain", fd::PiecewiseLinearData)
+    if get(io, :compact, false)::Bool
+        print(io, "piecewise linear ")
+    else
+        print(io, "$(typeof(fd)) representing piecewise linear function ")
+    end
+    print(io, "y = f(x) connecting points:")
+    for point in fd.points
+        print(io, "\n  $point")
+    end
+end
+
 """
 Structure to represent a step function as a series of endpoint x-coordinates and segment
 y-coordinates: two x-coordinates and one y-coordinate defines a single segment, three
@@ -272,6 +297,15 @@ function transform_array_for_hdf(
         transfd_data[k] = _transform_pwl_step_vector_hdf(fd)
     end
     return transform_array_for_hdf(transfd_data)
+end
+
+function Base.show(io::IO, ::MIME"text/plain", fd::PiecewiseStepData)
+    get(io, :compact, false)::Bool ||
+        print(io, "$(typeof(fd)) representing step (piecewise constant) function ")
+    print(io, "f(x) =")
+    for (y, x1, x2) in zip(fd.y_coords, fd.x_coords[1:(end - 1)], fd.x_coords[2:end])
+        print(io, "\n  $y for x in [$x1, $x2)")
+    end
 end
 
 """

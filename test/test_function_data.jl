@@ -160,7 +160,7 @@ end
     end
 end
 
-@testset "Test equality with NaN" begin
+@testset "Test FunctionData equality with NaN" begin
     examples_1 = get_more_test_function_data()
     examples_2 = get_more_test_function_data()
 
@@ -177,5 +177,35 @@ end
         @test hash(examples_1[(my_type, false)]) == hash(examples_2[(my_type, false)])
         @test hash(examples_1[(my_type, true)]) == hash(examples_2[(my_type, true)])
         @test hash(examples_1[(my_type, false)]) != hash(examples_2[(my_type, true)])
+    end
+end
+
+@testset "Test FunctionData printing" begin
+    repr_answers = [
+        "InfrastructureSystems.LinearFunctionData(5.0, 1.0)",
+        "InfrastructureSystems.QuadraticFunctionData(2.0, 3.0, 4.0)",
+        "InfrastructureSystems.PiecewiseLinearData(@NamedTuple{x::Float64, y::Float64}[(x = 1.0, y = 1.0), (x = 3.0, y = 5.0), (x = 5.0, y = 10.0)])",
+        "InfrastructureSystems.PiecewiseStepData([1.0, 3.0, 5.0], [2.0, 2.5])",
+    ]
+    plain_answers = [
+        "InfrastructureSystems.LinearFunctionData representing function f(x) = 5.0 x + 1.0",
+        "InfrastructureSystems.QuadraticFunctionData representing function f(x) = 2.0 x^2 + 3.0 x + 4.0",
+        "InfrastructureSystems.PiecewiseLinearData representing piecewise linear function y = f(x) connecting points:\n  (x = 1.0, y = 1.0)\n  (x = 3.0, y = 5.0)\n  (x = 5.0, y = 10.0)",
+        "InfrastructureSystems.PiecewiseStepData representing step (piecewise constant) function f(x) =\n  2.0 for x in [1.0, 3.0)\n  2.5 for x in [3.0, 5.0)",
+    ]
+    compact_plain_answers = [
+        "f(x) = 5.0 x + 1.0",
+        "f(x) = 2.0 x^2 + 3.0 x + 4.0",
+        "piecewise linear y = f(x) connecting points:\n  (x = 1.0, y = 1.0)\n  (x = 3.0, y = 5.0)\n  (x = 5.0, y = 10.0)",
+        "f(x) =\n  2.0 for x in [1.0, 3.0)\n  2.5 for x in [3.0, 5.0)",
+    ]
+
+    for (fd, repr_ans, plain_ans, compact_plain_ans) in
+        zip(get_test_function_data(), repr_answers, plain_answers, compact_plain_answers)
+        @test sprint(show, fd) == repr(fd) == repr_ans
+        @test sprint(show, "text/plain", fd) ==
+              sprint(show, "text/plain", fd; context = :compact => false) == plain_ans
+        @test sprint(show, "text/plain", fd; context = :compact => true) ==
+              compact_plain_ans
     end
 end
