@@ -51,6 +51,21 @@ function get_time_series(
     return deserialize_time_series(T, storage, ts_metadata, rows, columns)
 end
 
+"""
+Return a time series corresponding to the given parameters.
+
+# Arguments
+
+  - `owner::TimeSeriesOwners`: Component or attribute containing the time series
+  - `key::TimeSeriesKey`: the time series' key
+  - `start_time::Union{Nothing, Dates.DateTime} = nothing`: If nothing, use the
+    `initial_timestamp` of the time series. If the time series is a subtype of Forecast
+    then `start_time` must be the first timstamp of a window.
+  - `len::Union{Nothing, Int} = nothing`: Length in the time dimension. If nothing, use the
+    entire length.
+  - `count::Union{Nothing, Int} = nothing`: Only applicable to subtypes of Forecast. Number
+    of forecast windows starting at `start_time` to return. Defaults to all available.
+"""
 function get_time_series(
     owner::TimeSeriesOwners,
     key::TimeSeriesKey,
@@ -460,6 +475,11 @@ function copy_time_series!(
     end
 end
 
+"""
+Return information about each time series array attached to the owner.
+This information can be used to call
+[`get_time_series(::TimeSeriesOwners, ::TimeSeriesKey)`](@ref).
+"""
 function get_time_series_keys(owner::TimeSeriesOwners)
     mgr = get_time_series_manager(owner)
     isnothing(mgr) && return []
