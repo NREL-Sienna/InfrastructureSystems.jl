@@ -47,7 +47,7 @@ function execute(
     params::Union{Nothing, Vector},
     log_group::Symbol,
 )
-    @debug "Execute SQL" _group = log_group query
+    @debug "Execute SQL" _group = log_group query params
     try
         return if isnothing(params)
             SQLite.DBInterface.execute(db, query)

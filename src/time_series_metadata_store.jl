@@ -121,7 +121,7 @@ function add_metadata!(
     owner::TimeSeriesOwners,
     metadata::TimeSeriesMetadata,
 )
-    TimerOutputs.@timeit_debug SYSTEM_TIMERS "add ts metadata single" begin
+    TimerOutputs.@timeit_debug SYSTEM_TIMERS "add time series metadata single" begin
         owner_category = _get_owner_category(owner)
         ts_type = time_series_metadata_to_data(metadata)
         ts_category = _get_time_series_category(ts_type)
@@ -151,7 +151,7 @@ function add_metadata!(
     owners::Vector{<:TimeSeriesOwners},
     all_metadata::Vector{<:TimeSeriesMetadata},
 )
-    TimerOutputs.@timeit_debug SYSTEM_TIMERS "add ts metadata bulk" begin
+    TimerOutputs.@timeit_debug SYSTEM_TIMERS "add time series metadata bulk" begin
         @assert_op length(owners) == length(all_metadata)
         columns = (
             "id",
@@ -645,6 +645,74 @@ function get_time_series_resolutions(
     return Dates.Millisecond.(
         Tables.columntable(_execute(store, query, params)).resolution_ms
     )
+end
+
+"""
+Return the metadata specified in the passed metadata vector that are already stored.
+"""
+function list_existing_metadata(
+    store::TimeSeriesMetadataStore,
+    owners::Vector{TimeSeriesOwners},
+    metadata::Vector{TimeSeriesMetadata},
+)
+    # If resolution ever becomes a distinguishing attribute for time series,
+    # it has to be added here.
+    @assert_op length(owners) == length(metadata)
+    where_clauses = Vector{String}(undef, length(owners))
+    lookup = OrderedDict()
+    params = String[]
+    sizehint!(params, length(owners) * 4)
+    for (i, (owner, metadata)) in enumerate(zip(owners, metadata))
+        time_series_type = string(nameof(time_series_metadata_to_data(metadata)))
+        name = get_name(metadata)
+        owner_uuid = string(get_uuid(owner))
+        features = _make_features_string(metadata.features)
+        clause = """time_series_type = ?
+            AND name = ?
+            AND owner_uuid = ?
+            AND features = ?
+        """
+        push!(params, time_series_type)
+        push!(params, name)
+        push!(params, owner_uuid)
+        push!(params, features)
+        where_clauses[i] = clause
+        lookup[(string(time_series_type), name, owner_uuid, features)] = metadata
+    end
+    where_clause = join(where_clauses, " OR ")
+    query = """
+        SELECT 
+            time_series_type
+            ,name
+            ,owner_uuid
+            ,features
+        FROM $METADATA_TABLE_NAME
+        WHERE $where_clause
+    """
+    table = Tables.rowtable(_execute(store, query, params))
+    return [
+        lookup[(x.time_series_type, x.name, x.owner_uuid, x.features)]
+        for x in table
+    ]
+end
+
+"""
+Return the time series UUIDs specified in the passed uuids that are already stored.
+"""
+function list_existing_time_series_uuids(
+    store::TimeSeriesMetadataStore,
+    uuids,
+)
+    uuids_str = string.(uuids)
+    placeholder = chop(repeat("?,", length(uuids)))
+    query = """
+        SELECT
+            DISTINCT time_series_uuid
+            FROM $METADATA_TABLE_NAME 
+            WHERE time_series_uuid IN ($placeholder)
+    """
+    table = Tables.columntable(_execute(store, query, uuids_str))
+    return Base.UUID.(table.time_series_uuid)
 end
 
 """

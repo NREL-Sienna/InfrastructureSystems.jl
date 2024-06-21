@@ -1756,10 +1756,11 @@ end
 
     # Indexing
     @test length(time_series[1:16]) == 16
+    @show time_series
 
     # when
-    fcast = IS.when(time_series, TimeSeries.hour, 3)
-    @test length(fcast) == 1
+    fcast = IS.when(time_series, TimeSeries.minute, 0)
+    @test length(fcast) == 24
 end
 
 @testset "Test time_series head" begin
@@ -2389,11 +2390,19 @@ end
 
     # Horizon must be greater than 1.
     bad_data = SortedDict(initial_time => ones(1), second_time => ones(1))
-    @test_throws ArgumentError IS.Deterministic(; data = bad_data, name = name, resolution = resolution)
+    @test_throws ArgumentError IS.Deterministic(;
+        data = bad_data,
+        name = name,
+        resolution = resolution,
+    )
 
     # Arrays must have the same length.
     bad_data = SortedDict(initial_time => ones(2), second_time => ones(3))
-    @test_throws DimensionMismatch IS.Deterministic(; data = bad_data, name = name, resolution = resolution)
+    @test_throws DimensionMismatch IS.Deterministic(;
+        data = bad_data,
+        name = name,
+        resolution = resolution,
+    )
 
     # Set baseline parameters for the rest of the tests.
     data =
@@ -2820,4 +2829,49 @@ end
 
 @testset "Test forecast utils" begin
     @test_throws ErrorException IS.get_horizon_count(Dates.Hour(1), Dates.Minute(33))
+end
+
+@testset "Test bulk_add_time_series" begin
+    sys = IS.SystemData()
+    name = "Component1"
+    component = IS.TestComponent(name, 5)
+    IS.add_component!(sys, component)
+
+    initial_time = Dates.DateTime("2020-09-01")
+    resolution = Dates.Hour(1)
+
+    other_time = initial_time + resolution
+    name = "test"
+    horizon_count = 24
+
+    make_values(count, index) = ones(count) * index
+    associations = (
+        IS.TimeSeriesAssociation(
+            component,
+            IS.Deterministic(;
+                data = SortedDict(
+                    initial_time => make_values(horizon_count, i),
+                    other_time => make_values(horizon_count, i),
+                ),
+                name = "ts_$(i)", resolution = resolution,
+            ),
+        )
+        for i in 1:30
+    )
+    IS.bulk_add_time_series!(sys, associations; batch_size = 13)
+    ts_keys = IS.get_time_series_keys(component)
+    @test length(ts_keys) == 30
+    actual_ts_data = Dict(IS.get_name(x) => x for x in ts_keys)
+    for i in 1:30
+        name = "ts_$(i)"
+        @test haskey(actual_ts_data, name)
+        key = actual_ts_data[name]
+        ts = IS.get_time_series(component, key)
+        @test ts isa IS.Deterministic
+        data = IS.get_data(ts)
+        @test !isempty(values(data))
+        for val in values(data)
+            @test val == make_values(horizon_count, i)
+        end
+    end
 end

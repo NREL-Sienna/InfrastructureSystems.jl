@@ -199,6 +199,14 @@ function add_time_series!(
     )
 end
 
+function bulk_add_time_series!(
+    data::SystemData,
+    associations;
+    batch_size = ADD_TIME_SERIES_BATCH_SIZE,
+)
+    bulk_add_time_series!(data.time_series_manager, associations; batch_size = batch_size)
+end
+
 """
 Add the same time series data to multiple components.
 

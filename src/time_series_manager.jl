@@ -1,3 +1,5 @@
+const ADD_TIME_SERIES_BATCH_SIZE = 100
+
 mutable struct TimeSeriesManager <: InfrastructureSystemsType
     data_store::TimeSeriesStorage
     metadata_store::TimeSeriesMetadataStore
@@ -30,6 +32,112 @@ function TimeSeriesManager(;
     return TimeSeriesManager(data_store, metadata_store, read_only)
 end
 
+struct TimeSeriesAssociation
+    owner::TimeSeriesOwners
+    time_series::TimeSeriesData
+    features::Dict{Symbol, Any}
+end
+
+function TimeSeriesAssociation(owner, time_series; features...)
+    return TimeSeriesAssociation(owner, time_series, features)
+end
+
+function TimeSeriesAssociation(owner, time_series, features::Dict{String, Any})
+    return TimeSeriesAssociation(
+        owner,
+        time_series,
+        Dict{Symbol, Any}(Symbol(k) => v for (k, v) in features),
+    )
+end
+
+function bulk_add_time_series!(
+    mgr::TimeSeriesManager,
+    associations;
+    skip_if_present = false,
+    batch_size = ADD_TIME_SERIES_BATCH_SIZE,
+)
+    batch = TimeSeriesAssociation[]
+    sizehint!(batch, batch_size)
+    open_store!(mgr.data_store, "r+") do
+        for association in associations
+            push!(batch, association)
+            if length(batch) > batch_size
+                add_time_series!(mgr, batch; skip_if_present = skip_if_present)
+                empty!(batch)
+            end
+        end
+
+        if !isempty(batch)
+            add_time_series!(mgr, batch; skip_if_present = skip_if_present)
+        end
+    end
+
+    return
+end
+
+function add_time_series!(
+    mgr::TimeSeriesManager,
+    batch::Vector{TimeSeriesAssociation};
+    skip_if_present = false,
+)
+    _throw_if_read_only(mgr)
+    forecast_params = get_forecast_parameters(mgr.metadata_store)
+    sts_params = StaticTimeSeriesParameters()
+    num_metadata = length(batch)
+    all_metadata = Vector{TimeSeriesMetadata}(undef, num_metadata)
+    owners = Vector{TimeSeriesOwners}(undef, num_metadata)
+    ts_keys = Vector{TimeSeriesKey}(undef, num_metadata)
+    time_series_uuids = Dict{Base.UUID, TimeSeriesData}()
+    TimerOutputs.@timeit_debug SYSTEM_TIMERS "add_time_series! in bulk" begin
+        for (i, item) in enumerate(batch)
+            throw_if_does_not_support_time_series(item.owner)
+            metadata_type = time_series_data_to_metadata(typeof(item.time_series))
+            metadata = metadata_type(item.time_series; item.features...)
+            if isnothing(forecast_params)
+                forecast_params = _get_forecast_params(item.time_series)
+            end
+            check_params_compatibility(sts_params, forecast_params, item.time_series)
+            all_metadata[i] = metadata
+            owners[i] = item.owner
+            ts_keys[i] = make_time_series_key(metadata)
+            time_series_uuids[get_uuid(item.time_series)] = item.time_series
+        end
+
+        uuids = keys(time_series_uuids)
+        existing_ts_uuids = if isempty(uuids)
+            Base.UUID[]
+        else
+            list_existing_time_series_uuids(mgr.metadata_store, uuids)
+        end
+        new_ts_uuids = setdiff(keys(time_series_uuids), existing_ts_uuids)
+
+        existing_metadata = list_existing_metadata(mgr.metadata_store, owners, all_metadata)
+        if isempty(existing_metadata)
+            new_metadata = all_metadata
+        elseif !skip_if_present
+            throw(
+                ArgumentError(
+                    "Time series data with duplicate attributes are already stored: " *
+                    "$(existing_metadata)",
+                ),
+            )
+        else
+            existing_metadata_uuids = Set((get_uuid(x) for x in existing_metadata))
+            new_metadata =
+                [x for (i, x) in enumerate(all_metadata) if !in(i, existing_metadata_uuids)]
+        end
+
+        for uuid in new_ts_uuids
+            serialize_time_series!(mgr.data_store, time_series_uuids[uuid])
+        end
+        add_metadata!(mgr.metadata_store, owners, new_metadata)
+    end
+    return ts_keys
+end
+
+_get_forecast_params(ts::Forecast) = make_time_series_parameters(ts)
+_get_forecast_params(::StaticTimeSeries) = nothing
+
 function add_time_series!(
     mgr::TimeSeriesManager,
     owner::TimeSeriesOwners,
@@ -37,44 +145,11 @@ function add_time_series!(
     skip_if_present = false,
     features...,
 )
-    TimerOutputs.@timeit_debug SYSTEM_TIMERS "add_time_series" begin
-        TimerOutputs.@timeit_debug SYSTEM_TIMERS "add_time_series checks" begin
-            _throw_if_read_only(mgr)
-            throw_if_does_not_support_time_series(owner)
-            _check_time_series_params(mgr, time_series)
-            metadata_type = time_series_data_to_metadata(typeof(time_series))
-            metadata = metadata_type(time_series; features...)
-            data_exists = has_time_series(mgr.metadata_store, get_uuid(time_series))
-            metadata_exists = has_metadata(mgr.metadata_store, owner, metadata)
-        end
-
-        if metadata_exists && !skip_if_present
-            msg = if isempty(features)
-                "$(summary(metadata)) is already stored"
-            else
-                fmsg = join(["$k = $v" for (k, v) in features], ", ")
-                "$(summary(metadata)) with features $fmsg is already stored"
-            end
-            throw(ArgumentError(msg))
-        end
-
-        if !data_exists
-            serialize_time_series!(mgr.data_store, time_series)
-        end
-
-        # Order matters. Don't add metadata unless serialize works.
-        if !metadata_exists
-            add_metadata!(
-                mgr.metadata_store,
-                owner,
-                metadata;
-            )
-        end
-        @debug "Added $(summary(metadata)) to $(summary(owner)) " _group =
-            LOG_GROUP_TIME_SERIES
-
-        return make_time_series_key(metadata)
-    end
+    return add_time_series!(
+        mgr,
+        [TimeSeriesAssociation(owner, time_series; features...)];
+        skip_if_present = skip_if_present,
+    )[1]
 end
 
 function clear_time_series!(mgr::TimeSeriesManager)
@@ -171,50 +246,6 @@ function remove_time_series!(
         LOG_GROUP_TIME_SERIES
     _remove_data_if_no_more_references(mgr, get_time_series_uuid(metadata))
     return
-end
-
-function _check_time_series_params(mgr::TimeSeriesManager, ts::StaticTimeSeries)
-    check_params_compatibility(mgr.metadata_store, StaticTimeSeriesParameters())
-    data = get_data(ts)
-    if length(data) < 2
-        throw(ArgumentError("data array length must be at least 2: $(length(data))"))
-    end
-    if length(data) != length(ts)
-        throw(ConflictingInputsError("length mismatch: $(length(data)) $(length(ts))"))
-    end
-
-    timestamps = TimeSeries.timestamp(data)
-    difft = timestamps[2] - timestamps[1]
-    if difft != get_resolution(ts)
-        throw(ConflictingInputsError("resolution mismatch: $difft $(get_resolution(ts))"))
-    end
-    return
-end
-
-function _check_time_series_params(mgr::TimeSeriesManager, ts::Forecast)
-    check_params_compatibility(
-        mgr.metadata_store,
-        ForecastParameters(;
-            horizon = get_horizon(ts),
-            initial_timestamp = get_initial_timestamp(ts),
-            interval = get_interval(ts),
-            count = get_count(ts),
-            resolution = get_resolution(ts),
-        ),
-    )
-    horizon_count = get_horizon_count(ts)
-    if horizon_count < 2
-        throw(ArgumentError("horizon must be at least 2: $horizon_count"))
-    end
-    for window in iterate_windows(ts)
-        if size(window)[1] != horizon_count
-            throw(
-                ConflictingInputsError(
-                    "length mismatch: $(size(window)[1]) $horizon_count",
-                ),
-            )
-        end
-    end
 end
 
 function _remove_data_if_no_more_references(mgr::TimeSeriesManager, uuid::Base.UUID)

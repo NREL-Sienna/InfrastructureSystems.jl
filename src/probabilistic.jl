@@ -33,9 +33,18 @@ mutable struct Probabilistic <: Forecast
     scaling_factor_multiplier::Union{Nothing, Function}
     internal::InfrastructureSystemsInternal
 
-    function Probabilistic(name, data, percentiles, resolution, scaling_factor_multiplier, internal)
-        check_forecast_data(data)
-        new(name, data, percentiles, resolution, scaling_factor_multiplier, internal)
+    function Probabilistic(
+        name,
+        data,
+        percentiles,
+        resolution,
+        scaling_factor_multiplier,
+        internal,
+    )
+        forecast =
+            new(name, data, percentiles, resolution, scaling_factor_multiplier, internal)
+        check_forecast(forecast)
+        return forecast
     end
 end
 

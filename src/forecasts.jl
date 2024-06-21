@@ -13,13 +13,37 @@ Base.length(ts::Forecast) = get_count(ts)
 
 abstract type AbstractDeterministic <: Forecast end
 
-function check_forecast_data(data::AbstractDict)
+function check_forecast(forecast::Forecast)
+    _check_forecast_data(forecast)
+    _check_forecast_windows(forecast)
+end
+
+function _check_forecast_data(forecast::Forecast)
+    data = get_data(forecast)
     isempty(data) && throw(ArgumentError("Forecast data cannot be empty"))
     required_length = length(first(values(data)))
-    required_length < 2 && throw(ArgumentError("Forecast arrays must have a length of at least 2."))
+    required_length < 2 &&
+        throw(ArgumentError("Forecast arrays must have a length of at least 2."))
     lengths = Set((length(x) for x in values(data)))
-    length(lengths) != 1 && throw(DimensionMismatch("All forecast arrays must have the same length"))
+    length(lengths) != 1 &&
+        throw(DimensionMismatch("All forecast arrays must have the same length"))
     return
+end
+
+function _check_forecast_windows(forecast::Forecast)
+    horizon_count = get_horizon_count(forecast)
+    if horizon_count < 2
+        throw(ArgumentError("horizon must be at least 2: $horizon_count"))
+    end
+    for window in iterate_windows(forecast)
+        if size(window)[1] != horizon_count
+            throw(
+                ConflictingInputsError(
+                    "length mismatch: $(size(window)[1]) $horizon_count",
+                ),
+            )
+        end
+    end
 end
 
 # This method requires that the forecast type implement a `get_data` method like
