@@ -41,12 +41,21 @@ end
 """
 Wrapper around SQLite.DBInterface.execute to provide log messages.
 """
-function execute(db::SQLite.DB, query::AbstractString, log_group::Symbol)
-    @debug "Execute SQL" _group = log_group query
+function execute(
+    db::SQLite.DB,
+    query::AbstractString,
+    params::Union{Nothing, Vector},
+    log_group::Symbol,
+)
+    @debug "Execute SQL" _group = log_group query params
     try
-        return SQLite.DBInterface.execute(db, query)
+        return if isnothing(params)
+            SQLite.DBInterface.execute(db, query)
+        else
+            SQLite.DBInterface.execute(db, query, params)
+        end
     catch
-        @error "Failed to send SQL query" query
+        @error "Failed to send SQL query" query params
         rethrow()
     end
 end
@@ -54,8 +63,13 @@ end
 """
 Run a query to find a count. The query must produce a column called count with one row.
 """
-function execute_count(db::SQLite.DB, query::AbstractString, log_group::Symbol)
-    for row in Tables.rows(execute(db, query, log_group))
+function execute_count(
+    db::SQLite.DB,
+    query::AbstractString,
+    params::Union{Nothing, Vector},
+    log_group::Symbol,
+)
+    for row in Tables.rows(execute(db, query, params, log_group))
         return row.count
     end
 

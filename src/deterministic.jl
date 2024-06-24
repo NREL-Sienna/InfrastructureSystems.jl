@@ -28,6 +28,12 @@ mutable struct Deterministic <: AbstractDeterministic
     "Applicable when the time series data are scaling factors. Called on the associated component to convert the values."
     scaling_factor_multiplier::Union{Nothing, Function}
     internal::InfrastructureSystemsInternal
+
+    function Deterministic(name, data, resolution, scaling_factor_multiplier, internal)
+        forecast = new(name, data, resolution, scaling_factor_multiplier, internal)
+        check_forecast(forecast)
+        return forecast
+    end
 end
 
 function Deterministic(;

@@ -135,6 +135,13 @@ end
     component = IS.TestComponent(component_name, 5)
     IS.add_component!(sys, component)
     @test_throws ArgumentError IS.Deterministic(name, data_ts_two_cols)
+
+    invalid_horizon_count = SortedDict(initial_time => rand(1), other_time => rand(1))
+    @test_throws ArgumentError IS.Deterministic(
+        data = invalid_horizon_count,
+        name = name,
+        resolution = resolution,
+    )
 end
 
 @testset "Test add Deterministic with different resolutions" begin
@@ -395,6 +402,18 @@ end
         "test_c";
         start_time = initial_time - Dates.Day(10),
         len = 12,
+    )
+
+    @test_throws IS.ConflictingInputsError IS.SingleTimeSeries(
+        data = TimeSeries.TimeArray(
+            [
+                Dates.DateTime(2020, 1, 1),
+                Dates.DateTime(2020, 1, 2),
+                Dates.DateTime(2020, 1, 4),
+            ],
+            [1.0, 2.0, 3.0],
+        ),
+        name = "test",
     )
 
     # As of PSY 4.0, multiple resolutions are supported.
@@ -1758,8 +1777,8 @@ end
     @test length(time_series[1:16]) == 16
 
     # when
-    fcast = IS.when(time_series, TimeSeries.hour, 3)
-    @test length(fcast) == 1
+    fcast = IS.when(time_series, TimeSeries.minute, 0)
+    @test length(fcast) == 24
 end
 
 @testset "Test time_series head" begin
@@ -2389,13 +2408,19 @@ end
 
     # Horizon must be greater than 1.
     bad_data = SortedDict(initial_time => ones(1), second_time => ones(1))
-    forecast = IS.Deterministic(; data = bad_data, name = name, resolution = resolution)
-    @test_throws ArgumentError IS.add_time_series!(sys, component, forecast)
+    @test_throws ArgumentError IS.Deterministic(;
+        data = bad_data,
+        name = name,
+        resolution = resolution,
+    )
 
     # Arrays must have the same length.
     bad_data = SortedDict(initial_time => ones(2), second_time => ones(3))
-    forecast = IS.Deterministic(; data = bad_data, name = name, resolution = resolution)
-    @test_throws DimensionMismatch IS.add_time_series!(sys, component, forecast)
+    @test_throws DimensionMismatch IS.Deterministic(;
+        data = bad_data,
+        name = name,
+        resolution = resolution,
+    )
 
     # Set baseline parameters for the rest of the tests.
     data =
@@ -2822,4 +2847,135 @@ end
 
 @testset "Test forecast utils" begin
     @test_throws ErrorException IS.get_horizon_count(Dates.Hour(1), Dates.Minute(33))
+end
+
+@testset "Test bulk_add_time_series" begin
+    sys = IS.SystemData()
+    name = "Component1"
+    component = IS.TestComponent(name, 5)
+    IS.add_component!(sys, component)
+
+    initial_time = Dates.DateTime("2020-09-01")
+    resolution = Dates.Hour(1)
+
+    other_time = initial_time + resolution
+    name = "test"
+    horizon_count = 24
+
+    make_values(count, index) = ones(count) * index
+    associations = (
+        IS.TimeSeriesAssociation(
+            component,
+            IS.Deterministic(;
+                data = SortedDict(
+                    initial_time => make_values(horizon_count, i),
+                    other_time => make_values(horizon_count, i),
+                ),
+                name = "ts_$(i)", resolution = resolution,
+            );
+            model_year = "high",
+        )
+        for i in 1:30
+    )
+    IS.bulk_add_time_series!(sys, associations; batch_size = 13)
+    ts_keys = IS.get_time_series_keys(component)
+    @test length(ts_keys) == 30
+    actual_ts_data = Dict(IS.get_name(x) => x for x in ts_keys)
+    for i in 1:30
+        name = "ts_$(i)"
+        @test haskey(actual_ts_data, name)
+        key = actual_ts_data[name]
+        ts = IS.get_time_series(component, key)
+        @test ts isa IS.Deterministic
+        data = IS.get_data(ts)
+        @test !isempty(values(data))
+        for val in values(data)
+            @test val == make_values(horizon_count, i)
+        end
+    end
+end
+
+@testset "Test bulk_add_time_series with duplicates" begin
+    sys = IS.SystemData()
+    name = "Component1"
+    component = IS.TestComponent(name, 5)
+    IS.add_component!(sys, component)
+
+    initial_time = Dates.DateTime("2020-09-01")
+    resolution = Dates.Hour(1)
+    other_time = initial_time + resolution
+    name = "test"
+    horizon_count = 24
+    forecast = IS.Deterministic(;
+        data = SortedDict(
+            initial_time => rand(10),
+            other_time => rand(10),
+        ),
+        name = "ts", resolution = resolution,
+    )
+
+    @test_throws ArgumentError IS.bulk_add_time_series!(
+        sys,
+        [
+            IS.TimeSeriesAssociation(component, forecast; model_year = "high"),
+            IS.TimeSeriesAssociation(component, forecast; model_year = "low"),
+            IS.TimeSeriesAssociation(component, forecast; model_year = "high"),
+        ],
+    )
+
+    @test_throws ArgumentError IS.bulk_add_time_series!(
+        sys,
+        [
+            IS.TimeSeriesAssociation(component, forecast),
+            IS.TimeSeriesAssociation(component, forecast),
+            IS.TimeSeriesAssociation(component, forecast),
+        ],
+    )
+end
+
+@testset "Test list_existing_metadata" begin
+    sys = IS.SystemData()
+    initial_time = Dates.DateTime("2020-09-01")
+    resolution = Dates.Hour(1)
+    components = IS.TimeSeriesOwners[]
+    ts_metadata = IS.TimeSeriesMetadata[]
+    ts_uuids = Base.UUID[]
+    for i in 1:10
+        name = "Component_$i"
+        component = IS.TestComponent(name, i)
+        IS.add_component!(sys, component)
+        push!(components, component)
+
+        data = TimeSeries.TimeArray(
+            range(initial_time; length = 10, step = resolution),
+            rand(10),
+        )
+        ts_name = "test_$i"
+        ts = IS.SingleTimeSeries(; data = data, name = ts_name)
+        IS.add_time_series!(sys, component, ts; scenario = "high")
+        metadata = IS.SingleTimeSeriesMetadata(ts; scenario = "high")
+        push!(ts_metadata, metadata)
+        push!(ts_uuids, IS.get_uuid(ts))
+    end
+    push!(components, IS.TestComponent("extra", 1))
+    push!(ts_metadata, ts_metadata[end])
+    push!(ts_uuids, UUIDs.uuid4())
+
+    existing_metadata = IS.list_existing_metadata(
+        sys.time_series_manager.metadata_store,
+        components[1:5],
+        ts_metadata[1:5],
+    )
+    @test length(existing_metadata) == 5
+    for i in 1:5
+        @test existing_metadata[i] == ts_metadata[i]
+    end
+
+    existing_uuids = IS.list_existing_time_series_uuids(
+        sys.time_series_manager.metadata_store,
+        ts_uuids[1:5],
+    )
+    @test length(existing_uuids) == 5
+    @test sort(ts_uuids[1:5]; by = x -> string(x)) ==
+          sort(existing_uuids[1:5]; by = x -> string(x))
 end

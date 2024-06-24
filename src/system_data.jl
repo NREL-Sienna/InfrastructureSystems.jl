@@ -145,23 +145,37 @@ Adds time series data from a metadata file or metadata descriptors.
 """
 function add_time_series_from_file_metadata!(
     data::SystemData,
-    ::Type{T},
+    component_type::Type{<:InfrastructureSystemsComponent},
     file_metadata::Vector{TimeSeriesFileMetadata};
     resolution = nothing,
-) where {T <: InfrastructureSystemsComponent}
-    ts_keys = Vector{TimeSeriesKey}(undef, length(file_metadata))
-    open_time_series_store!(data, "r+") do
+)
+    return bulk_add_time_series!(
+        data,
+        _get_ts_associations_from_metadata(data, component_type, file_metadata, resolution),
+    )
+end
+
+function _get_ts_associations_from_metadata(
+    data::SystemData,
+    component_type::Type{<:InfrastructureSystemsComponent},
+    file_metadata,
+    resolution,
+)
+    Channel() do channel
         cache = TimeSeriesParsingCache()
-        for (i, metadata) in enumerate(file_metadata)
+        for metadata in file_metadata
             if resolution === nothing || metadata.resolution == resolution
-                key = add_time_series_from_file_metadata_internal!(data, T, cache, metadata)
-                if !isnothing(key)
-                    ts_keys[i] = key
+                for association in add_time_series_from_file_metadata_internal!(
+                    data,
+                    component_type,
+                    cache,
+                    metadata,
+                )
+                    put!(channel, association)
                 end
             end
         end
     end
-    return ts_keys
 end
 
 """
@@ -179,7 +193,6 @@ function add_time_series!(
     data::SystemData,
     owner::TimeSeriesOwners,
     time_series::TimeSeriesData;
-    skip_if_present = false,
     features...,
 )
     _validate(data, owner)
@@ -187,9 +200,16 @@ function add_time_series!(
         data.time_series_manager,
         owner,
         time_series;
-        skip_if_present = skip_if_present,
         features...,
     )
+end
+
+function bulk_add_time_series!(
+    data::SystemData,
+    associations;
+    batch_size = ADD_TIME_SERIES_BATCH_SIZE,
+)
+    bulk_add_time_series!(data.time_series_manager, associations; batch_size = batch_size)
 end
 
 """
@@ -233,10 +253,12 @@ function add_time_series_from_file_metadata_internal!(
     cache::TimeSeriesParsingCache,
     file_metadata::TimeSeriesFileMetadata,
 ) where {T <: InfrastructureSystemsComponent}
-    set_component!(file_metadata, data, InfrastructureSystems)
-    component = file_metadata.component
-    time_series = make_time_series!(cache, file_metadata)
-    return add_time_series!(data, component, time_series)
+    TimerOutputs.@timeit_debug SYSTEM_TIMERS "add_time_series_from_file_metadata_internal" begin
+        set_component!(file_metadata, data, InfrastructureSystems)
+        time_series = make_time_series!(cache, file_metadata)
+        add_assignment!(cache, file_metadata)
+        return [TimeSeriesAssociation(file_metadata.component, time_series)]
+    end
 end
 
 """
@@ -469,6 +491,22 @@ function transform_single_time_series!(
     horizon::Dates.Period,
     interval::Dates.Period,
 )
+    TimerOutputs.@timeit_debug SYSTEM_TIMERS "transform_single_time_series" begin
+        _transform_single_time_series!(
+            data,
+            DeterministicSingleTimeSeries,
+            horizon,
+            interval,
+        )
+    end
+end
+
+function _transform_single_time_series!(
+    data::SystemData,
+    ::Type{<:DeterministicSingleTimeSeries},
+    horizon::Dates.Period,
+    interval::Dates.Period,
+)
     remove_time_series!(data, DeterministicSingleTimeSeries)
     items = _check_transform_single_time_series(
         data,
@@ -482,9 +520,11 @@ function transform_single_time_series!(
         return
     end
 
-    if length(items) > 1
-        params1 = items[1].params
-        for item in items[2:end]
+    all_metadata = Vector{DeterministicMetadata}(undef, length(items))
+    components = Vector{InfrastructureSystemsComponent}(undef, length(items))
+    for (i, item) in enumerate(items)
+        if i > 1
+            params1 = items[1].params
             params = item.params
             if params.count != params1.count
                 msg =
@@ -501,12 +541,8 @@ function transform_single_time_series!(
                 throw(ConflictingInputsError(msg))
             end
         end
-    end
-
-    for item in items
         metadata = item.metadata
         params = item.params
-        component = item.component
         new_metadata = DeterministicMetadata(;
             name = get_name(metadata),
             resolution = get_resolution(metadata),
@@ -519,15 +555,19 @@ function transform_single_time_series!(
             scaling_factor_multiplier = get_scaling_factor_multiplier(metadata),
             internal = get_internal(metadata),
         )
-        try
-            add_metadata!(data.time_series_manager.metadata_store, component, new_metadata)
-        catch
-            # This shouldn't be needed, but just in case there is a bug, remove all
-            # DeterministicSingleTimeSeries to keep our guarantee.
-            remove_time_series!(data, DeterministicSingleTimeSeries)
-            rethrow()
-        end
+        all_metadata[i] = new_metadata
+        components[i] = item.component
     end
+
+    try
+        add_metadata!(data.time_series_manager.metadata_store, components, all_metadata)
+    catch
+        # This shouldn't be needed, but just in case there is a bug, remove all
+        # DeterministicSingleTimeSeries to keep our guarantee.
+        remove_time_series!(data, DeterministicSingleTimeSeries)
+        rethrow()
+    end
+    return
 end
 
 """
@@ -550,6 +590,7 @@ function _check_transform_single_time_series(
         InfrastructureSystemsComponent;
         time_series_type = SingleTimeSeries,
     )
+    system_params = get_forecast_parameters(data.time_series_manager.metadata_store)
     components_with_params_and_metadata = Vector(undef, length(items))
     for (i, item) in enumerate(items)
         params = _check_single_time_series_transformed_parameters(
@@ -558,8 +599,8 @@ function _check_transform_single_time_series(
             horizon,
             interval,
         )
+        check_params_compatibility(system_params, params)
         component = get_component(data, item.owner_uuid)
-        check_params_compatibility(data.time_series_manager.metadata_store, params)
         components_with_params_and_metadata[i] =
             (component = component, params = params, metadata = item.metadata)
     end
@@ -693,20 +734,22 @@ end
 Serialize all system and component data to a dictionary.
 """
 function to_dict(data::SystemData)
-    serialized_data = Dict{String, Any}()
-    for field in
-        (
-        :components,
-        :masked_components,
-        :subsystems,
-        :supplemental_attribute_manager,
-        :internal,
-    )
-        serialized_data[string(field)] = serialize(getproperty(data, field))
-    end
+    TimerOutputs.@timeit_debug SYSTEM_TIMERS "SystemData to_dict" begin
+        serialized_data = Dict{String, Any}()
+        for field in
+            (
+            :components,
+            :masked_components,
+            :subsystems,
+            :supplemental_attribute_manager,
+            :internal,
+        )
+            serialized_data[string(field)] = serialize(getproperty(data, field))
+        end
 
-    serialized_data["version_info"] = serialize_julia_info()
-    return serialized_data
+        serialized_data["version_info"] = serialize_julia_info()
+        return serialized_data
+    end
 end
 
 function serialize(data::SystemData)

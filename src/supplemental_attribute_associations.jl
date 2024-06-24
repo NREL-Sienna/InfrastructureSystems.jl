@@ -98,20 +98,22 @@ function add_association!(
     component::InfrastructureSystemsComponent,
     attribute::SupplementalAttribute,
 )
-    row = (
-        string(get_uuid(attribute)),
-        string(nameof(typeof(attribute))),
-        string(get_uuid(component)),
-        string(nameof(typeof(component))),
-    )
-    params = chop(repeat("?,", length(row)))
-    SQLite.DBInterface.execute(
-        associations.db,
-        "INSERT INTO $SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME VALUES($params)",
-        row,
-    )
-    @debug "Added association bewteen $(summary(attribute)) and $(summary(component))"
-    LOG_GROUP_SUPPLEMENTAL_ATTRIBUTES
+    TimerOutputs.@timeit_debug SYSTEM_TIMERS "add supplemental attribute association" begin
+        row = (
+            string(get_uuid(attribute)),
+            string(nameof(typeof(attribute))),
+            string(get_uuid(component)),
+            string(nameof(typeof(component))),
+        )
+        params = chop(repeat("?,", length(row)))
+        SQLite.DBInterface.execute(
+            associations.db,
+            "INSERT INTO $SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME VALUES($params)",
+            row,
+        )
+        @debug "Added association bewteen $(summary(attribute)) and $(summary(component))"
+        LOG_GROUP_SUPPLEMENTAL_ATTRIBUTES
+    end
     return
 end
 
@@ -207,10 +209,11 @@ function has_association(
     query = """
         SELECT attribute_uuid
         FROM $SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME
-        WHERE attribute_uuid = '$a_uuid' AND component_uuid = '$c_uuid'
+        WHERE attribute_uuid = ? AND component_uuid = ?
         LIMIT 1
     """
-    return !isempty(Tables.rowtable(_execute(associations, query)))
+    params = [string(a_uuid), string(c_uuid)]
+    return !isempty(Tables.rowtable(_execute(associations, query, params)))
 end
 
 function has_association(
@@ -218,12 +221,13 @@ function has_association(
     component::InfrastructureSystemsComponent,
     attribute_type::Union{Nothing, Type{<:SupplementalAttribute}} = nothing,
 )
-    c_str = "component_uuid = '$(get_uuid(component))'"
+    c_str = "component_uuid = ?"
+    params = [string(get_uuid(component))]
     where_clause = if isnothing(attribute_type)
         c_str
     else
-        a_str = _get_attribute_type_string(attribute_type)
-        "$a_str AND $c_str"
+        a_str = _get_attribute_type_string!(params, attribute_type)
+        "$c_str AND $a_str"
     end
 
     query = """
@@ -232,7 +236,7 @@ function has_association(
         WHERE $where_clause
         LIMIT 1
     """
-    return !isempty(Tables.rowtable(_execute(associations, query)))
+    return !isempty(Tables.rowtable(_execute(associations, query, params)))
 end
 
 """
@@ -259,19 +263,20 @@ function list_associated_supplemental_attribute_uuids(
     component::InfrastructureSystemsComponent;
     attribute_type::Union{Nothing, Type{<:SupplementalAttribute}} = nothing,
 )
-    c_str = "component_uuid = '$(get_uuid(component))'"
-    where_clause = if isnothing(attribute_type)
-        c_str
+    c_str = "component_uuid = ?"
+    params = [string(get_uuid(component))]
+    if isnothing(attribute_type)
+        where_clause = c_str
     else
-        a_str = _get_attribute_type_string(attribute_type)
-        "$a_str AND $c_str"
+        a_str = _get_attribute_type_string!(params, attribute_type)
+        where_clause = "$c_str AND $a_str"
     end
     query = """
         SELECT attribute_uuid
         FROM $SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME
         WHERE $where_clause
     """
-    table = Tables.columntable(_execute(associations, query))
+    table = Tables.columntable(_execute(associations, query, params))
     return Base.UUID.(table.attribute_uuid)
 end
 
@@ -326,8 +331,12 @@ end
 """
 Run a query and return the results in a DataFrame.
 """
-function sql(associations::SupplementalAttributeAssociations, query::String)
-    return DataFrames.DataFrame(_execute(associations, query))
+function sql(
+    associations::SupplementalAttributeAssociations,
+    query::String,
+    params = nothing,
+)
+    return DataFrames.DataFrame(_execute(associations, query, params))
 end
 
 """
@@ -347,7 +356,7 @@ function load_records!(associations::SupplementalAttributeAssociations, records)
     columns = ("attribute_uuid", "attribute_type", "component_uuid", "component_type")
     num_rows = length(records)
     num_columns = length(columns)
-    data = Dict(x => Vector{String}(undef, num_rows) for x in columns)
+    data = OrderedDict(x => Vector{String}(undef, num_rows) for x in columns)
     for (i, record) in enumerate(records)
         for column in columns
             data[column][i] = record[column]
@@ -409,22 +418,27 @@ function compare_values(
     return table_x == table_y
 end
 
-_execute(s::SupplementalAttributeAssociations, q) =
-    execute(s.db, q, LOG_GROUP_SUPPLEMENTAL_ATTRIBUTES)
-_execute_count(s::SupplementalAttributeAssociations, q) =
-    execute_count(s.db, q, LOG_GROUP_SUPPLEMENTAL_ATTRIBUTES)
+_execute(s::SupplementalAttributeAssociations, q, p = nothing) =
+    execute(s.db, q, p, LOG_GROUP_SUPPLEMENTAL_ATTRIBUTES)
+_execute_count(s::SupplementalAttributeAssociations, q, p = nothing) =
+    execute_count(s.db, q, p, LOG_GROUP_SUPPLEMENTAL_ATTRIBUTES)
 
-function _get_attribute_type_string(
-    attribute_type::Union{Nothing, Type{<:SupplementalAttribute}},
+function _get_attribute_type_string!(
+    params, attribute_type::Union{Nothing, Type{<:SupplementalAttribute}},
 )
     val = if isnothing(attribute_type)
         ""
     elseif isabstracttype(attribute_type)
-        types = ["'$(nameof(x))'" for x in get_all_concrete_subtypes(attribute_type)]
-        types_str = join(types, ",")
-        "attribute_type in ($types_str)"
+        count = 0
+        for type in get_all_concrete_subtypes(attribute_type)
+            push!(params, string(nameof(type)))
+            count += 1
+        end
+        placeholder = chop(repeat("?,", count))
+        "attribute_type in ($placeholder)"
     else
-        "attribute_type = '$(nameof(attribute_type))'"
+        push!(params, string(nameof(attribute_type)))
+        "attribute_type = ?"
     end
 
     return val

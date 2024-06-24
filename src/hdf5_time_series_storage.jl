@@ -235,26 +235,28 @@ function _serialize_time_series!(
     root = _get_root(storage, file)
     uuid = string(get_uuid(ts))
     if !haskey(root, uuid)
-        group = HDF5.create_group(root, uuid)
-        data = get_array_for_hdf(ts)
-        settings = storage.compression
-        if settings.enabled
-            if settings.type == CompressionTypes.BLOSC
-                group["data", blosc = settings.level] = data
-            elseif settings.type == CompressionTypes.DEFLATE
-                if settings.shuffle
-                    group["data", shuffle = (), deflate = settings.level] = data
+        TimerOutputs.@timeit_debug SYSTEM_TIMERS "HDF5 serialize_time_series" begin
+            group = HDF5.create_group(root, uuid)
+            data = get_array_for_hdf(ts)
+            settings = storage.compression
+            if settings.enabled
+                if settings.type == CompressionTypes.BLOSC
+                    group["data", blosc = settings.level] = data
+                elseif settings.type == CompressionTypes.DEFLATE
+                    if settings.shuffle
+                        group["data", shuffle = (), deflate = settings.level] = data
+                    else
+                        group["data", deflate = settings.level] = data
+                    end
                 else
-                    group["data", deflate = settings.level] = data
+                    error("not implemented for type=$(settings.type)")
                 end
             else
-                error("not implemented for type=$(settings.type)")
+                group["data"] = data
             end
-        else
-            group["data"] = data
+            _write_time_series_attributes!(ts, group)
+            @debug "Create new time series entry." _group = LOG_GROUP_TIME_SERIES uuid
         end
-        _write_time_series_attributes!(ts, group)
-        @debug "Create new time series entry." _group = LOG_GROUP_TIME_SERIES uuid
     end
     return
 end
@@ -390,21 +392,23 @@ function _deserialize_time_series(
     file::HDF5.File,
 ) where {T <: StaticTimeSeries}
     # Note that all range checks must occur at a higher level.
-    root = _get_root(storage, file)
-    uuid = get_time_series_uuid(metadata)
-    path = _get_time_series_path(root, uuid)
-    attributes = _read_time_series_attributes(path)
-    @debug "deserializing a StaticTimeSeries" _group = LOG_GROUP_TIME_SERIES T
-    data_type = attributes["data_type"]
-    data = get_hdf_array(path["data"], data_type, rows)
-    resolution = get_resolution(metadata)
-    start_time = get_initial_timestamp(metadata) + resolution * (rows.start - 1)
-    timestamps = range(
-        start_time;
-        length = length(rows),
-        step = resolution,
-    )
-    return T(metadata, TimeSeries.TimeArray(timestamps, data))
+    TimerOutputs.@timeit_debug SYSTEM_TIMERS "HDF5 deserialize StaticTimeSeries" begin
+        root = _get_root(storage, file)
+        uuid = get_time_series_uuid(metadata)
+        path = _get_time_series_path(root, uuid)
+        attributes = _read_time_series_attributes(path)
+        @debug "deserializing a StaticTimeSeries" _group = LOG_GROUP_TIME_SERIES T
+        data_type = attributes["data_type"]
+        data = get_hdf_array(path["data"], data_type, rows)
+        resolution = get_resolution(metadata)
+        start_time = get_initial_timestamp(metadata) + resolution * (rows.start - 1)
+        timestamps = range(
+            start_time;
+            length = length(rows),
+            step = resolution,
+        )
+        return T(metadata, TimeSeries.TimeArray(timestamps, data))
+    end
 end
 
 function deserialize_time_series(
@@ -454,11 +458,13 @@ function _deserialize_time_series(
         )
     end
 
-    @assert actual_type <: T "actual_type = $actual_type T = $T"
-    @debug "deserializing a Forecast" _group = LOG_GROUP_TIME_SERIES T
-    attributes = _read_time_series_attributes(path)
-    data = get_hdf_array(path["data"], attributes["data_type"], metadata, rows, columns)
-    return actual_type(metadata, data)
+    TimerOutputs.@timeit_debug SYSTEM_TIMERS "HDF5 deserialize Deterministic" begin
+        @assert actual_type <: T "actual_type = $actual_type T = $T"
+        @debug "deserializing a Forecast" _group = LOG_GROUP_TIME_SERIES T
+        attributes = _read_time_series_attributes(path)
+        data = get_hdf_array(path["data"], attributes["data_type"], metadata, rows, columns)
+        return actual_type(metadata, data)
+    end
 end
 
 function get_hdf_array(
@@ -627,33 +633,35 @@ function _deserialize_time_series(
     file::HDF5.File,
 ) where {T <: Probabilistic}
     # Note that all range checks must occur at a higher level.
-    total_percentiles = length(get_percentiles(metadata))
-    root = _get_root(storage, file)
-    uuid = get_time_series_uuid(metadata)
-    path = _get_time_series_path(root, uuid)
-    attributes = _read_time_series_attributes(path)
-    @assert_op length(attributes["dataset_size"]) == 3
-    @debug "deserializing a Forecast" _group = LOG_GROUP_TIME_SERIES T
-    data = SortedDict{Dates.DateTime, Matrix{attributes["data_type"]}}()
-    initial_timestamp = get_initial_timestamp(metadata)
-    interval = get_interval(metadata)
-    start_time = initial_timestamp + interval * (first(columns) - 1)
-    if length(columns) == 1
-        data[start_time] =
-            transpose(path["data"][1:total_percentiles, rows, first(columns)])
-    else
-        data_read = PermutedDimsArray(
-            path["data"][1:total_percentiles, rows, columns],
-            [3, 2, 1],
-        )
-        for (i, it) in enumerate(
-            range(start_time; length = length(columns), step = interval),
-        )
-            data[it] = @view data_read[i, 1:length(rows), 1:total_percentiles]
+    TimerOutputs.@timeit_debug SYSTEM_TIMERS "HDF5 deserialize Probabilistic" begin
+        total_percentiles = length(get_percentiles(metadata))
+        root = _get_root(storage, file)
+        uuid = get_time_series_uuid(metadata)
+        path = _get_time_series_path(root, uuid)
+        attributes = _read_time_series_attributes(path)
+        @assert_op length(attributes["dataset_size"]) == 3
+        @debug "deserializing a Forecast" _group = LOG_GROUP_TIME_SERIES T
+        data = SortedDict{Dates.DateTime, Matrix{attributes["data_type"]}}()
+        initial_timestamp = get_initial_timestamp(metadata)
+        interval = get_interval(metadata)
+        start_time = initial_timestamp + interval * (first(columns) - 1)
+        if length(columns) == 1
+            data[start_time] =
+                transpose(path["data"][1:total_percentiles, rows, first(columns)])
+        else
+            data_read = PermutedDimsArray(
+                path["data"][1:total_percentiles, rows, columns],
+                [3, 2, 1],
+            )
+            for (i, it) in enumerate(
+                range(start_time; length = length(columns), step = interval),
+            )
+                data[it] = @view data_read[i, 1:length(rows), 1:total_percentiles]
+            end
         end
-    end
 
-    return T(metadata, data)
+        return T(metadata, data)
+    end
 end
 
 function deserialize_time_series(
@@ -688,33 +696,35 @@ function _deserialize_time_series(
     file::HDF5.File,
 ) where {T <: Scenarios}
     # Note that all range checks must occur at a higher level.
-    total_scenarios = get_scenario_count(metadata)
+    TimerOutputs.@timeit_debug SYSTEM_TIMERS "HDF5 deserialize Scenarios" begin
+        total_scenarios = get_scenario_count(metadata)
 
-    root = _get_root(storage, file)
-    uuid = get_time_series_uuid(metadata)
-    path = _get_time_series_path(root, uuid)
-    attributes = _read_time_series_attributes(path)
-    @assert_op attributes["type"] == T
-    @assert_op length(attributes["dataset_size"]) == 3
-    @debug "deserializing a Forecast" _group = LOG_GROUP_TIME_SERIES T
-    data = SortedDict{Dates.DateTime, Matrix{attributes["data_type"]}}()
-    initial_timestamp = get_initial_timestamp(metadata)
-    interval = get_interval(metadata)
-    start_time = initial_timestamp + interval * (first(columns) - 1)
-    if length(columns) == 1
-        data[start_time] =
-            transpose(path["data"][1:total_scenarios, rows, first(columns)])
-    else
-        data_read =
-            PermutedDimsArray(path["data"][1:total_scenarios, rows, columns], [3, 2, 1])
-        for (i, it) in enumerate(
-            range(start_time; length = length(columns), step = interval),
-        )
-            data[it] = @view data_read[i, 1:length(rows), 1:total_scenarios]
+        root = _get_root(storage, file)
+        uuid = get_time_series_uuid(metadata)
+        path = _get_time_series_path(root, uuid)
+        attributes = _read_time_series_attributes(path)
+        @assert_op attributes["type"] == T
+        @assert_op length(attributes["dataset_size"]) == 3
+        @debug "deserializing a Forecast" _group = LOG_GROUP_TIME_SERIES T
+        data = SortedDict{Dates.DateTime, Matrix{attributes["data_type"]}}()
+        initial_timestamp = get_initial_timestamp(metadata)
+        interval = get_interval(metadata)
+        start_time = initial_timestamp + interval * (first(columns) - 1)
+        if length(columns) == 1
+            data[start_time] =
+                transpose(path["data"][1:total_scenarios, rows, first(columns)])
+        else
+            data_read =
+                PermutedDimsArray(path["data"][1:total_scenarios, rows, columns], [3, 2, 1])
+            for (i, it) in enumerate(
+                range(start_time; length = length(columns), step = interval),
+            )
+                data[it] = @view data_read[i, 1:length(rows), 1:total_scenarios]
+            end
         end
-    end
 
-    return T(metadata, data)
+        return T(metadata, data)
+    end
 end
 
 function clear_time_series!(storage::Hdf5TimeSeriesStorage)

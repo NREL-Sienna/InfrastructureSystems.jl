@@ -5,6 +5,27 @@ Stores references to TimeSeriesData.
 """
 abstract type TimeSeriesMetadata <: InfrastructureSystemsType end
 
+function make_unique_owner_metadata_identifer(owner, metadata::TimeSeriesMetadata)
+    return (
+        summary(owner),
+        strip_module_name(time_series_metadata_to_data(metadata)),
+        get_name(metadata),
+        make_features_string(metadata.features),
+    )
+end
+
+function make_features_string(features::Dict{String, Union{Bool, Int, String}})
+    key_names = sort!(collect(keys(features)))
+    data = [Dict(k => features[k]) for k in key_names]
+    return JSON3.write(data)
+end
+
+function make_features_string(; features...)
+    key_names = sort!(collect(string.(keys(features))))
+    data = [Dict(k => features[Symbol(k)]) for (k) in key_names]
+    return JSON3.write(data)
+end
+
 abstract type ForecastMetadata <: TimeSeriesMetadata end
 
 abstract type StaticTimeSeriesMetadata <: TimeSeriesMetadata end
@@ -30,15 +51,3 @@ abstract type TimeSeriesData <: InfrastructureSystemsType end
 # - get_resolution
 # - make_time_array
 # - eltype_data
-
-abstract type AbstractTimeSeriesParameters <: InfrastructureSystemsType end
-
-struct StaticTimeSeriesParameters <: AbstractTimeSeriesParameters end
-
-@kwdef struct ForecastParameters <: AbstractTimeSeriesParameters
-    horizon::Dates.Period
-    initial_timestamp::Dates.DateTime
-    interval::Dates.Period
-    count::Int
-    resolution::Dates.Period
-end

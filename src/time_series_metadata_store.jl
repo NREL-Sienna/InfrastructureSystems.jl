@@ -119,29 +119,90 @@ Add metadata to the store. The caller must check if there are duplicates.
 function add_metadata!(
     store::TimeSeriesMetadataStore,
     owner::TimeSeriesOwners,
-    metadata::TimeSeriesMetadata;
+    metadata::TimeSeriesMetadata,
 )
-    check_params_compatibility(store, metadata)
-    owner_category = _get_owner_category(owner)
-    ts_type = time_series_metadata_to_data(metadata)
-    ts_category = _get_time_series_category(ts_type)
-    features = _make_features_string(metadata.features)
-    vals = _create_row(
-        metadata,
-        owner,
-        owner_category,
-        string(nameof(ts_type)),
-        ts_category,
-        features,
-    )
-    params = repeat("?,", length(vals) - 1) * "jsonb(?)"
-    SQLite.DBInterface.execute(
-        store.db,
-        "INSERT INTO $METADATA_TABLE_NAME VALUES($params)",
-        vals,
-    )
-    @debug "Added metadata = $metadata to $(summary(owner))" _group =
-        LOG_GROUP_TIME_SERIES
+    TimerOutputs.@timeit_debug SYSTEM_TIMERS "add time series metadata single" begin
+        owner_category = _get_owner_category(owner)
+        ts_type = time_series_metadata_to_data(metadata)
+        ts_category = _get_time_series_category(ts_type)
+        features = make_features_string(metadata.features)
+        vals = _create_row(
+            metadata,
+            owner,
+            owner_category,
+            string(nameof(ts_type)),
+            ts_category,
+            features,
+        )
+        params = repeat("?,", length(vals) - 1) * "jsonb(?)"
+        SQLite.DBInterface.execute(
+            store.db,
+            "INSERT INTO $METADATA_TABLE_NAME VALUES($params)",
+            vals,
+        )
+        @debug "Added metadata = $metadata to $(summary(owner))" _group =
+            LOG_GROUP_TIME_SERIES
+    end
+    return
+end
+
+function add_metadata!(
+    store::TimeSeriesMetadataStore,
+    owners::Vector{<:TimeSeriesOwners},
+    all_metadata::Vector{<:TimeSeriesMetadata},
+)
+    TimerOutputs.@timeit_debug SYSTEM_TIMERS "add time series metadata bulk" begin
+        @assert_op length(owners) == length(all_metadata)
+        columns = (
+            "id",
+            "time_series_uuid",
+            "time_series_type",
+            "time_series_category",
+            "initial_timestamp",
+            "resolution_ms",
+            "horizon_ms",
+            "interval_ms",
+            "window_count",
+            "length",
+            "name",
+            "owner_uuid",
+            "owner_type",
+            "owner_category",
+            "features",
+            "metadata",
+        )
+        num_rows = length(all_metadata)
+        num_columns = length(columns)
+        data = OrderedDict(x => Vector{Any}(undef, num_rows) for x in columns)
+        for i in 1:num_rows
+            owner = owners[i]
+            metadata = all_metadata[i]
+            owner_category = _get_owner_category(owner)
+            ts_type = time_series_metadata_to_data(metadata)
+            ts_category = _get_time_series_category(ts_type)
+            features = make_features_string(metadata.features)
+            row = _create_row(
+                metadata,
+                owner,
+                owner_category,
+                string(nameof(ts_type)),
+                ts_category,
+                features,
+            )
+            for (j, column) in enumerate(columns)
+                data[column][i] = row[j]
+            end
+        end
+
+        params = repeat("?,", num_columns - 1) * "jsonb(?)"
+        SQLite.DBInterface.executemany(
+            store.db,
+            "INSERT INTO $METADATA_TABLE_NAME VALUES($params)",
+            NamedTuple(Symbol(k) => v for (k, v) in data),
+        )
+        @debug "Added $num_rows instances of time series metadata" _group =
+            LOG_GROUP_TIME_SERIES
+    end
     return
 end
 
@@ -194,32 +255,8 @@ function check_params_compatibility(
 )
     store_params = get_forecast_parameters(store)
     isnothing(store_params) && return
-
-    if params.count != store_params.count
-        throw(
-            ConflictingInputsError(
-                "forecast count $(params.count) does not match system count $(store_params.count)",
-            ),
-        )
-    end
-
-    if params.initial_timestamp != store_params.initial_timestamp
-        throw(
-            ConflictingInputsError(
-                "forecast initial_timestamp $(params.initial_timestamp) does not match system " *
-                "initial_timestamp $(store_params.initial_timestamp)",
-            ),
-        )
-    end
-
-    if params.horizon != store_params.horizon
-        throw(
-            ConflictingInputsError(
-                "forecast horizon $(params.horizon) " *
-                "does not match system horizon $(store_params.horizon)",
-            ),
-        )
-    end
+    check_params_compatibility(store_params, params)
+    return
 end
 
 # These are guaranteed to be consistent already.
@@ -539,30 +576,32 @@ function has_metadata(
         return true
     end
 
-    where_clause = _make_where_clause(
+    where_clause, params = _make_where_clause(
         owner;
         time_series_type = time_series_type,
         name = name,
         features...,
     )
     query = "SELECT COUNT(*) AS count FROM $METADATA_TABLE_NAME $where_clause"
-    return _execute_count(store, query) > 0
+    return _execute_count(store, query, params) > 0
 end
 
 """
 Return True if there is time series matching the UUID.
 """
 function has_time_series(store::TimeSeriesMetadataStore, time_series_uuid::Base.UUID)
-    where_clause = "WHERE time_series_uuid = '$time_series_uuid'"
-    return _has_time_series(store, where_clause)
+    where_clause = "WHERE time_series_uuid = ?"
+    params = [string(time_series_uuid)]
+    return _has_time_series(store, where_clause, params)
 end
 
 function has_time_series(
     store::TimeSeriesMetadataStore,
     owner::TimeSeriesOwners,
 )
-    where_clause = "WHERE owner_uuid = '$(get_uuid(owner))'"
-    return _has_time_series(store, where_clause)
+    where_clause = "WHERE owner_uuid = ?"
+    params = [string(get_uuid(owner))]
+    return _has_time_series(store, where_clause, params)
 end
 
 function has_time_series(
@@ -570,8 +609,8 @@ function has_time_series(
     owner::TimeSeriesOwners,
     time_series_type::Type{<:TimeSeriesData},
 )
-    where_clause = _make_where_clause(owner; time_series_type = time_series_type)
-    return _has_time_series(store, where_clause)
+    where_clause, params = _make_where_clause(owner; time_series_type = time_series_type)
+    return _has_time_series(store, where_clause, params)
 end
 
 has_time_series(
@@ -590,10 +629,12 @@ function get_time_series_resolutions(
     store::TimeSeriesMetadataStore;
     time_series_type::Union{Type{<:TimeSeriesData}, Nothing} = nothing,
 )
-    where_clause = if isnothing(time_series_type)
-        ""
+    params = []
+    if isnothing(time_series_type)
+        where_clause = ""
     else
-        "WHERE time_series_type = '$(nameof(time_series_type))'"
+        where_clause = "WHERE time_series_type = ?"
+        push!(params, string(nameof(time_series_type)))
     end
     query = """
         SELECT
@@ -601,7 +642,71 @@ function get_time_series_resolutions(
         FROM $METADATA_TABLE_NAME $where_clause
         ORDER BY resolution_ms
     """
-    return Dates.Millisecond.(Tables.columntable(_execute(store, query)).resolution_ms)
+    return Dates.Millisecond.(
+        Tables.columntable(_execute(store, query, params)).resolution_ms
+    )
+end
+
+"""
+Return the metadata specified in the passed metadata vector that are already stored.
+"""
+function list_existing_metadata(
+    store::TimeSeriesMetadataStore,
+    owners::Vector{TimeSeriesOwners},
+    metadata::Vector{TimeSeriesMetadata},
+)
+    # If resolution ever becomes a distinguishing attribute for time series,
+    # it has to be added here.
+    @assert_op length(owners) == length(metadata)
+    where_clauses = Vector{String}(undef, length(owners))
+    lookup = OrderedDict()
+    params = String[]
+    columns = ["time_series_type", "name", "owner_uuid", "features"]
+    clause = "(" * join(("$x = ?" for x in columns), " AND ") * ")"
+    sizehint!(params, length(owners) * length(columns))
+    for (i, (owner, metadata)) in enumerate(zip(owners, metadata))
+        time_series_type = string(nameof(time_series_metadata_to_data(metadata)))
+        name = get_name(metadata)
+        owner_uuid = string(get_uuid(owner))
+        features = make_features_string(metadata.features)
+        push!(params, time_series_type)
+        push!(params, name)
+        push!(params, owner_uuid)
+        push!(params, features)
+        where_clauses[i] = clause
+        lookup[(string(time_series_type), name, owner_uuid, features)] = metadata
+    end
+    where_clause = join(where_clauses, " OR ")
+    query = """
+        SELECT 
+            time_series_type
+            ,name
+            ,owner_uuid
+            ,features
+        FROM $METADATA_TABLE_NAME
+        WHERE $where_clause
+    """
+    table = Tables.rowtable(_execute(store, query, params))
+    return [
+        lookup[(x.time_series_type, x.name, x.owner_uuid, x.features)]
+        for x in table
+    ]
+end
+
+"""
+Return the time series UUIDs specified in the passed uuids that are already stored.
+"""
+function list_existing_time_series_uuids(store::TimeSeriesMetadataStore, uuids)
+    uuids_str = string.(uuids)
+    placeholder = chop(repeat("?,", length(uuids)))
+    query = """
+        SELECT
+            DISTINCT time_series_uuid
+            FROM $METADATA_TABLE_NAME 
+            WHERE time_series_uuid IN ($placeholder)
+    """
+    table = Tables.columntable(_execute(store, query, uuids_str))
+    return Base.UUID.(table.time_series_uuid)
 end
 
 """
@@ -613,13 +718,13 @@ function list_matching_time_series_uuids(
     name::Union{String, Nothing} = nothing,
     features...,
 )
-    where_clause = _make_where_clause(;
+    where_clause, params = _make_where_clause(;
         time_series_type = time_series_type,
         name = name,
         features...,
     )
     query = "SELECT DISTINCT time_series_uuid FROM $METADATA_TABLE_NAME $where_clause"
-    table = Tables.columntable(_execute(store, query))
+    table = Tables.columntable(_execute(store, query, params))
     return Base.UUID.(table.time_series_uuid)
 end
 
@@ -630,7 +735,7 @@ function list_metadata(
     name::Union{String, Nothing} = nothing,
     features...,
 )
-    where_clause = _make_where_clause(
+    where_clause, params = _make_where_clause(
         owner;
         time_series_type = time_series_type,
         name = name,
@@ -641,7 +746,7 @@ function list_metadata(
         FROM $METADATA_TABLE_NAME
         $where_clause
     """
-    table = Tables.rowtable(_execute(store, query))
+    table = Tables.rowtable(_execute(store, query, params))
     return [_deserialize_metadata(x.metadata) for x in table]
 end
 
@@ -655,7 +760,7 @@ function list_metadata_with_owner_uuid(
     name::Union{String, Nothing} = nothing,
     features...,
 )
-    where_clause = _make_where_clause(
+    where_clause, params = _make_where_clause(
         owner_type;
         time_series_type = time_series_type,
         name = name,
@@ -666,7 +771,7 @@ function list_metadata_with_owner_uuid(
         FROM $METADATA_TABLE_NAME
         $where_clause
     """
-    table = Tables.rowtable(_execute(store, query))
+    table = Tables.rowtable(_execute(store, query, params))
     return [
         (
             owner_uuid = Base.UUID(x.owner_uuid),
@@ -681,9 +786,11 @@ function list_owner_uuids_with_time_series(
     time_series_type::Union{Nothing, Type{<:TimeSeriesData}} = nothing,
 )
     category = _get_owner_category(owner_type)
-    vals = ["owner_category = '$category'"]
+    vals = ["owner_category = ?"]
+    params = [category]
     if !isnothing(time_series_type)
-        push!(vals, "time_series_type = '$(nameof(time_series_type))'")
+        push!(vals, "time_series_type = ?")
+        push!(params, string(nameof(time_series_type)))
     end
 
     where_clause = join(vals, " AND ")
@@ -693,7 +800,7 @@ function list_owner_uuids_with_time_series(
         FROM $METADATA_TABLE_NAME
         WHERE $where_clause
     """
-    return Base.UUID.(Tables.columntable(_execute(store, query)).owner_uuid)
+    return Base.UUID.(Tables.columntable(_execute(store, query, params)).owner_uuid)
 end
 
 """
@@ -712,8 +819,8 @@ function remove_metadata!(
     owner::TimeSeriesOwners,
     metadata::TimeSeriesMetadata,
 )
-    where_clause = _make_where_clause(owner, metadata)
-    num_deleted = _remove_metadata!(store, where_clause)
+    where_clause, params = _make_where_clause(owner, metadata)
+    num_deleted = _remove_metadata!(store, where_clause, params)
     if num_deleted != 1
         error("Bug: unexpected number of deletions: $num_deleted. Should have been 1.")
     end
@@ -726,7 +833,7 @@ function remove_metadata!(
     name::Union{String, Nothing} = nothing,
     features...,
 )
-    where_clause = _make_where_clause(
+    where_clause, params = _make_where_clause(
         owner;
         time_series_type = time_series_type,
         name = name,
@@ -735,7 +842,7 @@ function remove_metadata!(
         require_full_feature_match = false,
         features...,
     )
-    num_deleted = _remove_metadata!(store, where_clause)
+    num_deleted = _remove_metadata!(store, where_clause, params)
     if num_deleted == 0
         if time_series_type === Deterministic
             # This is a hack to account for the fact that we allow users to use
@@ -760,18 +867,19 @@ function replace_component_uuid!(
 )
     query = """
         UPDATE $METADATA_TABLE_NAME
-        SET owner_uuid = '$new_uuid'
-        WHERE owner_uuid = '$old_uuid'
+        SET owner_uuid = ?
+        WHERE owner_uuid = ?
     """
-    _execute(store, query)
+    params = [string(new_uuid), string(old_uuid)]
+    _execute(store, query, params)
     return
 end
 
 """
 Run a query and return the results in a DataFrame.
 """
-function sql(store::TimeSeriesMetadataStore, query::String)
-    return DataFrames.DataFrame(_execute(store, query))
+function sql(store::TimeSeriesMetadataStore, query::String, params = nothing)
+    return DataFrames.DataFrame(_execute(store, query, params))
 end
 
 function to_h5_file(store::TimeSeriesMetadataStore, dst::String)
@@ -846,20 +954,22 @@ function _create_row(
     )
 end
 
-_execute(s::TimeSeriesMetadataStore, q) = execute(s.db, q, LOG_GROUP_TIME_SERIES)
-_execute_count(s::TimeSeriesMetadataStore, q) =
-    execute_count(s.db, q, LOG_GROUP_TIME_SERIES)
+_execute(s::TimeSeriesMetadataStore, q, p = nothing) =
+    execute(s.db, q, p, LOG_GROUP_TIME_SERIES)
+_execute_count(s::TimeSeriesMetadataStore, q, p = nothing) =
+    execute_count(s.db, q, p, LOG_GROUP_TIME_SERIES)
 
-function _has_time_series(store::TimeSeriesMetadataStore, where_clause::String)
+function _has_time_series(store::TimeSeriesMetadataStore, where_clause::String, params)
     query = "SELECT COUNT(*) AS count FROM $METADATA_TABLE_NAME $where_clause"
-    return _execute_count(store, query) > 0
+    return _execute_count(store, query, params) > 0
 end
 
 function _remove_metadata!(
     store::TimeSeriesMetadataStore,
     where_clause::AbstractString,
+    params,
 )
-    _execute(store, "DELETE FROM $METADATA_TABLE_NAME $where_clause")
+    _execute(store, "DELETE FROM $METADATA_TABLE_NAME $where_clause", params)
     table = Tables.rowtable(_execute(store, "SELECT CHANGES() AS changes"))
     @assert_op length(table) == 1
     @debug "Deleted $(table[1].changes) rows from the time series metadata table" _group =
@@ -918,7 +1028,7 @@ function _try_time_series_metadata_by_full_params(
     column::String;
     features...,
 )
-    where_clause = _make_where_clause(
+    where_clause, params = _make_where_clause(
         owner;
         time_series_type = time_series_type,
         name = name,
@@ -926,7 +1036,7 @@ function _try_time_series_metadata_by_full_params(
         features...,
     )
     query = "SELECT $column FROM $METADATA_TABLE_NAME $where_clause"
-    return Tables.rowtable(_execute(store, query))
+    return Tables.rowtable(_execute(store, query, params))
 end
 
 function compare_values(
@@ -963,28 +1073,18 @@ _get_owner_category(::Union{SupplementalAttribute, Type{<:SupplementalAttribute}
 _get_time_series_category(::Type{<:Forecast}) = "Forecast"
 _get_time_series_category(::Type{<:StaticTimeSeries}) = "StaticTimeSeries"
 
-function _make_feature_filter(; features...)
+function _make_feature_filter!(params; features...)
     data = _make_sorted_feature_array(; features...)
-    return join(
-        (["metadata->>'\$.features.$k' = $(_make_val_str(v))" for (k, v) in data]),
-        " AND ",
-    )
+    strings = []
+    for (key, val) in data
+        push!(strings, "metadata->>'\$.features.$key' = ?")
+        push!(params, val)
+    end
+    return join(strings, " AND ")
 end
 
 _make_val_str(val::Union{Bool, Int}) = string(val)
 _make_val_str(val::String) = "'$val'"
-
-function _make_features_string(features::Dict{String, Union{Bool, Int, String}})
-    key_names = sort!(collect(keys(features)))
-    data = [Dict(k => features[k]) for k in key_names]
-    return JSON3.write(data)
-end
-
-function _make_features_string(; features...)
-    key_names = sort!(collect(string.(keys(features))))
-    data = [Dict(k => features[Symbol(k)]) for (k) in key_names]
-    return JSON3.write(data)
-end
 
 function _make_sorted_feature_array(; features...)
     key_names = sort!(collect(string.(keys(features))))
@@ -998,11 +1098,13 @@ function _make_where_clause(
     require_full_feature_match = false,
     features...,
 )
+    params = [_get_owner_category(owner_type)]
     return _make_where_clause(;
-        owner_clause = "owner_category = '$(_get_owner_category(owner_type))'",
+        owner_clause = "owner_category = ?",
         time_series_type = time_series_type,
         name = name,
         require_full_feature_match = require_full_feature_match,
+        params = params,
         features...,
     )
 end
@@ -1012,13 +1114,19 @@ function _make_where_clause(
     time_series_type::Union{Type{<:TimeSeriesData}, Nothing} = nothing,
     name::Union{String, Nothing} = nothing,
     require_full_feature_match = false,
+    params = nothing,
     features...,
 )
+    if isnothing(params)
+        params = []
+    end
+    push!(params, string(get_uuid(owner)))
     return _make_where_clause(;
-        owner_clause = "owner_uuid = '$(get_uuid(owner))'",
+        owner_clause = "owner_uuid = ?",
         time_series_type = time_series_type,
         name = name,
         require_full_feature_match = require_full_feature_match,
+        params = params,
         features...,
     )
 end
@@ -1028,28 +1136,35 @@ function _make_where_clause(;
     time_series_type::Union{Type{<:TimeSeriesData}, Nothing} = nothing,
     name::Union{String, Nothing} = nothing,
     require_full_feature_match = false,
+    params = nothing,
     features...,
 )
+    if isnothing(params)
+        params = []
+    end
     vals = String[]
     if !isnothing(owner_clause)
         push!(vals, owner_clause)
     end
     if !isnothing(name)
-        push!(vals, "name = '$name'")
+        push!(vals, "name = ?")
+        push!(params, name)
     end
     if !isnothing(time_series_type)
-        push!(vals, "time_series_type = '$(_convert_ts_type_to_string(time_series_type))'")
+        push!(vals, "time_series_type = ?")
+        push!(params, _convert_ts_type_to_string(time_series_type))
     end
     if !isempty(features)
         if require_full_feature_match
-            val = "features = '$(_make_features_string(; features...))'"
+            val = "features = ?"
+            push!(params, make_features_string(; features...))
         else
-            val = "$(_make_feature_filter(; features...))"
+            val = "$(_make_feature_filter!(params; features...))"
         end
         push!(vals, val)
     end
 
-    return isempty(vals) ? "" : "WHERE (" * join(vals, " AND ") * ")"
+    return (isempty(vals) ? "" : "WHERE (" * join(vals, " AND ") * ")", params)
 end
 
 function _make_where_clause(owner::TimeSeriesOwners, metadata::TimeSeriesMetadata)
