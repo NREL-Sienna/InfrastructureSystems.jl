@@ -2872,7 +2872,8 @@ end
                     other_time => make_values(horizon_count, i),
                 ),
                 name = "ts_$(i)", resolution = resolution,
-            ),
+            );
+            model_year = "high",
         )
         for i in 1:30
     )
@@ -2892,4 +2893,89 @@ end
             @test val == make_values(horizon_count, i)
         end
     end
+end
+
+@testset "Test bulk_add_time_series with duplicates" begin
+    sys = IS.SystemData()
+    name = "Component1"
+    component = IS.TestComponent(name, 5)
+    IS.add_component!(sys, component)
+
+    initial_time = Dates.DateTime("2020-09-01")
+    resolution = Dates.Hour(1)
+    other_time = initial_time + resolution
+    name = "test"
+    horizon_count = 24
+    forecast = IS.Deterministic(;
+        data = SortedDict(
+            initial_time => rand(10),
+            other_time => rand(10),
+        ),
+        name = "ts", resolution = resolution,
+    )
+
+    @test_throws ArgumentError IS.bulk_add_time_series!(
+        sys,
+        [
+            IS.TimeSeriesAssociation(component, forecast; model_year = "high"),
+            IS.TimeSeriesAssociation(component, forecast; model_year = "low"),
+            IS.TimeSeriesAssociation(component, forecast; model_year = "high"),
+        ],
+    )
+
+    @test_throws ArgumentError IS.bulk_add_time_series!(
+        sys,
+        [
+            IS.TimeSeriesAssociation(component, forecast),
+            IS.TimeSeriesAssociation(component, forecast),
+            IS.TimeSeriesAssociation(component, forecast),
+        ],
+    )
+end
+
+@testset "Test list_existing_metadata" begin
+    sys = IS.SystemData()
+    initial_time = Dates.DateTime("2020-09-01")
+    resolution = Dates.Hour(1)
+    components = IS.TimeSeriesOwners[]
+    ts_metadata = IS.TimeSeriesMetadata[]
+    ts_uuids = Base.UUID[]
+    for i in 1:10
+        name = "Component_$i"
+        component = IS.TestComponent(name, i)
+        IS.add_component!(sys, component)
+        push!(components, component)
+
+        data = TimeSeries.TimeArray(
+            range(initial_time; length = 10, step = resolution),
+            rand(10),
+        )
+        ts_name = "test_$i"
+        ts = IS.SingleTimeSeries(; data = data, name = ts_name)
+        IS.add_time_series!(sys, component, ts; scenario = "high")
+        metadata = IS.SingleTimeSeriesMetadata(ts; scenario = "high")
+        push!(ts_metadata, metadata)
+        push!(ts_uuids, IS.get_uuid(ts))
+    end
+    push!(components, IS.TestComponent("extra", 1))
+    push!(ts_metadata, ts_metadata[end])
+    push!(ts_uuids, UUIDs.uuid4())
+
+    existing_metadata = IS.list_existing_metadata(
+        sys.time_series_manager.metadata_store,
+        components[1:5],
+        ts_metadata[1:5],
+    )
+    @test length(existing_metadata) == 5
+    for i in 1:5
+        @test existing_metadata[i] == ts_metadata[i]
+    end
+
+    existing_uuids = IS.list_existing_time_series_uuids(
+        sys.time_series_manager.metadata_store,
+        ts_uuids[1:5],
+    )
+    @test length(existing_uuids) == 5
+    @test sort(ts_uuids[1:5]; by = x -> string(x)) ==
+          sort(existing_uuids[1:5]; by = x -> string(x))
 end

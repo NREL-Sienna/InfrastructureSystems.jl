@@ -202,8 +202,8 @@ function add_metadata!(
         )
         @debug "Added $num_rows instances of time series metadata" _group =
             LOG_GROUP_TIME_SERIES
-        return
     end
+    return
 end
 
 """
@@ -696,10 +696,7 @@ end
 """
 Return the time series UUIDs specified in the passed uuids that are already stored.
 """
-function list_existing_time_series_uuids(
-    store::TimeSeriesMetadataStore,
-    uuids,
-)
+function list_existing_time_series_uuids(store::TimeSeriesMetadataStore, uuids)
     uuids_str = string.(uuids)
     placeholder = chop(repeat("?,", length(uuids)))
     query = """

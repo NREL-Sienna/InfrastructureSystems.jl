@@ -34,24 +34,6 @@ function TimeSeriesManager(;
     return TimeSeriesManager(data_store, metadata_store, read_only)
 end
 
-struct TimeSeriesAssociation
-    owner::TimeSeriesOwners
-    time_series::TimeSeriesData
-    features::Dict{Symbol, Any}
-end
-
-function TimeSeriesAssociation(owner, time_series; features...)
-    return TimeSeriesAssociation(owner, time_series, features)
-end
-
-function TimeSeriesAssociation(owner, time_series, features::Dict{String, Any})
-    return TimeSeriesAssociation(
-        owner,
-        time_series,
-        Dict{Symbol, Any}(Symbol(k) => v for (k, v) in features),
-    )
-end
-
 function bulk_add_time_series!(
     mgr::TimeSeriesManager,
     associations;
