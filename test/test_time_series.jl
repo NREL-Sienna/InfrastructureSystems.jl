@@ -135,6 +135,13 @@ end
     component = IS.TestComponent(component_name, 5)
     IS.add_component!(sys, component)
     @test_throws ArgumentError IS.Deterministic(name, data_ts_two_cols)
+
+    invalid_horizon_count = SortedDict(initial_time => rand(1), other_time => rand(1))
+    @test_throws ArgumentError IS.Deterministic(
+        data = invalid_horizon_count,
+        name = name,
+        resolution = resolution,
+    )
 end
 
 @testset "Test add Deterministic with different resolutions" begin
@@ -395,6 +402,18 @@ end
         "test_c";
         start_time = initial_time - Dates.Day(10),
         len = 12,
+    )
+
+    @test_throws IS.ConflictingInputsError IS.SingleTimeSeries(
+        data = TimeSeries.TimeArray(
+            [
+                Dates.DateTime(2020, 1, 1),
+                Dates.DateTime(2020, 1, 2),
+                Dates.DateTime(2020, 1, 4),
+            ],
+            [1.0, 2.0, 3.0],
+        ),
+        name = "test",
     )
 
     # As of PSY 4.0, multiple resolutions are supported.
@@ -1756,7 +1775,6 @@ end
 
     # Indexing
     @test length(time_series[1:16]) == 16
-    @show time_series
 
     # when
     fcast = IS.when(time_series, TimeSeries.minute, 0)

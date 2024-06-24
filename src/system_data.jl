@@ -145,29 +145,36 @@ Adds time series data from a metadata file or metadata descriptors.
 """
 function add_time_series_from_file_metadata!(
     data::SystemData,
-    ::Type{T},
+    component_type::Type{<:InfrastructureSystemsComponent},
     file_metadata::Vector{TimeSeriesFileMetadata};
     resolution = nothing,
-) where {T <: InfrastructureSystemsComponent}
-    TimerOutputs.@timeit_debug SYSTEM_TIMERS "add_time_series_from_file_metadata" begin
-        ts_keys = Vector{TimeSeriesKey}(undef, length(file_metadata))
-        open_time_series_store!(data, "r+") do
-            cache = TimeSeriesParsingCache()
-            for (i, metadata) in enumerate(file_metadata)
-                if resolution === nothing || metadata.resolution == resolution
-                    key = add_time_series_from_file_metadata_internal!(
-                        data,
-                        T,
-                        cache,
-                        metadata,
-                    )
-                    if !isnothing(key)
-                        ts_keys[i] = key
-                    end
+)
+    return bulk_add_time_series!(
+        data,
+        _get_ts_associations_from_metadata(data, component_type, file_metadata, resolution),
+    )
+end
+
+function _get_ts_associations_from_metadata(
+    data::SystemData,
+    component_type::Type{<:InfrastructureSystemsComponent},
+    file_metadata,
+    resolution,
+)
+    Channel() do channel
+        cache = TimeSeriesParsingCache()
+        for metadata in file_metadata
+            if resolution === nothing || metadata.resolution == resolution
+                for association in add_time_series_from_file_metadata_internal!(
+                    data,
+                    component_type,
+                    cache,
+                    metadata,
+                )
+                    put!(channel, association)
                 end
             end
         end
-        return ts_keys
     end
 end
 
@@ -186,7 +193,6 @@ function add_time_series!(
     data::SystemData,
     owner::TimeSeriesOwners,
     time_series::TimeSeriesData;
-    skip_if_present = false,
     features...,
 )
     _validate(data, owner)
@@ -194,7 +200,6 @@ function add_time_series!(
         data.time_series_manager,
         owner,
         time_series;
-        skip_if_present = skip_if_present,
         features...,
     )
 end
@@ -250,9 +255,9 @@ function add_time_series_from_file_metadata_internal!(
 ) where {T <: InfrastructureSystemsComponent}
     TimerOutputs.@timeit_debug SYSTEM_TIMERS "add_time_series_from_file_metadata_internal" begin
         set_component!(file_metadata, data, InfrastructureSystems)
-        component = file_metadata.component
         time_series = make_time_series!(cache, file_metadata)
-        return add_time_series!(data, component, time_series)
+        add_assignment!(cache, file_metadata)
+        return [TimeSeriesAssociation(file_metadata.component, time_series)]
     end
 end
 
@@ -729,7 +734,7 @@ end
 Serialize all system and component data to a dictionary.
 """
 function to_dict(data::SystemData)
-    TimerOutputs.@timeit_debug SYSTEM_TIMERS "system to_dict" begin
+    TimerOutputs.@timeit_debug SYSTEM_TIMERS "SystemData to_dict" begin
         serialized_data = Dict{String, Any}()
         for field in
             (

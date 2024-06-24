@@ -289,11 +289,48 @@ end
 struct TimeSeriesParsingCache
     time_series_attributes::Vector{TimeSeriesParsedInfo}
     data_files::Dict{String, RawTimeSeries}
+    assignments::Dict{Base.UUID, Set{Tuple{DataType, DataType, String}}}
 end
 
 function TimeSeriesParsingCache()
-    return TimeSeriesParsingCache(Vector{TimeSeriesParsedInfo}(), Dict{String, Any}())
+    return TimeSeriesParsingCache(
+        Vector{TimeSeriesParsedInfo}(),
+        Dict{String, Any}(),
+        Dict{Base.UUID, Set{Tuple{DataType, DataType, String}}}(),
+    )
 end
+
+function add_assignment!(
+    cache::TimeSeriesParsingCache,
+    metadata::TimeSeriesFileMetadata,
+)
+    # This will need to support features whenever we add features to the metadata.
+    uuid = get_uuid(metadata.component)
+    if haskey(cache.assignments, uuid)
+        by_component = cache.assignments[uuid]
+    else
+        by_component = Set{Tuple{DataType, DataType, String}}()
+        cache.assignments[uuid] = by_component
+    end
+
+    key = _make_key(metadata)
+    if key in by_component
+        error("$key is already stored")
+    end
+    push!(by_component, key)
+    return
+end
+
+function has_assignment(
+    cache::TimeSeriesParsingCache,
+    metadata::TimeSeriesFileMetadata,
+)
+    uuid = get_uuid(metadata.component)
+    key = _make_key(metadata)
+    return haskey(cache.assignments, uuid) && key in cache.assignments[uuid]
+end
+
+_make_key(x::TimeSeriesFileMetadata) = (x.time_series_type, typeof(x.component), x.name)
 
 function _add_time_series_info!(
     cache::TimeSeriesParsingCache,

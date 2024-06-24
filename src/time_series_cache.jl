@@ -367,6 +367,7 @@ function StaticTimeSeriesCache(
     end
 
     # Get an instance to assess data size.
+    # 2 is the minimum length of a SingleTimeSeries.
     ts = get_time_series(T, component, name; start_time = start_time, len = 2)
     vals = get_time_series_values(component, ts, start_time; len = 2)
     row_size = _get_row_size(vals)

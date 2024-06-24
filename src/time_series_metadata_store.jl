@@ -125,7 +125,7 @@ function add_metadata!(
         owner_category = _get_owner_category(owner)
         ts_type = time_series_metadata_to_data(metadata)
         ts_category = _get_time_series_category(ts_type)
-        features = _make_features_string(metadata.features)
+        features = make_features_string(metadata.features)
         vals = _create_row(
             metadata,
             owner,
@@ -180,7 +180,7 @@ function add_metadata!(
             owner_category = _get_owner_category(owner)
             ts_type = time_series_metadata_to_data(metadata)
             ts_category = _get_time_series_category(ts_type)
-            features = _make_features_string(metadata.features)
+            features = make_features_string(metadata.features)
             row = _create_row(
                 metadata,
                 owner,
@@ -661,17 +661,14 @@ function list_existing_metadata(
     where_clauses = Vector{String}(undef, length(owners))
     lookup = OrderedDict()
     params = String[]
-    sizehint!(params, length(owners) * 4)
+    columns = ["time_series_type", "name", "owner_uuid", "features"]
+    clause = "(" * join(("$x = ?" for x in columns), " AND ") * ")"
+    sizehint!(params, length(owners) * length(columns))
     for (i, (owner, metadata)) in enumerate(zip(owners, metadata))
         time_series_type = string(nameof(time_series_metadata_to_data(metadata)))
         name = get_name(metadata)
         owner_uuid = string(get_uuid(owner))
-        features = _make_features_string(metadata.features)
-        clause = """time_series_type = ?
-            AND name = ?
-            AND owner_uuid = ?
-            AND features = ?
-        """
+        features = make_features_string(metadata.features)
         push!(params, time_series_type)
         push!(params, name)
         push!(params, owner_uuid)
@@ -1092,18 +1089,6 @@ end
 _make_val_str(val::Union{Bool, Int}) = string(val)
 _make_val_str(val::String) = "'$val'"
 
-function _make_features_string(features::Dict{String, Union{Bool, Int, String}})
-    key_names = sort!(collect(keys(features)))
-    data = [Dict(k => features[k]) for k in key_names]
-    return JSON3.write(data)
-end
-
-function _make_features_string(; features...)
-    key_names = sort!(collect(string.(keys(features))))
-    data = [Dict(k => features[Symbol(k)]) for (k) in key_names]
-    return JSON3.write(data)
-end
-
 function _make_sorted_feature_array(; features...)
     key_names = sort!(collect(string.(keys(features))))
     return [(key, features[Symbol(key)]) for key in key_names]
@@ -1175,7 +1160,7 @@ function _make_where_clause(;
     if !isempty(features)
         if require_full_feature_match
             val = "features = ?"
-            push!(params, _make_features_string(; features...))
+            push!(params, make_features_string(; features...))
         else
             val = "$(_make_feature_filter!(params; features...))"
         end

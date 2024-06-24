@@ -1,3 +1,5 @@
+# This is used to add time series associations efficiently in SQLite.
+# This strikes a balance in SQLite efficiency vs loading many time arrays into memory.
 const ADD_TIME_SERIES_BATCH_SIZE = 100
 
 mutable struct TimeSeriesManager <: InfrastructureSystemsType
@@ -53,33 +55,29 @@ end
 function bulk_add_time_series!(
     mgr::TimeSeriesManager,
     associations;
-    skip_if_present = false,
     batch_size = ADD_TIME_SERIES_BATCH_SIZE,
 )
+    ts_keys = TimeSeriesKey[]
     batch = TimeSeriesAssociation[]
     sizehint!(batch, batch_size)
     open_store!(mgr.data_store, "r+") do
         for association in associations
             push!(batch, association)
-            if length(batch) > batch_size
-                add_time_series!(mgr, batch; skip_if_present = skip_if_present)
+            if length(batch) >= batch_size
+                append!(ts_keys, add_time_series!(mgr, batch))
                 empty!(batch)
             end
         end
 
         if !isempty(batch)
-            add_time_series!(mgr, batch; skip_if_present = skip_if_present)
+            append!(ts_keys, add_time_series!(mgr, batch))
         end
     end
 
-    return
+    return ts_keys
 end
 
-function add_time_series!(
-    mgr::TimeSeriesManager,
-    batch::Vector{TimeSeriesAssociation};
-    skip_if_present = false,
-)
+function add_time_series!(mgr::TimeSeriesManager, batch::Vector{TimeSeriesAssociation})
     _throw_if_read_only(mgr)
     forecast_params = get_forecast_parameters(mgr.metadata_store)
     sts_params = StaticTimeSeriesParameters()
@@ -88,11 +86,17 @@ function add_time_series!(
     owners = Vector{TimeSeriesOwners}(undef, num_metadata)
     ts_keys = Vector{TimeSeriesKey}(undef, num_metadata)
     time_series_uuids = Dict{Base.UUID, TimeSeriesData}()
+    metadata_identifiers = Set{Tuple}()
     TimerOutputs.@timeit_debug SYSTEM_TIMERS "add_time_series! in bulk" begin
         for (i, item) in enumerate(batch)
             throw_if_does_not_support_time_series(item.owner)
             metadata_type = time_series_data_to_metadata(typeof(item.time_series))
             metadata = metadata_type(item.time_series; item.features...)
+            identifier = make_unique_owner_metadata_identifer(item.owner, metadata)
+            if identifier in metadata_identifiers
+                throw(ArgumentError("$identifier is present multiple times"))
+            end
+            push!(metadata_identifiers, identifier)
             if isnothing(forecast_params)
                 forecast_params = _get_forecast_params(item.time_series)
             end
@@ -112,25 +116,18 @@ function add_time_series!(
         new_ts_uuids = setdiff(keys(time_series_uuids), existing_ts_uuids)
 
         existing_metadata = list_existing_metadata(mgr.metadata_store, owners, all_metadata)
-        if isempty(existing_metadata)
-            new_metadata = all_metadata
-        elseif !skip_if_present
+        if !isempty(existing_metadata)
             throw(
                 ArgumentError(
                     "Time series data with duplicate attributes are already stored: " *
                     "$(existing_metadata)",
                 ),
             )
-        else
-            existing_metadata_uuids = Set((get_uuid(x) for x in existing_metadata))
-            new_metadata =
-                [x for (i, x) in enumerate(all_metadata) if !in(i, existing_metadata_uuids)]
         end
-
         for uuid in new_ts_uuids
             serialize_time_series!(mgr.data_store, time_series_uuids[uuid])
         end
-        add_metadata!(mgr.metadata_store, owners, new_metadata)
+        add_metadata!(mgr.metadata_store, owners, all_metadata)
     end
     return ts_keys
 end
@@ -142,13 +139,11 @@ function add_time_series!(
     mgr::TimeSeriesManager,
     owner::TimeSeriesOwners,
     time_series::TimeSeriesData;
-    skip_if_present = false,
     features...,
 )
     return add_time_series!(
         mgr,
-        [TimeSeriesAssociation(owner, time_series; features...)];
-        skip_if_present = skip_if_present,
+        [TimeSeriesAssociation(owner, time_series; features...)],
     )[1]
 end
 
