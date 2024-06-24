@@ -13,7 +13,7 @@ Base.length(ts::Forecast) = get_count(ts)
 
 abstract type AbstractDeterministic <: Forecast end
 
-function check_forecast(forecast::Forecast)
+function check_time_series_data(forecast::Forecast)
     _check_forecast_data(forecast)
     _check_forecast_windows(forecast)
 end

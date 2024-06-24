@@ -137,11 +137,12 @@ end
     @test_throws ArgumentError IS.Deterministic(name, data_ts_two_cols)
 
     invalid_horizon_count = SortedDict(initial_time => rand(1), other_time => rand(1))
-    @test_throws ArgumentError IS.Deterministic(
+    forecast = IS.Deterministic(;
         data = invalid_horizon_count,
         name = name,
         resolution = resolution,
     )
+    @test_throws ArgumentError IS.add_time_series!(sys, component, forecast)
 end
 
 @testset "Test add Deterministic with different resolutions" begin
@@ -404,7 +405,7 @@ end
         len = 12,
     )
 
-    @test_throws IS.ConflictingInputsError IS.SingleTimeSeries(
+    ts = IS.SingleTimeSeries(;
         data = TimeSeries.TimeArray(
             [
                 Dates.DateTime(2020, 1, 1),
@@ -415,6 +416,7 @@ end
         ),
         name = "test",
     )
+    @test_throws IS.ConflictingInputsError IS.add_time_series!(sys, component, ts)
 
     # As of PSY 4.0, multiple resolutions are supported.
     data = TimeSeries.TimeArray(
@@ -2408,19 +2410,17 @@ end
 
     # Horizon must be greater than 1.
     bad_data = SortedDict(initial_time => ones(1), second_time => ones(1))
-    @test_throws ArgumentError IS.Deterministic(;
-        data = bad_data,
-        name = name,
-        resolution = resolution,
-    )
+    forecast = IS.Deterministic(; data = bad_data, name = name, resolution = resolution)
+    @test_throws ArgumentError IS.add_time_series!(sys, component, forecast)
 
     # Arrays must have the same length.
     bad_data = SortedDict(initial_time => ones(2), second_time => ones(3))
-    @test_throws DimensionMismatch IS.Deterministic(;
+    forecast = IS.Deterministic(;
         data = bad_data,
         name = name,
         resolution = resolution,
     )
+    @test_throws DimensionMismatch IS.add_time_series!(sys, component, forecast)
 
     # Set baseline parameters for the rest of the tests.
     data =

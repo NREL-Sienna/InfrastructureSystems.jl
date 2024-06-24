@@ -25,19 +25,6 @@ mutable struct SingleTimeSeries <: StaticTimeSeries
     "Applicable when the time series data are scaling factors. Called on the associated component to convert the values."
     scaling_factor_multiplier::Union{Nothing, Function}
     internal::InfrastructureSystemsInternal
-
-    function SingleTimeSeries(name, data, resolution, scaling_factor_multiplier, internal)
-        len = length(data)
-        len < 2 && throw(ArgumentError("data array length must be at least 2: $len"))
-        timestamps = TimeSeries.timestamp(data)
-        for i in 2:len
-            res = timestamps[i] - timestamps[i - 1]
-            if res != resolution
-                throw(ConflictingInputsError("resolution mismatch: $res $resolution"))
-            end
-        end
-        new(name, data, resolution, scaling_factor_multiplier, internal)
-    end
 end
 
 function SingleTimeSeries(;
@@ -227,6 +214,18 @@ function SingleTimeSeries(info::TimeSeriesParsedInfo)
         normalization_factor = info.normalization_factor,
         scaling_factor_multiplier = info.scaling_factor_multiplier,
     )
+end
+
+function check_time_series_data(ts::SingleTimeSeries)
+    len = length(ts.data)
+    len < 2 && throw(ArgumentError("data array length must be at least 2: $len"))
+    timestamps = TimeSeries.timestamp(ts.data)
+    for i in 2:len
+        res = timestamps[i] - timestamps[i - 1]
+        if res != ts.resolution
+            throw(ConflictingInputsError("resolution mismatch: $res $ts.resolution"))
+        end
+    end
 end
 
 """

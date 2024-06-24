@@ -72,6 +72,7 @@ function add_time_series!(mgr::TimeSeriesManager, batch::Vector{TimeSeriesAssoci
     TimerOutputs.@timeit_debug SYSTEM_TIMERS "add_time_series! in bulk" begin
         for (i, item) in enumerate(batch)
             throw_if_does_not_support_time_series(item.owner)
+            check_time_series_data(item.time_series)
             metadata_type = time_series_data_to_metadata(typeof(item.time_series))
             metadata = metadata_type(item.time_series; item.features...)
             identifier = make_unique_owner_metadata_identifer(item.owner, metadata)
