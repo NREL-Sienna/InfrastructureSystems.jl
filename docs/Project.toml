@@ -8,5 +8,5 @@ Literate = "98b081ad-f1c9-55d3-8b20-4c87d4299306"
 [compat]
 CSV = "~0.9"
 Documenter = "0.25"
-InfrastructureSystems = "1"
-julia = "^1.2"
+InfrastructureSystems = "2"
+julia = "^1.5"
