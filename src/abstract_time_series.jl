@@ -48,6 +48,7 @@ abstract type TimeSeriesData <: InfrastructureSystemsType end
 
 # Subtypes must implement
 # - Base.length
+# - check_time_series_data
 # - get_resolution
 # - make_time_array
 # - eltype_data
