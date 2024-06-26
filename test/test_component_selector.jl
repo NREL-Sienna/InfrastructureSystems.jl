@@ -21,7 +21,7 @@ function cstest_make_system_data()
     return data
 end
 
-sort_name(x) = sort(collect(x); by = IS.get_name)
+sort_name!(x) = sort!(collect(x); by = IS.get_name)
 
 @testset "Test helper functions" begin
     @test IS.subtype_to_string(IS.TestComponent) == "TestComponent"
@@ -65,6 +65,12 @@ end
         @test length(the_components) == 1
         @test typeof(first(the_components)) == IS.TestComponent
         @test IS.get_name(first(the_components)) == "Component1"
+        @test Set(
+            collect(IS.get_components(test_gen_ent, test_sys; filterby = x -> true)),
+        ) == Set(the_components)
+        @test length(
+            collect(IS.get_components(test_gen_ent, test_sys; filterby = x -> false)),
+        ) == 0
     end
 end
 
@@ -98,6 +104,12 @@ end
         @test IS.get_component(IS.TestComponent, test_sys, "Component1") in the_components
         @test IS.get_component(IS.AdditionalTestComponent, test_sys, "Component3") in
               the_components
+        @test Set(
+            collect(IS.get_components(test_list_ent, test_sys; filterby = x -> true)),
+        ) == Set(the_components)
+        @test length(
+            collect(IS.get_components(test_list_ent, test_sys; filterby = x -> false)),
+        ) == 0
 
         @test collect(IS.get_subselectors(IS.select_components(), test_sys)) ==
               Vector{IS.InfrastructureSystemsComponent}()
@@ -105,6 +117,13 @@ end
         @test length(the_subselectors) == 2
         @test comp_ent_1 in the_subselectors
         @test comp_ent_2 in the_subselectors
+        @test Set(
+            collect(IS.get_subselectors(test_list_ent, test_sys; filterby = x -> true)),
+        ) == Set(the_subselectors)
+        # Even if we eventually filter out all the components, ListComponentSelector says we must have exactly the subselectors specified
+        @test length(
+            collect(IS.get_subselectors(test_list_ent, test_sys; filterby = x -> false)),
+        ) == 2
     end
 end
 
@@ -127,19 +146,33 @@ end
         @test IS.default_name(test_sub_ent) == "TestComponent"
 
         # Contents
-        answer = sort_name(IS.get_components(IS.TestComponent, test_sys))
+        answer = sort_name!(IS.get_components(IS.TestComponent, test_sys))
 
         @test collect(
             IS.get_components(IS.select_components(IS.SimpleTestComponent), test_sys),
         ) == Vector{IS.InfrastructureSystemsComponent}()
-        the_components = sort_name(IS.get_components(test_sub_ent, test_sys))
-        @test all(the_components .== answer)
+        the_components = IS.get_components(test_sub_ent, test_sys)
+        @test all(sort_name!(the_components) .== answer)
+        @test Set(
+            collect(IS.get_components(test_sub_ent, test_sys; filterby = x -> true)),
+        ) == Set(the_components)
+        @test length(
+            collect(IS.get_components(test_sub_ent, test_sys; filterby = x -> false)),
+        ) == 0
 
         @test collect(
             IS.get_subselectors(IS.select_components(IS.SimpleTestComponent), test_sys),
         ) == Vector{IS.ComponentSelectorElement}()
-        the_subselectors = sort_name(IS.get_subselectors(test_sub_ent, test_sys))
-        @test all(the_subselectors .== IS.select_components.(answer))
+        the_subselectors = IS.get_subselectors(test_sub_ent, test_sys)
+        @test all(
+            sort_name!(the_subselectors) .== sort_name!(IS.select_components.(answer)),
+        )
+        @test Set(
+            collect(IS.get_subselectors(test_sub_ent, test_sys; filterby = x -> true)),
+        ) == Set(the_subselectors)
+        @test length(
+            collect(IS.get_subselectors(test_sub_ent, test_sys; filterby = x -> false)),
+        ) == 0
     end
 end
 
@@ -177,7 +210,12 @@ end
 
         # Contents
         answer =
-            filter(val_over_ten, collect(IS.get_components(IS.TestComponent, test_sys)))
+            sort_name!(
+                filter(
+                    val_over_ten,
+                    collect(IS.get_components(IS.TestComponent, test_sys)),
+                ),
+            )
 
         @test collect(
             IS.get_components(
@@ -189,7 +227,13 @@ end
                 IS.select_components(x -> false, IS.InfrastructureSystemsComponent),
                 test_sys,
             )) == Vector{IS.InfrastructureSystemsComponent}()
-        @test all(collect(IS.get_components(test_filter_ent, test_sys)) .== answer)
+        the_components = IS.get_components(test_filter_ent, test_sys)
+        @test all(sort_name!(the_components) .== answer)
+        @test Set(IS.get_components(test_filter_ent, test_sys; filterby = x -> true)) ==
+              Set(the_components)
+        @test length(
+            collect(IS.get_components(test_filter_ent, test_sys; filterby = x -> false)),
+        ) == 0
 
         @test collect(
             IS.get_subselectors(
@@ -201,9 +245,15 @@ end
                 IS.select_components(x -> false, IS.InfrastructureSystemsComponent),
                 test_sys,
             )) == Vector{IS.ComponentSelectorElement}()
+        the_subselectors = IS.get_subselectors(test_filter_ent, test_sys)
         @test all(
-            collect(IS.get_subselectors(test_filter_ent, test_sys)) .==
+            sort_name!(the_subselectors) .==
             IS.select_components.(answer),
         )
+        @test Set(IS.get_subselectors(test_filter_ent, test_sys; filterby = x -> true)) ==
+              Set(the_subselectors)
+        @test length(
+            collect(IS.get_subselectors(test_filter_ent, test_sys; filterby = x -> false)),
+        ) == 0
     end
 end
