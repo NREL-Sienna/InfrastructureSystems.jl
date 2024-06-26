@@ -68,13 +68,14 @@ get_name(e::ComponentSelector) = (e.name !== nothing) ? e.name : default_name(e)
 """
 Get the components of the collection that make up the ComponentSelector.
 """
-get_components(e::ComponentSelector, sys::SystemData) = get_components(e, sys.components)
+get_components(e::ComponentSelector, sys::SystemData; filterby = nothing) =
+    get_components(e, sys.components; filterby = filterby)
 
 """
 Get the sub-selectors that make up the ComponentSelectorSet.
 """
-get_subselectors(e::ComponentSelectorSet, sys::SystemData) =
-    get_subselectors(e, sys.components)
+get_subselectors(e::ComponentSelectorSet, sys::SystemData; filterby = nothing) =
+    get_subselectors(e, sys.components; filterby = filterby)
 
 # CONCRETE SUBTYPE IMPLEMENTATIONS
 # SingleComponentSelector
@@ -110,8 +111,9 @@ default_name(e::SingleComponentSelector) =
     component_to_qualified_string(e.component_subtype, e.component_name)
 
 # Contents
-function get_components(e::SingleComponentSelector, sys::Components)
+function get_components(e::SingleComponentSelector, sys::Components; filterby = nothing)
     com = get_component(e.component_subtype, sys, e.component_name)
+    (!isnothing(filterby) && !filterby(com)) && (com = nothing)
     return (com === nothing) ? [] : [com]
 end
 
@@ -136,12 +138,13 @@ select_components(content::ComponentSelector...; name::Union{String, Nothing} = 
 default_name(e::ListComponentSelector) = "[$(join(get_name.(e.content), ", "))]"
 
 # Contents
-function get_subselectors(e::ListComponentSelector, sys::Components)
+function get_subselectors(e::ListComponentSelector, sys::Components; filterby = nothing)
     return e.content
 end
 
-function get_components(e::ListComponentSelector, sys::Components)
-    sub_components = Iterators.map(x -> get_components(x, sys), e.content)
+function get_components(e::ListComponentSelector, sys::Components; filterby = nothing)
+    sub_components =
+        Iterators.map(x -> get_components(x, sys; filterby = filterby), e.content)
     return Iterators.flatten(sub_components)
 end
 
@@ -168,12 +171,14 @@ select_components(
 default_name(e::SubtypeComponentSelector) = subtype_to_string(e.component_subtype)
 
 # Contents
-function get_subselectors(e::SubtypeComponentSelector, sys::Components)
-    return Iterators.map(select_components, get_components(e, sys))
+function get_subselectors(e::SubtypeComponentSelector, sys::Components; filterby = nothing)
+    return Iterators.map(select_components, get_components(e, sys; filterby = filterby))
 end
 
-function get_components(e::SubtypeComponentSelector, sys::Components)
-    return get_components(e.component_subtype, sys)
+function get_components(e::SubtypeComponentSelector, sys::Components; filterby = nothing)
+    components = get_components(e.component_subtype, sys)
+    isnothing(filterby) && (return components)
+    return Iterators.filter(filterby, components)
 end
 
 # FilterComponentSelector
@@ -210,12 +215,14 @@ function select_components(
 end
 
 # Contents
-function get_subselectors(e::FilterComponentSelector, sys::Components)
-    return Iterators.map(select_components, get_components(e, sys))
+function get_subselectors(e::FilterComponentSelector, sys::Components; filterby = nothing)
+    return Iterators.map(select_components, get_components(e, sys; filterby = filterby))
 end
 
-function get_components(e::FilterComponentSelector, sys::Components)
-    return get_components(e.filter_fn, e.component_subtype, sys)
+function get_components(e::FilterComponentSelector, sys::Components; filterby = nothing)
+    components = get_components(e.filter_fn, e.component_subtype, sys)
+    isnothing(filterby) && (return components)
+    return Iterators.filter(filterby, components)
 end
 
 # Naming
