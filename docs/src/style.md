@@ -136,7 +136,7 @@ add their own as needed.
 
 ## Unit Tests
 
-All code should be tested. The packages in SIIP have a minimum of 70% coverage to be merged
+All code should be tested. The packages in Sienna have a minimum of 70% coverage to be merged
 into master. This functionality is provided using Codecov
 
 ## Whitespace

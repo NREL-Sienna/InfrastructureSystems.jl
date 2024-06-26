@@ -4,7 +4,7 @@
 CurrentModule = InfrastructureSystems
 ```
 
-### Overview
+## Overview
 
 `InfrastructureSystems.jl` is a [`Julia`](http://www.julialang.org) package that provides
 data management services and common utility software for the packages in
