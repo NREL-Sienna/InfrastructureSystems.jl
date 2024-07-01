@@ -620,7 +620,7 @@ function _check_single_time_series_transformed_parameters(
     if desired_horizon > max_horizon
         throw(
             ConflictingInputsError(
-                "desired horizon = $desired_horizon is greater than max horizon = $max_horizon",
+                "desired horizon = $(Dates.canonicalize(desired_horizon)) is greater than max horizon = $(Dates.canonicalize(max_horizon))",
             ),
         )
     end
@@ -628,7 +628,7 @@ function _check_single_time_series_transformed_parameters(
     if desired_horizon % resolution != Dates.Millisecond(0)
         throw(
             ConflictingInputsError(
-                "desired horizon = $desired_horizon is not evenly divisible by resolution = $(Dates.canonicalize(resolution))",
+                "desired horizon = $(Dates.canonicalize(desired_horizon)) is not evenly divisible by resolution = $(Dates.canonicalize(resolution))",
             ),
         )
     end
