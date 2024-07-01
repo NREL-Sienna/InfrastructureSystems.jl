@@ -577,7 +577,7 @@ with the given horizon and interval.
 Throw ConflictingInputsError if any time series cannot be converted.
 
 Return a Vector of NamedTuple of component, time series metadata, and forecast parameters
-for all matches. 
+for all matches.
 """
 function _check_transform_single_time_series(
     data::SystemData,
@@ -628,7 +628,7 @@ function _check_single_time_series_transformed_parameters(
     if desired_horizon % resolution != Dates.Millisecond(0)
         throw(
             ConflictingInputsError(
-                "desired horizon = $desired_horizon is not evenly divisible by resolution = $resolution",
+                "desired horizon = $desired_horizon is not evenly divisible by resolution = $(Dates.canonicalize(resolution))",
             ),
         )
     end
@@ -637,11 +637,11 @@ function _check_single_time_series_transformed_parameters(
     max_interval = desired_horizon
     if len == horizon_count && desired_interval == max_interval
         desired_interval = Dates.Second(0)
-        @warn "There is only one forecast window. Setting interval = $desired_interval"
+        @warn "There is only one forecast window. Setting interval = $(Dates.canonicalize(desired_interval))"
     elseif desired_interval > max_interval
         throw(
             ConflictingInputsError(
-                "interval = $desired_interval is bigger than the max of $max_interval",
+                "interval = $(Dates.canonicalize(desired_interval)) is bigger than the max of $(Dates.canonicalize(max_interval))",
             ),
         )
     end
