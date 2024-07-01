@@ -95,6 +95,6 @@ build a new file with only the active objects. The HDF5 tools package provides
 the tool `h5repack` for this purpose.
 
 ```bash
-$ h5repack time_series.h5 new.h5
-$ mv new.h5 time_series.h5
+\$ h5repack time_series.h5 new.h5
+\$ mv new.h5 time_series.h5
 ```

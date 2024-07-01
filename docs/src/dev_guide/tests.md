@@ -1,6 +1,7 @@
 # Running Tests
 
 ## Standard test execution
+
 Unit tests can be executed in the REPL by executing the following:
 
 ```julia
@@ -8,6 +9,7 @@ julia> ] test
 ```
 
 ## Interactive test execution
+
 While developing code and tests it can be convenient to run a subset of tests.
 You can do this with a combination of TestEnv.jl and ReTest.jl.
 
@@ -15,14 +17,15 @@ You can do this with a combination of TestEnv.jl and ReTest.jl.
 in your global julia environment. Do the same for Revise.jl.
 
 ```
-$ julia
+\$ julia
 julia> ]
 (@v1.10) pkg> add TestEnv Revise
 ```
 
 Start the environment with the InfrastructureSystems.jl environment.
+
 ```
-$ julia --project
+\$ julia --project
 ```
 
 Load the test environment.
@@ -48,7 +51,7 @@ julia> run_tests(r"Test.*components")
 ```
 
 Refer to the [ReTest documentation](https://juliatesting.github.io/ReTest.jl/stable/) for more
-information. 
+information.
 
 ## Change logging levels
 
