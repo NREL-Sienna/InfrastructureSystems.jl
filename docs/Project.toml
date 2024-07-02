@@ -6,7 +6,4 @@ InfrastructureSystems = "2cd47ed4-ca9b-11e9-27f2-ab636a7671f1"
 Literate = "98b081ad-f1c9-55d3-8b20-4c87d4299306"
 
 [compat]
-CSV = "~0.9"
-Documenter = "0.25"
 InfrastructureSystems = "2"
-julia = "^1.5"

@@ -46,16 +46,20 @@ end
 
 makedocs(
     modules = [InfrastructureSystems],
-    format = Documenter.HTML(prettyurls = haskey(ENV, "GITHUB_ACTIONS"),),
+    format = Documenter.HTML(
+        prettyurls = haskey(ENV, "GITHUB_ACTIONS"),
+        size_threshold = nothing),
     sitename = "InfrastructureSystems.jl",
-    pages = Any[p for p in pages]
+    pages = Any[p for p in pages],
+    warnonly = Documenter.except(),
 )
+
 
 deploydocs(
     repo = "github.com/NREL-Sienna/InfrastructureSystems.jl.git",
     target = "build",
     branch = "gh-pages",
-    devbranch = "master",
+    devbranch = "main",
     devurl = "dev",
     versions = ["stable" => "v^", "v#.#"],
     push_preview = true,

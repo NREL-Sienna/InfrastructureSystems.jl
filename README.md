@@ -5,13 +5,13 @@
 [![Documentation](https://github.com/NREL-Sienna/InfrastructureSystems.jl/workflows/Documentation/badge.svg)](https://nrel-sienna.github.io/InfrastructureSystems.jl/stable/)
 [![DOI](https://zenodo.org/badge/202787784.svg)](https://zenodo.org/badge/latestdoi/202787784)
 
-The `InfrastructureSystems.jl` package provides utilities to support data models for infrastructure modeling in [NREL-Sienna](https://github.com/NREL-Sienna). The `InfrastructureSystems.jl` package is used to support functionalities in [PowerSystems.jl](https://github.com/NREL-Sienna/PowerSystems.jl), [PowerSimulations.jl](https://github.com/NREL-Sienna/PowerSimulations.jl), [PowerSimulationsDynamics.jl](https://github.com/NREL-Sienna/PowerSimulationsDynamics.jl) and other modeling packages in the Sienna ecosystem. 
+The `InfrastructureSystems.jl` package provides utilities to support data models for infrastructure modeling in [NREL-Sienna](https://github.com/NREL-Sienna). The `InfrastructureSystems.jl` package is used to support functionalities in [PowerSystems.jl](https://github.com/NREL-Sienna/PowerSystems.jl), [PowerSimulations.jl](https://github.com/NREL-Sienna/PowerSimulations.jl), [PowerSimulationsDynamics.jl](https://github.com/NREL-Sienna/PowerSimulationsDynamics.jl) and other modeling packages in the Sienna ecosystem.
 
 This package is only compatible with Julia 1.6 or higher.
 
 ## Development
 
-Contributions to the development and enahancement of PowerSystems is welcome. Please see [CONTRIBUTING.md](https://github.com/NREL-Sienna/InfrastructureSystems.jl/blob/master/CONTRIBUTING.md) for code contribution guidelines.
+Contributions to the development and enahancement of InfrastructureSystems is welcome. Please see [CONTRIBUTING.md](https://github.com/NREL-Sienna/InfrastructureSystems.jl/blob/master/CONTRIBUTING.md) for code contribution guidelines.
 
 ## License
 

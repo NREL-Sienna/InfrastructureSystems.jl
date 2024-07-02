@@ -94,7 +94,7 @@ size of the HDF5 does not decrease. The only way to recover this space is to
 build a new file with only the active objects. The HDF5 tools package provides
 the tool `h5repack` for this purpose.
 
-```bash
+```console
 $ h5repack time_series.h5 new.h5
 $ mv new.h5 time_series.h5
 ```
