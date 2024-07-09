@@ -461,7 +461,7 @@ function transform_array_for_hdf(data::SortedDict{Dates.DateTime, Vector{CONSTAN
     return hcat(values(data)...)
 end
 
-function transform_array_for_hdf(data::AbstractVector{T}) where T <: Number
+function transform_array_for_hdf(data::AbstractVector{T}) where {T <: Number}
     return transform_array_for_hdf(convert(Vector{T}, data))
 end
 
