@@ -4,6 +4,10 @@
 Concrete subtypes MUST implement:
  - `get_components`
  - `get_name`, or use the default by implementing `default_name` and having a `name` field
+ - `Base.in`, with the invariant that for all systems `s` and all `ComponentSelector`s `e`,
+   `c in e` iff `c in collect(get_components(e, s))` for all components `c` in `s`. Ideally,
+   `in` should be evaluable without a reference to a system, but a three-parameter form
+   in(c, e, s) may be used if absolutely necessary.
 
 Concrete subtypes MAY implement:
  - The factory method `select_components` (make sure your signature does not conflict with
@@ -117,6 +121,15 @@ function get_components(e::SingleComponentSelector, sys::Components; filterby = 
     return (com === nothing) ? [] : [com]
 end
 
+function Base.in(
+    c::InfrastructureSystemsComponent,
+    e::SingleComponentSelector;
+    filterby = nothing,
+)
+    (!isnothing(filterby) && !filterby(c)) && return false
+    return (c isa e.component_subtype) && (get_name(c) == e.component_name)
+end
+
 # ListComponentSelector
 "ComponentSelectorSet represented by a list of other ComponentSelectors."
 struct ListComponentSelector <: ComponentSelectorSet
@@ -146,6 +159,15 @@ function get_components(e::ListComponentSelector, sys::Components; filterby = no
     sub_components =
         Iterators.map(x -> get_components(x, sys; filterby = filterby), e.content)
     return Iterators.flatten(sub_components)
+end
+
+function Base.in(
+    c::InfrastructureSystemsComponent,
+    e::ListComponentSelector;
+    filterby = nothing,
+)
+    (!isnothing(filterby) && !filterby(c)) && return false
+    return any(in.(Ref(c), e.content))
 end
 
 # SubtypeComponentSelector
@@ -179,6 +201,15 @@ function get_components(e::SubtypeComponentSelector, sys::Components; filterby =
     components = get_components(e.component_subtype, sys)
     isnothing(filterby) && (return components)
     return Iterators.filter(filterby, components)
+end
+
+function Base.in(
+    c::InfrastructureSystemsComponent,
+    e::SubtypeComponentSelector;
+    filterby = nothing,
+)
+    (!isnothing(filterby) && !filterby(c)) && return false
+    return c isa e.component_subtype
 end
 
 # FilterComponentSelector
@@ -223,6 +254,15 @@ function get_components(e::FilterComponentSelector, sys::Components; filterby = 
     components = get_components(e.filter_fn, e.component_subtype, sys)
     isnothing(filterby) && (return components)
     return Iterators.filter(filterby, components)
+end
+
+function Base.in(
+    c::InfrastructureSystemsComponent,
+    e::FilterComponentSelector;
+    filterby = nothing,
+)
+    (!isnothing(filterby) && !filterby(c)) && return false
+    return (c isa e.component_subtype) && e.filter_fn(c)
 end
 
 # Naming
