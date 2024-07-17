@@ -71,6 +71,10 @@ end
         @test length(
             collect(IS.get_components(test_gen_ent, test_sys; filterby = x -> false)),
         ) == 0
+
+        @test IS.TestComponent("Component1", -1) in test_gen_ent
+        @test !(IS.TestComponent("Component2", -1) in test_gen_ent)
+        @test !in(IS.TestComponent("Component1", -1), test_gen_ent; filterby = x -> false)
     end
 end
 
@@ -124,6 +128,14 @@ end
         @test length(
             collect(IS.get_subselectors(test_list_ent, test_sys; filterby = x -> false)),
         ) == 2
+
+        @test IS.AdditionalTestComponent("Component3", -1) in test_list_ent
+        @test !(IS.AdditionalTestComponent("Component4", -1) in test_list_ent)
+        @test !in(
+            IS.AdditionalTestComponent("Component3", -1),
+            test_list_ent;
+            filterby = x -> false,
+        )
     end
 end
 
@@ -173,6 +185,10 @@ end
         @test length(
             collect(IS.get_subselectors(test_sub_ent, test_sys; filterby = x -> false)),
         ) == 0
+
+        @test IS.TestComponent("Component1", -1) in test_sub_ent
+        @test !(IS.AdditionalTestComponent("Component1", -1) in test_sub_ent)
+        @test !in(IS.TestComponent("Component1", -1), test_sub_ent; filterby = x -> false)
     end
 end
 
@@ -255,5 +271,13 @@ end
         @test length(
             collect(IS.get_subselectors(test_filter_ent, test_sys; filterby = x -> false)),
         ) == 0
+
+        @test IS.TestComponent("Component1", 20) in test_filter_ent
+        @test !(IS.AdditionalTestComponent("Component1", 0) in test_filter_ent)
+        @test !in(
+            IS.TestComponent("Component1", 20),
+            test_filter_ent;
+            filterby = x -> false,
+        )
     end
 end
