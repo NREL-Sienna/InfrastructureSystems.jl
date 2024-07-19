@@ -159,6 +159,7 @@ function compare_values(
     x::InMemoryTimeSeriesStorage,
     y::InMemoryTimeSeriesStorage;
     compare_uuids = false,
+    match_fn = isequivalent,
     kwargs...,
 )
     keys_x = sort!(collect(keys(x.data)))
@@ -175,7 +176,7 @@ function compare_values(
             @error "timestamps don't match" ts_x ts_y
             return false
         end
-        if TimeSeries.values(get_data(ts_x)) != TimeSeries.values(get_data(ts_y))
+        if !match_fn(TimeSeries.values(get_data(ts_x)), TimeSeries.values(get_data(ts_y)))
             @error "values don't match" ts_x ts_y
             return false
         end

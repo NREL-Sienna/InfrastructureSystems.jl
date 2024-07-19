@@ -131,11 +131,12 @@ function compare_values(
     y::T;
     compare_uuids = false,
     exclude = Set{Symbol}(),
+    match_fn = isequivalent,
 ) where {T}
     match = true
     fields = fieldnames(T)
     if isempty(fields)
-        match = x == y
+        match = match_fn(x, y)
     else
         for field_name in fields
             field_name in exclude && continue
@@ -147,6 +148,7 @@ function compare_values(
                     val2;
                     compare_uuids = compare_uuids,
                     exclude = exclude,
+                    match_fn = match_fn,
                 )
                     @error "values do not match" T field_name val1 val2
                     match = false
@@ -157,12 +159,13 @@ function compare_values(
                     val2;
                     compare_uuids = compare_uuids,
                     exclude = exclude,
+                    match_fn = match_fn,
                 )
                     @error "values do not match" T field_name val1 val2
                     match = false
                 end
             else
-                if val1 != val2
+                if !match_fn(val1, val2)
                     @error "values do not match" T field_name val1 val2
                     match = false
                 end
@@ -178,6 +181,7 @@ function compare_values(
     y::Vector{T};
     compare_uuids = false,
     exclude = Set{Symbol}(),
+    match_fn = isequivalent,
 ) where {T}
     if length(x) != length(y)
         @error "lengths do not match" T length(x) length(y)
@@ -186,7 +190,13 @@ function compare_values(
 
     match = true
     for i in range(1; length = length(x))
-        if !compare_values(x[i], y[i]; compare_uuids = compare_uuids, exclude = exclude)
+        if !compare_values(
+            x[i],
+            y[i];
+            compare_uuids = compare_uuids,
+            exclude = exclude,
+            match_fn = match_fn,
+        )
             @error "values do not match" typeof(x[i]) i x[i] y[i]
             match = false
         end
@@ -195,7 +205,13 @@ function compare_values(
     return match
 end
 
-function compare_values(x::Dict, y::Dict; compare_uuids = false, exclude = Set{Symbol}())
+function compare_values(
+    x::Dict,
+    y::Dict;
+    compare_uuids = false,
+    exclude = Set{Symbol}(),
+    match_fn = isequivalent,
+)
     keys_x = Set(keys(x))
     keys_y = Set(keys(y))
     if keys_x != keys_y
@@ -205,7 +221,13 @@ function compare_values(x::Dict, y::Dict; compare_uuids = false, exclude = Set{S
 
     match = true
     for key in keys_x
-        if !compare_values(x[key], y[key]; compare_uuids = compare_uuids, exclude = exclude)
+        if !compare_values(
+            x[key],
+            y[key];
+            compare_uuids = compare_uuids,
+            exclude = exclude,
+            match_fn = match_fn,
+        )
             @error "values do not match" typeof(x[key]) key x[key] y[key]
             match = false
         end
@@ -214,9 +236,12 @@ function compare_values(x::Dict, y::Dict; compare_uuids = false, exclude = Set{S
     return match
 end
 
-compare_values(x::Float64, y::Int; kwargs...) = x == Float64(y)
-compare_values(::Type{T}, ::Type{T}; kwargs...) where {T} = true
-compare_values(::Type{T}, ::Type{U}; kwargs...) where {T, U} = false
+compare_values(x::Float64, y::Int; match_fn = isequivalent, kwargs...) =
+    match_fn(x, Float64(y))
+compare_values(::Type{T}, ::Type{U}; match_fn = isequivalent, kwargs...) where {T, U} =
+    match_fn(T, U)
+compare_values(a::T, b::U; match_fn = isequivalent, kwargs...) where {T, U} =
+    match_fn(a, b)
 
 # Copied from https://discourse.julialang.org/t/encapsulating-enum-access-via-dot-syntax/11785/10
 # Some InfrastructureSystems-specific modifications

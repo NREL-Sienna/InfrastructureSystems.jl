@@ -406,6 +406,7 @@ function compare_values(
     y::SupplementalAttributeAssociations;
     compare_uuids = false,
     exclude = Set{Symbol}(),
+    match_fn = isequivalent,
 )
     !compare_uuids && return true
     query = """
@@ -415,7 +416,7 @@ function compare_values(
     """
     table_x = Tables.rowtable(_execute(x, query))
     table_y = Tables.rowtable(_execute(y, query))
-    return table_x == table_y
+    return match_fn(table_x, table_y)
 end
 
 _execute(s::SupplementalAttributeAssociations, q, p = nothing) =

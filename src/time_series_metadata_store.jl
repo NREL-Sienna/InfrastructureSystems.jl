@@ -1044,6 +1044,7 @@ function compare_values(
     y::TimeSeriesMetadataStore;
     compare_uuids = false,
     exclude = Set{Symbol}(),
+    match_fn = isequivalent,
 )
     # Note that we can't compare missing values.
     owner_uuid = compare_uuids ? ", owner_uuid" : ""
@@ -1053,7 +1054,7 @@ function compare_values(
     """
     table_x = Tables.rowtable(_execute(x, query))
     table_y = Tables.rowtable(_execute(y, query))
-    return table_x == table_y
+    return match_fn(table_x, table_y)
 end
 
 ### Non-TimeSeriesMetadataStore functions ###

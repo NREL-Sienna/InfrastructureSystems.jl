@@ -246,6 +246,7 @@ function compare_values(
     y::TimeSeriesManager;
     compare_uuids = false,
     exclude = Set{Symbol}(),
+    match_fn = isequivalent,
 )
     match = true
     for name in fieldnames(TimeSeriesManager)
@@ -262,7 +263,13 @@ function compare_values(
             continue
         end
 
-        if !compare_values(val_x, val_y; compare_uuids = compare_uuids, exclude = exclude)
+        if !compare_values(
+            val_x,
+            val_y;
+            compare_uuids = compare_uuids,
+            exclude = exclude,
+            match_fn = match_fn,
+        )
             @error "TimeSeriesManager field = $name does not match" getproperty(x, name) getproperty(
                 y,
                 name,

@@ -126,6 +126,7 @@ function compare_values(
     y::InfrastructureSystemsInternal;
     compare_uuids = false,
     exclude = Set{Symbol}(),
+    match_fn = isequivalent,
 )
     match = true
     for name in fieldnames(InfrastructureSystemsInternal)
@@ -146,7 +147,13 @@ function compare_values(
                collect(keys(val2)) == [SERIALIZATION_METADATA_KEY]
                 continue
             end
-            if !compare_values(val1, val2; compare_uuids = compare_uuids, exclude = exclude)
+            if !compare_values(
+                val1,
+                val2;
+                compare_uuids = compare_uuids,
+                exclude = exclude,
+                match_fn = match_fn,
+            )
                 @error "ext does not match" val1 val2
                 match = false
             end
@@ -155,6 +162,7 @@ function compare_values(
             getproperty(y, name);
             compare_uuids = compare_uuids,
             exclude = exclude,
+            match_fn = match_fn,
         )
             @error "InfrastructureSystemsInternal field=$name does not match"
             match = false

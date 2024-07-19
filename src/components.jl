@@ -391,6 +391,7 @@ function compare_values(
     y::Components;
     compare_uuids = false,
     exclude = Set{Symbol}(),
+    match_fn = isequivalent,
 )
     match = true
     for name in fieldnames(Components)
@@ -399,7 +400,13 @@ function compare_values(
         name == :time_series_manager && continue
         val_x = getproperty(x, name)
         val_y = getproperty(y, name)
-        if !compare_values(val_x, val_y; compare_uuids = compare_uuids, exclude = exclude)
+        if !compare_values(
+            val_x,
+            val_y;
+            compare_uuids = compare_uuids,
+            exclude = exclude,
+            match_fn = match_fn,
+        )
             val_x = getproperty(x, name)
             val_y = getproperty(y, name)
             @error "Components field = $name does not match" val_x val_y

@@ -342,6 +342,7 @@ function compare_values(
     y::SystemData;
     compare_uuids = false,
     exclude = Set{Symbol}(),
+    match_fn = isequivalent,
 )
     match = true
     for name in fieldnames(SystemData)
@@ -353,7 +354,13 @@ function compare_values(
         end
         val_x = getproperty(x, name)
         val_y = getproperty(y, name)
-        if !compare_values(val_x, val_y; compare_uuids = compare_uuids, exclude = exclude)
+        if !compare_values(
+            val_x,
+            val_y;
+            compare_uuids = compare_uuids,
+            exclude = exclude,
+            match_fn = match_fn,
+        )
             @error "SystemData field = $name does not match" getproperty(x, name) getproperty(
                 y,
                 name,

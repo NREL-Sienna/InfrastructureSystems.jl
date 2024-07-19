@@ -805,6 +805,7 @@ function compare_values(
     x::Hdf5TimeSeriesStorage,
     y::Hdf5TimeSeriesStorage;
     compare_uuids = false,
+    match_fn = isequivalent,
     kwargs...,
 )
     item_x = sort!(collect(iterate_time_series(x)); by = z -> z[1])
@@ -825,7 +826,7 @@ function compare_values(
             @error "UUIDs don't match" uuid_x uuid_y
             return false
         end
-        if !isequal(data_x, data_y)
+        if !match_fn(data_x, data_y)
             @error "data doesn't match" data_x data_y
             return false
         end
