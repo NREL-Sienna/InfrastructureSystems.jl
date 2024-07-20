@@ -19,8 +19,25 @@ const DEFAULT_COMPRESSION = false
 @scoped_enum(CompressionTypes, BLOSC = 0, DEFLATE = 1,)
 
 """
+    CompressionSettings(enabled, type, level, shuffle)
+
 Provides customization of HDF5 compression settings.
-Refer to the HDF5.jl and HDF5 documention for more information.
+
+$(TYPEDFIELDS)
+
+Refer to the [HDF5.jl](https://juliaio.github.io/HDF5.jl/stable/) and
+[HDF5](https://portal.hdfgroup.org/) documentation for more details on the
+options.
+
+# Example
+```julia
+settings = CompressionSettings(
+    enabled = true,
+    type = CompressionTypes.DEFLATE,  # BLOSC is also supported
+    level = 3,
+    shuffle = true,
+)
+```
 """
 struct CompressionSettings
     "Controls whether compression is enabled."
