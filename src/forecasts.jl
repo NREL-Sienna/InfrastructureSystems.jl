@@ -1,9 +1,10 @@
 """
-Supertype for forecast time series current concrete subtypes are:
-- [Deterministic](@ref)
-- [DeterministicSingleTimeSeries](@ref)
-- [Scenarios](@ref)
-- [Probabilistic](@ref)
+Supertype for forecast time series
+Current concrete subtypes are:
+- [`Deterministic`](@ref)
+- [`DeterministicSingleTimeSeries`](@ref)
+- [`Scenarios`](@ref)
+- [`Probabilistic`](@ref)
 
 Subtypes of Forecast must implement:
 - `get_horizon_count`
