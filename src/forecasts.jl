@@ -3,6 +3,7 @@ Supertype for forecast time series
 Yeah
 Current concrete subtypes are:
 - [Deterministic](@ref)
+- [DeterministicSingleTimeSeries](@ref)
 - [Scenarios](@ref)
 - [Probabilistic](@ref)
 
