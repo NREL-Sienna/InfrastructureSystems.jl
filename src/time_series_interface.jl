@@ -171,7 +171,7 @@ aware of how much data is stored.
 Specify `start_time` and `len` if you only need a subset of data.
 
 # Arguments
-  - `::Type{T}`: Concrete subtype of `TimeSeriesData` to return
+  - `::Type{T}`: the type of time series (a concrete subtype of `TimeSeriesData`)
   - `owner::TimeSeriesOwners`: Component or attribute containing the time series
   - `name::AbstractString`: name of time series
   - `start_time::Union{Nothing, Dates.DateTime} = nothing`: If nothing, use the
@@ -279,7 +279,7 @@ factor multiplier by default.
 
 # Arguments
   - `owner::TimeSeriesOwners`: Component or attribute containing the time series
-  - `time_series::StaticTimeSeries`
+  - `time_series::StaticTimeSeries`: subtype of `StaticTimeSeries` (e.g., `SingleTimeSeries`)
   - `start_time::Union{Nothing, Dates.DateTime} = nothing`: the first timestamp to retrieve.
     If nothing, use the `initial_timestamp` of the time series.
   - `len::Union{Nothing, Int} = nothing`: Length of time-series to retrieve (i.e. number
@@ -311,6 +311,17 @@ end
 
 """
 Return a vector of timestamps from storage for the given time series parameters.
+
+# Arguments
+  - `::Type{T}`: the type of time series (a concrete subtype of `TimeSeriesData`)
+  - `owner::TimeSeriesOwners`: Component or attribute containing the time series
+  - `name::AbstractString`: name of time series
+  - `start_time::Union{Nothing, Dates.DateTime} = nothing`: If nothing, use the
+    `initial_timestamp` of the time series. If T is a subtype of [`Forecast`](@ref) then
+    `start_time` must be the first timestamp of a window.
+  - `len::Union{Nothing, Int} = nothing`: Length of time-series to retrieve (i.e. number of
+    timestamps). If nothing, use the entire length.
+  - `features`
 
 See also: [`get_time_series_array`](@ref get_time_series_array(
     ::Type{T},
@@ -353,6 +364,14 @@ end
 """
 Return a vector of timestamps from a cached Forecast instance.
 
+# Arguments
+  - `owner::TimeSeriesOwners`: Component or attribute containing the time series
+  - `forecast::Forecast`: a concrete subtype of [`Forecast`](@ref)
+  - `start_time::Union{Nothing, Dates.DateTime} = nothing`: the first timestamp of one of
+    the forecast windows
+  - `len::Union{Nothing, Int} = nothing`: Length of time-series to retrieve (i.e. number of
+    timestamps). If nothing, use the entire length.
+
 See also: [`get_time_series_array`](@ref get_time_series_array(
     owner::TimeSeriesOwners,
     forecast::Forecast,
@@ -381,6 +400,14 @@ end
 """
 Return a vector of timestamps from a cached StaticTimeSeries instance.
 
+# Arguments
+  - `owner::TimeSeriesOwners`: Component or attribute containing the time series
+  - `time_series::StaticTimeSeries`: subtype of `StaticTimeSeries` (e.g., `SingleTimeSeries`)
+  - `start_time::Union{Nothing, Dates.DateTime} = nothing`: the first timestamp to retrieve.
+    If nothing, use the `initial_timestamp` of the time series.
+  - `len::Union{Nothing, Int} = nothing`: Length of time-series to retrieve (i.e. number
+    of timestamps). If nothing, use the entire length
+
 See also: [`get_time_series_array`](@ref get_time_series_array(
     owner::TimeSeriesOwners,
     time_series::StaticTimeSeries,
@@ -402,10 +429,23 @@ function get_time_series_timestamps(
 end
 
 """
-Return an Array of values from storage for the requested time series parameters.
+Return an vector of timeseries data without timestamps from storage
 
 If the data size is small and this will be called many times, consider using the version
-that accepts a cached TimeSeriesData instance.
+that accepts a cached `TimeSeriesData` instance.
+
+# Arguments
+  - `::Type{T}`: type of the time series (a concrete subtype of `TimeSeriesData`)
+  - `owner::TimeSeriesOwners`: Component or attribute containing the time series
+  - `name::AbstractString`: name of time series
+  - `start_time::Union{Nothing, Dates.DateTime} = nothing`: If nothing, use the
+    `initial_timestamp` of the time series. If T is a subtype of [`Forecast`](@ref) then
+    `start_time` must be the first timestamp of a window.
+  - `len::Union{Nothing, Int} = nothing`: Length of time-series to retrieve (i.e. number of
+    timestamps). If nothing, use the entire length.
+  - `ignore_scaling_factors = false`: If `true`, the time-series data will be multiplied by the
+    result of calling the stored `scaling_factor_multiplier` function on the `owner`
+  - `features`
 
 See also: [`get_time_series_array`](@ref get_time_series_array(
     ::Type{T},
@@ -449,7 +489,17 @@ function get_time_series_values(
 end
 
 """
-Return an Array of values for one forecast window from a cached Forecast instance.
+Return a vector of values for one forecast window from a cached Forecast instance.
+
+# Arguments
+  - `owner::TimeSeriesOwners`: Component or attribute containing the time series
+  - `forecast::Forecast`: a concrete subtype of [`Forecast`](@ref)
+  - `start_time::Union{Nothing, Dates.DateTime} = nothing`: the first timestamp of one of
+    the forecast windows
+  - `len::Union{Nothing, Int} = nothing`: Length of time-series to retrieve (i.e. number of
+    timestamps). If nothing, use the entire length.
+  - `ignore_scaling_factors = false`: If `true`, the time-series data will be multiplied by the
+    result of calling the stored `scaling_factor_multiplier` function on the `owner`
 
 See also: [`get_time_series_array`](@ref get_time_series_array(
     owner::TimeSeriesOwners,
@@ -483,9 +533,18 @@ function get_time_series_values(
 end
 
 """
-Return an Array of values from a cached StaticTimeSeries instance for the requested time
+Return a vector of values from a cached StaticTimeSeries instance for the requested time
 series parameters.
 
+# Arguments
+  - `owner::TimeSeriesOwners`: Component or attribute containing the time series
+  - `time_series::StaticTimeSeries`: subtype of `StaticTimeSeries` (e.g., `SingleTimeSeries`)
+  - `start_time::Union{Nothing, Dates.DateTime} = nothing`: the first timestamp to retrieve.
+    If nothing, use the `initial_timestamp` of the time series.
+  - `len::Union{Nothing, Int} = nothing`: Length of time-series to retrieve (i.e. number
+    of timestamps). If nothing, use the entire length
+  - `ignore_scaling_factors = false`: If `true`, the time-series data will be multiplied by the
+    result of calling the stored `scaling_factor_multiplier` function on the `owner`
 
 See also: [`get_time_series_array`](@ref get_time_series_array(
     owner::TimeSeriesOwners,
