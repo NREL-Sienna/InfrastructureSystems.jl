@@ -40,6 +40,8 @@ Does not apply a scaling factor multiplier.
     entire length.
   - `count::Union{Nothing, Int} = nothing`: Only applicable to subtypes of Forecast. Number
     of forecast windows starting at `start_time` to return. Defaults to all available.
+  - `features`: User-defined tags that differentiate multiple time series arrays for the
+    same component attribute, such as different arrays for different scenarios or years
 
 See also: [`get_time_series_array`](@ref), [`get_time_series_values`](@ref).
 """
@@ -76,6 +78,8 @@ Return a time series corresponding to the given parameters.
     entire length.
   - `count::Union{Nothing, Int} = nothing`: Only applicable to subtypes of Forecast. Number
     of forecast windows starting at `start_time` to return. Defaults to all available.
+  - `features`: User-defined tags that differentiate multiple time series arrays for the
+    same component attribute, such as different arrays for different scenarios or years
 """
 function get_time_series(
     owner::TimeSeriesOwners,
@@ -181,6 +185,8 @@ Specify `start_time` and `len` if you only need a subset of data.
     timestamps). If nothing, use the entire length.
   - `ignore_scaling_factors = false`: If `true`, the time-series data will be multiplied by the
     result of calling the stored `scaling_factor_multiplier` function on the `owner`
+  - `features`: User-defined tags that differentiate multiple time series arrays for the
+    same component attribute, such as different arrays for different scenarios or years
 
 See also: [`get_time_series_values`](@ref get_time_series_values(
     ::Type{T},
@@ -321,7 +327,8 @@ Return a vector of timestamps from storage for the given time series parameters.
     `start_time` must be the first timestamp of a window.
   - `len::Union{Nothing, Int} = nothing`: Length of time-series to retrieve (i.e. number of
     timestamps). If nothing, use the entire length.
-  - `features`
+  - `features`: User-defined tags that differentiate multiple time series arrays for the
+    same component attribute, such as different arrays for different scenarios or years
 
 See also: [`get_time_series_array`](@ref get_time_series_array(
     ::Type{T},
@@ -445,7 +452,8 @@ that accepts a cached `TimeSeriesData` instance.
     timestamps). If nothing, use the entire length.
   - `ignore_scaling_factors = false`: If `true`, the time-series data will be multiplied by the
     result of calling the stored `scaling_factor_multiplier` function on the `owner`
-  - `features`
+  - `features`: User-defined tags that differentiate multiple time series arrays for the
+    same component attribute, such as different arrays for different scenarios or years
 
 See also: [`get_time_series_array`](@ref get_time_series_array(
     ::Type{T},
