@@ -6,12 +6,13 @@
         internal::InfrastructureSystemsInternal
     end
 
-A deterministic forecast for a particular data field in a Component.
+A single column of time series data for a particular data field in a Component.
 
 # Arguments
 
   - `name::String`: user-defined name
   - `data::TimeSeries.TimeArray`: timestamp - scalingfactor
+  - `resolution::Dates.Period`: Time duration between steps in the time series. The resolution must be the same throughout the time series
   - `scaling_factor_multiplier::Union{Nothing, Function}`: Applicable when the time series
     data are scaling factors. Called on the associated component to convert the values.
   - `internal::InfrastructureSystemsInternal`
@@ -21,6 +22,7 @@ mutable struct SingleTimeSeries <: StaticTimeSeries
     name::String
     "timestamp - scalingfactor"
     data::TimeSeries.TimeArray
+    "resolution of the time series. The resolution cannot change during the time series."
     resolution::Dates.Period
     "Applicable when the time series data are scaling factors. Called on the associated component to convert the values."
     scaling_factor_multiplier::Union{Nothing, Function}
