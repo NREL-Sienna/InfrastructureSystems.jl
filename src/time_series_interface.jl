@@ -489,7 +489,8 @@ function get_time_series_values(
 end
 
 """
-Return a vector of values for one forecast window from a cached Forecast instance.
+Return an vector of timeseries data without timestamps for one forecast window from a
+cached `Forecast` instance.
 
 # Arguments
   - `owner::TimeSeriesOwners`: Component or attribute containing the time series
@@ -533,8 +534,7 @@ function get_time_series_values(
 end
 
 """
-Return a vector of values from a cached StaticTimeSeries instance for the requested time
-series parameters.
+Return an vector of timeseries data without timestamps from a cached `StaticTimeSeries` instance
 
 # Arguments
   - `owner::TimeSeriesOwners`: Component or attribute containing the time series
