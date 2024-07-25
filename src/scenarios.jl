@@ -260,4 +260,15 @@ get_initial_timestamp(forecast::Scenarios) = get_initial_timestamp_common(foreca
 get_interval(forecast::Scenarios) = get_interval_common(forecast)
 get_window(f::Scenarios, initial_time::Dates.DateTime; len = nothing) =
     get_window_common(f, initial_time; len = len)
+
+"""
+Iterate over the windows in a forecast
+
+# Examples
+```julia
+for window in iterate_windows(forecast)
+    @show values(maximum(window))
+end
+```
+"""
 iterate_windows(forecast::Scenarios) = iterate_windows_common(forecast)

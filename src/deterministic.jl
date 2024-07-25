@@ -314,7 +314,19 @@ eltype_data(forecast::Deterministic) = eltype_data_common(forecast)
 get_initial_times(forecast::Deterministic) = get_initial_times_common(forecast)
 get_initial_timestamp(forecast::Deterministic) = get_initial_timestamp_common(forecast)
 get_interval(forecast::Deterministic) = get_interval_common(forecast)
+
+"""
+Iterate over the windows in a forecast
+
+# Examples
+```julia
+for window in iterate_windows(forecast)
+    @show values(maximum(window))
+end
+```
+"""
 iterate_windows(forecast::Deterministic) = iterate_windows_common(forecast)
+
 get_window(f::Deterministic, initial_time::Dates.DateTime; len = nothing) =
     get_window_common(f, initial_time; len = len)
 

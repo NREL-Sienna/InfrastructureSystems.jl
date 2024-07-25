@@ -138,6 +138,16 @@ function get_window(
     return ta[initial_time:resolution:end_time]
 end
 
+"""
+Iterate over the windows in a forecast
+
+# Examples
+```julia
+for window in iterate_windows(forecast)
+    @show values(maximum(window))
+end
+```
+"""
 function iterate_windows(forecast::DeterministicSingleTimeSeries)
     if get_count(forecast) == 1
         return (get_window(forecast, get_initial_timestamp(forecast)),)
