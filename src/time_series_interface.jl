@@ -65,7 +65,13 @@ function get_time_series(
 end
 
 """
-Return a time series corresponding to the given parameters.
+Return the exact stored data in a time series, using a time series key look up
+
+This will load all forecast windows into memory by default. Be aware of how much data is stored.
+
+Specify start_time and len if you only need a subset of data.
+
+Does not apply a scaling factor multiplier.
 
 # Arguments
 
