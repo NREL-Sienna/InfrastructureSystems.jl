@@ -302,4 +302,15 @@ get_initial_timestamp(forecast::Probabilistic) = get_initial_timestamp_common(fo
 get_interval(forecast::Probabilistic) = get_interval_common(forecast)
 get_window(f::Probabilistic, initial_time::Dates.DateTime; len = nothing) =
     get_window_common(f, initial_time; len = len)
+
+"""
+Iterate over the windows in a forecast
+
+# Examples
+```julia
+for window in iterate_windows(forecast)
+    @show values(maximum(window))
+end
+```
+"""
 iterate_windows(forecast::Probabilistic) = iterate_windows_common(forecast)

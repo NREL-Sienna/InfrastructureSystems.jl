@@ -88,6 +88,13 @@ Reads from storage if the data is not already in cache.
 # Arguments
 
   - `cache::StaticTimeSeriesCache`: cached instance
+
+# Examples
+```julia
+cache = ForecastCache(Deterministic, component, "max_active_power")
+window1 = get_next_time_series_array!(cache)
+window2 = get_next_time_series_array!(cache)
+```
 """
 function get_next_time_series_array!(cache::TimeSeriesCache)
     next_time = get_next_time(cache)
