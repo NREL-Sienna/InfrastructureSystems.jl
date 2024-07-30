@@ -8,6 +8,10 @@
 
 A single column of time series data for a particular data field in a Component.
 
+In contrast with a forecast, this can represent one continual time series,
+such as a series of historical measurements or realizations or a single scenario
+(e.g. a weather year or different input assumptions).
+
 # Arguments
 
   - `name::String`: user-defined name
