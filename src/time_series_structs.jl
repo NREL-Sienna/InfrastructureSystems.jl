@@ -24,7 +24,7 @@ function deserialize_struct(T::Type{<:TimeSeriesKey}, data::Dict)
     return T(; vals...)
 end
 
-Base.@kwdef struct StaticTimeSeriesKey <: TimeSeriesKey
+@kwdef struct StaticTimeSeriesKey <: TimeSeriesKey
     time_series_type::Type{<:StaticTimeSeries}
     name::String
     initial_timestamp::Dates.DateTime
@@ -44,7 +44,7 @@ function make_time_series_key(metadata::StaticTimeSeriesMetadata)
     )
 end
 
-Base.@kwdef struct ForecastKey <: TimeSeriesKey
+@kwdef struct ForecastKey <: TimeSeriesKey
     time_series_type::Type{<:Forecast}
     name::String
     initial_timestamp::Dates.DateTime
@@ -72,7 +72,7 @@ end
 Provides counts of time series including attachments to components and supplemental
 attributes.
 """
-Base.@kwdef struct TimeSeriesCounts
+@kwdef struct TimeSeriesCounts
     components_with_time_series::Int
     supplemental_attributes_with_time_series::Int
     static_time_series_count::Int

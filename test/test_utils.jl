@@ -25,7 +25,7 @@ IS.@scoped_enum Fruit APPLE = 1 ORANGE = 2
     @test Fruit.ORANGE isa Fruit
     @test sort([Fruit.ORANGE, Fruit.APPLE]) == [Fruit.APPLE, Fruit.ORANGE]
 
-    Base.@kwdef struct Foo
+    @kwdef struct Foo
         fruit::Fruit
     end
     @test Foo(1) == Foo(Fruit.APPLE)

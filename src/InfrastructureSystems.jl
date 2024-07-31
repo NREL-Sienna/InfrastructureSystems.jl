@@ -2,6 +2,7 @@ isdefined(Base, :__precompile__) && __precompile__()
 
 module InfrastructureSystems
 
+import Base: @kwdef
 import CSV
 import DataFrames
 import DataFrames: DataFrame

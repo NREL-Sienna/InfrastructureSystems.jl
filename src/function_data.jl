@@ -8,7 +8,7 @@ the representation of cost functions `f(x) = proportional_term*x + constant_term
  - `proportional_term::Float64`: the proportional term in the represented function
  - `constant_term::Float64`: the constant term in the represented function
 """
-Base.@kwdef struct LinearFunctionData <: FunctionData
+@kwdef struct LinearFunctionData <: FunctionData
     proportional_term::Float64
     constant_term::Float64
 end
@@ -56,7 +56,7 @@ representation of cost functions
  - `proportional_term::Float64`: the proportional term in the represented function
  - `constant_term::Float64`: the constant term in the represented function
 """
-Base.@kwdef struct QuadraticFunctionData <: FunctionData
+@kwdef struct QuadraticFunctionData <: FunctionData
     quadratic_term::Float64
     proportional_term::Float64
     constant_term::Float64
@@ -116,7 +116,7 @@ store quantities (x, y), such as (MW, \$/h).
 # Arguments
  - `points::Vector{@NamedTuple{x::Float64, y::Float64}}`: the points that define the function
 """
-Base.@kwdef struct PiecewiseLinearData <: FunctionData
+@kwdef struct PiecewiseLinearData <: FunctionData
     points::Vector{XY_COORDS}
 
     function PiecewiseLinearData(points::Vector{<:NamedTuple{(:x, :y)}})
@@ -232,7 +232,7 @@ quantities (x, dy/dx), such as (MW, \$/MWh).
  `x_coords[1]` and `x_coords[2]`, etc. Must have one fewer elements than `x_coords`.
  - `c::Union{Nothing, Float64}`: optional, the value to use for the integral from 0 to `x_coords[1]` of this function
 """
-Base.@kwdef struct PiecewiseStepData <: FunctionData
+@kwdef struct PiecewiseStepData <: FunctionData
     x_coords::Vector{Float64}
     y_coords::Vector{Float64}
 

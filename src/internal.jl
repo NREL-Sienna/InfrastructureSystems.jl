@@ -5,7 +5,7 @@ abstract type UnitsData end
 
 @scoped_enum(UnitSystem, SYSTEM_BASE = 0, DEVICE_BASE = 1, NATURAL_UNITS = 2,)
 
-Base.@kwdef mutable struct SystemUnitsSettings <: UnitsData
+@kwdef mutable struct SystemUnitsSettings <: UnitsData
     base_value::Float64
     unit_system::UnitSystem
 end
@@ -13,7 +13,7 @@ end
 serialize(val::SystemUnitsSettings) = serialize_struct(val)
 deserialize(T::Type{<:SystemUnitsSettings}, val::Dict) = deserialize_struct(T, val)
 
-Base.@kwdef struct SharedSystemReferences <: InfrastructureSystemsType
+@kwdef struct SharedSystemReferences <: InfrastructureSystemsType
     supplemental_attribute_manager::Any = nothing
     time_series_manager::Any = nothing
 end

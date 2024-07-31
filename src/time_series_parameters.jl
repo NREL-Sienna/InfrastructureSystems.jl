@@ -2,7 +2,7 @@ abstract type AbstractTimeSeriesParameters <: InfrastructureSystemsType end
 
 struct StaticTimeSeriesParameters <: AbstractTimeSeriesParameters end
 
-Base.@kwdef struct ForecastParameters <: AbstractTimeSeriesParameters
+@kwdef struct ForecastParameters <: AbstractTimeSeriesParameters
     horizon::Dates.Period
     initial_timestamp::Dates.DateTime
     interval::Dates.Period
