@@ -2,6 +2,10 @@ isdefined(Base, :__precompile__) && __precompile__()
 
 module InfrastructureSystems
 
+# Cost aliases don't display properly unless they are exported from IS
+export LinearCurve, QuadraticCurve
+export PiecewisePointCurve, PiecewiseIncrementalCurve, PiecewiseAverageCurve
+
 import CSV
 import DataFrames
 import DataFrames: DataFrame
@@ -99,6 +103,8 @@ include("utils/logging.jl")
 include("utils/stdout_redirector.jl")
 include("utils/sqlite.jl")
 include("function_data.jl")
+include("value_curve.jl")
+include("cost_aliases.jl")
 include("utils/utils.jl")
 include("internal.jl")
 include("time_series_storage.jl")
