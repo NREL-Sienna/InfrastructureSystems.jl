@@ -6,6 +6,7 @@ module InfrastructureSystems
 export LinearCurve, QuadraticCurve
 export PiecewisePointCurve, PiecewiseIncrementalCurve, PiecewiseAverageCurve
 
+import Base: @kwdef
 import CSV
 import DataFrames
 import DataFrames: DataFrame
