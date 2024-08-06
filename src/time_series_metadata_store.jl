@@ -1040,6 +1040,7 @@ function _try_time_series_metadata_by_full_params(
 end
 
 function compare_values(
+    match_fn::Union{Function, Nothing},
     x::TimeSeriesMetadataStore,
     y::TimeSeriesMetadataStore;
     compare_uuids = false,
@@ -1053,7 +1054,8 @@ function compare_values(
     """
     table_x = Tables.rowtable(_execute(x, query))
     table_y = Tables.rowtable(_execute(y, query))
-    return table_x == table_y
+    match_fn = _fetch_match_fn(match_fn)
+    return match_fn(table_x, table_y)
 end
 
 ### Non-TimeSeriesMetadataStore functions ###

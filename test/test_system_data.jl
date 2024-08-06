@@ -1,3 +1,12 @@
+struct SpecialComparable
+    n::Int64
+end
+
+function IS.compare_values(a::SpecialComparable, b::SpecialComparable; kwargs...)
+    @info "reached custom compare_values"
+    return false
+end
+
 @testset "Test components" begin
     data = IS.SystemData()
 
@@ -159,6 +168,39 @@ end
         IS.get_component(IS.TestComponent, data1, "a"),
         IS.get_component(IS.TestComponent, data2, "a"),
     )
+
+    # Test match_fn
+    @test IS.compare_values(NaN, NaN)  # True by default because the default match_fn is now `IS.isequivalent`
+    @test IS.compare_values(0.0, -0.0)
+    @test IS.compare_values(0, -0.0)
+    @test !IS.compare_values(isequal, 0.0, -0.0)
+    @test !IS.compare_values(==, NaN, NaN)
+    @test !IS.compare_values(1.0, 1.0 + 1e-8)
+    @test IS.compare_values(isapprox, 1.0, 1.0 + 1e-8)
+
+    my_match_fn(a::String, b::String) = (a == b)
+    my_match_fn(a::Float64, b::Float64) = isapprox(a, b; atol = 0.1)
+    IS.compare_values(my_match_fn, ["a", 1.0], ["a", 1.05])
+
+    my_match_fn_2(a::Int64, b::Int64) = isapprox(a, b; rtol = 0.1)
+    my_match_fn_2(a, b) = isequal(a, b)
+    data3 = IS.SystemData()
+    IS.add_component!(data3, IS.TestComponent("a", 100))
+    data4 = IS.SystemData()
+    IS.add_component!(data4, IS.TestComponent("a", 105))
+    @test IS.compare_values(my_match_fn_2, data3, data4)
+
+    special1 = SpecialComparable(1)
+    @test !(@test_logs (:info, "reached custom compare_values") IS.compare_values(
+        special1,
+        special1,
+    ))
+    @test !(@test_logs (:info, "reached custom compare_values") IS.compare_values(
+        nothing,
+        special1,
+        special1,
+    ))
+    @test IS.compare_values(==, special1, special1)
 end
 
 @testset "Test compression settings" begin

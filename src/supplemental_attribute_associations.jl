@@ -402,6 +402,7 @@ function _remove_associations!(
 end
 
 function compare_values(
+    match_fn::Union{Function, Nothing},
     x::SupplementalAttributeAssociations,
     y::SupplementalAttributeAssociations;
     compare_uuids = false,
@@ -415,7 +416,8 @@ function compare_values(
     """
     table_x = Tables.rowtable(_execute(x, query))
     table_y = Tables.rowtable(_execute(y, query))
-    return table_x == table_y
+    match_fn = _fetch_match_fn(match_fn)
+    return match_fn(table_x, table_y)
 end
 
 _execute(s::SupplementalAttributeAssociations, q, p = nothing) =
