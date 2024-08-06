@@ -802,10 +802,10 @@ function _get_time_series_path(root::HDF5.Group, uuid::UUIDs.UUID)
 end
 
 function compare_values(
+    match_fn::Union{Function, Nothing},
     x::Hdf5TimeSeriesStorage,
     y::Hdf5TimeSeriesStorage;
     compare_uuids = false,
-    match_fn = isequivalent,
     kwargs...,
 )
     item_x = sort!(collect(iterate_time_series(x)); by = z -> z[1])
@@ -815,6 +815,7 @@ function compare_values(
         return false
     end
 
+    match_fn = _fetch_match_fn(match_fn)
     if !compare_uuids
         # TODO: This could be improved. But we still get plenty of verification when
         # UUIDs are not changed.

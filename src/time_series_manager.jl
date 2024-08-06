@@ -242,11 +242,11 @@ function _throw_if_read_only(mgr::TimeSeriesManager)
 end
 
 function compare_values(
+    match_fn::Union{Function, Nothing},
     x::TimeSeriesManager,
     y::TimeSeriesManager;
     compare_uuids = false,
     exclude = Set{Symbol}(),
-    match_fn = isequivalent,
 )
     match = true
     for name in fieldnames(TimeSeriesManager)
@@ -264,11 +264,11 @@ function compare_values(
         end
 
         if !compare_values(
+            match_fn,
             val_x,
             val_y;
             compare_uuids = compare_uuids,
             exclude = exclude,
-            match_fn = match_fn,
         )
             @error "TimeSeriesManager field = $name does not match" getproperty(x, name) getproperty(
                 y,

@@ -3,6 +3,7 @@ import SHA
 import JSON3
 
 const HASH_FILENAME = "check.sha256"
+const COMPARE_VALUES_SENTINEL = :(!NOUPGRADE)  # A Symbol that can't be a field name
 
 g_cached_subtypes = Dict{DataType, Vector{DataType}}()
 
@@ -115,60 +116,77 @@ function validate_exported_names(mod::Module)
     return is_valid
 end
 
+# Make match_fn optional
+compare_values(x, y; kwargs...) = compare_values(nothing, x, y; kwargs...)
+
+# Get the default match_fn if necessary. Only call when you know you're done recursing
+_fetch_match_fn(match_fn::Function) = match_fn
+_fetch_match_fn(::Nothing) = isequivalent
+
+# Whether to stop recursing and apply the match_fn
+_is_compare_directly(::DataType, ::DataType) = true
+_is_compare_directly(::T, ::U) where {T, U} = true
+_is_compare_directly(::T, ::T) where {T} = isempty(fieldnames(T))
+
 """
 Recursively compares struct values. Prints all mismatched values to stdout.
 
 # Arguments
-
+  - `match_fn`: optional, a function used to determine whether two values match in the base
+    case of the recursion. If `nothing` or not specified, the default implementation uses
+    `IS.isequivalent`.
   - `x::T`: First value
-  - `y::T`: Second value
+  - `y::U`: Second value
   - `compare_uuids::Bool = false`: Compare any UUID in the object or composed objects.
   - `exclude::Set{Symbol} = Set{Symbol}(): Fields to exclude from comparison. Passed on
      recursively and so applied per type.
 """
-function compare_values(
-    x::T,
-    y::T;
-    compare_uuids = false,
-    exclude = Set{Symbol}(),
-    match_fn = isequivalent,
-) where {T}
+function compare_values(match_fn::Union{Function, Nothing}, x::T, y::U;
+    compare_uuids = false, exclude = Set{Symbol}()) where {T, U}
+    # Special case: if match_fn is nothing, try calling the two-argument version to maintain
+    # backwards compatibility with packages that only implement that. Keep track of this to
+    # avoid infinite recursion. TODO remove in next major version
+    if isnothing(match_fn) && !(COMPARE_VALUES_SENTINEL in exclude)
+        return compare_values(x, y; compare_uuids = compare_uuids,
+            exclude = union(exclude, [COMPARE_VALUES_SENTINEL]))
+    end
+    exclude = setdiff(exclude, [COMPARE_VALUES_SENTINEL])
+
+    _is_compare_directly(x, y) && (return _fetch_match_fn(match_fn)(x, y))
+
     match = true
+    @assert T === U  # other case caught by _is_compare_directly
     fields = fieldnames(T)
-    if isempty(fields)
-        match = match_fn(x, y)
-    else
-        for field_name in fields
-            field_name in exclude && continue
-            val1 = getproperty(x, field_name)
-            val2 = getproperty(y, field_name)
-            if !isempty(fieldnames(typeof(val1)))
-                if !compare_values(
-                    val1,
-                    val2;
-                    compare_uuids = compare_uuids,
-                    exclude = exclude,
-                    match_fn = match_fn,
-                )
-                    @error "values do not match" T field_name val1 val2
-                    match = false
-                end
-            elseif val1 isa AbstractArray
-                if !compare_values(
-                    val1,
-                    val2;
-                    compare_uuids = compare_uuids,
-                    exclude = exclude,
-                    match_fn = match_fn,
-                )
-                    @error "values do not match" T field_name val1 val2
-                    match = false
-                end
-            else
-                if !match_fn(val1, val2)
-                    @error "values do not match" T field_name val1 val2
-                    match = false
-                end
+    for field_name in fields
+        field_name in exclude && continue
+        val1 = getproperty(x, field_name)
+        val2 = getproperty(y, field_name)
+        if !isempty(fieldnames(typeof(val1)))
+            if !compare_values(
+                match_fn,
+                val1,
+                val2;
+                compare_uuids = compare_uuids,
+                exclude = exclude,
+            )
+                @error "values do not match" T field_name val1 val2
+                match = false
+            end
+        elseif val1 isa AbstractArray
+            if !compare_values(
+                match_fn,
+                val1,
+                val2;
+                compare_uuids = compare_uuids,
+                exclude = exclude,
+            )
+                @error "values do not match" T field_name val1 val2
+                match = false
+            end
+        else
+            if !_fetch_match_fn(match_fn)(val1, val2)
+                @error "values do not match" T field_name val1 val2
+                match = false
             end
         end
     end
@@ -177,11 +195,11 @@ function compare_values(
 end
 
 function compare_values(
+    match_fn::Union{Function, Nothing},
     x::Vector{T},
     y::Vector{T};
     compare_uuids = false,
     exclude = Set{Symbol}(),
-    match_fn = isequivalent,
 ) where {T}
     if length(x) != length(y)
         @error "lengths do not match" T length(x) length(y)
@@ -191,11 +209,11 @@ function compare_values(
     match = true
     for i in range(1; length = length(x))
         if !compare_values(
+            match_fn,
             x[i],
             y[i];
             compare_uuids = compare_uuids,
             exclude = exclude,
-            match_fn = match_fn,
         )
             @error "values do not match" typeof(x[i]) i x[i] y[i]
             match = false
@@ -206,11 +224,11 @@ function compare_values(
 end
 
 function compare_values(
+    match_fn::Union{Function, Nothing},
     x::Dict,
     y::Dict;
     compare_uuids = false,
     exclude = Set{Symbol}(),
-    match_fn = isequivalent,
 )
     keys_x = Set(keys(x))
     keys_y = Set(keys(y))
@@ -222,11 +240,11 @@ function compare_values(
     match = true
     for key in keys_x
         if !compare_values(
+            match_fn,
             x[key],
             y[key];
             compare_uuids = compare_uuids,
             exclude = exclude,
-            match_fn = match_fn,
         )
             @error "values do not match" typeof(x[key]) key x[key] y[key]
             match = false
@@ -235,13 +253,6 @@ function compare_values(
 
     return match
 end
-
-compare_values(x::Float64, y::Int; match_fn = isequivalent, kwargs...) =
-    match_fn(x, Float64(y))
-compare_values(::Type{T}, ::Type{U}; match_fn = isequivalent, kwargs...) where {T, U} =
-    match_fn(T, U)
-compare_values(a::T, b::U; match_fn = isequivalent, kwargs...) where {T, U} =
-    match_fn(a, b)
 
 # Copied from https://discourse.julialang.org/t/encapsulating-enum-access-via-dot-syntax/11785/10
 # Some InfrastructureSystems-specific modifications

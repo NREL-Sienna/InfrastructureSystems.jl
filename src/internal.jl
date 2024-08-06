@@ -122,11 +122,11 @@ function serialize(internal::InfrastructureSystemsInternal)
 end
 
 function compare_values(
+    match_fn::Union{Function, Nothing},
     x::InfrastructureSystemsInternal,
     y::InfrastructureSystemsInternal;
     compare_uuids = false,
     exclude = Set{Symbol}(),
-    match_fn = isequivalent,
 )
     match = true
     for name in fieldnames(InfrastructureSystemsInternal)
@@ -148,21 +148,21 @@ function compare_values(
                 continue
             end
             if !compare_values(
+                match_fn,
                 val1,
                 val2;
                 compare_uuids = compare_uuids,
                 exclude = exclude,
-                match_fn = match_fn,
             )
                 @error "ext does not match" val1 val2
                 match = false
             end
         elseif !compare_values(
+            match_fn,
             getproperty(x, name),
             getproperty(y, name);
             compare_uuids = compare_uuids,
             exclude = exclude,
-            match_fn = match_fn,
         )
             @error "InfrastructureSystemsInternal field=$name does not match"
             match = false

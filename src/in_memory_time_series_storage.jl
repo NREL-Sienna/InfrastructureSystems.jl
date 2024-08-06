@@ -156,10 +156,10 @@ function convert_to_hdf5(storage::InMemoryTimeSeriesStorage, filename::AbstractS
 end
 
 function compare_values(
+    match_fn::Union{Function, Nothing},
     x::InMemoryTimeSeriesStorage,
     y::InMemoryTimeSeriesStorage;
     compare_uuids = false,
-    match_fn = isequivalent,
     kwargs...,
 )
     keys_x = sort!(collect(keys(x.data)))
@@ -169,6 +169,7 @@ function compare_values(
         return false
     end
 
+    match_fn = _fetch_match_fn(match_fn)
     for key in keys_x
         ts_x = x.data[key]
         ts_y = y.data[key]
