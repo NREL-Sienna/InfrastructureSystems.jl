@@ -122,6 +122,7 @@ function serialize(internal::InfrastructureSystemsInternal)
 end
 
 function compare_values(
+    match_fn::Union{Function, Nothing},
     x::InfrastructureSystemsInternal,
     y::InfrastructureSystemsInternal;
     compare_uuids = false,
@@ -146,11 +147,18 @@ function compare_values(
                collect(keys(val2)) == [SERIALIZATION_METADATA_KEY]
                 continue
             end
-            if !compare_values(val1, val2; compare_uuids = compare_uuids, exclude = exclude)
+            if !compare_values(
+                match_fn,
+                val1,
+                val2;
+                compare_uuids = compare_uuids,
+                exclude = exclude,
+            )
                 @error "ext does not match" val1 val2
                 match = false
             end
         elseif !compare_values(
+            match_fn,
             getproperty(x, name),
             getproperty(y, name);
             compare_uuids = compare_uuids,

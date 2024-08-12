@@ -156,6 +156,7 @@ function convert_to_hdf5(storage::InMemoryTimeSeriesStorage, filename::AbstractS
 end
 
 function compare_values(
+    match_fn::Union{Function, Nothing},
     x::InMemoryTimeSeriesStorage,
     y::InMemoryTimeSeriesStorage;
     compare_uuids = false,
@@ -168,6 +169,7 @@ function compare_values(
         return false
     end
 
+    match_fn = _fetch_match_fn(match_fn)
     for key in keys_x
         ts_x = x.data[key]
         ts_y = y.data[key]
@@ -175,7 +177,7 @@ function compare_values(
             @error "timestamps don't match" ts_x ts_y
             return false
         end
-        if TimeSeries.values(get_data(ts_x)) != TimeSeries.values(get_data(ts_y))
+        if !match_fn(TimeSeries.values(get_data(ts_x)), TimeSeries.values(get_data(ts_y)))
             @error "values don't match" ts_x ts_y
             return false
         end

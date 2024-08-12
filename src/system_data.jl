@@ -338,6 +338,7 @@ function _validate(data::SystemData, attribute::SupplementalAttribute)
 end
 
 function compare_values(
+    match_fn::Union{Function, Nothing},
     x::SystemData,
     y::SystemData;
     compare_uuids = false,
@@ -353,7 +354,13 @@ function compare_values(
         end
         val_x = getproperty(x, name)
         val_y = getproperty(y, name)
-        if !compare_values(val_x, val_y; compare_uuids = compare_uuids, exclude = exclude)
+        if !compare_values(
+            match_fn,
+            val_x,
+            val_y;
+            compare_uuids = compare_uuids,
+            exclude = exclude,
+        )
             @error "SystemData field = $name does not match" getproperty(x, name) getproperty(
                 y,
                 name,
