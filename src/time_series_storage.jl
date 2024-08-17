@@ -4,13 +4,13 @@ Abstract type for time series storage implementations.
 
 All subtypes must implement:
 
-  - clear_time_series!
-  - deserialize_time_series
-  - get_compression_settings
-  - get_num_time_series
-  - remove_time_series!
-  - serialize_time_series!
-  - Base.isempty
+  - `clear_time_series!`
+  - `deserialize_time_series`
+  - `get_compression_settings`
+  - `get_num_time_series`
+  - `remove_time_series!`
+  - `serialize_time_series!`
+  - `Base.isempty`
 """
 abstract type TimeSeriesStorage end
 
