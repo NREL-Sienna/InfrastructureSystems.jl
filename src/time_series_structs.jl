@@ -1,9 +1,17 @@
 const TimeSeriesOwners = Union{InfrastructureSystemsComponent, SupplementalAttribute}
 
-# Required methods:
-# - get_name
-# - get_time_series_type
-# The default methods rely on the field names name and time_series_type.
+"""
+Supertype for keys that can be used to access a desired time series dataset
+
+Concrete subtypes:
+- [`StaticTimeSeriesKey`](@ref)
+- [`ForecastKey`](@ref)
+
+Required methods:
+- `get_name`
+- `get_time_series_type`
+The default methods rely on the field names `name` and `time_series_type`.
+"""
 abstract type TimeSeriesKey <: InfrastructureSystemsType end
 
 get_name(key::TimeSeriesKey) = key.name
@@ -24,6 +32,11 @@ function deserialize_struct(T::Type{<:TimeSeriesKey}, data::Dict)
     return T(; vals...)
 end
 
+"""
+A unique key to identify and retrieve a [`StaticTimeSeries`](@ref)
+
+See: [`get_time_series_keys`](@ref) and [`get_time_series(::TimeSeriesOwners, ::TimeSeriesKey)`](@ref).
+"""
 @kwdef struct StaticTimeSeriesKey <: TimeSeriesKey
     time_series_type::Type{<:StaticTimeSeries}
     name::String
@@ -44,6 +57,11 @@ function make_time_series_key(metadata::StaticTimeSeriesMetadata)
     )
 end
 
+"""
+A unique key to identify and retrieve a [`Forecast`](@ref)
+
+See: [`get_time_series_keys`](@ref) and [`get_time_series(::TimeSeriesOwners, ::TimeSeriesKey)`](@ref).
+"""
 @kwdef struct ForecastKey <: TimeSeriesKey
     time_series_type::Type{<:Forecast}
     name::String
