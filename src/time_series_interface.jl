@@ -43,7 +43,14 @@ Does not apply a scaling factor multiplier.
   - `features...`: User-defined tags that differentiate multiple time series arrays for the
     same component attribute, such as different arrays for different scenarios or years
 
-See also: [`get_time_series_array`](@ref), [`get_time_series_values`](@ref).
+See also: [`get_time_series_array`](@ref), [`get_time_series_values`](@ref),
+[`get_time_series` by key](@ref get_time_series(
+    owner::TimeSeriesOwners,
+    key::TimeSeriesKey,
+    start_time::Union{Nothing, Dates.DateTime} = nothing,
+    len::Union{Nothing, Int} = nothing,
+    count::Union{Nothing, Int} = nothing,
+))
 """
 function get_time_series(
     ::Type{T},
@@ -86,6 +93,16 @@ Does not apply a scaling factor multiplier.
     of forecast windows starting at `start_time` to return. Defaults to all available.
   - `features...`: User-defined tags that differentiate multiple time series arrays for the
     same component attribute, such as different arrays for different scenarios or years
+
+See also: [`get_time_series` by name](@ref get_time_series(
+    ::Type{T},
+    owner::TimeSeriesOwners,
+    name::AbstractString;
+    start_time::Union{Nothing, Dates.DateTime} = nothing,
+    len::Union{Nothing, Int} = nothing,
+    count::Union{Nothing, Int} = nothing,
+    features...,
+) where {T <: TimeSeriesData})
 """
 function get_time_series(
     owner::TimeSeriesOwners,
@@ -120,6 +137,13 @@ Call `collect` on the result to get an array.
   - `filter_func = nothing`: Only return time_series for which this returns true.
   - `type = nothing`: Only return time_series with this type.
   - `name = nothing`: Only return time_series matching this value.
+
+See also: [`get_time_series_multiple` from a `System`](@ref get_time_series_multiple(
+    data::SystemData,
+    filter_func = nothing;
+    type = nothing,
+    name = nothing,
+))
 """
 function get_time_series_multiple(
     owner::TimeSeriesOwners,
@@ -210,7 +234,20 @@ features...,) where {T <: TimeSeriesData}),
     len::Union{Nothing, Int} = nothing,
     features...,
 ) where {T <: TimeSeriesData}),
- [`get_time_series`](@ref)
+[`get_time_series_array` from a `StaticTimeSeriesCache`](@ref get_time_series_array(
+    owner::TimeSeriesOwners,
+    time_series::StaticTimeSeries,
+    start_time::Union{Nothing, Dates.DateTime} = nothing;
+    len::Union{Nothing, Int} = nothing,
+    ignore_scaling_factors = false,
+)),
+[`get_time_series_array` from a `ForecastCache`](@ref get_time_series_array(
+    owner::TimeSeriesOwners,
+    forecast::Forecast,
+    start_time::Dates.DateTime;
+    len = nothing,
+    ignore_scaling_factors = false,
+))
 """
 function get_time_series_array(
     ::Type{T},
@@ -271,7 +308,23 @@ See also [`get_time_series_values`](@ref get_time_series_values(
     forecast::Forecast,
     start_time::Union{Nothing, Dates.DateTime} = nothing;
     len::Union{Nothing, Int} = nothing,
-)), [`ForecastCache`](@ref).
+)), [`ForecastCache`](@ref),
+[`get_time_series_array` by name from storage](@ref get_time_series_array(
+    ::Type{T},
+    owner::TimeSeriesOwners,
+    name::AbstractString;
+    start_time::Union{Nothing, Dates.DateTime} = nothing,
+    len::Union{Nothing, Int} = nothing,
+    ignore_scaling_factors = false,
+    features...,
+) where {T <: TimeSeriesData}),
+[`get_time_series_array` from a `StaticTimeSeriesCache`](@ref get_time_series_array(
+    owner::TimeSeriesOwners,
+    time_series::StaticTimeSeries,
+    start_time::Union{Nothing, Dates.DateTime} = nothing;
+    len::Union{Nothing, Int} = nothing,
+    ignore_scaling_factors = false,
+))
 """
 function get_time_series_array(
     owner::TimeSeriesOwners,
@@ -301,7 +354,23 @@ factor multiplier by default.
 
 See also: [`get_time_series_values`](@ref get_time_series_values(owner::TimeSeriesOwners, time_series::StaticTimeSeries, start_time::Union{Nothing, Dates.DateTime} = nothing; len::Union{Nothing, Int} = nothing, ignore_scaling_factors = false)),
 [`get_time_series_timestamps`](@ref get_time_series_timestamps(owner::TimeSeriesOwners, time_series::StaticTimeSeries, start_time::Union{Nothing, Dates.DateTime} = nothing; len::Union{Nothing, Int} = nothing,)),
-[`StaticTimeSeriesCache`](@ref).
+[`StaticTimeSeriesCache`](@ref),
+[`get_time_series_array` by name from storage](@ref get_time_series_array(
+    ::Type{T},
+    owner::TimeSeriesOwners,
+    name::AbstractString;
+    start_time::Union{Nothing, Dates.DateTime} = nothing,
+    len::Union{Nothing, Int} = nothing,
+    ignore_scaling_factors = false,
+    features...,
+) where {T <: TimeSeriesData}),
+[`get_time_series_array` from a `ForecastCache`](@ref get_time_series_array(
+    owner::TimeSeriesOwners,
+    forecast::Forecast,
+    start_time::Dates.DateTime;
+    len = nothing,
+    ignore_scaling_factors = false,
+))
 """
 function get_time_series_array(
     owner::TimeSeriesOwners,
@@ -352,7 +421,19 @@ See also: [`get_time_series_array`](@ref get_time_series_array(
     start_time::Union{Nothing, Dates.DateTime} = nothing,
     len::Union{Nothing, Int} = nothing,
     ignore_scaling_factors = false,
-features...,) where {T <: TimeSeriesData})
+features...,) where {T <: TimeSeriesData}),
+[`get_time_series_timestamps` from a `StaticTimeSeriesCache`](@ref get_time_series_timestamps(
+    owner::TimeSeriesOwners,
+    time_series::StaticTimeSeries,
+    start_time::Union{Nothing, Dates.DateTime} = nothing;
+    len::Union{Nothing, Int} = nothing,
+)),
+[`get_time_series_timestamps` from a `ForecastCache`](@ref get_time_series_timestamps(
+    owner::TimeSeriesOwners,
+    forecast::Forecast,
+    start_time::Union{Nothing, Dates.DateTime} = nothing;
+    len::Union{Nothing, Int} = nothing,
+))
 """
 function get_time_series_timestamps(
     ::Type{T},
@@ -397,7 +478,21 @@ See also: [`get_time_series_array`](@ref get_time_series_array(
     start_time::Dates.DateTime;
     len::Union{Nothing, Int} = nothing,
     ignore_scaling_factors = false,
-)), [`ForecastCache`](@ref).
+)), [`ForecastCache`](@ref),
+[`get_time_series_timestamps` by name from storage](@ref get_time_series_timestamps(
+    ::Type{T},
+    owner::TimeSeriesOwners,
+    name::AbstractString;
+    start_time::Union{Nothing, Dates.DateTime} = nothing,
+    len::Union{Nothing, Int} = nothing,
+    features...,
+) where {T <: TimeSeriesData}),
+[`get_time_series_timestamps` from a `StaticTimeSeriesCache`](@ref get_time_series_timestamps(
+    owner::TimeSeriesOwners,
+    time_series::StaticTimeSeries,
+    start_time::Union{Nothing, Dates.DateTime} = nothing;
+    len::Union{Nothing, Int} = nothing,
+))
 """
 function get_time_series_timestamps(
     owner::TimeSeriesOwners,
@@ -428,7 +523,21 @@ See also: [`get_time_series_array`](@ref get_time_series_array(
     len::Union{Nothing, Int} = nothing,
     ignore_scaling_factors = false,
 )), [`get_time_series_values`](@ref get_time_series_values(owner::TimeSeriesOwners, time_series::StaticTimeSeries, start_time::Union{Nothing, Dates.DateTime} = nothing; len::Union{Nothing, Int} = nothing, ignore_scaling_factors = false)),
-[`StaticTimeSeriesCache`](@ref).
+[`StaticTimeSeriesCache`](@ref),
+[`get_time_series_timestamps` by name from storage](@ref get_time_series_timestamps(
+    ::Type{T},
+    owner::TimeSeriesOwners,
+    name::AbstractString;
+    start_time::Union{Nothing, Dates.DateTime} = nothing,
+    len::Union{Nothing, Int} = nothing,
+    features...,
+) where {T <: TimeSeriesData}),
+[`get_time_series_timestamps` from a `ForecastCache`](@ref get_time_series_timestamps(
+    owner::TimeSeriesOwners,
+    forecast::Forecast,
+    start_time::Union{Nothing, Dates.DateTime} = nothing;
+    len::Union{Nothing, Int} = nothing,
+))
 """
 function get_time_series_timestamps(
     owner::TimeSeriesOwners,
@@ -478,7 +587,21 @@ See also: [`get_time_series_array`](@ref get_time_series_array(
     len::Union{Nothing, Int} = nothing,
     features...,
 ) where {T <: TimeSeriesData}),
-[`get_time_series`](@ref)
+[`get_time_series`](@ref),
+[`get_time_series_values` from a `StaticTimeSeriesCache`](@ref get_time_series_values(
+    owner::TimeSeriesOwners,
+    time_series::StaticTimeSeries,
+    start_time::Union{Nothing, Dates.DateTime} = nothing;
+    len::Union{Nothing, Int} = nothing,
+    ignore_scaling_factors = false,
+)),
+[`get_time_series_values` from a `ForecastCache`](@ref get_time_series_values(
+    owner::TimeSeriesOwners,
+    forecast::Forecast,
+    start_time::Dates.DateTime;
+    len::Union{Nothing, Int} = nothing,
+    ignore_scaling_factors = false,
+))
 """
 function get_time_series_values(
     ::Type{T},
@@ -527,7 +650,23 @@ See also: [`get_time_series_array`](@ref get_time_series_array(
     forecast::Forecast,
     start_time::Union{Nothing, Dates.DateTime} = nothing;
     len::Union{Nothing, Int} = nothing,
-)), [`ForecastCache`](@ref).
+)), [`ForecastCache`](@ref),
+[`get_time_series_values` by name from storage](@ref get_time_series_values(
+    ::Type{T},
+    owner::TimeSeriesOwners,
+    name::AbstractString;
+    start_time::Union{Nothing, Dates.DateTime} = nothing,
+    len::Union{Nothing, Int} = nothing,
+    ignore_scaling_factors = false,
+    features...,
+) where {T <: TimeSeriesData}),
+[`get_time_series_values` from a `StaticTimeSeriesCache`](@ref get_time_series_values(
+    owner::TimeSeriesOwners,
+    time_series::StaticTimeSeries,
+    start_time::Union{Nothing, Dates.DateTime} = nothing;
+    len::Union{Nothing, Int} = nothing,
+    ignore_scaling_factors = false,
+))
 """
 function get_time_series_values(
     owner::TimeSeriesOwners,
@@ -567,7 +706,23 @@ See also: [`get_time_series_array`](@ref get_time_series_array(
     len::Union{Nothing, Int} = nothing,
     ignore_scaling_factors = false,
 )), [`get_time_series_timestamps`](@ref get_time_series_timestamps(owner::TimeSeriesOwners, time_series::StaticTimeSeries, start_time::Union{Nothing, Dates.DateTime} = nothing; len::Union{Nothing, Int} = nothing,)),
-[`StaticTimeSeriesCache`](@ref).
+[`StaticTimeSeriesCache`](@ref),
+[`get_time_series_values` by name from storage](@ref get_time_series_values(
+    ::Type{T},
+    owner::TimeSeriesOwners,
+    name::AbstractString;
+    start_time::Union{Nothing, Dates.DateTime} = nothing,
+    len::Union{Nothing, Int} = nothing,
+    ignore_scaling_factors = false,
+    features...,
+) where {T <: TimeSeriesData}),
+[`get_time_series_values` from a `ForecastCache`](@ref get_time_series_values(
+    owner::TimeSeriesOwners,
+    forecast::Forecast,
+    start_time::Dates.DateTime;
+    len::Union{Nothing, Int} = nothing,
+    ignore_scaling_factors = false,
+))
 """
 function get_time_series_values(
     owner::TimeSeriesOwners,
