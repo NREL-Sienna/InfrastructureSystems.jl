@@ -467,8 +467,8 @@ Call `collect` on the result to get an array.
   - `name = nothing`: Only return time_series matching this value.
 """
 function get_time_series_multiple(
-    data::SystemData,
-    filter_func = nothing;
+    data::SystemData;
+    filter_func = nothing,
     type = nothing,
     name = nothing,
 )

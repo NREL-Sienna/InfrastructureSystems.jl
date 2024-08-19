@@ -89,7 +89,7 @@ Does not apply a scaling factor multiplier.
 """
 function get_time_series(
     owner::TimeSeriesOwners,
-    key::TimeSeriesKey,
+    key::TimeSeriesKey;
     start_time::Union{Nothing, Dates.DateTime} = nothing,
     len::Union{Nothing, Int} = nothing,
     count::Union{Nothing, Int} = nothing,
@@ -122,8 +122,8 @@ Call `collect` on the result to get an array.
   - `name = nothing`: Only return time_series matching this value.
 """
 function get_time_series_multiple(
-    owner::TimeSeriesOwners,
-    filter_func = nothing;
+    owner::TimeSeriesOwners;
+    filter_func = nothing,
     type = nothing,
     name = nothing,
 )
@@ -305,8 +305,8 @@ See also: [`get_time_series_values`](@ref get_time_series_values(owner::TimeSeri
 """
 function get_time_series_array(
     owner::TimeSeriesOwners,
-    time_series::StaticTimeSeries,
-    start_time::Union{Nothing, Dates.DateTime} = nothing;
+    time_series::StaticTimeSeries;
+    start_time::Union{Nothing, Dates.DateTime} = nothing,
     len::Union{Nothing, Int} = nothing,
     ignore_scaling_factors = false,
 )
@@ -401,8 +401,8 @@ See also: [`get_time_series_array`](@ref get_time_series_array(
 """
 function get_time_series_timestamps(
     owner::TimeSeriesOwners,
-    forecast::Forecast,
-    start_time::Union{Nothing, Dates.DateTime} = nothing;
+    forecast::Forecast;
+    start_time::Union{Nothing, Dates.DateTime} = nothing,
     len::Union{Nothing, Int} = nothing,
 )
     return TimeSeries.timestamp(
@@ -432,8 +432,8 @@ See also: [`get_time_series_array`](@ref get_time_series_array(
 """
 function get_time_series_timestamps(
     owner::TimeSeriesOwners,
-    time_series::StaticTimeSeries,
-    start_time::Union{Nothing, Dates.DateTime} = nothing;
+    time_series::StaticTimeSeries;
+    start_time::Union{Nothing, Dates.DateTime} = nothing,
     len::Union{Nothing, Int} = nothing,
 )
     return TimeSeries.timestamp(
@@ -571,8 +571,8 @@ See also: [`get_time_series_array`](@ref get_time_series_array(
 """
 function get_time_series_values(
     owner::TimeSeriesOwners,
-    time_series::StaticTimeSeries,
-    start_time::Union{Nothing, Dates.DateTime} = nothing;
+    time_series::StaticTimeSeries;
+    start_time::Union{Nothing, Dates.DateTime} = nothing,
     len::Union{Nothing, Int} = nothing,
     ignore_scaling_factors = false,
 )
