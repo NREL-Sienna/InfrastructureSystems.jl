@@ -590,7 +590,7 @@ function set_group_level!(logger::MultiLogger, group::Symbol, level::Base.LogLev
 end
 
 """
-Set the minimum log levels for multiple groups. Refer to [`set_group_level`](@ref) for more
+Set the minimum log levels for multiple groups. Refer to [`set_group_level!`](@ref) for more
 information.
 """
 function set_group_levels!(logger::MultiLogger, group_levels::Dict{Symbol, Base.LogLevel})
