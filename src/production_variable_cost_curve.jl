@@ -83,7 +83,7 @@ The default units for the x-axis are MW and can be specified with `power_units`.
     value_curve::T
     "(default: natural units (MW)) The units for the x-axis of the curve"
     power_units::UnitSystem = UnitSystem.NATURAL_UNITS
-    "Either a fixed value for fuel cost or the key to a fuel cost time series"
+    "Either a fixed value for fuel cost or the [`TimeSeriesKey`](@ref) to a fuel cost time series"
     fuel_cost::Union{Float64, TimeSeriesKey}
     "(default of 0) Additional proportional Variable Operation and Maintenance Cost in \$/(power_unit h)
     represented as a [`LinearCurve`](@ref)"
