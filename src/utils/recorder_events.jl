@@ -1,3 +1,6 @@
+"""
+Supertype for recorder events
+"""
 abstract type AbstractRecorderEvent end
 
 get_common(event::AbstractRecorderEvent) = event.common

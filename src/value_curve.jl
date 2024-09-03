@@ -1,7 +1,12 @@
 """
 Supertype that represents a unitless cost curve
 
-Concrete options are [listed here.](@ref value_curve_library)
+Concrete subtypes are:
+- [`LinearCurve`](@ref)
+- [`QuadraticCurve`](@ref)
+- [`PiecewisePointCurve`](@ref)
+- [`PiecewiseIncrementalCurve`](@ref)
+- [`PiecewiseAverageCurve`](@ref)
 """
 abstract type ValueCurve{T <: FunctionData} end
 
