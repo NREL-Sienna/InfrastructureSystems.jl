@@ -168,7 +168,7 @@ Return the events of type T in filename.
 """
 function list_recorder_events(
     ::Type{T},
-    filename::AbstractString,
+    filename::AbstractString;
     filter_func::Union{Nothing, Function} = nothing,
 ) where {T <: AbstractRecorderEvent}
     events = Vector{T}()
@@ -214,8 +214,8 @@ show_recorder_events(TestEvent, test_recorder.log, x -> x.val2 > 2)
 """
 function show_recorder_events(
     ::Type{T},
-    filename::AbstractString,
-    filter_func::Union{Nothing, Function} = nothing;
+    filename::AbstractString;
+    filter_func::Union{Nothing, Function} = nothing,
     kwargs...,
 ) where {T <: AbstractRecorderEvent}
     return show_recorder_events(stdout, T, filename, filter_func; kwargs...)
@@ -224,8 +224,8 @@ end
 function show_recorder_events(
     io::IO,
     ::Type{T},
-    filename::AbstractString,
-    filter_func::Union{Nothing, Function} = nothing;
+    filename::AbstractString;
+    filter_func::Union{Nothing, Function} = nothing,
     kwargs...,
 ) where {T <: AbstractRecorderEvent}
     events = list_recorder_events(T, filename, filter_func)

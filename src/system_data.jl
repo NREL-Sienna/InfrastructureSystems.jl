@@ -474,8 +474,8 @@ See also: [`get_time_series_multiple` from an individual component or attribute]
 ))
 """
 function get_time_series_multiple(
-    data::SystemData,
-    filter_func = nothing;
+    data::SystemData;
+    filter_func = nothing,
     type = nothing,
     name = nothing,
 )

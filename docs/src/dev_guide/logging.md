@@ -110,7 +110,7 @@ Note that you can use `Logging.ConsoleLogger` if you don't have `TerminalLoggers
 ```julia
 console_logger = TerminalLogger(stderr, Logging.Error)
 
-open_file_logger("log.txt", Logging.Info) do file_logger
+open_file_logger("log.txt"; level = Logging.Info) do file_logger
     multi_logger = MultiLogger([console_logger, file_logger])
     global_logger(multi_logger)
 
@@ -125,7 +125,7 @@ try/finally block and reset the global logger upon exit.
 function run_tests()
     console_logger = TerminalLogger(stderr, Logging.Error)
 
-    open_file_logger("log.txt", Logging.Info) do file_logger
+    open_file_logger("log.txt"; level = Logging.Info) do file_logger
         multi_logger = MultiLogger([console_logger, file_logger])
         global_logger(multi_logger)
 
