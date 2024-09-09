@@ -113,7 +113,7 @@ function Base.show(io::IO, ::MIME"text/plain", system_units::SystemUnitsSettings
     end
 end
 
-function Base.show(io::IO, ::MIME"text/plain", ist::InfrastructureSystemsComponent)
+function Base.show(io::IO, ::MIME"text/plain", ist::TimeSeriesOwners)
     print(io, summary(ist), ":")
     for name in fieldnames(typeof(ist))
         obj = getfield(ist, name)
@@ -131,7 +131,7 @@ function Base.show(io::IO, ::MIME"text/plain", ist::InfrastructureSystemsCompone
     print(io, "\n   ", "has_time_series", ": ", string(has_time_series(ist)))
 end
 
-function Base.show(io::IO, ist::InfrastructureSystemsComponent)
+function Base.show(io::IO, ist::TimeSeriesOwners)
     print(io, strip_module_name(typeof(ist)), "(")
     is_first = true
     for (name, field_type) in zip(fieldnames(typeof(ist)), fieldtypes(typeof(ist)))
