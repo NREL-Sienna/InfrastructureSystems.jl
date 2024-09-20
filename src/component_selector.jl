@@ -2,12 +2,13 @@
 """The basic type for all ComponentSelectors.
 
 Concrete subtypes MUST implement:
- - `get_components`
+ - `get_components`: returns an iterable of components
  - `get_name`, or use the default by implementing `default_name` and having a `name` field
  - `Base.in`, with the invariant that for all systems `s` and all `ComponentSelector`s `e`,
    `c in e` iff `c in collect(get_components(e, s))` for all components `c` in `s`. Ideally,
    `in` should be evaluable without a reference to a system, but a three-parameter form
    in(c, e, s) may be used if absolutely necessary.
+ - `get_groups`: returns an iterable of `ComponentSelector`s
 
 Concrete subtypes MAY implement:
  - The factory method `select_components` (make sure your signature does not conflict with
@@ -20,17 +21,22 @@ abstract type ComponentSelector end
 ComponentSelectors that are not composed of other ComponentSelectors.
 
 The interface is the same as for `ComponentSelector` except `get_components` MUST return
-zero or one components
+zero or one components.
 """
 abstract type ComponentSelectorElement <: ComponentSelector end
 
 """
 ComponentSelectors that are composed of other ComponentSelectors.
 
-The interface is that of `ComponentSelector` plus concrete subtypes MUST implement
-`get_subselectors`
+The interface is that of `ComponentSelector`.
 """
 abstract type ComponentSelectorSet <: ComponentSelector end
+
+"""
+ComponentSelectorSets whose grouping is determined by a `groupby` field (all of the built-in
+ComponentSelectorSets except ListComponentSelector work this way)
+"""
+abstract type DynamicallyGroupedComponentSelectorSet <: ComponentSelectorSet end
 
 # COMMON COMPONENTSELECTOR INFRASTRUCTURE
 # TODO perhaps put this elsewhere; it is also referenced in metrics.jl
@@ -78,8 +84,17 @@ get_components(e::ComponentSelector, sys::SystemData; filterby = nothing) =
 """
 Get the sub-selectors that make up the ComponentSelectorSet.
 """
-get_subselectors(e::ComponentSelectorSet, sys::SystemData; filterby = nothing) =
-    get_subselectors(e, sys.components; filterby = filterby)
+get_groups(e::ComponentSelector, sys::SystemData; filterby = nothing) =
+    get_groups(e, sys.components; filterby = filterby)
+
+function get_groups(e::DynamicallyGroupedComponentSelectorSet, sys::Components; filterby = nothing)
+    (e.groupby == :all) && return [e]
+    (e.groupby == :each) && return Iterators.map(select_components, get_components(e, sys; filterby = filterby))
+    @assert e.groupby isa Function
+    components = collect(get_components(e, sys; filterby = filterby))
+    partition_result = e.groupby.(components)
+    return [select_components(select_components.(components[partition_result .== groupname])..., name = groupname) for groupname in unique(partition_result)]
+end
 
 # CONCRETE SUBTYPE IMPLEMENTATIONS
 # SingleComponentSelector
@@ -97,18 +112,20 @@ subtype and name. Optionally provide a name for the ComponentSelector.
 """
 select_components(
     component_subtype::Type{<:InfrastructureSystemsComponent},
-    component_name::AbstractString,
+    component_name::AbstractString;
     name::Union{String, Nothing} = nothing,
+    groupby::Union{Symbol, Function} = :all
 ) = SingleComponentSelector(component_subtype, component_name, name)
 """
 Construct a ComponentSelector from an InfrastructureSystemsComponent reference, pointing to Components in any
 collection with the given Component's subtype and name.
 """
 select_components(
-    component_ref::InfrastructureSystemsComponent,
+    component_ref::InfrastructureSystemsComponent;
     name::Union{String, Nothing} = nothing,
+    groupby::Union{Symbol, Function} = :all
 ) =
-    select_components(typeof(component_ref), get_name(component_ref), name)
+    select_components(typeof(component_ref), get_name(component_ref); name = name)
 
 # Naming
 default_name(e::SingleComponentSelector) =
@@ -130,6 +147,8 @@ function Base.in(
     return (c isa e.component_subtype) && (get_name(c) == e.component_name)
 end
 
+get_groups(e::SingleComponentSelector, sys::Components; filterby = nothing) = e
+
 # ListComponentSelector
 "ComponentSelectorSet represented by a list of other ComponentSelectors."
 struct ListComponentSelector <: ComponentSelectorSet
@@ -144,14 +163,14 @@ Make a ComponentSelector pointing to a list of subselectors. Optionally provide 
 the ComponentSelector.
 """
 # name needs to be a kwarg to disambiguate from content
-select_components(content::ComponentSelector...; name::Union{String, Nothing} = nothing) =
+select_components(content::ComponentSelector...; name::Union{String, Nothing} = nothing, groupby::Union{Symbol, Function} = :all) =
     ListComponentSelector(content, name)
 
 # Naming
 default_name(e::ListComponentSelector) = "[$(join(get_name.(e.content), ", "))]"
 
 # Contents
-function get_subselectors(e::ListComponentSelector, sys::Components; filterby = nothing)
+function get_groups(e::ListComponentSelector, sys::Components; filterby = nothing)
     return e.content
 end
 
@@ -172,9 +191,10 @@ end
 
 # SubtypeComponentSelector
 "ComponentSelectorSet represented by a subtype of Component."
-struct SubtypeComponentSelector <: ComponentSelectorSet
+struct SubtypeComponentSelector <: DynamicallyGroupedComponentSelectorSet
     component_subtype::Type{<:InfrastructureSystemsComponent}
     name::Union{String, Nothing}
+    groupby::Union{Symbol, Function}  # TODO add validation
 end
 
 # Construction
@@ -186,17 +206,14 @@ ComponentSelectorSet.
 select_components(
     component_subtype::Type{<:InfrastructureSystemsComponent};
     name::Union{String, Nothing} = nothing,
+    groupby::Union{Symbol, Function} = :all
 ) =
-    SubtypeComponentSelector(component_subtype, name)
+    SubtypeComponentSelector(component_subtype, name, groupby)
 
 # Naming
 default_name(e::SubtypeComponentSelector) = subtype_to_string(e.component_subtype)
 
 # Contents
-function get_subselectors(e::SubtypeComponentSelector, sys::Components; filterby = nothing)
-    return Iterators.map(select_components, get_components(e, sys; filterby = filterby))
-end
-
 function get_components(e::SubtypeComponentSelector, sys::Components; filterby = nothing)
     components = get_components(e.component_subtype, sys)
     isnothing(filterby) && (return components)
@@ -214,9 +231,9 @@ end
 
 # FilterComponentSelector
 "ComponentSelectorSet represented by a filter function and a subtype of Component."
-struct FilterComponentSelector <: ComponentSelectorSet
-    filter_fn::Function
+struct FilterComponentSelector <: DynamicallyGroupedComponentSelectorSet
     component_subtype::Type{<:InfrastructureSystemsComponent}
+    filter_fn::Function
     name::Union{String, Nothing}
 end
 
@@ -227,9 +244,8 @@ provide a name for the ComponentSelector. The filter function must accept instan
 component_subtype as a sole argument and return a Bool.
 """
 function select_components(
-    filter_fn::Function,
     component_subtype::Type{<:InfrastructureSystemsComponent},
-    name::Union{String, Nothing} = nothing,
+    filter_fn::Function; name::Union{String, Nothing} = nothing, groupby::Union{Symbol, Function} = :all
 )
     # Try to catch inappropriate filter functions
     hasmethod(filter_fn, Tuple{component_subtype}) || throw(
@@ -242,7 +258,7 @@ function select_components(
     # can in fact be called on the given subtype (e.g., filter_fn = (x -> x+1 == 0) should
     # fail). Core.compiler.return_type does not seem to be stable enough to rely on. The
     # IsDef.jl library looks interesting.
-    return FilterComponentSelector(filter_fn, component_subtype, name)
+    return FilterComponentSelector(component_subtype, filter_fn, name)
 end
 
 # Contents
