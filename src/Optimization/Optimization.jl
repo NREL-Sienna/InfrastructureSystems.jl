@@ -10,6 +10,9 @@ import Dates
 import CSV
 import DataFrames
 
+import ..InfrastructureSystems
+const IS = InfrastructureSystems
+
 import ..InfrastructureSystems:
     @scoped_enum,
     InfrastructureSystemsType,
