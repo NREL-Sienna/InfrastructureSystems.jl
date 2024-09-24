@@ -16,8 +16,10 @@ abstract type ComponentSelector end
 """
 ComponentSelectors that are not composed of other ComponentSelectors.
 
-The interface is the same as for `ComponentSelector` except `get_components` MUST return
-zero or one components.
+The interface is the same as for `ComponentSelector` except
+ - `get_components` MUST return zero or one components
+ - the additional method `get_component` is part of the interface, but the default
+   implementation just wraps `get_components` and should not need to be overridden.
 """
 abstract type ComponentSelectorElement <: ComponentSelector end
 
@@ -77,6 +79,14 @@ Get the components of the collection that make up the ComponentSelector.
 get_components(e::ComponentSelector, sys::SystemData; filterby = nothing) =
     get_components(e, sys.components; filterby = filterby)
 
+
+"""
+Get the component of the collection that makes up the `ComponentSelectorElement`, `nothing`
+if there is none.
+"""
+get_component(e::ComponentSelectorElement, sys::SystemData; filterby = nothing) =
+    get_component(e, sys.components; filterby = filterby)
+
 """
 Get the sub-selectors that make up the ComponentSelectorSet.
 """
@@ -130,6 +140,12 @@ function get_components(e::SingleComponentSelector, sys::Components; filterby = 
     com = get_component(e.component_subtype, sys, e.component_name)
     (!isnothing(filterby) && !filterby(com)) && (com = nothing)
     return (com === nothing) ? [] : [com]
+end
+
+function get_component(e::ComponentSelectorElement, sys::Components; filterby = nothing)
+    components = get_components(e, sys; filterby = filterby)
+    isempty(components) && return nothing
+    return only(components)
 end
 
 get_groups(e::SingleComponentSelector, sys::Components; filterby = nothing) = e
