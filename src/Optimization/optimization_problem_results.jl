@@ -178,7 +178,7 @@ end
 function _validate_keys(existing_keys, result_keys)
     diff = setdiff(result_keys, existing_keys)
     if !isempty(diff)
-        throw(IS.InvalidValue("These keys are not stored: $diff"))
+        throw(InvalidValue("These keys are not stored: $diff"))
     end
     return
 end
