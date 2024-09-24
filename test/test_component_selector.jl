@@ -45,10 +45,10 @@ end
               named_test_gen_ent
 
         # Construction
-        @test IS.select_components(IS.TestComponent, "Component1") == test_gen_ent
-        @test IS.select_components(IS.TestComponent, "Component1", "CompOne") ==
+        @test IS.make_selector(IS.TestComponent, "Component1") == test_gen_ent
+        @test IS.make_selector(IS.TestComponent, "Component1", "CompOne") ==
               named_test_gen_ent
-        @test IS.select_components(
+        @test IS.make_selector(
             IS.get_component(IS.TestComponent, test_sys, "Component1"),
         ) == test_gen_ent
 
@@ -59,7 +59,7 @@ end
 
         # Contents
         @test collect(
-            IS.get_components(IS.select_components(IS.SimpleTestComponent, ""), test_sys),
+            IS.get_components(IS.make_selector(IS.SimpleTestComponent, ""), test_sys),
         ) == Vector{IS.InfrastructureSystemsComponent}()
         the_components = collect(IS.get_components(test_gen_ent, test_sys))
         @test length(the_components) == 1
@@ -80,8 +80,8 @@ end
 
 @testset "Test ListComponentSelector" begin
     @testset for test_sys in [cstest_make_components(), cstest_make_system_data()]
-        comp_ent_1 = IS.select_components(IS.TestComponent, "Component1")
-        comp_ent_2 = IS.select_components(IS.AdditionalTestComponent, "Component3")
+        comp_ent_1 = IS.make_selector(IS.TestComponent, "Component1")
+        comp_ent_2 = IS.make_selector(IS.AdditionalTestComponent, "Component3")
         test_list_ent = IS.ListComponentSelector((comp_ent_1, comp_ent_2), nothing)
         named_test_list_ent = IS.ListComponentSelector((comp_ent_1, comp_ent_2), "TwoComps")
 
@@ -91,8 +91,8 @@ end
               named_test_list_ent
 
         # Construction
-        @test IS.select_components(comp_ent_1, comp_ent_2;) == test_list_ent
-        @test IS.select_components(comp_ent_1, comp_ent_2; name = "TwoComps") ==
+        @test IS.make_selector(comp_ent_1, comp_ent_2;) == test_list_ent
+        @test IS.make_selector(comp_ent_1, comp_ent_2; name = "TwoComps") ==
               named_test_list_ent
 
         # Naming
@@ -101,7 +101,7 @@ end
         @test IS.get_name(named_test_list_ent) == "TwoComps"
 
         # Contents
-        @test collect(IS.get_components(IS.select_components(), test_sys)) ==
+        @test collect(IS.get_components(IS.make_selector(), test_sys)) ==
               Vector{IS.InfrastructureSystemsComponent}()
         the_components = collect(IS.get_components(test_list_ent, test_sys))
         @test length(the_components) == 2
@@ -115,7 +115,7 @@ end
             collect(IS.get_components(test_list_ent, test_sys; filterby = x -> false)),
         ) == 0
 
-        @test collect(IS.get_subselectors(IS.select_components(), test_sys)) ==
+        @test collect(IS.get_subselectors(IS.make_selector(), test_sys)) ==
               Vector{IS.InfrastructureSystemsComponent}()
         the_subselectors = collect(IS.get_subselectors(test_list_ent, test_sys))
         @test length(the_subselectors) == 2
@@ -149,8 +149,8 @@ end
         @test IS.SubtypeComponentSelector(IS.TestComponent, "TComps") == named_test_sub_ent
 
         # Construction
-        @test IS.select_components(IS.TestComponent) == test_sub_ent
-        @test IS.select_components(IS.TestComponent; name = "TComps") == named_test_sub_ent
+        @test IS.make_selector(IS.TestComponent) == test_sub_ent
+        @test IS.make_selector(IS.TestComponent; name = "TComps") == named_test_sub_ent
 
         # Naming
         @test IS.get_name(test_sub_ent) == "TestComponent"
@@ -161,7 +161,7 @@ end
         answer = sort_name!(IS.get_components(IS.TestComponent, test_sys))
 
         @test collect(
-            IS.get_components(IS.select_components(IS.SimpleTestComponent), test_sys),
+            IS.get_components(IS.make_selector(IS.SimpleTestComponent), test_sys),
         ) == Vector{IS.InfrastructureSystemsComponent}()
         the_components = IS.get_components(test_sub_ent, test_sys)
         @test all(sort_name!(the_components) .== answer)
@@ -173,11 +173,11 @@ end
         ) == 0
 
         @test collect(
-            IS.get_subselectors(IS.select_components(IS.SimpleTestComponent), test_sys),
+            IS.get_subselectors(IS.make_selector(IS.SimpleTestComponent), test_sys),
         ) == Vector{IS.ComponentSelectorElement}()
         the_subselectors = IS.get_subselectors(test_sub_ent, test_sys)
         @test all(
-            sort_name!(the_subselectors) .== sort_name!(IS.select_components.(answer)),
+            sort_name!(the_subselectors) .== sort_name!(IS.make_selector.(answer)),
         )
         @test Set(
             collect(IS.get_subselectors(test_sub_ent, test_sys; filterby = x -> true)),
@@ -207,18 +207,18 @@ end
               named_test_filter_ent
 
         # Construction
-        @test IS.select_components(val_over_ten, IS.TestComponent) == test_filter_ent
-        @test IS.select_components(val_over_ten, IS.TestComponent, "TCOverTen") ==
+        @test IS.make_selector(val_over_ten, IS.TestComponent) == test_filter_ent
+        @test IS.make_selector(val_over_ten, IS.TestComponent, "TCOverTen") ==
               named_test_filter_ent
         bad_input_fn(x::Integer) = true  # Should always fail to construct
         specific_input_fn(x::IS.AdditionalTestComponent) = true  # Should require compatible subtype
-        @test_throws ArgumentError IS.select_components(bad_input_fn, IS.TestComponent)
-        @test_throws ArgumentError IS.select_components(
+        @test_throws ArgumentError IS.make_selector(bad_input_fn, IS.TestComponent)
+        @test_throws ArgumentError IS.make_selector(
             specific_input_fn,
             IS.InfrastructureSystemsComponent,
         )
-        @test_throws ArgumentError IS.select_components(specific_input_fn, IS.TestComponent)
-        @test IS.select_components(specific_input_fn, IS.AdditionalTestComponent) isa Any  # test absence of error
+        @test_throws ArgumentError IS.make_selector(specific_input_fn, IS.TestComponent)
+        @test IS.make_selector(specific_input_fn, IS.AdditionalTestComponent) isa Any  # test absence of error
 
         # Naming
         @test IS.get_name(test_filter_ent) == "val_over_ten__TestComponent"
@@ -235,12 +235,12 @@ end
 
         @test collect(
             IS.get_components(
-                IS.select_components(x -> true, IS.SimpleTestComponent),
+                IS.make_selector(x -> true, IS.SimpleTestComponent),
                 test_sys,
             )) == Vector{IS.InfrastructureSystemsComponent}()
         @test collect(
             IS.get_components(
-                IS.select_components(x -> false, IS.InfrastructureSystemsComponent),
+                IS.make_selector(x -> false, IS.InfrastructureSystemsComponent),
                 test_sys,
             )) == Vector{IS.InfrastructureSystemsComponent}()
         the_components = IS.get_components(test_filter_ent, test_sys)
@@ -253,18 +253,18 @@ end
 
         @test collect(
             IS.get_subselectors(
-                IS.select_components(x -> true, IS.SimpleTestComponent),
+                IS.make_selector(x -> true, IS.SimpleTestComponent),
                 test_sys,
             )) == Vector{IS.ComponentSelectorElement}()
         @test collect(
             IS.get_subselectors(
-                IS.select_components(x -> false, IS.InfrastructureSystemsComponent),
+                IS.make_selector(x -> false, IS.InfrastructureSystemsComponent),
                 test_sys,
             )) == Vector{IS.ComponentSelectorElement}()
         the_subselectors = IS.get_subselectors(test_filter_ent, test_sys)
         @test all(
             sort_name!(the_subselectors) .==
-            IS.select_components.(answer),
+            IS.make_selector.(answer),
         )
         @test Set(IS.get_subselectors(test_filter_ent, test_sys; filterby = x -> true)) ==
               Set(the_subselectors)

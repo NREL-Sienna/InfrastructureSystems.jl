@@ -11,7 +11,7 @@ Concrete subtypes MUST implement:
  - `get_groups`: returns an iterable of `ComponentSelector`s
 
 Concrete subtypes MAY implement:
- - The factory method `select_components` (make sure your signature does not conflict with
+ - The factory method `make_selector` (make sure your signature does not conflict with
    an existing one)
  - `default_name`
 """
@@ -89,11 +89,11 @@ get_groups(e::ComponentSelector, sys::SystemData; filterby = nothing) =
 
 function get_groups(e::DynamicallyGroupedComponentSelectorSet, sys::Components; filterby = nothing)
     (e.groupby == :all) && return [e]
-    (e.groupby == :each) && return Iterators.map(select_components, get_components(e, sys; filterby = filterby))
+    (e.groupby == :each) && return Iterators.map(make_selector, get_components(e, sys; filterby = filterby))
     @assert e.groupby isa Function
     components = collect(get_components(e, sys; filterby = filterby))
     partition_result = e.groupby.(components)
-    return [select_components(select_components.(components[partition_result .== groupname])..., name = groupname) for groupname in unique(partition_result)]
+    return [make_selector(make_selector.(components[partition_result .== groupname])..., name = groupname) for groupname in unique(partition_result)]
 end
 
 # CONCRETE SUBTYPE IMPLEMENTATIONS
@@ -110,7 +110,7 @@ end
 Make a ComponentSelector pointing to an InfrastructureSystemsComponent with the given
 subtype and name. Optionally provide a name for the ComponentSelector.
 """
-select_components(
+make_selector(
     component_subtype::Type{<:InfrastructureSystemsComponent},
     component_name::AbstractString;
     name::Union{String, Nothing} = nothing,
@@ -120,12 +120,12 @@ select_components(
 Construct a ComponentSelector from an InfrastructureSystemsComponent reference, pointing to Components in any
 collection with the given Component's subtype and name.
 """
-select_components(
+make_selector(
     component_ref::InfrastructureSystemsComponent;
     name::Union{String, Nothing} = nothing,
     groupby::Union{Symbol, Function} = :all
 ) =
-    select_components(typeof(component_ref), get_name(component_ref); name = name)
+    make_selector(typeof(component_ref), get_name(component_ref); name = name)
 
 # Naming
 default_name(e::SingleComponentSelector) =
@@ -163,7 +163,7 @@ Make a ComponentSelector pointing to a list of subselectors. Optionally provide 
 the ComponentSelector.
 """
 # name needs to be a kwarg to disambiguate from content
-select_components(content::ComponentSelector...; name::Union{String, Nothing} = nothing, groupby::Union{Symbol, Function} = :all) =
+make_selector(content::ComponentSelector...; name::Union{String, Nothing} = nothing, groupby::Union{Symbol, Function} = :all) =
     ListComponentSelector(content, name)
 
 # Naming
@@ -202,8 +202,8 @@ end
 Make a ComponentSelector from a subtype of Component. Optionally provide a name for the
 ComponentSelectorSet.
 """
-# name needs to be a kwarg to disambiguate from SingleComponentSelector's select_components
-select_components(
+# name needs to be a kwarg to disambiguate from SingleComponentSelector's make_selector
+make_selector(
     component_subtype::Type{<:InfrastructureSystemsComponent};
     name::Union{String, Nothing} = nothing,
     groupby::Union{Symbol, Function} = :all
@@ -243,7 +243,7 @@ Make a ComponentSelector from a filter function and a subtype of Component. Opti
 provide a name for the ComponentSelector. The filter function must accept instances of
 component_subtype as a sole argument and return a Bool.
 """
-function select_components(
+function make_selector(
     component_subtype::Type{<:InfrastructureSystemsComponent},
     filter_fn::Function; name::Union{String, Nothing} = nothing, groupby::Union{Symbol, Function} = :all
 )
@@ -263,7 +263,7 @@ end
 
 # Contents
 function get_subselectors(e::FilterComponentSelector, sys::Components; filterby = nothing)
-    return Iterators.map(select_components, get_components(e, sys; filterby = filterby))
+    return Iterators.map(make_selector, get_components(e, sys; filterby = filterby))
 end
 
 function get_components(e::FilterComponentSelector, sys::Components; filterby = nothing)
