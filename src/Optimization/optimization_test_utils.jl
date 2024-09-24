@@ -69,7 +69,7 @@ function write_optimizer_stats!(
 end
 
 function read_optimizer_stats(store::MockModelStore)
-    stats = [IS.to_namedtuple(x) for x in values(store.optimizer_stats)]
+    stats = [to_namedtuple(x) for x in values(store.optimizer_stats)]
     df = DataFrames.DataFrame(stats)
     DataFrames.insertcols!(df, 1, :DateTime => keys(store.optimizer_stats))
     return df
