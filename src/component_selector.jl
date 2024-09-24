@@ -114,7 +114,6 @@ make_selector(
     component_subtype::Type{<:InfrastructureSystemsComponent},
     component_name::AbstractString;
     name::Union{String, Nothing} = nothing,
-    groupby::Union{Symbol, Function} = :all
 ) = SingleComponentSelector(component_subtype, component_name, name)
 """
 Construct a ComponentSelector from an InfrastructureSystemsComponent reference, pointing to Components in any
@@ -123,7 +122,6 @@ collection with the given Component's subtype and name.
 make_selector(
     component_ref::InfrastructureSystemsComponent;
     name::Union{String, Nothing} = nothing,
-    groupby::Union{Symbol, Function} = :all
 ) =
     make_selector(typeof(component_ref), get_name(component_ref); name = name)
 
@@ -163,7 +161,7 @@ Make a ComponentSelector pointing to a list of subselectors. Optionally provide 
 the ComponentSelector.
 """
 # name needs to be a kwarg to disambiguate from content
-make_selector(content::ComponentSelector...; name::Union{String, Nothing} = nothing, groupby::Union{Symbol, Function} = :all) =
+make_selector(content::ComponentSelector...; name::Union{String, Nothing} = nothing) =
     ListComponentSelector(content, name)
 
 # Naming
@@ -235,6 +233,7 @@ struct FilterComponentSelector <: DynamicallyGroupedComponentSelectorSet
     component_subtype::Type{<:InfrastructureSystemsComponent}
     filter_fn::Function
     name::Union{String, Nothing}
+    groupby::Union{Symbol, Function}  # TODO add validation
 end
 
 # Construction
@@ -258,7 +257,7 @@ function make_selector(
     # can in fact be called on the given subtype (e.g., filter_fn = (x -> x+1 == 0) should
     # fail). Core.compiler.return_type does not seem to be stable enough to rely on. The
     # IsDef.jl library looks interesting.
-    return FilterComponentSelector(component_subtype, filter_fn, name)
+    return FilterComponentSelector(component_subtype, filter_fn, name, groupby)
 end
 
 # Contents
