@@ -96,12 +96,10 @@ passed in at creation time.
 """
 get_name(e::ComponentSelector) = (e.name !== nothing) ? e.name : default_name(e)
 
-# Make all get_components below that take a Components also work with a SystemData
 """
 Get the components of the collection that make up the `ComponentSelector`.
 """
-get_components(e::ComponentSelector, sys::SystemData; filterby = nothing) =
-    get_components(e, sys.components; filterby = filterby)
+function get_components end
 
 """
 Get the component of the collection that makes up the `SingularComponentSelector`; `nothing`
@@ -113,8 +111,7 @@ get_component(e::SingularComponentSelector, sys::SystemData; filterby = nothing)
 """
 Get the groups that make up the `ComponentSelector`.
 """
-get_groups(e::ComponentSelector, sys::SystemData; filterby = nothing) =
-    get_groups(e, sys.components; filterby = filterby)
+function get_groups end
 
 """
 Use the `groupby` property to get the groups that make up the
@@ -122,7 +119,7 @@ Use the `groupby` property to get the groups that make up the
 """
 function get_groups(
     e::DynamicallyGroupedComponentSelector,
-    sys::Components;
+    sys;
     filterby = nothing,
 )
     validate_groupby(e.groupby)
@@ -148,7 +145,7 @@ function get_groups(
 end
 
 "Get the single group that corresponds to the `SingularComponentSelector`, i.e., itself"
-get_groups(e::SingularComponentSelector, sys::Components; filterby = nothing) = [e]
+get_groups(e::SingularComponentSelector, sys; filterby = nothing) = [e]
 
 """
 Get the component of the collection that makes up the `SingularComponentSelector`; `nothing`
@@ -199,7 +196,7 @@ default_name(e::NameComponentSelector) =
     component_to_qualified_string(e.component_subtype, e.component_name)
 
 # Contents
-function get_components(e::NameComponentSelector, sys::Components; filterby = nothing)
+function get_components(e::NameComponentSelector, sys; filterby = nothing)
     com = get_component(e.component_subtype, sys, e.component_name)
     (!isnothing(filterby) && !filterby(com)) && (com = nothing)
     return (com === nothing) ? [] : [com]
@@ -225,11 +222,11 @@ make_selector(content::ComponentSelector...; name::Union{String, Nothing} = noth
 default_name(e::ListComponentSelector) = "[$(join(get_name.(e.content), ", "))]"
 
 # Contents
-function get_groups(e::ListComponentSelector, sys::Components; filterby = nothing)
+function get_groups(e::ListComponentSelector, sys; filterby = nothing)
     return e.content
 end
 
-function get_components(e::ListComponentSelector, sys::Components; filterby = nothing)
+function get_components(e::ListComponentSelector, sys; filterby = nothing)
     sub_components =
         Iterators.map(x -> get_components(x, sys; filterby = filterby), e.content)
     return Iterators.flatten(sub_components)
@@ -259,7 +256,7 @@ make_selector(
 default_name(e::SubtypeComponentSelector) = subtype_to_string(e.component_subtype)
 
 # Contents
-function get_components(e::SubtypeComponentSelector, sys::Components; filterby = nothing)
+function get_components(e::SubtypeComponentSelector, sys; filterby = nothing)
     components = get_components(e.component_subtype, sys)
     isnothing(filterby) && (return components)
     return Iterators.filter(filterby, components)
@@ -288,7 +285,7 @@ make_selector(
 ) = FilterComponentSelector(component_subtype, filter_fn, name, validate_groupby(groupby))
 
 # Contents
-function get_components(e::FilterComponentSelector, sys::Components; filterby = nothing)
+function get_components(e::FilterComponentSelector, sys; filterby = nothing)
     components = get_components(e.filter_fn, e.component_subtype, sys)
     isnothing(filterby) && (return components)
     return Iterators.filter(filterby, components)
