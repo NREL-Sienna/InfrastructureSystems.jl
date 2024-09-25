@@ -29,6 +29,11 @@ sort_name!(x) = sort!(collect(x); by = IS.get_name)
           "TestComponent__Component1"
     @test IS.component_to_qualified_string(IS.TestComponent("Component1", 11)) ==
           "TestComponent__Component1"
+    
+    @test IS.validate_groupby(:all) == :all
+    @test IS.validate_groupby(:each) == :each
+    @test_throws ArgumentError IS.validate_groupby(:other)
+    @test IS.validate_groupby(string) == string
 end
 
 @testset "Test NameComponentSelector" begin
@@ -46,7 +51,7 @@ end
 
         # Construction
         @test IS.make_selector(IS.TestComponent, "Component1") == test_gen_ent
-        @test IS.make_selector(IS.TestComponent, "Component1", "CompOne") ==
+        @test IS.make_selector(IS.TestComponent, "Component1"; name = "CompOne") ==
               named_test_gen_ent
         @test IS.make_selector(
             IS.get_component(IS.TestComponent, test_sys, "Component1"),
@@ -72,9 +77,7 @@ end
             collect(IS.get_components(test_gen_ent, test_sys; filterby = x -> false)),
         ) == 0
 
-        @test IS.TestComponent("Component1", -1) in test_gen_ent
-        @test !(IS.TestComponent("Component2", -1) in test_gen_ent)
-        @test !in(IS.TestComponent("Component1", -1), test_gen_ent; filterby = x -> false)
+        @test only(IS.get_groups(test_gen_ent, test_sys)) == test_gen_ent
     end
 end
 
@@ -115,42 +118,35 @@ end
             collect(IS.get_components(test_list_ent, test_sys; filterby = x -> false)),
         ) == 0
 
-        @test collect(IS.get_subselectors(IS.make_selector(), test_sys)) ==
+        @test collect(IS.get_groups(IS.make_selector(), test_sys)) ==
               Vector{IS.InfrastructureSystemsComponent}()
-        the_subselectors = collect(IS.get_subselectors(test_list_ent, test_sys))
-        @test length(the_subselectors) == 2
-        @test comp_ent_1 in the_subselectors
-        @test comp_ent_2 in the_subselectors
+        the_groups = collect(IS.get_groups(test_list_ent, test_sys))
+        @test length(the_groups) == 2
+        @test comp_ent_1 in the_groups
+        @test comp_ent_2 in the_groups
         @test Set(
-            collect(IS.get_subselectors(test_list_ent, test_sys; filterby = x -> true)),
-        ) == Set(the_subselectors)
-        # Even if we eventually filter out all the components, ListComponentSelector says we must have exactly the subselectors specified
+            collect(IS.get_groups(test_list_ent, test_sys; filterby = x -> true)),
+        ) == Set(the_groups)
+        # Even if we eventually filter out all the components, ListComponentSelector says we must have exactly the groups specified
         @test length(
-            collect(IS.get_subselectors(test_list_ent, test_sys; filterby = x -> false)),
+            collect(IS.get_groups(test_list_ent, test_sys; filterby = x -> false)),
         ) == 2
-
-        @test IS.AdditionalTestComponent("Component3", -1) in test_list_ent
-        @test !(IS.AdditionalTestComponent("Component4", -1) in test_list_ent)
-        @test !in(
-            IS.AdditionalTestComponent("Component3", -1),
-            test_list_ent;
-            filterby = x -> false,
-        )
     end
 end
 
 @testset "Test SubtypeComponentSelector" begin
     @testset for test_sys in [cstest_make_components(), cstest_make_system_data()]
-        test_sub_ent = IS.SubtypeComponentSelector(IS.TestComponent, nothing)
-        named_test_sub_ent = IS.SubtypeComponentSelector(IS.TestComponent, "TComps")
+        test_sub_ent = IS.SubtypeComponentSelector(IS.TestComponent, nothing, :all)
+        named_test_sub_ent = IS.SubtypeComponentSelector(IS.TestComponent, "TComps", :all)
 
         # Equality
-        @test IS.SubtypeComponentSelector(IS.TestComponent, nothing) == test_sub_ent
-        @test IS.SubtypeComponentSelector(IS.TestComponent, "TComps") == named_test_sub_ent
+        @test IS.SubtypeComponentSelector(IS.TestComponent, nothing, :all) == test_sub_ent
+        @test IS.SubtypeComponentSelector(IS.TestComponent, "TComps", :all) == named_test_sub_ent
 
         # Construction
         @test IS.make_selector(IS.TestComponent) == test_sub_ent
         @test IS.make_selector(IS.TestComponent; name = "TComps") == named_test_sub_ent
+        @test IS.make_selector(IS.TestComponent; groupby = string) isa IS.SubtypeComponentSelector
 
         # Naming
         @test IS.get_name(test_sub_ent) == "TestComponent"
@@ -172,23 +168,7 @@ end
             collect(IS.get_components(test_sub_ent, test_sys; filterby = x -> false)),
         ) == 0
 
-        @test collect(
-            IS.get_subselectors(IS.make_selector(IS.SimpleTestComponent), test_sys),
-        ) == Vector{IS.SingularComponentSelector}()
-        the_subselectors = IS.get_subselectors(test_sub_ent, test_sys)
-        @test all(
-            sort_name!(the_subselectors) .== sort_name!(IS.make_selector.(answer)),
-        )
-        @test Set(
-            collect(IS.get_subselectors(test_sub_ent, test_sys; filterby = x -> true)),
-        ) == Set(the_subselectors)
-        @test length(
-            collect(IS.get_subselectors(test_sub_ent, test_sys; filterby = x -> false)),
-        ) == 0
-
-        @test IS.TestComponent("Component1", -1) in test_sub_ent
-        @test !(IS.AdditionalTestComponent("Component1", -1) in test_sub_ent)
-        @test !in(IS.TestComponent("Component1", -1), test_sub_ent; filterby = x -> false)
+        # Grouping inherits from `DynamicallyGroupedComponentSelector` and is tested elsewhere
     end
 end
 
@@ -196,29 +176,20 @@ end
     @testset for test_sys in [cstest_make_components(), cstest_make_system_data()]
         val_over_ten(x) = IS.get_val(x) > 10
         test_filter_ent =
-            IS.FilterComponentSelector(val_over_ten, IS.TestComponent, nothing)
+            IS.FilterComponentSelector(IS.TestComponent, val_over_ten, nothing, :all)
         named_test_filter_ent =
-            IS.FilterComponentSelector(val_over_ten, IS.TestComponent, "TCOverTen")
+            IS.FilterComponentSelector(IS.TestComponent, val_over_ten, "TCOverTen", :all)
 
         # Equality
-        @test IS.FilterComponentSelector(val_over_ten, IS.TestComponent, nothing) ==
+        @test IS.FilterComponentSelector(IS.TestComponent, val_over_ten, nothing, :all) ==
               test_filter_ent
-        @test IS.FilterComponentSelector(val_over_ten, IS.TestComponent, "TCOverTen") ==
-              named_test_filter_ent
+        @test IS.FilterComponentSelector(IS.TestComponent, val_over_ten, "TCOverTen", :all) == named_test_filter_ent
 
         # Construction
-        @test IS.make_selector(val_over_ten, IS.TestComponent) == test_filter_ent
-        @test IS.make_selector(val_over_ten, IS.TestComponent, "TCOverTen") ==
+        @test IS.make_selector(IS.TestComponent, val_over_ten) == test_filter_ent
+        @test IS.make_selector(IS.TestComponent, val_over_ten; name = "TCOverTen") ==
               named_test_filter_ent
-        bad_input_fn(x::Integer) = true  # Should always fail to construct
-        specific_input_fn(x::IS.AdditionalTestComponent) = true  # Should require compatible subtype
-        @test_throws ArgumentError IS.make_selector(bad_input_fn, IS.TestComponent)
-        @test_throws ArgumentError IS.make_selector(
-            specific_input_fn,
-            IS.InfrastructureSystemsComponent,
-        )
-        @test_throws ArgumentError IS.make_selector(specific_input_fn, IS.TestComponent)
-        @test IS.make_selector(specific_input_fn, IS.AdditionalTestComponent) isa Any  # test absence of error
+        @test IS.make_selector(IS.TestComponent, val_over_ten; groupby = string) isa IS.FilterComponentSelector
 
         # Naming
         @test IS.get_name(test_filter_ent) == "val_over_ten__TestComponent"
@@ -235,12 +206,12 @@ end
 
         @test collect(
             IS.get_components(
-                IS.make_selector(x -> true, IS.SimpleTestComponent),
+                IS.make_selector(IS.SimpleTestComponent, x -> true),
                 test_sys,
             )) == Vector{IS.InfrastructureSystemsComponent}()
         @test collect(
             IS.get_components(
-                IS.make_selector(x -> false, IS.InfrastructureSystemsComponent),
+                IS.make_selector(IS.InfrastructureSystemsComponent, x -> false),
                 test_sys,
             )) == Vector{IS.InfrastructureSystemsComponent}()
         the_components = IS.get_components(test_filter_ent, test_sys)
@@ -250,34 +221,30 @@ end
         @test length(
             collect(IS.get_components(test_filter_ent, test_sys; filterby = x -> false)),
         ) == 0
+    end
+end
 
-        @test collect(
-            IS.get_subselectors(
-                IS.make_selector(x -> true, IS.SimpleTestComponent),
-                test_sys,
-            )) == Vector{IS.SingularComponentSelector}()
-        @test collect(
-            IS.get_subselectors(
-                IS.make_selector(x -> false, IS.InfrastructureSystemsComponent),
-                test_sys,
-            )) == Vector{IS.SingularComponentSelector}()
-        the_subselectors = IS.get_subselectors(test_filter_ent, test_sys)
-        @test all(
-            sort_name!(the_subselectors) .==
-            IS.make_selector.(answer),
-        )
-        @test Set(IS.get_subselectors(test_filter_ent, test_sys; filterby = x -> true)) ==
-              Set(the_subselectors)
-        @test length(
-            collect(IS.get_subselectors(test_filter_ent, test_sys; filterby = x -> false)),
-        ) == 0
+@testset "Test DynamicallyGroupedComponentSelector grouping" begin
+    # We'll use SubtypeComponentSelector as the token example
+    @assert IS.SubtypeComponentSelector <: IS.DynamicallyGroupedComponentSelector
+    
+    all_selector = IS.make_selector(IS.TestComponent; groupby = :all)
+    each_selector = IS.make_selector(IS.TestComponent; groupby = :each)
+    @test IS.make_selector(IS.TestComponent; groupby = :all) == all_selector
+    @test_throws ArgumentError IS.make_selector(IS.TestComponent; groupby = :other)
+    partition_selector = IS.make_selector(IS.TestComponent;
+        groupby = x -> length(IS.get_name(x)))
 
-        @test IS.TestComponent("Component1", 20) in test_filter_ent
-        @test !(IS.AdditionalTestComponent("Component1", 0) in test_filter_ent)
-        @test !in(
-            IS.TestComponent("Component1", 20),
-            test_filter_ent;
-            filterby = x -> false,
-        )
+    for test_sys in [cstest_make_components(), cstest_make_system_data()]
+        @test only(IS.get_groups(all_selector, test_sys)) == all_selector
+        @test Set(IS.get_name.(IS.get_groups(each_selector, test_sys))) ==
+            Set(IS.component_to_qualified_string.(Ref(IS.TestComponent),
+                IS.get_name.(IS.get_components(each_selector, test_sys))))
+        @test length(collect(IS.get_groups(each_selector, test_sys;
+            filterby = x -> length(IS.get_name(x)) < 11))) == 2
+        @test Set(IS.get_name.(IS.get_groups(partition_selector, test_sys))) ==
+            Set(["13", "10"])
+        @test length(collect(IS.get_groups(partition_selector, test_sys;
+            filterby = x -> length(IS.get_name(x)) < 11))) == 1
     end
 end
