@@ -29,7 +29,7 @@ sort_name!(x) = sort!(collect(x); by = IS.get_name)
           "TestComponent__Component1"
     @test IS.component_to_qualified_string(IS.TestComponent("Component1", 11)) ==
           "TestComponent__Component1"
-    
+
     @test IS.validate_groupby(:all) == :all
     @test IS.validate_groupby(:each) == :each
     @test_throws ArgumentError IS.validate_groupby(:other)
@@ -141,12 +141,14 @@ end
 
         # Equality
         @test IS.SubtypeComponentSelector(IS.TestComponent, nothing, :all) == test_sub_ent
-        @test IS.SubtypeComponentSelector(IS.TestComponent, "TComps", :all) == named_test_sub_ent
+        @test IS.SubtypeComponentSelector(IS.TestComponent, "TComps", :all) ==
+              named_test_sub_ent
 
         # Construction
         @test IS.make_selector(IS.TestComponent) == test_sub_ent
         @test IS.make_selector(IS.TestComponent; name = "TComps") == named_test_sub_ent
-        @test IS.make_selector(IS.TestComponent; groupby = string) isa IS.SubtypeComponentSelector
+        @test IS.make_selector(IS.TestComponent; groupby = string) isa
+              IS.SubtypeComponentSelector
 
         # Naming
         @test IS.get_name(test_sub_ent) == "TestComponent"
@@ -183,13 +185,19 @@ end
         # Equality
         @test IS.FilterComponentSelector(IS.TestComponent, val_over_ten, nothing, :all) ==
               test_filter_ent
-        @test IS.FilterComponentSelector(IS.TestComponent, val_over_ten, "TCOverTen", :all) == named_test_filter_ent
+        @test IS.FilterComponentSelector(
+            IS.TestComponent,
+            val_over_ten,
+            "TCOverTen",
+            :all,
+        ) == named_test_filter_ent
 
         # Construction
         @test IS.make_selector(IS.TestComponent, val_over_ten) == test_filter_ent
         @test IS.make_selector(IS.TestComponent, val_over_ten; name = "TCOverTen") ==
               named_test_filter_ent
-        @test IS.make_selector(IS.TestComponent, val_over_ten; groupby = string) isa IS.FilterComponentSelector
+        @test IS.make_selector(IS.TestComponent, val_over_ten; groupby = string) isa
+              IS.FilterComponentSelector
 
         # Naming
         @test IS.get_name(test_filter_ent) == "val_over_ten__TestComponent"
@@ -227,7 +235,7 @@ end
 @testset "Test DynamicallyGroupedComponentSelector grouping" begin
     # We'll use SubtypeComponentSelector as the token example
     @assert IS.SubtypeComponentSelector <: IS.DynamicallyGroupedComponentSelector
-    
+
     all_selector = IS.make_selector(IS.TestComponent; groupby = :all)
     each_selector = IS.make_selector(IS.TestComponent; groupby = :each)
     @test IS.make_selector(IS.TestComponent; groupby = :all) == all_selector
@@ -238,13 +246,23 @@ end
     for test_sys in [cstest_make_components(), cstest_make_system_data()]
         @test only(IS.get_groups(all_selector, test_sys)) == all_selector
         @test Set(IS.get_name.(IS.get_groups(each_selector, test_sys))) ==
-            Set(IS.component_to_qualified_string.(Ref(IS.TestComponent),
-                IS.get_name.(IS.get_components(each_selector, test_sys))))
-        @test length(collect(IS.get_groups(each_selector, test_sys;
-            filterby = x -> length(IS.get_name(x)) < 11))) == 2
+              Set(
+            IS.component_to_qualified_string.(Ref(IS.TestComponent),
+                IS.get_name.(IS.get_components(each_selector, test_sys))),
+        )
+        @test length(
+            collect(
+                IS.get_groups(each_selector, test_sys;
+                    filterby = x -> length(IS.get_name(x)) < 11),
+            ),
+        ) == 2
         @test Set(IS.get_name.(IS.get_groups(partition_selector, test_sys))) ==
-            Set(["13", "10"])
-        @test length(collect(IS.get_groups(partition_selector, test_sys;
-            filterby = x -> length(IS.get_name(x)) < 11))) == 1
+              Set(["13", "10"])
+        @test length(
+            collect(
+                IS.get_groups(partition_selector, test_sys;
+                    filterby = x -> length(IS.get_name(x)) < 11),
+            ),
+        ) == 1
     end
 end
