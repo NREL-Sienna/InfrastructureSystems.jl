@@ -38,8 +38,6 @@ abstract type DynamicallyGroupedComponentSelectorSet <: ComponentSelectorSet end
 
 # COMMON COMPONENTSELECTOR INFRASTRUCTURE
 # TODO perhaps put this elsewhere; it is also referenced in metrics.jl
-"Delimeter to use when constructing fully-qualified names."
-const NAME_DELIMETER::String = "__"
 
 "Canonical way to turn an InfrastructureSystemsComponent subtype into a unique string."
 subtype_to_string(subtype::Type{<:InfrastructureSystemsComponent}) =
@@ -52,7 +50,7 @@ unique-per-container string.
 component_to_qualified_string(
     component_subtype::Type{<:InfrastructureSystemsComponent},
     component_name::AbstractString,
-) = subtype_to_string(component_subtype) * NAME_DELIMETER * component_name
+) = subtype_to_string(component_subtype) * COMPONENT_NAME_DELIMETER * component_name
 component_to_qualified_string(component::InfrastructureSystemsComponent) =
     component_to_qualified_string(typeof(component), get_name(component))
 
@@ -258,4 +256,4 @@ end
 
 # Naming
 default_name(e::FilterComponentSelector) =
-    string(e.filter_fn) * NAME_DELIMETER * subtype_to_string(e.component_subtype)
+    string(e.filter_fn) * COMPONENT_NAME_DELIMETER * subtype_to_string(e.component_subtype)
