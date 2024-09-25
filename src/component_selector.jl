@@ -4,7 +4,7 @@
 Concrete subtypes MUST implement:
  - `get_components`: returns an iterable of components
  - `get_name`: returns a name for the selector -- or use the default by implementing `default_name` and having a `name` field
- - `get_groups`: returns an iterable of `ComponentSelector`s -- or use the default by having a `groupby` field
+ - `get_groups`: returns an iterable of `ComponentSelector`s
 
 Concrete subtypes MAY implement:
  - The factory method `make_selector` (make sure your signature does not conflict with
@@ -53,6 +53,20 @@ component_to_qualified_string(
 component_to_qualified_string(component::InfrastructureSystemsComponent) =
     component_to_qualified_string(typeof(component), get_name(component))
 
+const VALID_GROUPBY_KEYWORDS = [:all, :each]
+
+"""
+Helper function to check that the `groupby` argument is valid. Passes it through if so,
+errors if not.
+"""
+validate_groupby(groupby::Symbol) =
+    if (groupby in VALID_GROUPBY_KEYWORDS)
+        groupby
+    else
+        throw(ArgumentError("groupby must be one of $VALID_GROUPBY_KEYWORDS or a function"))
+    end
+validate_groupby(groupby::Function) = groupby  # Don't try to validate functions for now
+
 # Generic implementations/generic docstrings for simple functions with many methods
 """
 Get the default name for the `ComponentSelector`, constructed automatically from what the
@@ -98,17 +112,25 @@ function get_groups(
     sys::Components;
     filterby = nothing,
 )
+    validate_groupby(e.groupby)
     (e.groupby == :all) && return [e]
     (e.groupby == :each) &&
         return Iterators.map(make_selector, get_components(e, sys; filterby = filterby))
     @assert e.groupby isa Function
     components = collect(get_components(e, sys; filterby = filterby))
-    partition_result = e.groupby.(components)
+
+    partition_results = (e.groupby).(components)
+    unique_partitions = unique(partition_results)
+    partition_labels = string.(unique_partitions)
+    # Catch the case where `p1 != p2` but `string(p1) == string(p2)`
+    (length(unique_partitions) == length(unique(partition_labels))) ||
+        throw(ArgumentError("Some partitions have the same name when converted to string"))
+
     return [
         make_selector(
-            make_selector.(components[partition_result .== groupname])...;
-            name = groupname,
-        ) for groupname in unique(partition_result)
+            make_selector.(components[partition_results .== Ref(group_result)])...;
+            name = group_name,
+        ) for (group_result, group_name) in zip(unique_partitions, partition_labels)
     ]
 end
 
@@ -201,7 +223,7 @@ end
 struct SubtypeComponentSelector <: DynamicallyGroupedPluralComponentSelector
     component_subtype::Type{<:InfrastructureSystemsComponent}
     name::Union{String, Nothing}
-    groupby::Union{Symbol, Function}  # TODO add validation
+    groupby::Union{Symbol, Function}
 end
 
 # Construction
@@ -214,7 +236,7 @@ make_selector(
     name::Union{String, Nothing} = nothing,
     groupby::Union{Symbol, Function} = :all,
 ) =
-    SubtypeComponentSelector(component_subtype, name, groupby)
+    SubtypeComponentSelector(component_subtype, name, validate_groupby(groupby))
 
 # Naming
 default_name(e::SubtypeComponentSelector) = subtype_to_string(e.component_subtype)
@@ -232,33 +254,21 @@ struct FilterComponentSelector <: DynamicallyGroupedPluralComponentSelector
     component_subtype::Type{<:InfrastructureSystemsComponent}
     filter_fn::Function
     name::Union{String, Nothing}
-    groupby::Union{Symbol, Function}  # TODO add validation
+    groupby::Union{Symbol, Function}
 end
 
 # Construction
+# Could try to validate filter_fn here, probably not worth it
 """
 Make a ComponentSelector from a filter function and a type of component. Optionally
 provide a name for the ComponentSelector. The filter function must accept instances of
 component_subtype as a sole argument and return a Bool.
 """
-function make_selector(
+make_selector(
     component_subtype::Type{<:InfrastructureSystemsComponent},
     filter_fn::Function; name::Union{String, Nothing} = nothing,
     groupby::Union{Symbol, Function} = :all,
-)
-    # Try to catch inappropriate filter functions
-    hasmethod(filter_fn, Tuple{component_subtype}) || throw(
-        ArgumentError(
-            "filter function $filter_fn does not have a method that accepts $(subtype_to_string(component_subtype)).",
-        ),
-    )
-    # TODO it would be nice to have more rigorous checks on filter_fn here: check that the
-    # return type is a Bool and check whether a filter_fn without parameter type annotations
-    # can in fact be called on the given subtype (e.g., filter_fn = (x -> x+1 == 0) should
-    # fail). Core.compiler.return_type does not seem to be stable enough to rely on. The
-    # IsDef.jl library looks interesting.
-    return FilterComponentSelector(component_subtype, filter_fn, name, groupby)
-end
+) = FilterComponentSelector(component_subtype, filter_fn, name, validate_groupby(groupby))
 
 # Contents
 function get_components(e::FilterComponentSelector, sys::Components; filterby = nothing)
