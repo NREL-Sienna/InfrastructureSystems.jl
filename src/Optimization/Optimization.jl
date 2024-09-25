@@ -26,7 +26,8 @@ import ..InfrastructureSystems:
     get_uuid,
     compute_file_hash,
     convert_for_path,
-    InvalidValue
+    InvalidValue,
+    COMPONENT_NAME_DELIMETER
 
 using DocStringExtensions
 
