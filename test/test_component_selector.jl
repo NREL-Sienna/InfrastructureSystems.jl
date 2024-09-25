@@ -31,17 +31,17 @@ sort_name!(x) = sort!(collect(x); by = IS.get_name)
           "TestComponent__Component1"
 end
 
-@testset "Test SingleComponentSelector" begin
+@testset "Test NameComponentSelector" begin
     # Everything should work for both Components and SystemData
     @testset for test_sys in [cstest_make_components(), cstest_make_system_data()]
-        test_gen_ent = IS.SingleComponentSelector(IS.TestComponent, "Component1", nothing)
+        test_gen_ent = IS.NameComponentSelector(IS.TestComponent, "Component1", nothing)
         named_test_gen_ent =
-            IS.SingleComponentSelector(IS.TestComponent, "Component1", "CompOne")
+            IS.NameComponentSelector(IS.TestComponent, "Component1", "CompOne")
 
         # Equality
-        @test IS.SingleComponentSelector(IS.TestComponent, "Component1", nothing) ==
+        @test IS.NameComponentSelector(IS.TestComponent, "Component1", nothing) ==
               test_gen_ent
-        @test IS.SingleComponentSelector(IS.TestComponent, "Component1", "CompOne") ==
+        @test IS.NameComponentSelector(IS.TestComponent, "Component1", "CompOne") ==
               named_test_gen_ent
 
         # Construction
@@ -174,7 +174,7 @@ end
 
         @test collect(
             IS.get_subselectors(IS.make_selector(IS.SimpleTestComponent), test_sys),
-        ) == Vector{IS.ComponentSelectorElement}()
+        ) == Vector{IS.SingularComponentSelector}()
         the_subselectors = IS.get_subselectors(test_sub_ent, test_sys)
         @test all(
             sort_name!(the_subselectors) .== sort_name!(IS.make_selector.(answer)),
@@ -255,12 +255,12 @@ end
             IS.get_subselectors(
                 IS.make_selector(x -> true, IS.SimpleTestComponent),
                 test_sys,
-            )) == Vector{IS.ComponentSelectorElement}()
+            )) == Vector{IS.SingularComponentSelector}()
         @test collect(
             IS.get_subselectors(
                 IS.make_selector(x -> false, IS.InfrastructureSystemsComponent),
                 test_sys,
-            )) == Vector{IS.ComponentSelectorElement}()
+            )) == Vector{IS.SingularComponentSelector}()
         the_subselectors = IS.get_subselectors(test_filter_ent, test_sys)
         @test all(
             sort_name!(the_subselectors) .==
