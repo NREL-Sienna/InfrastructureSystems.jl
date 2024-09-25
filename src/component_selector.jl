@@ -44,12 +44,12 @@ implementation of `get_groups`.
 abstract type DynamicallyGroupedComponentSelector <: PluralComponentSelector end
 
 # COMMON COMPONENTSELECTOR INFRASTRUCTURE
-"Canonical way to turn an InfrastructureSystemsComponent subtype into a unique string."
+"Canonical way to turn an `InfrastructureSystemsComponent` subtype into a unique string."
 subtype_to_string(subtype::Type{<:InfrastructureSystemsComponent}) =
     strip_module_name(subtype)
 
 """
-Canonical way to turn an InfrastructureSystemsComponent specification/instance into a
+Canonical way to turn an `InfrastructureSystemsComponent` specification/instance into a
 unique-per-system string.
 """
 component_to_qualified_string(
@@ -275,7 +275,7 @@ end
 # Could try to validate filter_fn here, probably not worth it
 """
 Make a ComponentSelector from a filter function and a type of component. The filter function
-must accept instances of component_subtype as a sole argument and return a Bool. Optionally
+must accept instances of component_subtype as a sole argument and return a `Bool`. Optionally
 provide a name and/or grouping behavior for the `ComponentSelector`.
 """
 make_selector(
