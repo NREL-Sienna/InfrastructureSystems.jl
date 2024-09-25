@@ -1,41 +1,47 @@
 # ABSTRACT TYPE DEFINITIONS
-"""The basic type for all `ComponentSelector`s.
-
+#=
+`ComponentSelector` extension notes:
 Concrete subtypes MUST implement:
  - `get_components`: returns an iterable of components
- - `get_name`: returns a name for the selector -- or use the default by implementing `default_name` and having a `name` field
+ - `get_name`: returns a name for the selector -- or use the default by implementing
+   `default_name` and having a `name` field
  - `get_groups`: returns an iterable of `ComponentSelector`s
 
+Concrete subtypes SHOULD implement:
+ - The factory method `make_selector` (make sure your signature does not conflict with an
+   existing one)
+
 Concrete subtypes MAY implement:
- - The factory method `make_selector` (make sure your signature does not conflict with
-   an existing one)
  - `default_name`
-"""
+=#
+"The base type for all `ComponentSelector`s."
 abstract type ComponentSelector end
 
-"""
-`ComponentSelector`s that can only refer to zero or one components.
-
-The interface is the same as for `ComponentSelector` except
+#=
+`SingularComponentSelector` extension notes:
+The interface is the same as for `ComponentSelector` except:
  - `get_components` MUST return zero or one components
  - the additional method `get_component` is part of the interface, but the default
-   implementation just wraps `get_components` and should not need to be overridden.
- - there is a sensible default for `get_groups`
-"""
+   implementation just wraps `get_components` and SHOULD NOT need to be overridden
+ - there is a sensible default for `get_groups`; it MAY be overridden
+=#
+"`ComponentSelector`s that can only refer to zero or one components."
 abstract type SingularComponentSelector <: ComponentSelector end
 
-"""
-`ComponentSelector`s that may refer to multiple components.
-
-The interface is that of `ComponentSelector`.
-"""
+#=
+`PluralComponentSelector` extension notes:
+The interface is the same as for `ComponentSelector`.
+=#
+"""`ComponentSelector`s that may refer to multiple components."""
 abstract type PluralComponentSelector <: ComponentSelector end
 
-"""
-`PluralComponentSelector`s whose grouping is determined by a `groupby` field (all of the
-built-in `PluralComponentSelector`s except `ListComponentSelector` work this way)
-"""
-abstract type DynamicallyGroupedPluralComponentSelector <: PluralComponentSelector end
+#=
+`DynamicallyGroupedComponentSelector` extension notes:
+One MAY subtype this and have a `groupby::Union{Symbol, Function}` field to get an automatic
+implementation of `get_groups`.
+=#
+"`PluralComponentSelector`s whose grouping is determined by a `groupby` field."
+abstract type DynamicallyGroupedComponentSelector <: PluralComponentSelector end
 
 # COMMON COMPONENTSELECTOR INFRASTRUCTURE
 "Canonical way to turn an InfrastructureSystemsComponent subtype into a unique string."
@@ -44,7 +50,7 @@ subtype_to_string(subtype::Type{<:InfrastructureSystemsComponent}) =
 
 """
 Canonical way to turn an InfrastructureSystemsComponent specification/instance into a
-unique-per-container string.
+unique-per-system string.
 """
 component_to_qualified_string(
     component_subtype::Type{<:InfrastructureSystemsComponent},
@@ -69,8 +75,15 @@ validate_groupby(groupby::Function) = groupby  # Don't try to validate functions
 
 # Generic implementations/generic docstrings for simple functions with many methods
 """
+Factory function to create the appropriate subtype of `ComponentSelector` given the
+arguments. Users should call this rather than manually constructing `ComponentSelector`
+subtypes.
+"""
+function make_selector end
+
+"""
 Get the default name for the `ComponentSelector`, constructed automatically from what the
-`ComponentSelector` contains. Particularly with complex `ComponentSelector`s, this may not
+`ComponentSelector` contains. Particularly for complex `ComponentSelector`s, this may not
 always be very concise or informative, so in these cases constructing the
 `ComponentSelector` with a custom name is recommended.
 """
@@ -105,10 +118,10 @@ get_groups(e::ComponentSelector, sys::SystemData; filterby = nothing) =
 
 """
 Use the `groupby` property to get the groups that make up the
-`DynamicallyGroupedPluralComponentSelector`
+`DynamicallyGroupedComponentSelector`
 """
 function get_groups(
-    e::DynamicallyGroupedPluralComponentSelector,
+    e::DynamicallyGroupedComponentSelector,
     sys::Components;
     filterby = nothing,
 )
@@ -175,7 +188,11 @@ make_selector(
     component_ref::InfrastructureSystemsComponent;
     name::Union{String, Nothing} = nothing,
 ) =
-    make_selector(typeof(component_ref), get_name(component_ref); name = name)
+    make_selector(
+        typeof(component_ref),
+        get_name(component_ref)::AbstractString;
+        name = name,
+    )
 
 # Naming
 default_name(e::NameComponentSelector) =
@@ -220,7 +237,7 @@ end
 
 # SubtypeComponentSelector
 "`PluralComponentSelector` represented by a type of component."
-struct SubtypeComponentSelector <: DynamicallyGroupedPluralComponentSelector
+struct SubtypeComponentSelector <: DynamicallyGroupedComponentSelector
     component_subtype::Type{<:InfrastructureSystemsComponent}
     name::Union{String, Nothing}
     groupby::Union{Symbol, Function}
@@ -228,8 +245,8 @@ end
 
 # Construction
 """
-Make a `ComponentSelector` from a type of component. Optionally provide a name for the
-`ComponentSelector`.
+Make a `ComponentSelector` from a type of component. Optionally provide a name and/or
+grouping behavior for the `ComponentSelector`.
 """
 make_selector(
     component_subtype::Type{<:InfrastructureSystemsComponent};
@@ -250,7 +267,7 @@ end
 
 # FilterComponentSelector
 "`PluralComponentSelector` represented by a filter function and a type of component."
-struct FilterComponentSelector <: DynamicallyGroupedPluralComponentSelector
+struct FilterComponentSelector <: DynamicallyGroupedComponentSelector
     component_subtype::Type{<:InfrastructureSystemsComponent}
     filter_fn::Function
     name::Union{String, Nothing}
@@ -260,9 +277,9 @@ end
 # Construction
 # Could try to validate filter_fn here, probably not worth it
 """
-Make a ComponentSelector from a filter function and a type of component. Optionally
-provide a name for the ComponentSelector. The filter function must accept instances of
-component_subtype as a sole argument and return a Bool.
+Make a ComponentSelector from a filter function and a type of component. The filter function
+must accept instances of component_subtype as a sole argument and return a Bool. Optionally
+provide a name and/or grouping behavior for the `ComponentSelector`.
 """
 make_selector(
     component_subtype::Type{<:InfrastructureSystemsComponent},
