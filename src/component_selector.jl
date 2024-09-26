@@ -61,6 +61,12 @@ component_to_qualified_string(component::InfrastructureSystemsComponent) =
 
 const VALID_GROUPBY_KEYWORDS = [:all, :each]
 
+# Ideally we could leave system-like arguments untyped for maximum extensibility, but
+# because only PSY.get_components, not IS.get_components, is defined for PSY.System, we need
+# to be able to easily override these methods. See
+# https://github.com/NREL-Sienna/InfrastructureSystems.jl/issues/388
+const SYSTEM_LIKE = Union{Components, SystemData}
+
 """
 Helper function to check that the `groupby` argument is valid. Passes it through if so,
 errors if not.
@@ -100,13 +106,6 @@ get_name(e::ComponentSelector) = (e.name !== nothing) ? e.name : default_name(e)
 Get the components of the collection that make up the `ComponentSelector`.
 """
 function get_components end
-
-"""
-Get the component of the collection that makes up the `SingularComponentSelector`; `nothing`
-if there is none.
-"""
-get_component(e::SingularComponentSelector, sys::SystemData; filterby = nothing) =
-    get_component(e, sys.components; filterby = filterby)
 
 """
 Get the groups that make up the `ComponentSelector`.
@@ -151,7 +150,7 @@ get_groups(e::SingularComponentSelector, sys; filterby = nothing) = [e]
 Get the component of the collection that makes up the `SingularComponentSelector`; `nothing`
 if there is none.
 """
-function get_component(e::SingularComponentSelector, sys::Components; filterby = nothing)
+function get_component(e::SingularComponentSelector, sys::SYSTEM_LIKE; filterby = nothing)
     components = get_components(e, sys; filterby = filterby)
     isempty(components) && return nothing
     return only(components)
@@ -196,7 +195,7 @@ default_name(e::NameComponentSelector) =
     component_to_qualified_string(e.component_subtype, e.component_name)
 
 # Contents
-function get_components(e::NameComponentSelector, sys; filterby = nothing)
+function get_components(e::NameComponentSelector, sys::SYSTEM_LIKE; filterby = nothing)
     com = get_component(e.component_subtype, sys, e.component_name)
     (!isnothing(filterby) && !filterby(com)) && (com = nothing)
     return (com === nothing) ? [] : [com]
@@ -226,7 +225,7 @@ function get_groups(e::ListComponentSelector, sys; filterby = nothing)
     return e.content
 end
 
-function get_components(e::ListComponentSelector, sys; filterby = nothing)
+function get_components(e::ListComponentSelector, sys::SYSTEM_LIKE; filterby = nothing)
     sub_components =
         Iterators.map(x -> get_components(x, sys; filterby = filterby), e.content)
     return Iterators.flatten(sub_components)
@@ -256,7 +255,7 @@ make_selector(
 default_name(e::SubtypeComponentSelector) = subtype_to_string(e.component_subtype)
 
 # Contents
-function get_components(e::SubtypeComponentSelector, sys; filterby = nothing)
+function get_components(e::SubtypeComponentSelector, sys::SYSTEM_LIKE; filterby = nothing)
     components = get_components(e.component_subtype, sys)
     isnothing(filterby) && (return components)
     return Iterators.filter(filterby, components)
@@ -285,7 +284,7 @@ make_selector(
 ) = FilterComponentSelector(component_subtype, filter_fn, name, validate_groupby(groupby))
 
 # Contents
-function get_components(e::FilterComponentSelector, sys; filterby = nothing)
+function get_components(e::FilterComponentSelector, sys::SYSTEM_LIKE; filterby = nothing)
     components = get_components(e.filter_fn, e.component_subtype, sys)
     isnothing(filterby) && (return components)
     return Iterators.filter(filterby, components)
