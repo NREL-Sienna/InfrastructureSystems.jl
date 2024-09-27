@@ -28,8 +28,8 @@ deserialize the system.
   - Time series data can optionally be stored fully in memory. Refer to the [`InfrastructureSystems.SystemData`](@ref) documentation.
   - `InfrastructureSystems.jl` creates HDF5 files on the tmp filesystem by default, using the location obtained from `tempdir()`. This can be changed if the time series data is larger than the amount of tmp space available. Refer to the [`InfrastructureSystems.SystemData`](@ref) link above.
   - By default, the call to `add_time_series!` will open the .h5 file, write the data to the file,
-  and close the file. Opening and closing the file has overhead. If you will add thousands of time
-  series arrays, consider using `open_time_series_store!` to add all the arrays with one file handle.
+    and close the file. Opening and closing the file has overhead. If you will add thousands of time
+    series arrays, consider using `open_time_series_store!` to add all the arrays with one file handle.
 
 ## Instructions
 

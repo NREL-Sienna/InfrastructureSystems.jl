@@ -31,15 +31,15 @@ get_ext(c::MyComponent) = InfrastructureSystems.get_ext(c.ext)
 clear_ext!(c::MyComponent) = InfrastructureSystems.clear_ext(c.ext)
 ```
 
-  2. Implement this function with `true` or `false` depending on whether your component type
-     will support time series data. The default method returns `false`.
+ 2. Implement this function with `true` or `false` depending on whether your component type
+    will support time series data. The default method returns `false`.
 
 ```julia
 supports_time_series(::MyComponent) = true
 ```
 
-  3. Implement this function with `true` or `false` depending on whether your component type
-     will support supplemental attributes. The default method returns `true`.
+ 3. Implement this function with `true` or `false` depending on whether your component type
+    will support supplemental attributes. The default method returns `true`.
 
 ```julia
 supports_supplemental_attributes(::MyComponent) = true

@@ -37,7 +37,7 @@ preferences (console and/or file, levels, etc.).
 **Example**: Global logger configuration
 
 ```julia
-logger = configure_logging(; filename="log.txt")
+logger = configure_logging(; filename = "log.txt")
 @info "hello world"
 flush(logger)
 @error "some error"
@@ -77,7 +77,7 @@ group in two ways:
  2. Change the logger dynamically from with Julia. Here is an example:
 
 ```julia
-logger = configure_logging(console_level=Logging.Debug)
+logger = configure_logging(; console_level = Logging.Debug)
 InfrastructureSystems.set_group_level!(
     logger,
     InfrastructureSystems.LOG_GROUP_TIME_SERIES,
@@ -150,7 +150,7 @@ The standard Logging module in Julia provides a method to suppress messages.
 Tag the log message with maxlog = X.
 
 ```julia
-for i in range(1, length=100)
+for i in range(1; length = 100)
     @error "something happened" i maxlog = 2
 end
 ```
@@ -165,7 +165,7 @@ every five seconds. It will log how many log messages were suppressed on the
 first message that gets logged after a timeout.
 
 ```julia
-for i in range(1, length=100)
+for i in range(1; length = 100)
     @error "something happened" i maxlog = 2 _suppression_period = 5
     sleep(0.5)
 end
@@ -177,7 +177,7 @@ By default a `MultiLogger` creates a `LogEventTracker` that keeps counts of all
 messages. Call `report_log_summary` after execution.
 
 ```julia
-logger = configure_logging(; filename="log.txt")
+logger = configure_logging(; filename = "log.txt")
 @info "hello world"
 
 # Include a summary in the log file.
@@ -188,7 +188,7 @@ close(logger)
 The output of the logger can be explored in the REPL:
 
 ```julia
-for i in range(1, length=100)
+for i in range(1; length = 100)
     @info "hello" maxlog = 2
     @warn "beware" maxlog = 2
 end
