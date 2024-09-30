@@ -76,6 +76,9 @@ end
         @test length(
             collect(IS.get_components(test_gen_ent, test_sys; filterby = x -> false)),
         ) == 0
+        @test IS.get_component(test_gen_ent, test_sys; filterby = x -> true) ==
+              first(the_components)
+        @test isnothing(IS.get_component(test_gen_ent, test_sys; filterby = x -> false))
 
         @test only(IS.get_groups(test_gen_ent, test_sys)) == test_gen_ent
     end
@@ -194,6 +197,7 @@ end
 
         # Construction
         @test IS.make_selector(IS.TestComponent, val_over_ten) == test_filter_ent
+        @test IS.make_selector(val_over_ten, IS.TestComponent) == test_filter_ent
         @test IS.make_selector(IS.TestComponent, val_over_ten; name = "TCOverTen") ==
               named_test_filter_ent
         @test IS.make_selector(IS.TestComponent, val_over_ten; groupby = string) isa
@@ -265,4 +269,15 @@ end
             ),
         ) == 1
     end
+end
+
+@testset "Test alternative interfaces" begin
+    test_sys = cstest_make_components()
+    selector = IS.make_selector(IS.TestComponent, "Component1")
+    @test IS.get_components(selector, test_sys; filterby = x -> true) ==
+          IS.get_components(x -> true, selector, test_sys)
+    @test IS.get_component(selector, test_sys; filterby = x -> true) ==
+          IS.get_component(x -> true, selector, test_sys)
+    @test IS.get_groups(selector, test_sys; filterby = x -> true) ==
+          IS.get_groups(x -> true, selector, test_sys)
 end
