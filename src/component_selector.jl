@@ -104,14 +104,42 @@ get_name(selector::ComponentSelector) =
     (selector.name !== nothing) ? selector.name : default_name(selector)
 
 """
+    get_components(selector, sys; filterby = nothing)
 Get the components of the collection that make up the `ComponentSelector`.
+ - `filterby`: optional filter function to apply after evaluating the `ComponentSelector`
 """
 function get_components end
 
 """
+    get_components(filterby, selector, sys)
+Get the components of the collection that make up the `ComponentSelector`.
+ - `filterby`: optional filter function to apply after evaluating the `ComponentSelector`
+"""
+get_components(
+    filterby::Union{Nothing, Function},
+    selector::ComponentSelector,
+    sys::SYSTEM_LIKE,
+) =
+    get_components(selector, sys; filterby = filterby)
+
+"""
+    get_groups(selector, sys; filterby = nothing)
 Get the groups that make up the `ComponentSelector`.
+ - `filterby`: optional filter function to apply after evaluating the `ComponentSelector`
 """
 function get_groups end
+
+"""
+    get_groups(filterby, selector, sys)
+Get the groups that make up the `ComponentSelector`.
+ - `filterby`: optional filter function to apply after evaluating the `ComponentSelector`
+"""
+get_groups(
+    filterby::Union{Nothing, Function},
+    selector::ComponentSelector,
+    sys::SYSTEM_LIKE,
+) =
+    get_groups(selector, sys; filterby = filterby)
 
 """
 Use the `groupby` property to get the groups that make up the
@@ -149,8 +177,10 @@ end
 get_groups(selector::SingularComponentSelector, sys; filterby = nothing) = [selector]
 
 """
+    get_component(selector, sys; filterby = nothing)
 Get the component of the collection that makes up the `SingularComponentSelector`; `nothing`
 if there is none.
+ - `filterby`: optional filter function to apply after evaluating the `ComponentSelector`
 """
 function get_component(
     selector::SingularComponentSelector,
@@ -161,6 +191,19 @@ function get_component(
     isempty(components) && return nothing
     return only(components)
 end
+
+"""
+    get_component(filterby, selector, sys)
+Get the component of the collection that makes up the `SingularComponentSelector`; `nothing`
+if there is none.
+ - `filterby`: optional filter function to apply after evaluating the `ComponentSelector`
+"""
+get_component(
+    filterby::Union{Nothing, Function},
+    selector::SingularComponentSelector,
+    sys::SYSTEM_LIKE,
+) =
+    get_component(selector, sys; filterby = filterby)
 
 # CONCRETE SUBTYPE IMPLEMENTATIONS
 # NameComponentSelector
@@ -279,13 +322,14 @@ end
 "`PluralComponentSelector` represented by a filter function and a type of component."
 struct FilterComponentSelector <: DynamicallyGroupedComponentSelector
     component_type::Type{<:InfrastructureSystemsComponent}
-    filter_fn::Function
+    filter_func::Function
     name::Union{String, Nothing}
     groupby::Union{Symbol, Function}
 end
 
 # Construction
-# Could try to validate filter_fn here, probably not worth it
+# Could try to validate filter_func here, probably not worth it
+# Signature 1: put the type first for consistency with many other `make_selector` methods
 """
 Make a ComponentSelector from a filter function and a type of component. The filter function
 must accept instances of `component_type` as a sole argument and return a `Bool`. Optionally
@@ -293,9 +337,22 @@ provide a name and/or grouping behavior for the `ComponentSelector`.
 """
 make_selector(
     component_type::Type{<:InfrastructureSystemsComponent},
-    filter_fn::Function; name::Union{String, Nothing} = nothing,
+    filter_func::Function; name::Union{String, Nothing} = nothing,
     groupby::Union{Symbol, Function} = :all,
-) = FilterComponentSelector(component_type, filter_fn, name, validate_groupby(groupby))
+) = FilterComponentSelector(component_type, filter_func, name, validate_groupby(groupby))
+
+# Signature 2: put the filter function first for consistency with non-`ComponentSelector` `get_components`
+"""
+Make a ComponentSelector from a filter function and a type of component. The filter function
+must accept instances of `component_type` as a sole argument and return a `Bool`. Optionally
+provide a name and/or grouping behavior for the `ComponentSelector`.
+"""
+make_selector(
+    filter_func::Function,
+    component_type::Type{<:InfrastructureSystemsComponent};
+    name::Union{String, Nothing} = nothing,
+    groupby::Union{Symbol, Function} = :all,
+) = FilterComponentSelector(component_type, filter_func, name, validate_groupby(groupby))
 
 # Contents
 function get_components(
@@ -303,12 +360,12 @@ function get_components(
     sys::SYSTEM_LIKE;
     filterby = nothing,
 )
-    components = get_components(selector.filter_fn, selector.component_type, sys)
+    components = get_components(selector.filter_func, selector.component_type, sys)
     isnothing(filterby) && (return components)
     return Iterators.filter(filterby, components)
 end
 
 # Naming
 default_name(selector::FilterComponentSelector) =
-    string(selector.filter_fn) * COMPONENT_NAME_DELIMITER *
+    string(selector.filter_func) * COMPONENT_NAME_DELIMITER *
     subtype_to_string(selector.component_type)
