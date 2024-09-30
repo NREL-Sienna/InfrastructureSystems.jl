@@ -27,7 +27,7 @@ import ..InfrastructureSystems:
     compute_file_hash,
     convert_for_path,
     InvalidValue,
-    COMPONENT_NAME_DELIMETER
+    COMPONENT_NAME_DELIMITER
 
 using DocStringExtensions
 
