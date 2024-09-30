@@ -134,21 +134,21 @@ end
     end
 end
 
-@testset "Test SubtypeComponentSelector" begin
+@testset "Test TypeComponentSelector" begin
     @testset for test_sys in [cstest_make_components(), cstest_make_system_data()]
-        test_sub_ent = IS.SubtypeComponentSelector(IS.TestComponent, nothing, :all)
-        named_test_sub_ent = IS.SubtypeComponentSelector(IS.TestComponent, "TComps", :all)
+        test_sub_ent = IS.TypeComponentSelector(IS.TestComponent, nothing, :all)
+        named_test_sub_ent = IS.TypeComponentSelector(IS.TestComponent, "TComps", :all)
 
         # Equality
-        @test IS.SubtypeComponentSelector(IS.TestComponent, nothing, :all) == test_sub_ent
-        @test IS.SubtypeComponentSelector(IS.TestComponent, "TComps", :all) ==
+        @test IS.TypeComponentSelector(IS.TestComponent, nothing, :all) == test_sub_ent
+        @test IS.TypeComponentSelector(IS.TestComponent, "TComps", :all) ==
               named_test_sub_ent
 
         # Construction
         @test IS.make_selector(IS.TestComponent) == test_sub_ent
         @test IS.make_selector(IS.TestComponent; name = "TComps") == named_test_sub_ent
         @test IS.make_selector(IS.TestComponent; groupby = string) isa
-              IS.SubtypeComponentSelector
+              IS.TypeComponentSelector
 
         # Naming
         @test IS.get_name(test_sub_ent) == "TestComponent"
@@ -233,8 +233,8 @@ end
 end
 
 @testset "Test DynamicallyGroupedComponentSelector grouping" begin
-    # We'll use SubtypeComponentSelector as the token example
-    @assert IS.SubtypeComponentSelector <: IS.DynamicallyGroupedComponentSelector
+    # We'll use TypeComponentSelector as the token example
+    @assert IS.TypeComponentSelector <: IS.DynamicallyGroupedComponentSelector
 
     all_selector = IS.make_selector(IS.TestComponent; groupby = :all)
     each_selector = IS.make_selector(IS.TestComponent; groupby = :each)

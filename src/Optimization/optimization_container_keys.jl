@@ -18,15 +18,15 @@ function encode_symbol(
     ::Type{U},
     meta::String = CONTAINER_KEY_EMPTY_META,
 ) where {T <: InfrastructureSystemsType, U}
-    meta_ = isempty(meta) ? meta : COMPONENT_NAME_DELIMETER * meta
-    T_ = replace(replace(strip_module_name(T), "{" => COMPONENT_NAME_DELIMETER), "}" => "")
-    return Symbol("$(strip_module_name(string(U)))$(COMPONENT_NAME_DELIMETER)$(T_)" * meta_)
+    meta_ = isempty(meta) ? meta : COMPONENT_NAME_DELIMITER * meta
+    T_ = replace(replace(strip_module_name(T), "{" => COMPONENT_NAME_DELIMITER), "}" => "")
+    return Symbol("$(strip_module_name(string(U)))$(COMPONENT_NAME_DELIMITER)$(T_)" * meta_)
 end
 
 function check_meta_chars(meta::String)
     # Underscores in this field will prevent us from being able to decode keys.
-    if occursin(COMPONENT_NAME_DELIMETER, meta)
-        throw(InvalidValue("'$COMPONENT_NAME_DELIMETER' is not allowed in meta"))
+    if occursin(COMPONENT_NAME_DELIMITER, meta)
+        throw(InvalidValue("'$COMPONENT_NAME_DELIMITER' is not allowed in meta"))
     end
 end
 
