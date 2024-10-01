@@ -16,7 +16,7 @@ of that data to figure out what went wrong.
     `RecorderEventCommon` in each struct.
 
  2. Call [`InfrastructureSystems.register_recorder!`](@ref) with arguments `recorder-name` for each recorder object you want to create.
-
+    
       + Depending on how often your code create events you may want to make this
         conditional. You may only need it for debug runs.
       + PowerSimulations creates one recorder for simulation step and stage

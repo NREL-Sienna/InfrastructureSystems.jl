@@ -26,7 +26,10 @@ Or
     directory.
 
 ```julia
-InfrastructureSystems.generate_structs("./src/descriptors/power_system_structs.json", "./src/models/generated")
+InfrastructureSystems.generate_structs(
+    "./src/descriptors/power_system_structs.json",
+    "./src/models/generated",
+)
 ```
 
 ## Struct Descriptor Rules
@@ -52,7 +55,7 @@ Optional fields for each struct member:
   - `exclude_setter`: Do not generate a setter function for this field.
   - `internal_default`: Set to true for non-user-facing fields like `InfrastructureSystemsInternal` that have default values.
   - `needs_conversion`: Set to true if the getter and setter function needs to apply unit conversion. The type must implement
-
+    
       + `get_value(::InfrastructureSystemsComponent, ::Type)` and
       + `set_value(::InfrastructureSystemsComponent, ::Type)`
         for this combination of component type and member type.
