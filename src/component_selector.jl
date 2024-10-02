@@ -65,7 +65,7 @@ const VALID_GROUPBY_KEYWORDS = [:all, :each]
 # because only PSY.get_components, not IS.get_components, is defined for PSY.System, we need
 # to be able to easily override these methods. See
 # https://github.com/NREL-Sienna/InfrastructureSystems.jl/issues/388
-const SYSTEM_LIKE = Union{Components, SystemData}
+const SystemLike = Union{Components, SystemData}
 
 """
 Helper function to check that the `groupby` argument is valid. Passes it through if so,
@@ -104,42 +104,52 @@ get_name(selector::ComponentSelector) =
     (selector.name !== nothing) ? selector.name : default_name(selector)
 
 """
-    get_components(selector, sys; filterby = nothing)
+    get_components(selector, sys; scope_limiter = nothing)
 Get the components of the collection that make up the `ComponentSelector`.
- - `filterby`: optional filter function to apply after evaluating the `ComponentSelector`
+ - `scope_limiter`: optional filter function to limit the scope of components under consideration
 """
 function get_components end
 
 """
-    get_components(filterby, selector, sys)
+    get_components(scope_limiter, selector, sys)
 Get the components of the collection that make up the `ComponentSelector`.
- - `filterby`: optional filter function to apply after evaluating the `ComponentSelector`
+ - `scope_limiter`: optional filter function to limit the scope of components under consideration
 """
 get_components(
-    filterby::Union{Nothing, Function},
+    scope_limiter::Union{Nothing, Function},
     selector::ComponentSelector,
-    sys::SYSTEM_LIKE,
+    sys::SystemLike,
 ) =
-    get_components(selector, sys; filterby = filterby)
+    get_components(selector, sys; scope_limiter = scope_limiter)
 
 """
-    get_groups(selector, sys; filterby = nothing)
+    get_groups(selector, sys; scope_limiter = nothing)
 Get the groups that make up the `ComponentSelector`.
- - `filterby`: optional filter function to apply after evaluating the `ComponentSelector`
+ - `scope_limiter`: optional filter function to limit the scope of components under consideration
 """
 function get_groups end
 
 """
-    get_groups(filterby, selector, sys)
+    get_groups(scope_limiter, selector, sys)
 Get the groups that make up the `ComponentSelector`.
- - `filterby`: optional filter function to apply after evaluating the `ComponentSelector`
+ - `scope_limiter`: optional filter function to limit the scope of components under consideration
 """
 get_groups(
-    filterby::Union{Nothing, Function},
+    scope_limiter::Union{Nothing, Function},
     selector::ComponentSelector,
-    sys::SYSTEM_LIKE,
+    sys::SystemLike,
 ) =
-    get_groups(selector, sys; filterby = filterby)
+    get_groups(selector, sys; scope_limiter = scope_limiter)
+
+"""
+Make a `ComponentSelector` containing the components in `all_components` whose corresponding
+entry of `partition_results` matches `group_result`
+"""
+function _make_group(all_components, partition_results, group_result, group_name)
+    to_include = [isequal(p_res, group_result) for p_res in partition_results]
+    component_selectors = make_selector.(all_components[to_include])
+    return make_selector(component_selectors...; name = group_name)
+end
 
 """
 Use the `groupby` property to get the groups that make up the
@@ -148,15 +158,15 @@ Use the `groupby` property to get the groups that make up the
 function get_groups(
     selector::DynamicallyGroupedComponentSelector,
     sys;
-    filterby = nothing,
+    scope_limiter = nothing,
 )
     validate_groupby(selector.groupby)
     (selector.groupby == :all) && return [selector]
     (selector.groupby == :each) &&
         return Iterators.map(make_selector,
-            get_components(selector, sys; filterby = filterby))
+            get_components(selector, sys; scope_limiter = scope_limiter))
     @assert selector.groupby isa Function
-    components = collect(get_components(selector, sys; filterby = filterby))
+    components = collect(get_components(selector, sys; scope_limiter = scope_limiter))
 
     partition_results = (selector.groupby).(components)
     unique_partitions = unique(partition_results)
@@ -166,44 +176,42 @@ function get_groups(
         throw(ArgumentError("Some partitions have the same name when converted to string"))
 
     return [
-        make_selector(
-            make_selector.(components[partition_results .== Ref(group_result)])...;
-            name = group_name,
-        ) for (group_result, group_name) in zip(unique_partitions, partition_labels)
+        _make_group(components, partition_results, group_result, group_name)
+        for (group_result, group_name) in zip(unique_partitions, partition_labels)
     ]
 end
 
 "Get the single group that corresponds to the `SingularComponentSelector`, i.e., itself"
-get_groups(selector::SingularComponentSelector, sys; filterby = nothing) = [selector]
+get_groups(selector::SingularComponentSelector, sys; scope_limiter = nothing) = [selector]
 
 """
-    get_component(selector, sys; filterby = nothing)
+    get_component(selector, sys; scope_limiter = nothing)
 Get the component of the collection that makes up the `SingularComponentSelector`; `nothing`
 if there is none.
- - `filterby`: optional filter function to apply after evaluating the `ComponentSelector`
+ - `scope_limiter`: optional filter function to apply after evaluating the `ComponentSelector`
 """
 function get_component(
     selector::SingularComponentSelector,
-    sys::SYSTEM_LIKE;
-    filterby = nothing,
+    sys::SystemLike;
+    scope_limiter = nothing,
 )
-    components = get_components(selector, sys; filterby = filterby)
+    components = get_components(selector, sys; scope_limiter = scope_limiter)
     isempty(components) && return nothing
     return only(components)
 end
 
 """
-    get_component(filterby, selector, sys)
+    get_component(scope_limiter, selector, sys)
 Get the component of the collection that makes up the `SingularComponentSelector`; `nothing`
 if there is none.
- - `filterby`: optional filter function to apply after evaluating the `ComponentSelector`
+ - `scope_limiter`: optional filter function to apply after evaluating the `ComponentSelector`
 """
 get_component(
-    filterby::Union{Nothing, Function},
+    scope_limiter::Union{Nothing, Function},
     selector::SingularComponentSelector,
-    sys::SYSTEM_LIKE,
+    sys::SystemLike,
 ) =
-    get_component(selector, sys; filterby = filterby)
+    get_component(selector, sys; scope_limiter = scope_limiter)
 
 # CONCRETE SUBTYPE IMPLEMENTATIONS
 # NameComponentSelector
@@ -241,11 +249,11 @@ default_name(selector::NameComponentSelector) =
 # Contents
 function get_components(
     selector::NameComponentSelector,
-    sys::SYSTEM_LIKE;
-    filterby = nothing,
+    sys::SystemLike;
+    scope_limiter = nothing,
 )
     com = get_component(selector.component_type, sys, selector.component_name)
-    (!isnothing(filterby) && !filterby(com)) && (com = nothing)
+    (!isnothing(scope_limiter) && !scope_limiter(com)) && (com = nothing)
     return (com === nothing) ? [] : [com]
 end
 
@@ -270,17 +278,20 @@ default_name(selector::ListComponentSelector) =
     "[$(join(get_name.(selector.content), ", "))]"
 
 # Contents
-function get_groups(selector::ListComponentSelector, sys; filterby = nothing)
+function get_groups(selector::ListComponentSelector, sys; scope_limiter = nothing)
     return selector.content
 end
 
 function get_components(
     selector::ListComponentSelector,
-    sys::SYSTEM_LIKE;
-    filterby = nothing,
+    sys::SystemLike;
+    scope_limiter = nothing,
 )
     sub_components =
-        Iterators.map(x -> get_components(x, sys; filterby = filterby), selector.content)
+        Iterators.map(
+            x -> get_components(x, sys; scope_limiter = scope_limiter),
+            selector.content,
+        )
     return Iterators.flatten(sub_components)
 end
 
@@ -310,12 +321,12 @@ default_name(selector::TypeComponentSelector) = subtype_to_string(selector.compo
 # Contents
 function get_components(
     selector::TypeComponentSelector,
-    sys::SYSTEM_LIKE;
-    filterby = nothing,
+    sys::SystemLike;
+    scope_limiter = nothing,
 )
     components = get_components(selector.component_type, sys)
-    isnothing(filterby) && (return components)
-    return Iterators.filter(filterby, components)
+    isnothing(scope_limiter) && (return components)
+    return Iterators.filter(scope_limiter, components)
 end
 
 # FilterComponentSelector
@@ -357,12 +368,18 @@ make_selector(
 # Contents
 function get_components(
     selector::FilterComponentSelector,
-    sys::SYSTEM_LIKE;
-    filterby = nothing,
+    sys::SystemLike;
+    scope_limiter = nothing,
 )
-    components = get_components(selector.filter_func, selector.component_type, sys)
-    isnothing(filterby) && (return components)
-    return Iterators.filter(filterby, components)
+    # Short-circuit-evaluate the `scope_limiter` first so `filter_func` may refer to
+    # component attributes that do not exist in components outside the scope
+    combo_filter = if isnothing(scope_limiter)
+        selector.filter_func
+    else
+        x -> scope_limiter(x) && selector.filter_func(x)
+    end
+    components = get_components(combo_filter, selector.component_type, sys)
+    return components
 end
 
 # Naming
