@@ -336,7 +336,7 @@ end
 """
 function open_file_logger(
     func::Function,
-    filename::String,
+    filename::String;
     level = Logging.Info,
     mode = "w+",
 )
