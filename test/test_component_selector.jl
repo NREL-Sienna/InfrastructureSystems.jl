@@ -60,7 +60,6 @@ end
         # Naming
         @test IS.get_name(test_gen_ent) == "TestComponent__Component1"
         @test IS.get_name(named_test_gen_ent) == "CompOne"
-        @test IS.default_name(test_gen_ent) == "TestComponent__Component1"
 
         # Contents
         @test collect(
@@ -141,12 +140,12 @@ end
 
 @testset "Test TypeComponentSelector" begin
     @testset for test_sys in [cstest_make_components(), cstest_make_system_data()]
-        test_sub_ent = IS.TypeComponentSelector(IS.TestComponent, nothing, :all)
-        named_test_sub_ent = IS.TypeComponentSelector(IS.TestComponent, "TComps", :all)
+        test_sub_ent = IS.TypeComponentSelector(IS.TestComponent, :all, nothing)
+        named_test_sub_ent = IS.TypeComponentSelector(IS.TestComponent, :all, "TComps")
 
         # Equality
-        @test IS.TypeComponentSelector(IS.TestComponent, nothing, :all) == test_sub_ent
-        @test IS.TypeComponentSelector(IS.TestComponent, "TComps", :all) ==
+        @test IS.TypeComponentSelector(IS.TestComponent, :all, nothing) == test_sub_ent
+        @test IS.TypeComponentSelector(IS.TestComponent, :all, "TComps") ==
               named_test_sub_ent
 
         # Construction
@@ -158,7 +157,6 @@ end
         # Naming
         @test IS.get_name(test_sub_ent) == "TestComponent"
         @test IS.get_name(named_test_sub_ent) == "TComps"
-        @test IS.default_name(test_sub_ent) == "TestComponent"
 
         # Contents
         answer = sort_name!(IS.get_components(IS.TestComponent, test_sys))
@@ -183,18 +181,18 @@ end
     @testset for test_sys in [cstest_make_components(), cstest_make_system_data()]
         val_over_ten(x) = IS.get_val(x) > 10
         test_filter_ent =
-            IS.FilterComponentSelector(IS.TestComponent, val_over_ten, nothing, :all)
+            IS.FilterComponentSelector(IS.TestComponent, val_over_ten, :all, nothing)
         named_test_filter_ent =
-            IS.FilterComponentSelector(IS.TestComponent, val_over_ten, "TCOverTen", :all)
+            IS.FilterComponentSelector(IS.TestComponent, val_over_ten, :all, "TCOverTen")
 
         # Equality
-        @test IS.FilterComponentSelector(IS.TestComponent, val_over_ten, nothing, :all) ==
+        @test IS.FilterComponentSelector(IS.TestComponent, val_over_ten, :all, nothing) ==
               test_filter_ent
         @test IS.FilterComponentSelector(
             IS.TestComponent,
             val_over_ten,
-            "TCOverTen",
             :all,
+            "TCOverTen",
         ) == named_test_filter_ent
 
         # Construction
