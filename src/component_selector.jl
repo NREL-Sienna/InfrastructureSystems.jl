@@ -3,16 +3,12 @@
 `ComponentSelector` extension notes:
 Concrete subtypes MUST implement:
  - `get_components`: returns an iterable of components
- - `get_name`: returns a name for the selector -- or use the default by implementing
-   `default_name` and having a `name` field
+ - `get_name`: returns a name for the selector -- or use the default by having a `name::String` field
  - `get_groups`: returns an iterable of `ComponentSelector`s
 
 Concrete subtypes SHOULD implement:
  - The factory method `make_selector` (make sure your signature does not conflict with an
    existing one)
-
-Concrete subtypes MAY implement:
- - `default_name`
 =#
 "The base type for all `ComponentSelector`s."
 abstract type ComponentSelector end
@@ -87,21 +83,12 @@ subtypes.
 """
 function make_selector end
 
-"""
-Get the default name for the `ComponentSelector`, constructed automatically from what the
-`ComponentSelector` contains. Particularly for complex `ComponentSelector`s, this may not
-always be very concise or informative, so in these cases constructing the
-`ComponentSelector` with a custom name is recommended.
-"""
-function default_name end
-
 # Override this if you define a ComponentSelector subtype with no name field
 """
 Get the name of the `ComponentSelector`. This is either the default name or a custom name
 passed in at creation time.
 """
-get_name(selector::ComponentSelector) =
-    (selector.name !== nothing) ? selector.name : default_name(selector)
+get_name(selector::ComponentSelector) = selector.name
 
 """
     get_components(selector, sys; scope_limiter = nothing)
@@ -160,7 +147,6 @@ function get_groups(
     sys;
     scope_limiter = nothing,
 )
-    validate_groupby(selector.groupby)
     (selector.groupby == :all) && return [selector]
     (selector.groupby == :each) &&
         return Iterators.map(make_selector,
@@ -219,10 +205,21 @@ get_component(
 struct NameComponentSelector <: SingularComponentSelector
     component_type::Type{<:InfrastructureSystemsComponent}
     component_name::AbstractString
-    name::Union{String, Nothing}
+    name::String
 end
 
 # Construction
+NameComponentSelector(
+    component_type::Type{<:InfrastructureSystemsComponent},
+    component_name::AbstractString,
+    name::Nothing = nothing,
+) =
+    NameComponentSelector(
+        component_type,
+        component_name,
+        component_to_qualified_string(component_type, component_name),
+    )
+
 """
 Make a `ComponentSelector` pointing to a component with the given type and name.
 Optionally provide a name for the `ComponentSelector`.
@@ -242,10 +239,6 @@ make_selector(
 ) =
     make_selector(typeof(component), get_name(component)::AbstractString; name = name)
 
-# Naming
-default_name(selector::NameComponentSelector) =
-    component_to_qualified_string(selector.component_type, selector.component_name)
-
 # Contents
 function get_components(
     selector::NameComponentSelector,
@@ -262,20 +255,19 @@ end
 struct ListComponentSelector <: PluralComponentSelector
     # Using tuples internally for immutability => `==` is automatically well-behaved
     content::Tuple{Vararg{ComponentSelector}}
-    name::Union{String, Nothing}
+    name::String
 end
 
 # Construction
+ListComponentSelector(content::Tuple{Vararg{ComponentSelector}}, name::Nothing = nothing) =
+    ListComponentSelector(content, "[$(join(get_name.(content), ", "))]")
+
 """
 Make a `ComponentSelector` pointing to a list of sub-selectors, which form the groups.
 Optionally provide a name for the `ComponentSelector`.
 """
 make_selector(content::ComponentSelector...; name::Union{String, Nothing} = nothing) =
     ListComponentSelector(content, name)
-
-# Naming
-default_name(selector::ListComponentSelector) =
-    "[$(join(get_name.(selector.content), ", "))]"
 
 # Contents
 function get_groups(selector::ListComponentSelector, sys; scope_limiter = nothing)
@@ -299,24 +291,32 @@ end
 "`PluralComponentSelector` represented by a type of component."
 struct TypeComponentSelector <: DynamicallyGroupedComponentSelector
     component_type::Type{<:InfrastructureSystemsComponent}
-    name::Union{String, Nothing}
     groupby::Union{Symbol, Function}
+    name::String
+
+    TypeComponentSelector(
+        component_type::Type{<:InfrastructureSystemsComponent},
+        groupby::Union{Symbol, Function},
+        name::String,
+    ) = new(component_type, validate_groupby(groupby), name)
 end
 
 # Construction
+TypeComponentSelector(
+    component_type::Type{<:InfrastructureSystemsComponent},
+    groupby::Union{Symbol, Function},
+    name::Nothing = nothing,
+) = TypeComponentSelector(component_type, groupby, subtype_to_string(component_type))
+
 """
 Make a `ComponentSelector` from a type of component. Optionally provide a name and/or
 grouping behavior for the `ComponentSelector`.
 """
 make_selector(
     component_type::Type{<:InfrastructureSystemsComponent};
-    name::Union{String, Nothing} = nothing,
     groupby::Union{Symbol, Function} = :all,
-) =
-    TypeComponentSelector(component_type, name, validate_groupby(groupby))
-
-# Naming
-default_name(selector::TypeComponentSelector) = subtype_to_string(selector.component_type)
+    name::Union{String, Nothing} = nothing,
+) = TypeComponentSelector(component_type, groupby, name)
 
 # Contents
 function get_components(
@@ -334,11 +334,31 @@ end
 struct FilterComponentSelector <: DynamicallyGroupedComponentSelector
     component_type::Type{<:InfrastructureSystemsComponent}
     filter_func::Function
-    name::Union{String, Nothing}
     groupby::Union{Symbol, Function}
+    name::String
+
+    FilterComponentSelector(
+        component_type::Type{<:InfrastructureSystemsComponent},
+        filter_func::Function,
+        groupby::Union{Symbol, Function},
+        name::String,
+    ) = new(component_type, filter_func, validate_groupby(groupby), name)
 end
 
 # Construction
+FilterComponentSelector(
+    component_type::Type{<:InfrastructureSystemsComponent},
+    filter_func::Function,
+    groupby::Union{Symbol, Function},
+    name::Nothing = nothing,
+) =
+    FilterComponentSelector(
+        component_type,
+        filter_func,
+        groupby,
+        string(filter_func) * COMPONENT_NAME_DELIMITER * subtype_to_string(component_type),
+    )
+
 # Could try to validate filter_func here, probably not worth it
 # Signature 1: put the type first for consistency with many other `make_selector` methods
 """
@@ -348,9 +368,9 @@ provide a name and/or grouping behavior for the `ComponentSelector`.
 """
 make_selector(
     component_type::Type{<:InfrastructureSystemsComponent},
-    filter_func::Function; name::Union{String, Nothing} = nothing,
-    groupby::Union{Symbol, Function} = :all,
-) = FilterComponentSelector(component_type, filter_func, name, validate_groupby(groupby))
+    filter_func::Function;
+    groupby::Union{Symbol, Function} = :all, name::Union{String, Nothing} = nothing,
+) = FilterComponentSelector(component_type, filter_func, groupby, name)
 
 # Signature 2: put the filter function first for consistency with non-`ComponentSelector` `get_components`
 """
@@ -363,7 +383,7 @@ make_selector(
     component_type::Type{<:InfrastructureSystemsComponent};
     name::Union{String, Nothing} = nothing,
     groupby::Union{Symbol, Function} = :all,
-) = FilterComponentSelector(component_type, filter_func, name, validate_groupby(groupby))
+) = FilterComponentSelector(component_type, filter_func, groupby, name)
 
 # Contents
 function get_components(
@@ -381,8 +401,3 @@ function get_components(
     components = get_components(combo_filter, selector.component_type, sys)
     return components
 end
-
-# Naming
-default_name(selector::FilterComponentSelector) =
-    string(selector.filter_func) * COMPONENT_NAME_DELIMITER *
-    subtype_to_string(selector.component_type)
