@@ -77,14 +77,12 @@ function make_time_series_storage(;
     return storage
 end
 
-const COMPONENT_name_DELIMITER = "__"
-
 function make_component_name(component_uuid::UUIDs.UUID, name::AbstractString)
-    return string(component_uuid) * COMPONENT_name_DELIMITER * name
+    return string(component_uuid) * COMPONENT_NAME_DELIMITER * name
 end
 
 function deserialize_component_name(component_name::AbstractString)
-    data = split(component_name, COMPONENT_name_DELIMITER)
+    data = split(component_name, COMPONENT_NAME_DELIMITER)
     component = UUIDs.UUID(data[1])
     name = data[2]
     return component, name
