@@ -23,6 +23,16 @@ end
 
 sort_name!(x) = sort!(collect(x); by = IS.get_name)
 
+# NOTE we are not constraining the second type parameter
+const GCReturnType = IS.FlattenIteratorWrapper{<:IS.InfrastructureSystemsComponent, <:Any}
+
+"Helper function to test the return type of `get_components` whenever we call it"
+function get_components_rt(args...; kwargs...)
+    result = IS.get_components(args...; kwargs...)
+    @test result isa GCReturnType
+    return result
+end
+
 @testset "Test helper functions" begin
     @test IS.subtype_to_string(IS.TestComponent) == "TestComponent"
     @test IS.component_to_qualified_string(IS.TestComponent, "Component1") ==
@@ -63,17 +73,17 @@ end
 
         # Contents
         @test collect(
-            IS.get_components(IS.make_selector(IS.SimpleTestComponent, ""), test_sys),
+            get_components_rt(IS.make_selector(IS.SimpleTestComponent, ""), test_sys),
         ) == Vector{IS.InfrastructureSystemsComponent}()
-        the_components = collect(IS.get_components(test_gen_ent, test_sys))
+        the_components = collect(get_components_rt(test_gen_ent, test_sys))
         @test length(the_components) == 1
         @test typeof(first(the_components)) == IS.TestComponent
         @test IS.get_name(first(the_components)) == "Component1"
         @test Set(
-            collect(IS.get_components(test_gen_ent, test_sys; scope_limiter = x -> true)),
+            collect(get_components_rt(test_gen_ent, test_sys; scope_limiter = x -> true)),
         ) == Set(the_components)
         @test length(
-            collect(IS.get_components(test_gen_ent, test_sys; scope_limiter = x -> false)),
+            collect(get_components_rt(test_gen_ent, test_sys; scope_limiter = x -> false)),
         ) == 0
         @test IS.get_component(test_gen_ent, test_sys; scope_limiter = x -> true) ==
               first(the_components)
@@ -108,18 +118,18 @@ end
         @test IS.get_name(named_test_list_ent) == "TwoComps"
 
         # Contents
-        @test collect(IS.get_components(IS.make_selector(), test_sys)) ==
+        @test collect(get_components_rt(IS.make_selector(), test_sys)) ==
               Vector{IS.InfrastructureSystemsComponent}()
-        the_components = collect(IS.get_components(test_list_ent, test_sys))
+        the_components = collect(get_components_rt(test_list_ent, test_sys))
         @test length(the_components) == 2
         @test IS.get_component(IS.TestComponent, test_sys, "Component1") in the_components
         @test IS.get_component(IS.AdditionalTestComponent, test_sys, "Component3") in
               the_components
         @test Set(
-            collect(IS.get_components(test_list_ent, test_sys; scope_limiter = x -> true)),
+            collect(get_components_rt(test_list_ent, test_sys; scope_limiter = x -> true)),
         ) == Set(the_components)
         @test length(
-            collect(IS.get_components(test_list_ent, test_sys; scope_limiter = x -> false)),
+            collect(get_components_rt(test_list_ent, test_sys; scope_limiter = x -> false)),
         ) == 0
 
         @test collect(IS.get_groups(IS.make_selector(), test_sys)) ==
@@ -159,18 +169,18 @@ end
         @test IS.get_name(named_test_sub_ent) == "TComps"
 
         # Contents
-        answer = sort_name!(IS.get_components(IS.TestComponent, test_sys))
+        answer = sort_name!(get_components_rt(IS.TestComponent, test_sys))
 
         @test collect(
-            IS.get_components(IS.make_selector(IS.SimpleTestComponent), test_sys),
+            get_components_rt(IS.make_selector(IS.SimpleTestComponent), test_sys),
         ) == Vector{IS.InfrastructureSystemsComponent}()
-        the_components = IS.get_components(test_sub_ent, test_sys)
+        the_components = get_components_rt(test_sub_ent, test_sys)
         @test all(sort_name!(the_components) .== answer)
         @test Set(
-            collect(IS.get_components(test_sub_ent, test_sys; scope_limiter = x -> true)),
+            collect(get_components_rt(test_sub_ent, test_sys; scope_limiter = x -> true)),
         ) == Set(the_components)
         @test length(
-            collect(IS.get_components(test_sub_ent, test_sys; scope_limiter = x -> false)),
+            collect(get_components_rt(test_sub_ent, test_sys; scope_limiter = x -> false)),
         ) == 0
 
         # Grouping inherits from `DynamicallyGroupedComponentSelector` and is tested elsewhere
@@ -212,29 +222,29 @@ end
             sort_name!(
                 filter(
                     val_over_ten,
-                    collect(IS.get_components(IS.TestComponent, test_sys)),
+                    collect(get_components_rt(IS.TestComponent, test_sys)),
                 ),
             )
 
         @test collect(
-            IS.get_components(
+            get_components_rt(
                 IS.make_selector(IS.SimpleTestComponent, x -> true),
                 test_sys,
             )) == Vector{IS.InfrastructureSystemsComponent}()
         @test collect(
-            IS.get_components(
+            get_components_rt(
                 IS.make_selector(IS.InfrastructureSystemsComponent, x -> false),
                 test_sys,
             )) == Vector{IS.InfrastructureSystemsComponent}()
-        the_components = IS.get_components(test_filter_ent, test_sys)
+        the_components = get_components_rt(test_filter_ent, test_sys)
         @test all(sort_name!(the_components) .== answer)
         @test Set(
-            IS.get_components(test_filter_ent, test_sys; scope_limiter = x -> true),
+            get_components_rt(test_filter_ent, test_sys; scope_limiter = x -> true),
         ) ==
               Set(the_components)
         @test length(
             collect(
-                IS.get_components(test_filter_ent, test_sys; scope_limiter = x -> false),
+                get_components_rt(test_filter_ent, test_sys; scope_limiter = x -> false),
             ),
         ) == 0
     end
@@ -256,7 +266,7 @@ end
         @test Set(IS.get_name.(IS.get_groups(each_selector, test_sys))) ==
               Set(
             IS.component_to_qualified_string.(Ref(IS.TestComponent),
-                IS.get_name.(IS.get_components(each_selector, test_sys))),
+                IS.get_name.(get_components_rt(each_selector, test_sys))),
         )
         @test length(
             collect(
@@ -278,10 +288,10 @@ end
 @testset "Test alternative interfaces" begin
     test_sys = cstest_make_components()
     selector = IS.make_selector(IS.TestComponent, "Component1")
-    @test IS.get_components(selector, test_sys; scope_limiter = x -> true) ==
-          IS.get_components(x -> true, selector, test_sys)
+    @test collect(get_components_rt(selector, test_sys; scope_limiter = x -> true)) ==
+          collect(get_components_rt(x -> true, selector, test_sys))
     @test IS.get_component(selector, test_sys; scope_limiter = x -> true) ==
           IS.get_component(x -> true, selector, test_sys)
-    @test IS.get_groups(selector, test_sys; scope_limiter = x -> true) ==
-          IS.get_groups(x -> true, selector, test_sys)
+    @test collect(IS.get_groups(selector, test_sys; scope_limiter = x -> true)) ==
+          collect(IS.get_groups(x -> true, selector, test_sys))
 end

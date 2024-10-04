@@ -17,8 +17,8 @@ abstract type ComponentSelector end
 `SingularComponentSelector` extension notes:
 The interface is the same as for `ComponentSelector` except:
  - `get_components` MUST return zero or one components
- - the additional method `get_component` is part of the interface, but the default
-   implementation just wraps `get_components` and SHOULD NOT need to be overridden
+ - `get_component` MUST be implemented: return `nothing` where `get_components` would return
+   zero components, else return an iterator of the one component
  - there is a sensible default for `get_groups`; it MAY be overridden
 =#
 "`ComponentSelector`s that can only refer to zero or one components."
@@ -176,15 +176,7 @@ Get the component of the collection that makes up the `SingularComponentSelector
 if there is none.
  - `scope_limiter`: optional filter function to apply after evaluating the `ComponentSelector`
 """
-function get_component(
-    selector::SingularComponentSelector,
-    sys::SystemLike;
-    scope_limiter = nothing,
-)
-    components = get_components(selector, sys; scope_limiter = scope_limiter)
-    isempty(components) && return nothing
-    return only(components)
-end
+function get_component end
 
 """
     get_component(scope_limiter, selector, sys)
@@ -240,14 +232,27 @@ make_selector(
     make_selector(typeof(component), get_name(component)::AbstractString; name = name)
 
 # Contents
-function get_components(
+function get_component(
     selector::NameComponentSelector,
     sys::SystemLike;
     scope_limiter = nothing,
 )
     com = get_component(selector.component_type, sys, selector.component_name)
-    (!isnothing(scope_limiter) && !scope_limiter(com)) && (com = nothing)
-    return (com === nothing) ? [] : [com]
+    isnothing(com) && return nothing
+    (!isnothing(scope_limiter) && !scope_limiter(com)) && return nothing
+    return com
+end
+
+function get_components(
+    selector::NameComponentSelector,
+    sys::SystemLike;
+    scope_limiter = nothing,
+)
+    com = get_component(selector, sys; scope_limiter = scope_limiter)
+    isnothing(com) && return _make_empty_iterator(selector.component_type)
+    # Wrap the one component up in a bunch of other data structures to get the Sienna standard type for this
+    com_dict = Dict(selector.component_name => com)
+    return _make_iterator_from_concrete_dict(selector.component_type, com_dict)
 end
 
 # ListComponentSelector
@@ -280,11 +285,12 @@ function get_components(
     scope_limiter = nothing,
 )
     sub_components =
-        Iterators.map(
+        map(
             x -> get_components(x, sys; scope_limiter = scope_limiter),
             selector.content,
         )
-    return Iterators.flatten(sub_components)
+    my_supertype = typejoin(eltype.(sub_components)...)
+    return FlattenIteratorWrapper(my_supertype, sub_components)
 end
 
 # TypeComponentSelector
@@ -324,9 +330,8 @@ function get_components(
     sys::SystemLike;
     scope_limiter = nothing,
 )
-    components = get_components(selector.component_type, sys)
-    isnothing(scope_limiter) && (return components)
-    return Iterators.filter(scope_limiter, components)
+    isnothing(scope_limiter) && return get_components(selector.component_type, sys)
+    return get_components(scope_limiter, selector.component_type, sys)
 end
 
 # FilterComponentSelector
