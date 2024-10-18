@@ -17,6 +17,13 @@ pages = OrderedDict(
             "dev_guide/logging.md",
         ],
         "Style Guide" => "style.md",
+        "Documentation Best Practices" => Any[
+            "How to..." => Any[
+                "Compile and View Documentation Locally" => "docs_best_practices/how-to/compile.md",
+                "View Draft Documentation on Github" => "docs_best_practices/how-to/view_github.md",
+                "Troubleshoot Common Errors" => "docs_best_practices/how-to/troubleshoot.md",],
+            "Explanation" => "docs_best_practices/explanation.md"
+        ],
         "API" => "InfrastructureSystems.md"
 )
 
