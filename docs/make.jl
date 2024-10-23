@@ -20,6 +20,7 @@ pages = OrderedDict(
         "Documentation Best Practices" => Any[
             "Explanation" => "docs_best_practices/explanation.md",
             "How to..." => Any[
+                "Clean Up General Formatting" => "docs_best_practices/how-to/general_formatting.md",
                 "Write a Tutorial" => "docs_best_practices/how-to/write_a_tutorial.md",
                 "Compile and View Documentation Locally" => "docs_best_practices/how-to/compile.md",
                 "View Draft Documentation on Github" => "docs_best_practices/how-to/view_github.md",
