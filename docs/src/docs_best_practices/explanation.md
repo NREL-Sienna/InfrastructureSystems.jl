@@ -30,6 +30,14 @@ the meantime, `Documenter.jl` has released its v1.0 and onwards, which contain m
 more rigorous checks for documentation quality. Sienna's packages have not kept up with
 these improvements. 
 
-We aim to remedy these issues through a concerted clean up and re-organization effort, 
-compliance with `Documenter.jl` >v1.0's quality control checks, and clear best practice
-guidelines that can be applied as a regular part of future pull request reviews.
+## Purpose of the Documentation Best Practices
+
+We aim to remedy the historical issues above through a concerted clean up and
+re-organization effort and compliance with `Documenter.jl` >v1.0's quality control checks,
+following these best practice guidelines. These guidelines are not intended to reiterate
+[Diataxis](https://diataxis.fr/), beyond regularly reminding contributers to refer to them
+-- and contributers should read the [Diataxis](https://diataxis.fr/) website in its entirety
+before getting started. Instead, the best practices are intended to bridge the gap where
+there are Julia- or Sienna-specific recommendations, either to consistently implement the
+Diataxis framework or to highlight common documentation issues throughout the Sienna
+packages that need to be addressed as part of our concerted clean-up effort.  
