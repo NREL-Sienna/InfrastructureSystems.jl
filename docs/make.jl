@@ -18,12 +18,14 @@ pages = OrderedDict(
         ],
         "Style Guide" => "style.md",
         "Documentation Best Practices" => Any[
+            "Explanation" => "docs_best_practices/explanation.md",
             "How to..." => Any[
+                "Write a Tutorial" => "docs_best_practices/how-to/write_a_tutorial.md",
                 "Compile and View Documentation Locally" => "docs_best_practices/how-to/compile.md",
                 "View Draft Documentation on Github" => "docs_best_practices/how-to/view_github.md",
                 "Troubleshoot Common Errors" => "docs_best_practices/how-to/troubleshoot.md",],
-            "Explanation" => "docs_best_practices/explanation.md",
-            "Reference" => Any["docs_best_practices/reference/useful_links.md"],
+            "Reference" => Any["docs_best_practices/reference/requirements_checklist.md",
+                "docs_best_practices/reference/useful_links.md",],
         ],
         "API" => "InfrastructureSystems.md"
 )
