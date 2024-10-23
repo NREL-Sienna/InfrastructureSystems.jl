@@ -60,12 +60,6 @@ the exact results seen on the documentation page.
     [`@setup`](https://documenter.juliadocs.org/stable/man/syntax/#reference-at-setup)
     blocks.
 
-### Make it realistic and relatable
-!!! tip "Do"
-    Take the time to define some realistic example data. 
-!!! warning "Don't"   
-    Use `zero()` or `one()` for all example data.
-
 ### Make it effortless to read
 !!! tip "Do"
     Split code examples into ideally 1 (to 3) lines ONLY, with a short preface
@@ -74,6 +68,12 @@ the exact results seen on the documentation page.
     Use blocks of example code and/or return statements that go over 1 screen
     length in the compiled .html. They are very hard to follow and allow a user to tune out
     or give up.
+
+### Make it realistic and relatable
+!!! tip "Do"
+    Take the time to define some realistic example data. 
+!!! warning "Don't"   
+    Use `zero()` or `one()` for all example data.
 
 ### Only show relevant log and return statements
 !!! tip "Do"
