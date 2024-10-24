@@ -28,7 +28,7 @@ development of the [`Documenter.jl`](https://documenter.juliadocs.org/stable/) p
 Early versions of Sienna's packages were documented requiring `Documenter.jl` v0.27, and in
 the meantime, `Documenter.jl` has released its v1.0 and onwards, which contain much
 more rigorous checks for documentation quality. Sienna's packages have not kept up with
-these improvements. 
+these improvements.
 
 ## Purpose of the Documentation Best Practices
 
@@ -40,4 +40,4 @@ following these best practice guidelines. These guidelines are not intended to r
 before getting started. Instead, the best practices are intended to bridge the gap where
 there are Julia- or Sienna-specific recommendations, either to consistently implement the
 Diataxis framework or to highlight common documentation issues throughout the Sienna
-packages that need to be addressed as part of our concerted clean-up effort.  
+packages that need to be addressed as part of our concerted clean-up effort.
