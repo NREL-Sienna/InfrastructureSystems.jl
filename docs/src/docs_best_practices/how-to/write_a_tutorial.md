@@ -77,7 +77,7 @@ the exact results seen on the documentation page.
 
 ### Only show relevant log and return statements
 !!! tip "Do"
-    [Configure the logger](@ref "Logging") or load/build a `System` that returns very
+    [Configure the logger](@ref log) or load/build a `System` that returns very
         few log statements. Use semi-colons at line ends to hide return statements if need be.
 !!! warning "Don't" 
     Show extensive or confusing log or return statements that bog down a reader with
