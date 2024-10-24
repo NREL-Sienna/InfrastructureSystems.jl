@@ -28,6 +28,13 @@ import ..InfrastructureSystems:
     convert_for_path,
     InvalidValue
 
+using DocStringExtensions
+
+@template (FUNCTIONS, METHODS) = """
+                                    $(TYPEDSIGNATURES)
+                                    $(DOCSTRING)
+                                    """
+
 export OptimizationProblemResults
 export OptimizationProblemResultsExport
 export OptimizerStats

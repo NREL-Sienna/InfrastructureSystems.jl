@@ -17,6 +17,17 @@ pages = OrderedDict(
             "dev_guide/logging.md",
         ],
         "Style Guide" => "style.md",
+        "Documentation Best Practices" => Any[
+            "Explanation" => "docs_best_practices/explanation.md",
+            "How to..." => Any[
+                "Clean Up General Formatting" => "docs_best_practices/how-to/general_formatting.md",
+                "Write a Tutorial" => "docs_best_practices/how-to/write_a_tutorial.md",
+                "Compile and View Documentation Locally" => "docs_best_practices/how-to/compile.md",
+                "View Draft Documentation on Github" => "docs_best_practices/how-to/view_github.md",
+                "Troubleshoot Common Errors" => "docs_best_practices/how-to/troubleshoot.md",],
+            "Reference" => Any["docs_best_practices/reference/requirements_checklist.md",
+                "docs_best_practices/reference/useful_links.md",],
+        ],
         "API" => "InfrastructureSystems.md"
 )
 
@@ -51,7 +62,6 @@ makedocs(
         size_threshold = nothing),
     sitename = "InfrastructureSystems.jl",
     pages = Any[p for p in pages],
-    warnonly = Documenter.except(),
 )
 
 
