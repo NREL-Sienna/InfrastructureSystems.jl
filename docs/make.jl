@@ -62,7 +62,6 @@ makedocs(
         size_threshold = nothing),
     sitename = "InfrastructureSystems.jl",
     pages = Any[p for p in pages],
-    warnonly = Documenter.except(),
 )
 
 
