@@ -84,13 +84,3 @@ function _get_concrete_types(
 ) where {T <: InfrastructureSystemsType}
     return [x for x in keys(data) if x <: T]
 end
-
-function Base.filter(filter_func::Function, iter::FlattenIteratorWrapper{T, I}) where {T, I}
-    # PERF note that here we materialize everything
-    filtered_items = filter(filter_func, collect(iter))
-    # NOTE that we don't currently require the second type parameter of `result` to be `I`.
-    # This is because `I` is often something like `Vector{Base.ValueIterator}` that it
-    # doesn't make sense to reconstruct. We do, however, guarantee that the first type
-    # parameter of `result` is `T` and that this method is type stable given `T` and `I`.
-    return FlattenIteratorWrapper(T, [filtered_items])
-end

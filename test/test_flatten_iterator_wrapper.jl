@@ -22,11 +22,3 @@ end
     run_test(Int, [1, 2, 3], [4, 5, 6])
     run_test(Int, [], [])
 end
-
-@testset "Test filter(..., ::IS.FlattenIteratorWrapper)" begin
-    iter = IS.FlattenIteratorWrapper(Integer, [[1, 2, 3, 4, 5, 6]])
-    @test filter(iseven, iter) isa IS.FlattenIteratorWrapper{Integer}
-    @test collect(filter(iseven, iter)) == [2, 4, 6]
-    @test filter(<(0), iter) isa IS.FlattenIteratorWrapper{Integer}
-    @test collect(filter(<(0), iter)) == []
-end
