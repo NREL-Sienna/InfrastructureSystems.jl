@@ -284,14 +284,3 @@ end
         ) == 1
     end
 end
-
-@testset "Test alternative interfaces" begin
-    test_sys = cstest_make_components()
-    selector = IS.make_selector(IS.TestComponent, "Component1")
-    @test collect(get_components_rt(selector, test_sys; scope_limiter = x -> true)) ==
-          collect(get_components_rt(x -> true, selector, test_sys))
-    @test IS.get_component(selector, test_sys; scope_limiter = x -> true) ==
-          IS.get_component(x -> true, selector, test_sys)
-    @test collect(IS.get_groups(selector, test_sys; scope_limiter = x -> true)) ==
-          collect(IS.get_groups(x -> true, selector, test_sys))
-end

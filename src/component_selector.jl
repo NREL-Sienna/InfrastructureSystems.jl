@@ -91,42 +91,16 @@ passed in at creation time.
 get_name(selector::ComponentSelector) = selector.name
 
 """
-    get_components(selector, sys; scope_limiter = nothing)
+    get_components(selector, sys)
 Get the components of the collection that make up the `ComponentSelector`.
- - `scope_limiter`: optional filter function to limit the scope of components under consideration
 """
 function get_components end
 
 """
-    get_components(scope_limiter, selector, sys)
-Get the components of the collection that make up the `ComponentSelector`.
- - `scope_limiter`: optional filter function to limit the scope of components under consideration
-"""
-get_components(
-    scope_limiter::Union{Nothing, Function},
-    selector::ComponentSelector,
-    sys::SystemLike,
-) =
-    get_components(selector, sys; scope_limiter = scope_limiter)
-
-"""
-    get_groups(selector, sys; scope_limiter = nothing)
+    get_groups(selector, sys)
 Get the groups that make up the `ComponentSelector`.
- - `scope_limiter`: optional filter function to limit the scope of components under consideration
 """
 function get_groups end
-
-"""
-    get_groups(scope_limiter, selector, sys)
-Get the groups that make up the `ComponentSelector`.
- - `scope_limiter`: optional filter function to limit the scope of components under consideration
-"""
-get_groups(
-    scope_limiter::Union{Nothing, Function},
-    selector::ComponentSelector,
-    sys::SystemLike,
-) =
-    get_groups(selector, sys; scope_limiter = scope_limiter)
 
 """
 Make a `ComponentSelector` containing the components in `all_components` whose corresponding
@@ -145,14 +119,14 @@ Use the `groupby` property to get the groups that make up the
 function get_groups(
     selector::DynamicallyGroupedComponentSelector,
     sys;
-    scope_limiter = nothing,
+    kwargs...,
 )
     (selector.groupby == :all) && return [selector]
     (selector.groupby == :each) &&
         return Iterators.map(make_selector,
-            get_components(selector, sys; scope_limiter = scope_limiter))
+            get_components(selector, sys; kwargs...))
     @assert selector.groupby isa Function
-    components = collect(get_components(selector, sys; scope_limiter = scope_limiter))
+    components = collect(get_components(selector, sys; kwargs...))
 
     partition_results = (selector.groupby).(components)
     unique_partitions = unique(partition_results)
@@ -168,28 +142,14 @@ function get_groups(
 end
 
 "Get the single group that corresponds to the `SingularComponentSelector`, i.e., itself"
-get_groups(selector::SingularComponentSelector, sys; scope_limiter = nothing) = [selector]
+get_groups(selector::SingularComponentSelector, sys; kwargs...) = [selector]
 
 """
-    get_component(selector, sys; scope_limiter = nothing)
+    get_component(selector, sys)
 Get the component of the collection that makes up the `SingularComponentSelector`; `nothing`
 if there is none.
- - `scope_limiter`: optional filter function to apply after evaluating the `ComponentSelector`
 """
 function get_component end
-
-"""
-    get_component(scope_limiter, selector, sys)
-Get the component of the collection that makes up the `SingularComponentSelector`; `nothing`
-if there is none.
- - `scope_limiter`: optional filter function to apply after evaluating the `ComponentSelector`
-"""
-get_component(
-    scope_limiter::Union{Nothing, Function},
-    selector::SingularComponentSelector,
-    sys::SystemLike,
-) =
-    get_component(selector, sys; scope_limiter = scope_limiter)
 
 # CONCRETE SUBTYPE IMPLEMENTATIONS
 # NameComponentSelector
@@ -235,10 +195,11 @@ make_selector(
 function get_component(
     selector::NameComponentSelector,
     sys::SystemLike;
-    scope_limiter = nothing,
+    kwargs...,
 )
     com = get_component(selector.component_type, sys, selector.component_name)
     isnothing(com) && return nothing
+    scope_limiter = get(kwargs, :scope_limiter, nothing)
     (!isnothing(scope_limiter) && !scope_limiter(com)) && return nothing
     return com
 end
@@ -246,9 +207,9 @@ end
 function get_components(
     selector::NameComponentSelector,
     sys::SystemLike;
-    scope_limiter = nothing,
+    kwargs...,
 )
-    com = get_component(selector, sys; scope_limiter = scope_limiter)
+    com = get_component(selector, sys; kwargs...)
     isnothing(com) && return _make_empty_iterator(selector.component_type)
     # Wrap the one component up in a bunch of other data structures to get the Sienna standard type for this
     com_dict = Dict(selector.component_name => com)
@@ -275,18 +236,18 @@ make_selector(content::ComponentSelector...; name::Union{String, Nothing} = noth
     ListComponentSelector(content, name)
 
 # Contents
-function get_groups(selector::ListComponentSelector, sys; scope_limiter = nothing)
+function get_groups(selector::ListComponentSelector, sys; kwargs...)
     return selector.content
 end
 
 function get_components(
     selector::ListComponentSelector,
     sys::SystemLike;
-    scope_limiter = nothing,
+    kwargs...,
 )
     sub_components =
         map(
-            x -> get_components(x, sys; scope_limiter = scope_limiter),
+            x -> get_components(x, sys; kwargs...),
             selector.content,
         )
     my_supertype = typejoin(eltype.(sub_components)...)
@@ -295,7 +256,7 @@ end
 
 # TypeComponentSelector
 "`PluralComponentSelector` represented by a type of component."
-struct TypeComponentSelector <: DynamicallyGroupedComponentSelector
+@kwdef struct TypeComponentSelector <: DynamicallyGroupedComponentSelector
     component_type::Type{<:InfrastructureSystemsComponent}
     groupby::Union{Symbol, Function}
     name::String
@@ -328,15 +289,16 @@ make_selector(
 function get_components(
     selector::TypeComponentSelector,
     sys::SystemLike;
-    scope_limiter = nothing,
+    kwargs...,
 )
+    scope_limiter = get(kwargs, :scope_limiter, nothing)
     isnothing(scope_limiter) && return get_components(selector.component_type, sys)
     return get_components(scope_limiter, selector.component_type, sys)
 end
 
 # FilterComponentSelector
 "`PluralComponentSelector` represented by a filter function and a type of component."
-struct FilterComponentSelector <: DynamicallyGroupedComponentSelector
+@kwdef struct FilterComponentSelector <: DynamicallyGroupedComponentSelector
     component_type::Type{<:InfrastructureSystemsComponent}
     filter_func::Function
     groupby::Union{Symbol, Function}
@@ -394,10 +356,11 @@ make_selector(
 function get_components(
     selector::FilterComponentSelector,
     sys::SystemLike;
-    scope_limiter = nothing,
+    kwargs...,
 )
     # Short-circuit-evaluate the `scope_limiter` first so `filter_func` may refer to
     # component attributes that do not exist in components outside the scope
+    scope_limiter = get(kwargs, :scope_limiter, nothing)
     combo_filter = if isnothing(scope_limiter)
         selector.filter_func
     else
