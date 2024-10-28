@@ -201,6 +201,9 @@ end
         special1,
     ))
     @test IS.compare_values(==, special1, special1)
+
+    # https://github.com/NREL-Sienna/InfrastructureSystems.jl/issues/407
+    @test InfrastructureSystems.compare_values([0 0], [0 0])
 end
 
 @testset "Test compression settings" begin

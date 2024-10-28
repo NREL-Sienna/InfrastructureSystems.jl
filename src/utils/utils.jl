@@ -126,6 +126,8 @@ _fetch_match_fn(::Nothing) = isequivalent
 # Whether to stop recursing and apply the match_fn
 _is_compare_directly(::DataType, ::DataType) = true
 _is_compare_directly(::T, ::U) where {T, U} = true
+# As of 1.11, Arrays have fields we don't want to touch
+_is_compare_directly(::T, ::T) where {T <: AbstractArray} = true
 _is_compare_directly(::T, ::T) where {T} = isempty(fieldnames(T))
 
 """
@@ -161,33 +163,15 @@ function compare_values(match_fn::Union{Function, Nothing}, x::T, y::U;
         field_name in exclude && continue
         val1 = getproperty(x, field_name)
         val2 = getproperty(y, field_name)
-        if !isempty(fieldnames(typeof(val1)))
-            if !compare_values(
-                match_fn,
-                val1,
-                val2;
-                compare_uuids = compare_uuids,
-                exclude = exclude,
-            )
-                @error "values do not match" T field_name val1 val2
-                match = false
-            end
-        elseif val1 isa AbstractArray
-            if !compare_values(
-                match_fn,
-                val1,
-                val2;
-                compare_uuids = compare_uuids,
-                exclude = exclude,
-            )
-                @error "values do not match" T field_name val1 val2
-                match = false
-            end
+        sub_result = if _is_compare_directly(val1, val2)
+            _fetch_match_fn(match_fn)(val1, val2)
         else
-            if !_fetch_match_fn(match_fn)(val1, val2)
-                @error "values do not match" T field_name val1 val2
-                match = false
-            end
+            compare_values(match_fn, val1, val2;
+                compare_uuids = compare_uuids, exclude = exclude)
+        end
+        if !sub_result
+            @error "values do not match" T field_name val1 val2
+            match = false
         end
     end
 
