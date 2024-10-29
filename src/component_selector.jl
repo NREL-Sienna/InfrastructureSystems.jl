@@ -5,11 +5,16 @@ Concrete subtypes MUST implement:
  - `get_components`: returns an iterable of components
  - `get_name`: returns a name for the selector -- or use the default by having a `name::String` field
  - `get_groups`: returns an iterable of `ComponentSelector`s
+ - `rebuild_selector`: returns a new `ComponentSelector` (need not be the same concrete
+   type) with the changes given in the keyword arguments. `name` MUST be a valid keyword
+   argument; it is up to the extender what other attributes of the selector may be rebuilt.
+   There is a default that may suffice.
 
 Concrete subtypes SHOULD implement:
  - The factory method `make_selector` (make sure your signature does not conflict with an
    existing one)
 =#
+
 "The base type for all `ComponentSelector`s."
 abstract type ComponentSelector end
 
@@ -152,10 +157,49 @@ if there is none.
 """
 function get_component end
 
+# Fallback `rebuild_selector` that only handles `name`
+"""
+Returns a `ComponentSelector` functionally identical to the input `selector` except with the
+changes to its fields specified in the keyword arguments.
+
+# Examples
+Suppose you have a selector with `name = "my_name`. If you instead wanted `name = "your_name`:
+```julia
+sel = make_selector(ThermalStandard, "322_CT_6"; name = "my_name")
+sel_yours = rebuild_selector(sel; name = "your_name")
+```
+"""
+function rebuild_selector(selector::T; name = nothing) where {T <: ComponentSelector}
+    selector_data =
+        Dict(key => getfield(selector, key) for key in fieldnames(typeof(selector)))
+    isnothing(name) || (selector_data[:name] = name)
+    return T(; selector_data...)
+end
+
+"""
+Returns a `ComponentSelector` functionally identical to the input `selector` except with the
+changes to its fields specified in the keyword arguments.
+
+# Examples
+Suppose you have a selector with `groupby = :all`. If you instead wanted `groupby = :each`:
+```julia
+sel = make_selector(ThermalStandard; groupby = :all)
+sel_each = rebuild_selector(sel; groupby = :each)
+```
+"""
+function rebuild_selector(selector::T;
+    name = nothing, groupby = nothing) where {T <: DynamicallyGroupedComponentSelector}
+    selector_data =
+        Dict(key => getfield(selector, key) for key in fieldnames(typeof(selector)))
+    isnothing(name) || (selector_data[:name] = name)
+    isnothing(groupby) || (selector_data[:groupby] = groupby)
+    return T(; selector_data...)
+end
+
 # CONCRETE SUBTYPE IMPLEMENTATIONS
 # NameComponentSelector
 "`ComponentSelector` that refers by name to at most a single component."
-struct NameComponentSelector <: SingularComponentSelector
+@kwdef struct NameComponentSelector <: SingularComponentSelector
     component_type::Type{<:InfrastructureSystemsComponent}
     component_name::AbstractString
     name::String
@@ -219,7 +263,7 @@ end
 
 # ListComponentSelector
 "`PluralComponentSelector` represented by a list of other `ComponentSelector`s."
-struct ListComponentSelector <: PluralComponentSelector
+@kwdef struct ListComponentSelector <: PluralComponentSelector
     # Using tuples internally for immutability => `==` is automatically well-behaved
     content::Tuple{Vararg{ComponentSelector}}
     name::String
