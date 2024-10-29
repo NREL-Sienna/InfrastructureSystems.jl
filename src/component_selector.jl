@@ -326,19 +326,6 @@ FilterComponentSelector(
         string(filter_func) * COMPONENT_NAME_DELIMITER * subtype_to_string(component_type),
     )
 
-# Could try to validate filter_func here, probably not worth it
-# Signature 1: put the type first for consistency with many other `make_selector` methods
-"""
-Make a ComponentSelector from a filter function and a type of component. The filter function
-must accept instances of `component_type` as a sole argument and return a `Bool`. Optionally
-provide a name and/or grouping behavior for the `ComponentSelector`.
-"""
-make_selector(
-    component_type::Type{<:InfrastructureSystemsComponent},
-    filter_func::Function;
-    groupby::Union{Symbol, Function} = :all, name::Union{String, Nothing} = nothing,
-) = FilterComponentSelector(component_type, filter_func, groupby, name)
-
 # Signature 2: put the filter function first for consistency with non-`ComponentSelector` `get_components`
 """
 Make a ComponentSelector from a filter function and a type of component. The filter function

@@ -206,11 +206,10 @@ end
         ) == named_test_filter_ent
 
         # Construction
-        @test IS.make_selector(IS.TestComponent, val_over_ten) == test_filter_ent
         @test IS.make_selector(val_over_ten, IS.TestComponent) == test_filter_ent
-        @test IS.make_selector(IS.TestComponent, val_over_ten; name = "TCOverTen") ==
+        @test IS.make_selector(val_over_ten, IS.TestComponent; name = "TCOverTen") ==
               named_test_filter_ent
-        @test IS.make_selector(IS.TestComponent, val_over_ten; groupby = string) isa
+        @test IS.make_selector(val_over_ten, IS.TestComponent; groupby = string) isa
               IS.FilterComponentSelector
 
         # Naming
@@ -228,12 +227,12 @@ end
 
         @test collect(
             get_components_rt(
-                IS.make_selector(IS.SimpleTestComponent, x -> true),
+                IS.make_selector(x -> true, IS.SimpleTestComponent),
                 test_sys,
             )) == Vector{IS.InfrastructureSystemsComponent}()
         @test collect(
             get_components_rt(
-                IS.make_selector(IS.InfrastructureSystemsComponent, x -> false),
+                IS.make_selector(x -> false, IS.InfrastructureSystemsComponent),
                 test_sys,
             )) == Vector{IS.InfrastructureSystemsComponent}()
         the_components = get_components_rt(test_filter_ent, test_sys)
