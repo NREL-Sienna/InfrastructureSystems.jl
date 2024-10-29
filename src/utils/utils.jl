@@ -126,8 +126,6 @@ _fetch_match_fn(::Nothing) = isequivalent
 # Whether to stop recursing and apply the match_fn
 _is_compare_directly(::DataType, ::DataType) = true
 _is_compare_directly(::T, ::U) where {T, U} = true
-# As of 1.11, Arrays have fields we don't want to touch
-_is_compare_directly(::T, ::T) where {T <: AbstractArray} = true
 _is_compare_directly(::T, ::T) where {T} = isempty(fieldnames(T))
 
 """
@@ -163,12 +161,8 @@ function compare_values(match_fn::Union{Function, Nothing}, x::T, y::U;
         field_name in exclude && continue
         val1 = getproperty(x, field_name)
         val2 = getproperty(y, field_name)
-        sub_result = if _is_compare_directly(val1, val2)
-            _fetch_match_fn(match_fn)(val1, val2)
-        else
-            compare_values(match_fn, val1, val2;
-                compare_uuids = compare_uuids, exclude = exclude)
-        end
+        sub_result = compare_values(match_fn, val1, val2;
+            compare_uuids = compare_uuids, exclude = exclude)
         if !sub_result
             @error "values do not match" T field_name val1 val2
             match = false
@@ -178,20 +172,21 @@ function compare_values(match_fn::Union{Function, Nothing}, x::T, y::U;
     return match
 end
 
+# compare_values of an AbstractArray: ignore the fields, iterate over all dimensions of the array
 function compare_values(
     match_fn::Union{Function, Nothing},
-    x::Vector{T},
-    y::Vector{T};
+    x::AbstractArray,
+    y::AbstractArray;
     compare_uuids = false,
     exclude = Set{Symbol}(),
-) where {T}
-    if length(x) != length(y)
-        @error "lengths do not match" T length(x) length(y)
+)
+    if size(x) != size(y)
+        @error "sizes do not match" size(x) size(y)
         return false
     end
 
     match = true
-    for i in range(1; length = length(x))
+    for i in keys(x)
         if !compare_values(
             match_fn,
             x[i],
@@ -209,8 +204,8 @@ end
 
 function compare_values(
     match_fn::Union{Function, Nothing},
-    x::Dict,
-    y::Dict;
+    x::AbstractDict,
+    y::AbstractDict;
     compare_uuids = false,
     exclude = Set{Symbol}(),
 )
