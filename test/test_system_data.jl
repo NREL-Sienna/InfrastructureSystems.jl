@@ -201,6 +201,17 @@ end
         special1,
     ))
     @test IS.compare_values(==, special1, special1)
+
+    # https://github.com/NREL-Sienna/InfrastructureSystems.jl/issues/407
+    @test InfrastructureSystems.compare_values([0 0], [0 0])
+
+    # Test that for arrays and dicts we are actually comparing the values
+    my_match_fn_3(::Int64, ::Int64) = true
+    my_match_fn_3(::Any, ::Any) = false
+    @test IS.compare_values(my_match_fn_3, [0, 1], [0, 1])
+    @test IS.compare_values(my_match_fn_3, [0 1], [0 1])
+    @test IS.compare_values(my_match_fn_3,
+        Dict("a" => 0, "b" => 1), Dict("a" => 0, "b" => 1))
 end
 
 @testset "Test compression settings" begin
