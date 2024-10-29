@@ -293,3 +293,21 @@ end
         ) == 1
     end
 end
+
+@testset "Test rebuild_selector" begin
+    @assert !(IS.NameComponentSelector <: IS.DynamicallyGroupedComponentSelector)
+    @assert IS.TypeComponentSelector <: IS.DynamicallyGroupedComponentSelector
+
+    sel1::IS.NameComponentSelector =
+        IS.make_selector(IS.TestComponent, "Component1"; name = "oldname")
+    sel2::IS.TypeComponentSelector = IS.make_selector(IS.TestComponent; groupby = :all)
+
+    @test IS.rebuild_selector(sel1; name = "newname") ==
+          IS.make_selector(IS.TestComponent, "Component1"; name = "newname")
+    @test_throws Exception IS.rebuild_selector(sel1; groupby = :each)
+
+    @test IS.rebuild_selector(sel2; name = "newname") ==
+          IS.make_selector(IS.TestComponent; name = "newname", groupby = :all)
+    @test IS.rebuild_selector(sel2; name = "newname", groupby = :each) ==
+          IS.make_selector(IS.TestComponent; name = "newname", groupby = :each)
+end
