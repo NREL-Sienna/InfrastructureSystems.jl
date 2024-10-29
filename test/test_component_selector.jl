@@ -159,8 +159,11 @@ end
               named_test_sub_ent
 
         # Construction
-        @test IS.make_selector(IS.TestComponent) == test_sub_ent
-        @test IS.make_selector(IS.TestComponent; name = "TComps") == named_test_sub_ent
+        @test IS.make_selector(IS.TestComponent) ==
+              IS.make_selector(IS.TestComponent; groupby = :each)
+        @test IS.make_selector(IS.TestComponent; groupby = :all) == test_sub_ent
+        @test IS.make_selector(IS.TestComponent; groupby = :all, name = "TComps") ==
+              named_test_sub_ent
         @test IS.make_selector(IS.TestComponent; groupby = string) isa
               IS.TypeComponentSelector
 
@@ -206,9 +209,16 @@ end
         ) == named_test_filter_ent
 
         # Construction
-        @test IS.make_selector(val_over_ten, IS.TestComponent) == test_filter_ent
-        @test IS.make_selector(val_over_ten, IS.TestComponent; name = "TCOverTen") ==
-              named_test_filter_ent
+        @test IS.make_selector(val_over_ten, IS.TestComponent) ==
+              IS.make_selector(val_over_ten, IS.TestComponent; groupby = :each)
+        @test IS.make_selector(val_over_ten, IS.TestComponent; groupby = :all) ==
+              test_filter_ent
+        @test IS.make_selector(
+            val_over_ten,
+            IS.TestComponent;
+            groupby = :all,
+            name = "TCOverTen",
+        ) == named_test_filter_ent
         @test IS.make_selector(val_over_ten, IS.TestComponent; groupby = string) isa
               IS.FilterComponentSelector
 
@@ -255,7 +265,7 @@ end
 
     all_selector = IS.make_selector(IS.TestComponent; groupby = :all)
     each_selector = IS.make_selector(IS.TestComponent; groupby = :each)
-    @test IS.make_selector(IS.TestComponent; groupby = :all) == all_selector
+    @test IS.make_selector(IS.TestComponent) == each_selector
     @test_throws ArgumentError IS.make_selector(IS.TestComponent; groupby = :other)
     partition_selector = IS.make_selector(IS.TestComponent;
         groupby = x -> length(IS.get_name(x)))
