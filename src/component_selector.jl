@@ -56,6 +56,7 @@ component_to_qualified_string(component::InfrastructureSystemsComponent) =
     component_to_qualified_string(typeof(component), get_name(component))
 
 const VALID_GROUPBY_KEYWORDS = [:all, :each]
+const DEFAULT_GROUPBY = :each
 
 # Ideally we could leave system-like arguments untyped for maximum extensibility, but
 # because only PSY.get_components, not IS.get_components, is defined for PSY.System, we need
@@ -281,7 +282,7 @@ grouping behavior for the `ComponentSelector`.
 """
 make_selector(
     component_type::Type{<:InfrastructureSystemsComponent};
-    groupby::Union{Symbol, Function} = :all,
+    groupby::Union{Symbol, Function} = DEFAULT_GROUPBY,
     name::Union{String, Nothing} = nothing,
 ) = TypeComponentSelector(component_type, groupby, name)
 
@@ -336,7 +337,7 @@ make_selector(
     filter_func::Function,
     component_type::Type{<:InfrastructureSystemsComponent};
     name::Union{String, Nothing} = nothing,
-    groupby::Union{Symbol, Function} = :all,
+    groupby::Union{Symbol, Function} = DEFAULT_GROUPBY,
 ) = FilterComponentSelector(component_type, filter_func, groupby, name)
 
 # Contents
