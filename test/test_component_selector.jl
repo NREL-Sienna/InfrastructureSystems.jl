@@ -259,6 +259,25 @@ end
     end
 end
 
+@testset "Test RegroupedComponentSelector" begin
+    @testset for test_sys in [cstest_make_components(), cstest_make_system_data()]
+        comp_ent_1 = IS.make_selector(IS.TestComponent, "Component1")
+        comp_ent_2 = IS.make_selector(IS.AdditionalTestComponent, "Component3")
+        test_list_ent = IS.ListComponentSelector((comp_ent_1, comp_ent_2), nothing)
+        test_sel = IS.RegroupedComponentSelector(test_list_ent, :all)
+
+        # Equality
+        @test IS.RegroupedComponentSelector(test_list_ent, :all) == test_sel
+
+        # Naming
+        @test IS.get_name(test_sel) == IS.get_name(test_list_ent)
+
+        # Contents
+        @test Set(collect(get_components_rt(test_sel, test_sys))) ==
+              Set(collect(get_components_rt(test_list_ent, test_sys)))
+    end
+end
+
 @testset "Test DynamicallyGroupedComponentSelector grouping" begin
     # We'll use TypeComponentSelector as the token example
     @assert IS.TypeComponentSelector <: IS.DynamicallyGroupedComponentSelector
@@ -301,6 +320,7 @@ end
     sel1::IS.NameComponentSelector =
         IS.make_selector(IS.TestComponent, "Component1"; name = "oldname")
     sel2::IS.TypeComponentSelector = IS.make_selector(IS.TestComponent; groupby = :all)
+    sel3::IS.ListComponentSelector = IS.make_selector(sel1, sel2; name = "oldname")
 
     @test IS.rebuild_selector(sel1; name = "newname") ==
           IS.make_selector(IS.TestComponent, "Component1"; name = "newname")
@@ -310,4 +330,13 @@ end
           IS.make_selector(IS.TestComponent; name = "newname", groupby = :all)
     @test IS.rebuild_selector(sel2; name = "newname", groupby = :each) ==
           IS.make_selector(IS.TestComponent; name = "newname", groupby = :each)
+
+    @test IS.rebuild_selector(sel3; name = "newname") ==
+          IS.make_selector(sel1, sel2; name = "newname")
+    regrouped = IS.rebuild_selector(sel3; name = "newname", groupby = :all)
+    for test_sys in [cstest_make_components(), cstest_make_system_data()]
+        @test Set(collect(get_components_rt(regrouped, test_sys))) ==
+              Set(collect(get_components_rt(sel3, test_sys)))
+        @test length(IS.get_groups(regrouped, test_sys)) == 1
+    end
 end

@@ -299,6 +299,33 @@ function get_components(
     return FlattenIteratorWrapper(my_supertype, sub_components)
 end
 
+# Rebuilding
+"""
+Returns a `ComponentSelector` functionally identical to the input `selector` except with the
+changes to its fields specified in the keyword arguments. For `ListComponentSelector`, if a
+`groupby` option is specified, the return type will be a `RegroupedComponentSelector`
+instead of a `ListComponentSelector`.
+
+# Examples
+Suppose you have a selector with manual groups and you want to group by `:each`:
+```julia
+sel = make_selector(make_selector(ThermalStandard), make_selector(RenewableDispatch))
+sel_each = rebuild_selector(sel; groupby = :each)  # will be a RegroupedComponentSelector
+```
+"""
+function rebuild_selector(selector::ListComponentSelector;
+    name = nothing, groupby = nothing)
+    # Handle the easy stuff first
+    selector_data =
+        Dict(key => getfield(selector, key) for key in fieldnames(typeof(selector)))
+    isnothing(name) || (selector_data[:name] = name)
+    rebuilt = ListComponentSelector(; selector_data...)
+
+    # Wrap in a RegroupedComponentSelector if we need to
+    isnothing(groupby) && return rebuilt
+    return RegroupedComponentSelector(rebuilt, groupby)
+end
+
 # TypeComponentSelector
 "`PluralComponentSelector` represented by a type of component."
 @kwdef struct TypeComponentSelector <: DynamicallyGroupedComponentSelector
@@ -371,7 +398,6 @@ FilterComponentSelector(
         string(filter_func) * COMPONENT_NAME_DELIMITER * subtype_to_string(component_type),
     )
 
-# Signature 2: put the filter function first for consistency with non-`ComponentSelector` `get_components`
 """
 Make a ComponentSelector from a filter function and a type of component. The filter function
 must accept instances of `component_type` as a sole argument and return a `Bool`. Optionally
@@ -401,3 +427,22 @@ function get_components(
     components = get_components(combo_filter, selector.component_type, sys)
     return components
 end
+
+# RegroupedComponentSelector
+"`PluralComponentSelector` that wraps another `ComponentSelector` and applies dynamic grouping."
+@kwdef struct RegroupedComponentSelector <: DynamicallyGroupedComponentSelector
+    wrapped_selector::ComponentSelector
+    groupby::Union{Symbol, Function}
+
+    RegroupedComponentSelector(
+        wrapped_selector::ComponentSelector,
+        groupby::Union{Symbol, Function},
+    ) = new(wrapped_selector, validate_groupby(groupby))
+end
+
+# Naming
+get_name(selector::RegroupedComponentSelector) = get_name(selector.wrapped_selector)
+
+# Contents
+get_components(selector::RegroupedComponentSelector, sys::SystemLike; kwargs...) =
+    get_components(selector.wrapped_selector, sys, kwargs...)
