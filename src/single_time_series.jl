@@ -44,7 +44,7 @@ function SingleTimeSeries(;
     return SingleTimeSeries(
         name,
         data,
-        _get_resolution(data),
+        get_resolution(data),
         scaling_factor_multiplier,
         internal,
     )
@@ -70,17 +70,6 @@ function SingleTimeSeries(
         scaling_factor_multiplier,
         internal,
     )
-end
-
-function _get_resolution(data::TimeSeries.TimeArray)
-    if length(data) < 2
-        throw(
-            ConflictingInputsError(
-                "Resolution can't be inferred from the data. Please select an appropiate constructor.",
-            ),
-        )
-    end
-    return TimeSeries.timestamp(data)[2] - TimeSeries.timestamp(data)[1]
 end
 
 """

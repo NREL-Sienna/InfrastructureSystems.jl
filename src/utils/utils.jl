@@ -385,11 +385,18 @@ end
 Return the resolution from a TimeArray.
 """
 function get_resolution(ts::TimeSeries.TimeArray)
+    if length(ts) < 2
+        throw(ConflictingInputsError("Resolution can't be inferred from the data."))
+    end
+
+    timestamps = TimeSeries.timestamp(ts)
+    return timestamps[2] - timestamps[1]
+end
+
+function check_resolution(ts::TimeSeries.TimeArray)
     tstamps = TimeSeries.timestamp(ts)
     timediffs = unique([tstamps[ix] - tstamps[ix - 1] for ix in 2:length(tstamps)])
-
     res = []
-
     for timediff in timediffs
         if mod(timediff, Dates.Millisecond(Dates.Day(1))) == Dates.Millisecond(0)
             push!(res, Dates.Day(timediff / Dates.Millisecond(Dates.Day(1))))
@@ -419,14 +426,25 @@ function get_initial_timestamp(data::TimeSeries.TimeArray)
     return TimeSeries.timestamp(data)[1]
 end
 
-function get_module(module_name)
+# Looking up modules with Base.root_module is slow; cache them.
+const g_cached_modules = Dict{String, Module}()
+
+function get_module(module_name::AbstractString)
+    cached_module = get(g_cached_modules, module_name, nothing)
+    if !isnothing(cached_module)
+        return cached_module
+    end
+
     # root_module cannot find InfrastructureSystems if it hasn't been installed by the
     # user (but has been installed as a dependency to another package).
-    return if module_name == "InfrastructureSystems"
+    mod = if module_name == "InfrastructureSystems"
         InfrastructureSystems
     else
         Base.root_module(Base.__toplevel__, Symbol(module_name))
     end
+
+    g_cached_modules[module_name] = mod
+    return mod
 end
 
 get_type_from_strings(module_name, type) =
