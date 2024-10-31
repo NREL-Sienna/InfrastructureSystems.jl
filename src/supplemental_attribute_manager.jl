@@ -1,3 +1,6 @@
+# This is used to supplemental attribute associations efficiently in SQLite.
+const ADD_SUPPLEMENTAL_ATTRIBUTES_BATCH_SIZE = 1000
+
 const SupplementalAttributesByType =
     Dict{DataType, Dict{Base.UUID, <:SupplementalAttribute}}
 
@@ -36,6 +39,57 @@ function add_supplemental_attribute!(
         allow_existing_time_series = allow_existing_time_series,
     )
     add_association!(mgr.associations, component, attribute)
+    return
+end
+
+function add_supplemental_attributes!(
+    mgr::SupplementalAttributeManager,
+    components_and_attributes;
+    allow_existing_time_series = false,
+    batch_size = ADD_SUPPLEMENTAL_ATTRIBUTES_BATCH_SIZE,
+)
+    batch = ComponentSupplementalAttributeAssociation[]
+    sizehint!(batch, batch_size)
+    for (component, attribute) in components_and_attributes
+        push!(batch, ComponentSupplementalAttributeAssociation(component, attribute))
+        if length(batch) >= batch_size
+            add_supplemental_attributes!(
+                mgr,
+                batch;
+                allow_existing_time_series = allow_existing_time_series,
+            )
+            empty!(batch)
+        end
+    end
+
+    if !isempty(batch)
+        add_supplemental_attributes!(
+            mgr,
+            batch;
+            allow_existing_time_series = allow_existing_time_series,
+        )
+    end
+
+    return
+end
+
+function add_supplemental_attributes!(
+    mgr::SupplementalAttributeManager,
+    ca_pairs::Vector{ComponentSupplementalAttributeAssociation};
+    allow_existing_time_series = false,
+)
+    if has_associations(mgr.associations, ca_pairs)
+        # TODO DT: report the duplicates
+        throw(ArgumentError("There is already an association."))
+    end
+    for pair in ca_pairs
+        _attach_attribute!(
+            mgr,
+            pair.supplemental_attribute;
+            allow_existing_time_series = allow_existing_time_series,
+        )
+    end
+    add_associations!(mgr.associations, ca_pairs)
     return
 end
 
