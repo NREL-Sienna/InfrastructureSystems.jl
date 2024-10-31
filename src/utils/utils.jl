@@ -385,11 +385,18 @@ end
 Return the resolution from a TimeArray.
 """
 function get_resolution(ts::TimeSeries.TimeArray)
+    if length(ts) < 2
+        throw(ConflictingInputsError("Resolution can't be inferred from the data."))
+    end
+
+    timestamps = TimeSeries.timestamp(ts)
+    return timestamps[2] - timestamps[1]
+end
+
+function check_resolution(ts::TimeSeries.TimeArray)
     tstamps = TimeSeries.timestamp(ts)
     timediffs = unique([tstamps[ix] - tstamps[ix - 1] for ix in 2:length(tstamps)])
-
     res = []
-
     for timediff in timediffs
         if mod(timediff, Dates.Millisecond(Dates.Day(1))) == Dates.Millisecond(0)
             push!(res, Dates.Day(timediff / Dates.Millisecond(Dates.Day(1))))
