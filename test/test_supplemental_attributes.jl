@@ -198,3 +198,24 @@ end
     )
     @test length(table) == 4
 end
+
+@testset "Test add supplemental attributes in bulk" begin
+    data = IS.SystemData()
+    components = IS.TestComponent[]
+    attr_pairs = []
+    for i in 1:5
+        component = IS.TestComponent("component_$(i)", i)
+        attr = IS.GeographicInfo(; geo_json = Dict("name" => string(i)))
+        pair = (component = component, supplemental_attribute = attr)
+        IS.add_component!(data, component)
+        push!(attr_pairs, pair)
+    end
+    IS.add_supplemental_attributes!(data, attr_pairs)
+
+    for i in 1:5
+        uuid = IS.get_uuid(attr_pairs[i].supplemental_attribute)
+        component = IS.get_component(IS.TestComponent, data, "component_$(i)")
+        attr = IS.get_supplemental_attribute(component, uuid)
+        @test attr.geo_json["name"] == string(i)
+    end
+end
