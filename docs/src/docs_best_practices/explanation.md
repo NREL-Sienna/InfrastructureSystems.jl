@@ -12,11 +12,12 @@ documentation organization, based on the expected needs of different user person
 However, as Sienna's user base has expanded, it has become apparent that this previous
 organization is no longer serving. As of 2024, a new effort is underway to clean up and
 re-organize the Sienna documentation according to the 4-part [Diataxis](https://diataxis.fr/)
-framework, a well-established, systematic approach to technical documentation split up into
-[Tutorials](https://diataxis.fr/tutorials/),
-[How-to guides](https://diataxis.fr/how-to-guides/),
-[Reference](https://diataxis.fr/reference/), and
-[Explanation](https://diataxis.fr/explanation/).
+framework, a well-established, systematic approach to technical documentation split up into:
+
+  - [Tutorials](https://diataxis.fr/tutorials/)
+  - [How-to guides](https://diataxis.fr/how-to-guides/)
+  - [Reference](https://diataxis.fr/reference/)
+  - [Explanation](https://diataxis.fr/explanation/)
 
 In addition, the current documentation has multiple quality issues, including misformatted
 text, broken reference links, and documentation that has been written but is not visible to
