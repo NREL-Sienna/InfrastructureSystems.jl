@@ -54,7 +54,7 @@ demonstrations.
 A user should be able to copy and paste every code block in the tutorial in order and get
 the exact results seen on the documentation page. 
 !!! tip "Do"
-    Display all code, starting from `import SomeSiennaPackage` 
+    Display all code, starting from `using SomeSiennaPackage` 
 !!! warning "Don't"    
     Use `#hide` or
     [`@setup`](https://documenter.juliadocs.org/stable/man/syntax/#reference-at-setup)
