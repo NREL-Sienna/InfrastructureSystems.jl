@@ -1,6 +1,12 @@
 using Documenter, InfrastructureSystems
 import DataStructures: OrderedDict
 using Literate
+using DocumenterInterLinks
+
+links = InterLinks(
+    "Documenter" => "https://documenter.juliadocs.org/stable/",
+    "Julia" => "https://docs.julialang.org/en/v1/",
+)
 
 if haskey(ENV, "GITHUB_ACTIONS")
     ENV["JULIA_DEBUG"] = "Documenter"
@@ -62,6 +68,7 @@ makedocs(
         size_threshold = nothing),
     sitename = "InfrastructureSystems.jl",
     pages = Any[p for p in pages],
+    plugins = [links],
 )
 
 
