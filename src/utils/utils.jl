@@ -161,53 +161,32 @@ function compare_values(match_fn::Union{Function, Nothing}, x::T, y::U;
         field_name in exclude && continue
         val1 = getproperty(x, field_name)
         val2 = getproperty(y, field_name)
-        if !isempty(fieldnames(typeof(val1)))
-            if !compare_values(
-                match_fn,
-                val1,
-                val2;
-                compare_uuids = compare_uuids,
-                exclude = exclude,
-            )
-                @error "values do not match" T field_name val1 val2
-                match = false
-            end
-        elseif val1 isa AbstractArray
-            if !compare_values(
-                match_fn,
-                val1,
-                val2;
-                compare_uuids = compare_uuids,
-                exclude = exclude,
-            )
-                @error "values do not match" T field_name val1 val2
-                match = false
-            end
-        else
-            if !_fetch_match_fn(match_fn)(val1, val2)
-                @error "values do not match" T field_name val1 val2
-                match = false
-            end
+        sub_result = compare_values(match_fn, val1, val2;
+            compare_uuids = compare_uuids, exclude = exclude)
+        if !sub_result
+            @error "values do not match" T field_name val1 val2
+            match = false
         end
     end
 
     return match
 end
 
+# compare_values of an AbstractArray: ignore the fields, iterate over all dimensions of the array
 function compare_values(
     match_fn::Union{Function, Nothing},
-    x::Vector{T},
-    y::Vector{T};
+    x::AbstractArray,
+    y::AbstractArray;
     compare_uuids = false,
     exclude = Set{Symbol}(),
-) where {T}
-    if length(x) != length(y)
-        @error "lengths do not match" T length(x) length(y)
+)
+    if size(x) != size(y)
+        @error "sizes do not match" size(x) size(y)
         return false
     end
 
     match = true
-    for i in range(1; length = length(x))
+    for i in keys(x)
         if !compare_values(
             match_fn,
             x[i],
@@ -225,8 +204,8 @@ end
 
 function compare_values(
     match_fn::Union{Function, Nothing},
-    x::Dict,
-    y::Dict;
+    x::AbstractDict,
+    y::AbstractDict;
     compare_uuids = false,
     exclude = Set{Symbol}(),
 )
@@ -406,11 +385,18 @@ end
 Return the resolution from a TimeArray.
 """
 function get_resolution(ts::TimeSeries.TimeArray)
+    if length(ts) < 2
+        throw(ConflictingInputsError("Resolution can't be inferred from the data."))
+    end
+
+    timestamps = TimeSeries.timestamp(ts)
+    return timestamps[2] - timestamps[1]
+end
+
+function check_resolution(ts::TimeSeries.TimeArray)
     tstamps = TimeSeries.timestamp(ts)
     timediffs = unique([tstamps[ix] - tstamps[ix - 1] for ix in 2:length(tstamps)])
-
     res = []
-
     for timediff in timediffs
         if mod(timediff, Dates.Millisecond(Dates.Day(1))) == Dates.Millisecond(0)
             push!(res, Dates.Day(timediff / Dates.Millisecond(Dates.Day(1))))
@@ -440,14 +426,25 @@ function get_initial_timestamp(data::TimeSeries.TimeArray)
     return TimeSeries.timestamp(data)[1]
 end
 
-function get_module(module_name)
+# Looking up modules with Base.root_module is slow; cache them.
+const g_cached_modules = Dict{String, Module}()
+
+function get_module(module_name::AbstractString)
+    cached_module = get(g_cached_modules, module_name, nothing)
+    if !isnothing(cached_module)
+        return cached_module
+    end
+
     # root_module cannot find InfrastructureSystems if it hasn't been installed by the
     # user (but has been installed as a dependency to another package).
-    return if module_name == "InfrastructureSystems"
+    mod = if module_name == "InfrastructureSystems"
         InfrastructureSystems
     else
         Base.root_module(Base.__toplevel__, Symbol(module_name))
     end
+
+    g_cached_modules[module_name] = mod
+    return mod
 end
 
 get_type_from_strings(module_name, type) =
