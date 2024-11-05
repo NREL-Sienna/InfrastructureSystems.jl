@@ -1,8 +1,11 @@
 # Troubleshoot Common Errors
 
-## ` Error: ## docstrings not included in the manual`
+## [`Error: ## docstrings not included in the manual`](@id miss_doc)
 
 TODO
+
+1. Are these docstrings from `InfrastructureSystems.jl`? Follow how-to
+    [selectively export docstrings from `InfrastructureSystems.jl`](@ref docs_from_is)
 
 ## `Error: duplicate docs found`
 

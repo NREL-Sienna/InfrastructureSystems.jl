@@ -28,6 +28,7 @@ pages = OrderedDict(
             "How to..." => Any[
                 "Clean Up General Formatting" => "docs_best_practices/how-to/general_formatting.md",
                 "Write a Tutorial" => "docs_best_practices/how-to/write_a_tutorial.md",
+                "Write Docstrings and Organize the APIs" => "docs_best_practices/how-to/write_docstrings_org_api.md",
                 "Compile and View Documentation Locally" => "docs_best_practices/how-to/compile.md",
                 "View Draft Documentation on Github" => "docs_best_practices/how-to/view_github.md",
                 "Troubleshoot Common Errors" => "docs_best_practices/how-to/troubleshoot.md",],
