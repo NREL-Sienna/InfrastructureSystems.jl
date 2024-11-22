@@ -276,13 +276,27 @@ function _read_results(
                         v
                     end
             else
-                results[k] =
-                    if convert_result_to_natural_units(k)
-                        v[time_ids, :] .* base_power
-                    else
-                        v[time_ids, :]
-                    end
-                DataFrames.insertcols!(results[k], 1, :DateTime => timestamps)
+                total_rows = size(v)[1]
+                if total_rows == length(time_ids)
+                    results[k] =
+                        if convert_result_to_natural_units(k)
+                            v[time_ids, :] .* base_power
+                        else
+                            v[time_ids, :]
+                        end
+                    DataFrames.insertcols!(results[k], 1, :DateTime => timestamps)
+                else
+                    @warn(
+                        "Length of variables is different than timestamps. Ignoring timestamps."
+                    )
+                    results[k] =
+                        if convert_result_to_natural_units(k)
+                            v[1:total_rows, :] .* base_power
+                        else
+                            v[1:total_rows, :]
+                        end
+                    DataFrames.insertcols!(results[k], 1)
+                end
             end
         end
     end
