@@ -1,7 +1,7 @@
 # This needs renaming to avoid collision with the DecisionModelResults/EmulationModelResults
 mutable struct OptimizationProblemResults <: Results
     base_power::Float64
-    timestamps::StepRange{Dates.DateTime, Dates.Millisecond}
+    timestamps::Union{StepRange{Dates.DateTime, Dates.Millisecond}, Vector{Dates.DateTime}}
     source_data::Union{Nothing, InfrastructureSystemsType}
     source_data_uuid::Base.UUID
     aux_variable_values::Dict{AuxVarKey, DataFrames.DataFrame}
