@@ -13,6 +13,11 @@ Concrete subtypes MUST implement:
 Concrete subtypes SHOULD implement:
  - The factory method `make_selector` (make sure your signature does not conflict with an
    existing one)
+
+New system-like types MUST ensure that `get_available_components` and `get_available_groups`
+work for them, likely either by using the default if all components are always available or
+by implementing a method that uses `get_components`'s `scope_limiter` kwarg to specify the
+proper filtering.
 =#
 
 "The base type for all `ComponentSelector`s."
@@ -63,12 +68,6 @@ component_to_qualified_string(component::InfrastructureSystemsComponent) =
 const VALID_GROUPBY_KEYWORDS = [:all, :each]
 const DEFAULT_GROUPBY = :each
 
-# Ideally we could leave system-like arguments untyped for maximum extensibility, but
-# because only PSY.get_components, not IS.get_components, is defined for PSY.System, we need
-# to be able to easily override these methods. See
-# https://github.com/NREL-Sienna/InfrastructureSystems.jl/issues/388
-const SystemLike = Union{Components, SystemData}
-
 """
 Helper function to check that the `groupby` argument is valid. Passes it through if so,
 errors if not.
@@ -103,10 +102,24 @@ Get the components of the collection that make up the `ComponentSelector`.
 function get_components end
 
 """
+    get_available_components(selector, sys)
+Get the available components of the collection that make up the `ComponentSelector`.
+"""
+get_available_components(selector::ComponentSelector, sys) =
+    get_components(selector, sys)
+
+"""
     get_groups(selector, sys)
 Get the groups that make up the `ComponentSelector`.
 """
 function get_groups end
+
+"""
+    get_available_groups(selector, sys)
+Get the available groups of the collection that make up the `ComponentSelector`.
+"""
+get_available_groups(selector::ComponentSelector, sys) =
+    get_groups(selector, sys)
 
 """
 Make a `ComponentSelector` containing the components in `all_components` whose corresponding
@@ -237,11 +250,7 @@ make_selector(
     make_selector(typeof(component), get_name(component)::AbstractString; name = name)
 
 # Contents
-function get_component(
-    selector::NameComponentSelector,
-    sys::SystemLike;
-    kwargs...,
-)
+function get_component(selector::NameComponentSelector, sys; kwargs...)
     com = get_component(selector.component_type, sys, selector.component_name)
     isnothing(com) && return nothing
     scope_limiter = get(kwargs, :scope_limiter, nothing)
@@ -249,11 +258,7 @@ function get_component(
     return com
 end
 
-function get_components(
-    selector::NameComponentSelector,
-    sys::SystemLike;
-    kwargs...,
-)
+function get_components(selector::NameComponentSelector, sys; kwargs...)
     com = get_component(selector, sys; kwargs...)
     isnothing(com) && return _make_empty_iterator(selector.component_type)
     # Wrap the one component up in a bunch of other data structures to get the Sienna standard type for this
@@ -285,11 +290,7 @@ function get_groups(selector::ListComponentSelector, sys; kwargs...)
     return selector.content
 end
 
-function get_components(
-    selector::ListComponentSelector,
-    sys::SystemLike;
-    kwargs...,
-)
+function get_components(selector::ListComponentSelector, sys; kwargs...)
     sub_components =
         map(
             x -> get_components(x, sys; kwargs...),
@@ -358,11 +359,7 @@ make_selector(
 ) = TypeComponentSelector(component_type, groupby, name)
 
 # Contents
-function get_components(
-    selector::TypeComponentSelector,
-    sys::SystemLike;
-    kwargs...,
-)
+function get_components(selector::TypeComponentSelector, sys; kwargs...)
     scope_limiter = get(kwargs, :scope_limiter, nothing)
     isnothing(scope_limiter) && return get_components(selector.component_type, sys)
     return get_components(scope_limiter, selector.component_type, sys)
@@ -411,11 +408,7 @@ make_selector(
 ) = FilterComponentSelector(component_type, filter_func, groupby, name)
 
 # Contents
-function get_components(
-    selector::FilterComponentSelector,
-    sys::SystemLike;
-    kwargs...,
-)
+function get_components(selector::FilterComponentSelector, sys; kwargs...)
     # Short-circuit-evaluate the `scope_limiter` first so `filter_func` may refer to
     # component attributes that do not exist in components outside the scope
     scope_limiter = get(kwargs, :scope_limiter, nothing)
@@ -444,5 +437,5 @@ end
 get_name(selector::RegroupedComponentSelector) = get_name(selector.wrapped_selector)
 
 # Contents
-get_components(selector::RegroupedComponentSelector, sys::SystemLike; kwargs...) =
-    get_components(selector.wrapped_selector, sys, kwargs...)
+get_components(selector::RegroupedComponentSelector, sys; kwargs...) =
+    get_components(selector.wrapped_selector, sys; kwargs...)

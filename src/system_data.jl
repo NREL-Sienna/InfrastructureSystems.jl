@@ -1001,6 +1001,14 @@ function get_components(
     return get_components(filter_func, T, data.components; component_uuids = uuids)
 end
 
+get_available_components(
+    filter_func::Function,
+    ::Type{T},
+    data::SystemData;
+    subsystem_name::Union{Nothing, AbstractString} = nothing,
+) where {T} =
+    get_components(filter_func, T, data; subsystem_name = subsystem_name)
+
 function get_components(
     ::Type{T},
     data::SystemData;
@@ -1009,6 +1017,13 @@ function get_components(
     uuids = isnothing(subsystem_name) ? nothing : get_component_uuids(data, subsystem_name)
     return get_components(T, data.components; component_uuids = uuids)
 end
+
+get_available_components(
+    ::Type{T},
+    data::SystemData;
+    subsystem_name::Union{Nothing, AbstractString} = nothing,
+) where {T} =
+    get_components(T, data; subsystem_name = subsystem_name)
 
 get_components_by_name(::Type{T}, data::SystemData, args...) where {T} =
     get_components_by_name(T, data.components, args...)
@@ -1021,6 +1036,9 @@ function get_components(data::SystemData, attribute::SupplementalAttribute)
         )
     ]
 end
+
+get_available_components(data::SystemData, attribute::SupplementalAttribute) =
+    get_components(data, attribute)
 
 function get_masked_components(
     ::Type{T},
