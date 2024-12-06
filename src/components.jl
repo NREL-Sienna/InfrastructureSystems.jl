@@ -1,6 +1,6 @@
 const ComponentsByType = Dict{DataType, Dict{String, <:InfrastructureSystemsComponent}}
 
-struct Components <: InfrastructureSystemsContainer
+struct Components <: SystemLike
     data::ComponentsByType
     time_series_manager::TimeSeriesManager
     validation_descriptors::Vector
