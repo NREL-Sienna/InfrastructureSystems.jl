@@ -38,8 +38,11 @@ function backup(
     end
 end
 
+const STATEMENT_CACHE = Dict{String, SQLite.Stmt}()
+
 """
-Wrapper around SQLite.DBInterface.execute to provide log messages.
+Wrapper around SQLite.DBInterface.execute to provide caching of compiled statements
+as well as log messages.
 """
 function execute(
     db::SQLite.DB,
@@ -48,6 +51,8 @@ function execute(
     log_group::Symbol,
 )
     @debug "Execute SQL" _group = log_group query params
+    # If we don't cache these statements, there is a cost of 3-4 us on every query.
+    #stmt = get!(() -> SQLite.Stmt(db, query), STATEMENT_CACHE, query)
     try
         return if isnothing(params)
             SQLite.DBInterface.execute(db, query)
@@ -56,6 +61,26 @@ function execute(
         end
     catch
         @error "Failed to send SQL query" query params
+        rethrow()
+    end
+end
+
+function execute(
+    stmt::SQLite.Stmt,
+    params::Union{Nothing, Vector, Tuple},
+    log_group::Symbol,
+)
+    @debug "Execute SQL" _group = log_group params
+    # If we don't cache these statements, there is a cost of 3-4 us on every query.
+    #stmt = get!(() -> SQLite.Stmt(db, query), STATEMENT_CACHE, query)
+    try
+        return if isnothing(params)
+            SQLite.DBInterface.execute(stmt)
+        else
+            SQLite.DBInterface.execute(stmt, params)
+        end
+    catch
+        @error "Failed to send SQL query" params
         rethrow()
     end
 end

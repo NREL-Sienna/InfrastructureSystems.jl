@@ -146,10 +146,6 @@ function clear_time_series!(mgr::TimeSeriesManager, component::TimeSeriesOwners)
     return
 end
 
-has_time_series(mgr::TimeSeriesManager, component::TimeSeriesOwners) =
-    has_time_series(mgr.metadata_store, component)
-has_time_series(::Nothing, component::TimeSeriesOwners) = false
-
 get_metadata(
     mgr::TimeSeriesManager,
     component::TimeSeriesOwners,
@@ -227,7 +223,7 @@ function remove_time_series!(
 end
 
 function _remove_data_if_no_more_references(mgr::TimeSeriesManager, uuid::Base.UUID)
-    if !has_time_series(mgr.metadata_store, uuid)
+    if !has_metadata(mgr.metadata_store, uuid)
         remove_time_series!(mgr.data_store, uuid)
         @debug "Removed time_series data $uuid." _group = LOG_GROUP_TIME_SERIES
     end
