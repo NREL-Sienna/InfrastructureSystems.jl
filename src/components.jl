@@ -304,25 +304,6 @@ function get_components(
     return iterate_instances(T, components.data, component_uuids)
 end
 
-"""
-By default, `get_available_components` is the same as `get_components`, but system-like
-types with a notion of component availability can define their own methods of it to fetch
-only available components that fulfill the criteria.
-"""
-get_available_components(
-    ::Type{T},
-    components::Components;
-    component_uuids::Union{Nothing, Set{Base.UUID}} = nothing,
-) where {T <: InfrastructureSystemsComponent} =
-    get_components(T, components; component_uuids = component_uuids)
-
-"""
-By default, `get_available_component` is the same as `get_component`, but system-like types
-with a notion of component availability can define their own methods of it to fetch only
-available components that fulfill the criteria.
-"""
-get_available_component(args...; kwargs...) = get_component(args...; kwargs...)
-
 function get_components(
     filter_func::Function,
     ::Type{T},
@@ -331,14 +312,6 @@ function get_components(
 ) where {T <: InfrastructureSystemsComponent}
     return iterate_instances(filter_func, T, components.data, component_uuids)
 end
-
-get_available_components(
-    filter_func::Function,
-    ::Type{T},
-    components::Components;
-    component_uuids::Union{Nothing, Set{Base.UUID}} = nothing,
-) where {T <: InfrastructureSystemsComponent} =
-    get_components(filter_func, T, components; component_uuids = component_uuids)
 
 """
 Iterates over all components.

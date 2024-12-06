@@ -15,9 +15,7 @@ Concrete subtypes SHOULD implement:
    existing one)
 
 New system-like types MUST ensure that `get_available_components` and `get_available_groups`
-work for them, likely either by using the default if all components are always available or
-by implementing a method that uses `get_components`'s `scope_limiter` kwarg to specify the
-proper filtering.
+work for them.
 =#
 
 "The base type for all `ComponentSelector`s."
@@ -106,7 +104,15 @@ function get_components end
 Get the available components of the collection that make up the `ComponentSelector`.
 """
 get_available_components(selector::ComponentSelector, sys) =
-    get_components(selector, sys)
+    get_components(selector, sys; scope_limiter = x -> get_available(sys, x))
+
+"""
+    get_available_component(selector, sys)
+Get the available component of the collection that makes up the `SingularComponentSelector`;
+`nothing` if there is none.
+"""
+get_available_component(selector::ComponentSelector, sys) =
+    get_component(selector, sys; scope_limiter = x -> get_available(sys, x))
 
 """
     get_groups(selector, sys)
@@ -119,7 +125,7 @@ function get_groups end
 Get the available groups of the collection that make up the `ComponentSelector`.
 """
 get_available_groups(selector::ComponentSelector, sys) =
-    get_groups(selector, sys)
+    get_groups(selector, sys; scope_limiter = x -> get_available(sys, x))
 
 """
 Make a `ComponentSelector` containing the components in `all_components` whose corresponding
