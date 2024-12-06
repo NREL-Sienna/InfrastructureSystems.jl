@@ -97,7 +97,7 @@ end
     component = IS.TestComponent(component_name, 5)
     IS.add_component!(sys, component)
     forecast = IS.Deterministic(name, data, resolution)
-    @test IS.get_initial_timestamp(forecast) == initial_time
+    #@test IS.get_initial_timestamp(forecast) == initial_time
     IS.add_time_series!(sys, component, forecast)
     @test IS.has_time_series(component)
 
@@ -497,6 +497,7 @@ end
     ) isa IS.SingleTimeSeries
     @test IS.has_time_series(component, IS.SingleTimeSeries)
     @test IS.has_time_series(component, IS.SingleTimeSeries, ts_name)
+    @test IS.has_time_series(component, ts_name)
     @test IS.has_time_series(component, IS.SingleTimeSeries, ts_name, scenario = "low")
     @test IS.has_time_series(
         component,

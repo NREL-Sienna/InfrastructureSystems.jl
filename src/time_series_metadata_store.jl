@@ -3,6 +3,10 @@ const DB_FILENAME = "time_series_metadata.db"
 
 mutable struct TimeSeriesMetadataStore
     db::SQLite.DB
+    # If we don't cache SQL statements, there is a cost of 3-4 us on every query.
+    # DBInterface.jl does something similar with @prepare. We need this to be tied
+    # to our connection.
+    cached_statements::Dict{String, SQLite.Stmt}
     # If you add any fields, ensure they are managed in deepcopy_internal below.
 end
 
@@ -12,7 +16,7 @@ Construct a new TimeSeriesMetadataStore with an in-memory database.
 function TimeSeriesMetadataStore()
     # This metadata is not expected to exceed system memory, so create an in-memory
     # database so that it is faster. This could be changed.
-    store = TimeSeriesMetadataStore(SQLite.DB())
+    store = TimeSeriesMetadataStore(SQLite.DB(), Dict{String, SQLite.Stmt}())
     _create_metadata_table!(store)
     _create_indexes!(store)
     @debug "Initialized new time series metadata table" _group = LOG_GROUP_TIME_SERIES
@@ -26,7 +30,10 @@ function TimeSeriesMetadataStore(filename::AbstractString)
     src = SQLite.DB(filename)
     db = SQLite.DB()
     backup(db, src)
-    store = TimeSeriesMetadataStore(db)
+    store = TimeSeriesMetadataStore(db, Dict{Base.UUID, TimeSeriesMetadata}())
+    if isempty(sql(store, "PRAGMA index_list(time_series_metadata)"))
+        _create_indexes!(store)
+    end
     @debug "Loaded time series metadata from file" _group = LOG_GROUP_TIME_SERIES filename
     return store
 end
@@ -108,8 +115,10 @@ function Base.deepcopy_internal(store::TimeSeriesMetadataStore, dict::IdDict)
 
     new_db = SQLite.DB()
     backup(new_db, store.db)
-    new_store = TimeSeriesMetadataStore(new_db)
+    new_cached_statements = deepcopy(store.cached_statements)
+    new_store = TimeSeriesMetadataStore(new_db, new_cached_statements)
     dict[store] = new_store
+    dict[store.cached_statements] = new_cached_statements
     return new_store
 end
 
@@ -135,8 +144,8 @@ function add_metadata!(
             features,
         )
         params = repeat("?,", length(vals) - 1) * "jsonb(?)"
-        SQLite.DBInterface.execute(
-            store.db,
+        _execute(
+            store,
             "INSERT INTO $METADATA_TABLE_NAME VALUES($params)",
             vals,
         )
@@ -541,22 +550,52 @@ function get_time_series_summary_table(store::TimeSeriesMetadataStore)
     return DataFrame(_execute(store, query))
 end
 
-"""
-Return True if there is time series metadata matching the inputs.
-"""
 function has_metadata(
     store::TimeSeriesMetadataStore,
     owner::TimeSeriesOwners,
-    metadata::TimeSeriesMetadata,
 )
-    features = Dict(Symbol(k) => v for (k, v) in get_features(metadata))
-    return _try_has_time_series_metadata_by_full_params(
-        store,
-        owner,
-        time_series_metadata_to_data(metadata),
-        get_name(metadata);
-        features...,
-    )
+    query = """
+        SELECT id FROM
+        $METADATA_TABLE_NAME
+        WHERE owner_uuid = ?
+        LIMIT 1
+    """
+    params = (string(get_uuid(owner)),)
+    return _has_metadata(store, query, params)
+end
+
+# The code in the has_metadata methods could be shared a bit more.
+# However, this function is called frequently in PowerSimulations and we want
+# to avoid extra string interpolations.
+
+function has_metadata(
+    store::TimeSeriesMetadataStore,
+    owner::TimeSeriesOwners,
+    time_series_type::Type{<:TimeSeriesData},
+)
+    query = """
+        SELECT id FROM
+        $METADATA_TABLE_NAME
+        WHERE owner_uuid = ? AND time_series_type = ?
+        LIMIT 1
+    """
+    params = (string(get_uuid(owner)), _convert_ts_type_to_string(time_series_type))
+    return _has_metadata(store, query, params)
+end
+
+function has_metadata(
+    store::TimeSeriesMetadataStore,
+    owner::TimeSeriesOwners,
+    name::AbstractString,
+)
+    query = """
+        SELECT id FROM
+        $METADATA_TABLE_NAME
+        WHERE owner_uuid = ? AND name = ?
+        LIMIT 1
+    """
+    params = (string(get_uuid(owner)), name)
+    return _has_metadata(store, query, params)
 end
 
 function has_metadata(
@@ -566,60 +605,45 @@ function has_metadata(
     name::String;
     features...,
 )
-    if _try_has_time_series_metadata_by_full_params(
-        store,
-        owner,
-        time_series_type,
-        name;
-        features...,
-    )
-        return true
+    if isempty(features)
+        params =
+            (string(get_uuid(owner)), _convert_ts_type_to_string(time_series_type), name)
+        query = """
+            SELECT id FROM
+            $METADATA_TABLE_NAME
+            WHERE owner_uuid = ? AND time_series_type = ? AND name = ?
+            LIMIT 1
+        """
+        return _has_metadata(store, query, params)
     end
 
-    where_clause, params = _make_where_clause(
-        owner;
-        time_series_type = time_series_type,
-        name = name,
-        features...,
-    )
-    query = "SELECT COUNT(*) AS count FROM $METADATA_TABLE_NAME $where_clause"
-    return _execute_count(store, query, params) > 0
+    params = Vector{Any}([
+        string(get_uuid(owner)),
+        _convert_ts_type_to_string(time_series_type),
+        name,
+    ])
+    feature_str = _make_feature_filter!(params; features...)
+    query = """
+        SELECT id FROM
+        $METADATA_TABLE_NAME
+        WHERE owner_uuid = ? AND time_series_type = ? AND name = ? AND ($feature_str)
+        LIMIT 1
+    """
+    return _has_metadata(store, query, params)
 end
 
 """
 Return True if there is time series matching the UUID.
 """
-function has_time_series(store::TimeSeriesMetadataStore, time_series_uuid::Base.UUID)
-    where_clause = "WHERE time_series_uuid = ?"
-    params = [string(time_series_uuid)]
-    return _has_time_series(store, where_clause, params)
+function has_metadata(store::TimeSeriesMetadataStore, time_series_uuid::Base.UUID)
+    query = "SELECT id FROM $METADATA_TABLE_NAME WHERE time_series_uuid = ?"
+    params = (string(time_series_uuid),)
+    return _has_metadata(store, query, params)
 end
 
-function has_time_series(
-    store::TimeSeriesMetadataStore,
-    owner::TimeSeriesOwners,
-)
-    where_clause = "WHERE owner_uuid = ?"
-    params = [string(get_uuid(owner))]
-    return _has_time_series(store, where_clause, params)
+function _has_metadata(store::TimeSeriesMetadataStore, query::String, params)
+    return !isempty(_execute(store, query, params))
 end
-
-function has_time_series(
-    store::TimeSeriesMetadataStore,
-    owner::TimeSeriesOwners,
-    time_series_type::Type{<:TimeSeriesData},
-)
-    where_clause, params = _make_where_clause(owner; time_series_type = time_series_type)
-    return _has_time_series(store, where_clause, params)
-end
-
-has_time_series(
-    store::TimeSeriesMetadataStore,
-    owner::TimeSeriesOwners,
-    time_series_type::Type{<:TimeSeriesData},
-    name::String;
-    features...,
-) = has_metadata(store, owner, time_series_type, name; features...)
 
 """
 Return a sorted Vector of distinct resolutions for all time series of the given type
@@ -678,7 +702,7 @@ function list_existing_metadata(
     end
     where_clause = join(where_clauses, " OR ")
     query = """
-        SELECT 
+        SELECT
             time_series_type
             ,name
             ,owner_uuid
@@ -702,7 +726,7 @@ function list_existing_time_series_uuids(store::TimeSeriesMetadataStore, uuids)
     query = """
         SELECT
             DISTINCT time_series_uuid
-            FROM $METADATA_TABLE_NAME 
+            FROM $METADATA_TABLE_NAME
             WHERE time_series_uuid IN ($placeholder)
     """
     table = Tables.columntable(_execute(store, query, uuids_str))
@@ -751,7 +775,7 @@ function list_metadata(
 end
 
 """
-Return a Vector of NamedTuple of owner UUID and time series metadata matching the inputs. 
+Return a Vector of NamedTuple of owner UUID and time series metadata matching the inputs.
 """
 function list_metadata_with_owner_uuid(
     store::TimeSeriesMetadataStore,
@@ -954,15 +978,14 @@ function _create_row(
     )
 end
 
+function make_stmt(store::TimeSeriesMetadataStore, query::String)
+    return get!(() -> SQLite.Stmt(store.db, query), store.cached_statements, query)
+end
+
 _execute(s::TimeSeriesMetadataStore, q, p = nothing) =
-    execute(s.db, q, p, LOG_GROUP_TIME_SERIES)
+    execute(make_stmt(s, q), p, LOG_GROUP_TIME_SERIES)
 _execute_count(s::TimeSeriesMetadataStore, q, p = nothing) =
     execute_count(s.db, q, p, LOG_GROUP_TIME_SERIES)
-
-function _has_time_series(store::TimeSeriesMetadataStore, where_clause::String, params)
-    query = "SELECT COUNT(*) AS count FROM $METADATA_TABLE_NAME $where_clause"
-    return _execute_count(store, query, params) > 0
-end
 
 function _remove_metadata!(
     store::TimeSeriesMetadataStore,
