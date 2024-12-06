@@ -5,7 +5,7 @@ const VALIDATION_DESCRIPTOR_FILE = "validation_descriptors.json"
 const SERIALIZATION_METADATA_KEY = "__serialization_metadata__"
 
 """
-    mutable struct SystemData <: InfrastructureSystemsType
+    mutable struct SystemData <: SystemLike
         components::Components
         "Masked components are attached to the system for overall management purposes but
         are not exposed in the standard library calls like [`get_components`](@ref).
@@ -17,7 +17,7 @@ const SERIALIZATION_METADATA_KEY = "__serialization_metadata__"
 
 Container for system components and time series data
 """
-mutable struct SystemData <: InfrastructureSystemsType
+mutable struct SystemData <: SystemLike
     components::Components
     masked_components::Components
     "Contains all attached component UUIDs, regular and masked."
