@@ -62,3 +62,10 @@ get_available_component(
 
 get_available_component(sys::ComponentContainer, args...; kwargs...) =
     _get_available_component(sys, sys, args...; kwargs...)
+
+# Satisfy the InfrastructureSystemsContainer interface
+iterate_container(sys::ComponentContainer) =
+    get_components(InfrastructureSystemsComponent, sys)
+
+get_num_members(sys::ComponentContainer) =
+    length(get_components(InfrastructureSystemsComponent, sys))
