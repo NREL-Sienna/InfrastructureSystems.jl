@@ -144,7 +144,7 @@ function add_metadata!(
             features,
         )
         params = repeat("?,", length(vals) - 1) * "jsonb(?)"
-        _execute(
+        _execute_cached(
             store,
             "INSERT INTO $METADATA_TABLE_NAME VALUES($params)",
             vals,
@@ -203,10 +203,10 @@ function add_metadata!(
             end
         end
 
-        params = repeat("?,", num_columns - 1) * "jsonb(?)"
+        placeholder = repeat("?,", num_columns - 1) * "jsonb(?)"
         SQLite.DBInterface.executemany(
             store.db,
-            "INSERT INTO $METADATA_TABLE_NAME VALUES($params)",
+            "INSERT INTO $METADATA_TABLE_NAME VALUES($placeholder)",
             NamedTuple(Symbol(k) => v for (k, v) in data),
         )
         @debug "Added $num_rows instances of time series metadata" _group =
@@ -320,7 +320,7 @@ function get_forecast_parameters(store::TimeSeriesMetadataStore)
         WHERE horizon_ms IS NOT NULL
         LIMIT 1
         """
-    table = Tables.rowtable(_execute(store, query))
+    table = Tables.rowtable(_execute_cached(store, query))
     isempty(table) && return nothing
     row = table[1]
     return ForecastParameters(;
@@ -340,7 +340,7 @@ function get_forecast_window_count(store::TimeSeriesMetadataStore)
         WHERE window_count IS NOT NULL
         LIMIT 1
         """
-    table = Tables.rowtable(_execute(store, query))
+    table = Tables.rowtable(_execute_cached(store, query))
     return isempty(table) ? nothing : table[1].window_count
 end
 
@@ -352,7 +352,7 @@ function get_forecast_horizon(store::TimeSeriesMetadataStore)
         WHERE horizon_ms IS NOT NULL
         LIMIT 1
         """
-    table = Tables.rowtable(_execute(store, query))
+    table = Tables.rowtable(_execute_cached(store, query))
     return isempty(table) ? nothing : Dates.Millisecond(table[1].horizon_ms)
 end
 
@@ -364,7 +364,7 @@ function get_forecast_initial_timestamp(store::TimeSeriesMetadataStore)
         WHERE horizon_ms IS NOT NULL
         LIMIT 1
         """
-    table = Tables.rowtable(_execute(store, query))
+    table = Tables.rowtable(_execute_cached(store, query))
     return if isempty(table)
         nothing
     else
@@ -380,7 +380,7 @@ function get_forecast_interval(store::TimeSeriesMetadataStore)
         WHERE interval_ms IS NOT NULL
         LIMIT 1
         """
-    table = Tables.rowtable(_execute(store, query))
+    table = Tables.rowtable(_execute_cached(store, query))
     return if isempty(table)
         nothing
     else
@@ -642,7 +642,7 @@ function has_metadata(store::TimeSeriesMetadataStore, time_series_uuid::Base.UUI
 end
 
 function _has_metadata(store::TimeSeriesMetadataStore, query::String, params)
-    return !isempty(_execute(store, query, params))
+    return !isempty(_execute_cached(store, query, params))
 end
 
 """
@@ -710,7 +710,7 @@ function list_existing_metadata(
         FROM $METADATA_TABLE_NAME
         WHERE $where_clause
     """
-    table = Tables.rowtable(_execute(store, query, params))
+    table = Tables.rowtable(_execute_cached(store, query, params))
     return [
         lookup[(x.time_series_type, x.name, x.owner_uuid, x.features)]
         for x in table
@@ -729,7 +729,7 @@ function list_existing_time_series_uuids(store::TimeSeriesMetadataStore, uuids)
             FROM $METADATA_TABLE_NAME
             WHERE time_series_uuid IN ($placeholder)
     """
-    table = Tables.columntable(_execute(store, query, uuids_str))
+    table = Tables.columntable(_execute_cached(store, query, uuids_str))
     return Base.UUID.(table.time_series_uuid)
 end
 
@@ -748,7 +748,7 @@ function list_matching_time_series_uuids(
         features...,
     )
     query = "SELECT DISTINCT time_series_uuid FROM $METADATA_TABLE_NAME $where_clause"
-    table = Tables.columntable(_execute(store, query, params))
+    table = Tables.columntable(_execute_cached(store, query, params))
     return Base.UUID.(table.time_series_uuid)
 end
 
@@ -770,7 +770,7 @@ function list_metadata(
         FROM $METADATA_TABLE_NAME
         $where_clause
     """
-    table = Tables.rowtable(_execute(store, query, params))
+    table = Tables.rowtable(_execute_cached(store, query, params))
     return [_deserialize_metadata(x.metadata) for x in table]
 end
 
@@ -795,7 +795,7 @@ function list_metadata_with_owner_uuid(
         FROM $METADATA_TABLE_NAME
         $where_clause
     """
-    table = Tables.rowtable(_execute(store, query, params))
+    table = Tables.rowtable(_execute_cached(store, query, params))
     return [
         (
             owner_uuid = Base.UUID(x.owner_uuid),
@@ -824,7 +824,7 @@ function list_owner_uuids_with_time_series(
         FROM $METADATA_TABLE_NAME
         WHERE $where_clause
     """
-    return Base.UUID.(Tables.columntable(_execute(store, query, params)).owner_uuid)
+    return Base.UUID.(Tables.columntable(_execute_cached(store, query, params)).owner_uuid)
 end
 
 """
@@ -982,8 +982,10 @@ function make_stmt(store::TimeSeriesMetadataStore, query::String)
     return get!(() -> SQLite.Stmt(store.db, query), store.cached_statements, query)
 end
 
-_execute(s::TimeSeriesMetadataStore, q, p = nothing) =
+_execute_cached(s::TimeSeriesMetadataStore, q, p = nothing) =
     execute(make_stmt(s, q), p, LOG_GROUP_TIME_SERIES)
+_execute(s::TimeSeriesMetadataStore, q, p = nothing) =
+    execute(s.db, q, p, LOG_GROUP_TIME_SERIES)
 _execute_count(s::TimeSeriesMetadataStore, q, p = nothing) =
     execute_count(s.db, q, p, LOG_GROUP_TIME_SERIES)
 
@@ -1059,7 +1061,7 @@ function _try_time_series_metadata_by_full_params(
         features...,
     )
     query = "SELECT $column FROM $METADATA_TABLE_NAME $where_clause"
-    return Tables.rowtable(_execute(store, query, params))
+    return Tables.rowtable(_execute_cached(store, query, params))
 end
 
 function compare_values(
