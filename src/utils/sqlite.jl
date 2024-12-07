@@ -51,8 +51,6 @@ function execute(
     log_group::Symbol,
 )
     @debug "Execute SQL" _group = log_group query params
-    # If we don't cache these statements, there is a cost of 3-4 us on every query.
-    #stmt = get!(() -> SQLite.Stmt(db, query), STATEMENT_CACHE, query)
     try
         return if isnothing(params)
             SQLite.DBInterface.execute(db, query)
@@ -71,8 +69,6 @@ function execute(
     log_group::Symbol,
 )
     @debug "Execute SQL" _group = log_group params
-    # If we don't cache these statements, there is a cost of 3-4 us on every query.
-    #stmt = get!(() -> SQLite.Stmt(db, query), STATEMENT_CACHE, query)
     try
         return if isnothing(params)
             SQLite.DBInterface.execute(stmt)
