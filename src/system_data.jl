@@ -567,7 +567,7 @@ function _transform_single_time_series!(
             horizon = params.horizon,
             time_series_type = DeterministicSingleTimeSeries,
             scaling_factor_multiplier = get_scaling_factor_multiplier(metadata),
-            internal = get_internal(metadata),
+            internal = InfrastructureSystemsInternal(),
         )
         all_metadata[i] = new_metadata
         components[i] = item.component

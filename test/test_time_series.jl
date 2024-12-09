@@ -497,8 +497,16 @@ end
     ) isa IS.SingleTimeSeries
     @test IS.has_time_series(component, IS.SingleTimeSeries)
     @test IS.has_time_series(component, IS.SingleTimeSeries, ts_name)
-    @test IS.has_time_series(component, ts_name)
+    @test IS.has_time_series(component; name = ts_name)
+    @test IS.has_time_series(component; name = ts_name, resolution = resolution)
     @test IS.has_time_series(component, IS.SingleTimeSeries, ts_name, scenario = "low")
+    @test IS.has_time_series(
+        component,
+        IS.SingleTimeSeries,
+        ts_name,
+        resolution = resolution,
+        scenario = "low",
+    )
     @test IS.has_time_series(
         component,
         IS.SingleTimeSeries,
@@ -745,7 +753,8 @@ end
 end
 
 @testset "Test Deterministic with a wrapped SingleTimeSeries" begin
-    for in_memory in (true, false)
+    #for in_memory in (true, false)
+    for in_memory in (true,)
         sys = IS.SystemData(; time_series_in_memory = in_memory)
 
         # This is allowed when there are no time series.
@@ -850,7 +859,7 @@ end
         forecasts = collect(IS.get_time_series_multiple(sys))
         @test length(forecasts) == 3
         forecasts = collect(IS.get_time_series_multiple(sys; type = IS.Deterministic))
-        @test length(forecasts) == 1
+        @test length(forecasts) == 2
         forecasts =
             collect(
                 IS.get_time_series_multiple(

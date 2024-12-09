@@ -1,12 +1,24 @@
 const METADATA_TABLE_NAME = "time_series_metadata"
 const DB_FILENAME = "time_series_metadata.db"
 
+@kwdef struct HasMetadataQueryKey
+    has_name::Bool
+    num_possible_types::Int
+    has_resolution::Bool
+    has_features::Bool
+    feature_filter::Union{Nothing, String} = nothing
+end
+
 mutable struct TimeSeriesMetadataStore
     db::SQLite.DB
-    # If we don't cache SQL statements, there is a cost of 3-4 us on every query.
-    # DBInterface.jl does something similar with @prepare. We need this to be tied
-    # to our connection.
+    # Caching compiled SQL statements saves 3-4 us per query query.
+    # DBInterface.jl does something similar with @prepare.
+    # We need this to be tied to our connection.
     cached_statements::Dict{String, SQLite.Stmt}
+    # This caching allows the code to skip some string interpolations.
+    # It is experimental for PowerSimulations, which calls has_metadata frequently.
+    # It may not be necessary. Savings are less than 1 us.
+    has_metadata_statements::Dict{HasMetadataQueryKey, SQLite.Stmt}
     # If you add any fields, ensure they are managed in deepcopy_internal below.
 end
 
@@ -16,7 +28,11 @@ Construct a new TimeSeriesMetadataStore with an in-memory database.
 function TimeSeriesMetadataStore()
     # This metadata is not expected to exceed system memory, so create an in-memory
     # database so that it is faster. This could be changed.
-    store = TimeSeriesMetadataStore(SQLite.DB(), Dict{String, SQLite.Stmt}())
+    store = TimeSeriesMetadataStore(
+        SQLite.DB(),
+        Dict{String, SQLite.Stmt}(),
+        Dict{HasMetadataQueryKey, SQLite.Stmt}(),
+    )
     _create_metadata_table!(store)
     _create_indexes!(store)
     @debug "Initialized new time series metadata table" _group = LOG_GROUP_TIME_SERIES
@@ -30,10 +46,17 @@ function TimeSeriesMetadataStore(filename::AbstractString)
     src = SQLite.DB(filename)
     db = SQLite.DB()
     backup(db, src)
-    store = TimeSeriesMetadataStore(db, Dict{Base.UUID, TimeSeriesMetadata}())
-    if isempty(sql(store, "PRAGMA index_list(time_series_metadata)"))
-        _create_indexes!(store)
+    # TODO DT: only do this if needed...check for resolution
+    for index in ("by_c_n_tst_features", "by_ts_uuid")
+        SQLite.DBInterface.execute(db, "DROP INDEX IF EXISTS $index")
     end
+    # TODO DT: fix metadata UUIDs
+    store = TimeSeriesMetadataStore(
+        db,
+        Dict{Base.UUID, TimeSeriesMetadata}(),
+        Dict{Tuple{Bool, Bool, Int64, String}, SQLite.Stmt}(),
+    )
+    _create_indexes!(store)
     @debug "Loaded time series metadata from file" _group = LOG_GROUP_TIME_SERIES filename
     return store
 end
@@ -95,7 +118,7 @@ function _create_indexes!(store::TimeSeriesMetadataStore)
         store.db,
         METADATA_TABLE_NAME,
         "by_c_n_tst_features",
-        ["owner_uuid", "name", "time_series_type", "features"];
+        ["owner_uuid", "time_series_type", "name", "features"];
         unique = true,
     )
     SQLite.createindex!(
@@ -116,9 +139,11 @@ function Base.deepcopy_internal(store::TimeSeriesMetadataStore, dict::IdDict)
     new_db = SQLite.DB()
     backup(new_db, store.db)
     new_cached_statements = deepcopy(store.cached_statements)
-    new_store = TimeSeriesMetadataStore(new_db, new_cached_statements)
+    new_statements = Dict{HasMetadataQueryKey, SQLite.Stmt}()
+    new_store = TimeSeriesMetadataStore(new_db, new_cached_statements, new_statements)
     dict[store] = new_store
     dict[store.cached_statements] = new_cached_statements
+    dict[store.has_metadata_statements] = new_statements
     return new_store
 end
 
@@ -132,14 +157,14 @@ function add_metadata!(
 )
     TimerOutputs.@timeit_debug SYSTEM_TIMERS "add time series metadata single" begin
         owner_category = _get_owner_category(owner)
-        ts_type = time_series_metadata_to_data(metadata)
-        ts_category = _get_time_series_category(ts_type)
+        time_series_type = time_series_metadata_to_data(metadata)
+        ts_category = _get_time_series_category(time_series_type)
         features = make_features_string(metadata.features)
         vals = _create_row(
             metadata,
             owner,
             owner_category,
-            string(nameof(ts_type)),
+            _convert_ts_type_to_string(time_series_type),
             ts_category,
             features,
         )
@@ -187,14 +212,14 @@ function add_metadata!(
             owner = owners[i]
             metadata = all_metadata[i]
             owner_category = _get_owner_category(owner)
-            ts_type = time_series_metadata_to_data(metadata)
-            ts_category = _get_time_series_category(ts_type)
+            time_series_type = time_series_metadata_to_data(metadata)
+            ts_category = _get_time_series_category(time_series_type)
             features = make_features_string(metadata.features)
             row = _create_row(
                 metadata,
                 owner,
                 owner_category,
-                string(nameof(ts_type)),
+                _convert_ts_type_to_string(time_series_type),
                 ts_category,
                 features,
             )
@@ -417,26 +442,6 @@ function get_metadata(
     )
     len = length(metadata_items)
     if len == 0
-        if time_series_type === Deterministic
-            # This is a hack to account for the fact that we allow users to use
-            # Deterministic interchangeably with DeterministicSingleTimeSeries.
-            try
-                return get_metadata(
-                    store,
-                    owner,
-                    DeterministicSingleTimeSeries,
-                    name;
-                    features...,
-                )
-            catch _
-                throw(
-                    ArgumentError(
-                        "No matching metadata is stored. " *
-                        "Tried $time_series_type and DeterministicSingleTimeSeries.",
-                    ),
-                )
-            end
-        end
         throw(ArgumentError("No matching metadata is stored."))
     elseif len > 1
         throw(ArgumentError("Found more than one matching metadata: $len"))
@@ -552,84 +557,55 @@ end
 
 function has_metadata(
     store::TimeSeriesMetadataStore,
-    owner::TimeSeriesOwners,
-)
-    query = """
-        SELECT id FROM
-        $METADATA_TABLE_NAME
-        WHERE owner_uuid = ?
-        LIMIT 1
-    """
-    params = (string(get_uuid(owner)),)
-    return _has_metadata(store, query, params)
-end
-
-# The code in the has_metadata methods could be shared a bit more.
-# However, this function is called frequently in PowerSimulations and we want
-# to avoid extra string interpolations.
-
-function has_metadata(
-    store::TimeSeriesMetadataStore,
-    owner::TimeSeriesOwners,
-    time_series_type::Type{<:TimeSeriesData},
-)
-    query = """
-        SELECT id FROM
-        $METADATA_TABLE_NAME
-        WHERE owner_uuid = ? AND time_series_type = ?
-        LIMIT 1
-    """
-    params = (string(get_uuid(owner)), _convert_ts_type_to_string(time_series_type))
-    return _has_metadata(store, query, params)
-end
-
-function has_metadata(
-    store::TimeSeriesMetadataStore,
-    owner::TimeSeriesOwners,
-    name::AbstractString,
-)
-    query = """
-        SELECT id FROM
-        $METADATA_TABLE_NAME
-        WHERE owner_uuid = ? AND name = ?
-        LIMIT 1
-    """
-    params = (string(get_uuid(owner)), name)
-    return _has_metadata(store, query, params)
-end
-
-function has_metadata(
-    store::TimeSeriesMetadataStore,
-    owner::TimeSeriesOwners,
-    time_series_type::Type{<:TimeSeriesData},
-    name::String;
+    owner::TimeSeriesOwners;
+    time_series_type::Union{Type{<:TimeSeriesData}, Nothing} = nothing,
+    name::Union{String, Nothing} = nothing,
+    resolution::Union{Nothing, Dates.Period} = nothing,
     features...,
 )
+    params = _make_has_metadata_params(owner, time_series_type, name, resolution)
     if isempty(features)
-        params =
-            (string(get_uuid(owner)), _convert_ts_type_to_string(time_series_type), name)
-        query = """
-            SELECT id FROM
-            $METADATA_TABLE_NAME
-            WHERE owner_uuid = ? AND time_series_type = ? AND name = ?
-            LIMIT 1
-        """
-        return _has_metadata(store, query, params)
+        stmt = _make_has_metadata_statement!(
+            store,
+            HasMetadataQueryKey(;
+                has_name = !isnothing(name),
+                num_possible_types = _get_num_possible_types(time_series_type),
+                has_resolution = !isnothing(resolution),
+                has_features = false,
+            ),
+        )
+        return _has_metadata(stmt, params)
     end
 
-    params = Vector{Any}([
-        string(get_uuid(owner)),
-        _convert_ts_type_to_string(time_series_type),
-        name,
-    ])
-    feature_str = _make_feature_filter!(params; features...)
-    query = """
-        SELECT id FROM
-        $METADATA_TABLE_NAME
-        WHERE owner_uuid = ? AND time_series_type = ? AND name = ? AND ($feature_str)
-        LIMIT 1
-    """
-    return _has_metadata(store, query, params)
+    # It's worth trying full features first because we can get a cache hit and
+    # avoid JSON parsing.
+    stmt = _make_has_metadata_statement!(
+        store,
+        HasMetadataQueryKey(;
+            has_name = !isnothing(name),
+            num_possible_types = _get_num_possible_types(time_series_type),
+            has_resolution = !isnothing(resolution),
+            has_features = true,
+        ),
+    )
+    full_features = make_features_string(; features...)
+    if _has_metadata(stmt, (params..., full_features))
+        return true
+    end
+
+    params2 = collect(params)
+    feature_filter = _make_feature_filter!(params2; features...)
+    stmt = _make_has_metadata_statement!(
+        store,
+        HasMetadataQueryKey(;
+            has_name = !isnothing(name),
+            num_possible_types = _get_num_possible_types(time_series_type),
+            has_resolution = !isnothing(resolution),
+            has_features = true,
+            feature_filter = feature_filter,
+        ),
+    )
+    return _has_metadata(stmt, params2)
 end
 
 """
@@ -639,6 +615,94 @@ function has_metadata(store::TimeSeriesMetadataStore, time_series_uuid::Base.UUI
     query = "SELECT id FROM $METADATA_TABLE_NAME WHERE time_series_uuid = ?"
     params = (string(time_series_uuid),)
     return _has_metadata(store, query, params)
+end
+
+function _make_has_metadata_statement!(
+    store::TimeSeriesMetadataStore,
+    key::HasMetadataQueryKey;
+)
+    stmt = get(store.has_metadata_statements, key, nothing)
+    if !isnothing(stmt)
+        return stmt
+    end
+
+    query = "SELECT id FROM $METADATA_TABLE_NAME WHERE owner_uuid = ?"
+    where_clauses = String[]
+    if key.has_name
+        push!(where_clauses, "name = ?")
+    end
+    if key.num_possible_types == 1
+        push!(where_clauses, "time_series_type = ?")
+    elseif key.num_possible_types > 1
+        val = chop(repeat("?,", key.num_possible_types))
+        push!(where_clauses, "time_series_type IN ($val)")
+    end
+    if key.has_resolution
+        push!(where_clauses, "resolution_ms = ?")
+    end
+    if key.has_features
+        if isnothing(key.feature_filter)
+            push!(where_clauses, "features = ?")
+        else
+            push!(where_clauses, "$(key.feature_filter)")
+        end
+    end
+
+    if isempty(where_clauses)
+        final = "$query LIMIT 1"
+    else
+        where_clause = join(where_clauses, " AND ")
+        final = "$query AND $where_clause LIMIT 1"
+    end
+
+    stmt = SQLite.Stmt(store.db, final)
+    store.has_metadata_statements[key] = stmt
+    return stmt
+end
+
+function _make_has_metadata_params(
+    owner::TimeSeriesOwners,
+    time_series_type::Union{Type{<:TimeSeriesData}, Nothing},
+    name::Union{String, Nothing},
+    resolution::Union{Dates.Period, Nothing};
+    feature_value::Union{String, Nothing} = nothing,
+)
+    return (
+        string(get_uuid(owner)),
+        _get_name_params(name)...,
+        _get_ts_type_params(time_series_type)...,
+        _get_resolution_param(resolution)...,
+        _get_feature_params(feature_value)...,
+    )
+end
+
+_get_name_params(::Nothing) = ()
+_get_name_params(name::String) = (name,)
+_get_resolution_param(::Nothing) = ()
+_get_resolution_param(x::Dates.Period) = (Dates.Millisecond(x).value,)
+_get_ts_type_params(::Nothing) = ()
+_get_ts_type_params(ts_type::Type{<:TimeSeriesData}) =
+    (_convert_ts_type_to_string(ts_type),)
+_get_ts_type_params(ts_type::Type{<:DeterministicSingleTimeSeries}) =
+    (_convert_ts_type_to_string(ts_type),)
+_get_feature_params(::Nothing) = ()
+_get_feature_params(feature::String) = (feature,)
+
+function _get_ts_type_params(::Type{<:AbstractDeterministic})
+    return (
+        _convert_ts_type_to_string(Deterministic),
+        _convert_ts_type_to_string(DeterministicSingleTimeSeries),
+        _convert_ts_type_to_string(AbstractDeterministic),
+    )
+end
+
+_get_num_possible_types(::Nothing) = 0
+_get_num_possible_types(::Type{<:TimeSeriesData}) = 1
+_get_num_possible_types(::Type{<:DeterministicSingleTimeSeries}) = 1
+_get_num_possible_types(::Type{<:AbstractDeterministic}) = 3
+
+function _has_metadata(stmt::SQLite.Stmt, params)
+    return !isempty(SQLite.DBInterface.execute(stmt, params))
 end
 
 function _has_metadata(store::TimeSeriesMetadataStore, query::String, params)
@@ -710,7 +774,7 @@ function list_existing_metadata(
         FROM $METADATA_TABLE_NAME
         WHERE $where_clause
     """
-    table = Tables.rowtable(_execute_cached(store, query, params))
+    table = Tables.rowtable(_execute(store, query, params))
     return [
         lookup[(x.time_series_type, x.name, x.owner_uuid, x.features)]
         for x in table
@@ -729,7 +793,7 @@ function list_existing_time_series_uuids(store::TimeSeriesMetadataStore, uuids)
             FROM $METADATA_TABLE_NAME
             WHERE time_series_uuid IN ($placeholder)
     """
-    table = Tables.columntable(_execute_cached(store, query, uuids_str))
+    table = Tables.columntable(_execute(store, query, uuids_str))
     return Base.UUID.(table.time_series_uuid)
 end
 
@@ -748,7 +812,7 @@ function list_matching_time_series_uuids(
         features...,
     )
     query = "SELECT DISTINCT time_series_uuid FROM $METADATA_TABLE_NAME $where_clause"
-    table = Tables.columntable(_execute_cached(store, query, params))
+    table = Tables.columntable(_execute(store, query, params))
     return Base.UUID.(table.time_series_uuid)
 end
 
@@ -795,7 +859,7 @@ function list_metadata_with_owner_uuid(
         FROM $METADATA_TABLE_NAME
         $where_clause
     """
-    table = Tables.rowtable(_execute_cached(store, query, params))
+    table = Tables.rowtable(_execute(store, query, params))
     return [
         (
             owner_uuid = Base.UUID(x.owner_uuid),
@@ -824,7 +888,7 @@ function list_owner_uuids_with_time_series(
         FROM $METADATA_TABLE_NAME
         WHERE $where_clause
     """
-    return Base.UUID.(Tables.columntable(_execute_cached(store, query, params)).owner_uuid)
+    return Base.UUID.(Tables.columntable(_execute(store, query, params)).owner_uuid)
 end
 
 """
@@ -1009,14 +1073,15 @@ function _try_get_time_series_metadata_by_full_params(
     name::String;
     features...,
 )
-    rows = _try_time_series_metadata_by_full_params(
-        store,
-        owner,
-        time_series_type,
-        name,
-        "json(metadata) AS metadata";
+    where_clause, params = _make_where_clause(
+        owner;
+        time_series_type = time_series_type,
+        name = name,
+        require_full_feature_match = true,
         features...,
     )
+    query = "SELECT json(metadata) AS metadata FROM $METADATA_TABLE_NAME $where_clause"
+    rows = Tables.rowtable(_execute_cached(store, query, params))
     len = length(rows)
     if len == 0
         return nothing
@@ -1025,43 +1090,6 @@ function _try_get_time_series_metadata_by_full_params(
     else
         throw(ArgumentError("Found more than one matching time series: $len"))
     end
-end
-
-function _try_has_time_series_metadata_by_full_params(
-    store::TimeSeriesMetadataStore,
-    owner::TimeSeriesOwners,
-    time_series_type::Type{<:TimeSeriesData},
-    name::String;
-    features...,
-)
-    row = _try_time_series_metadata_by_full_params(
-        store,
-        owner,
-        time_series_type,
-        name,
-        "id";
-        features...,
-    )
-    return !isempty(row)
-end
-
-function _try_time_series_metadata_by_full_params(
-    store::TimeSeriesMetadataStore,
-    owner::TimeSeriesOwners,
-    time_series_type::Type{<:TimeSeriesData},
-    name::String,
-    column::String;
-    features...,
-)
-    where_clause, params = _make_where_clause(
-        owner;
-        time_series_type = time_series_type,
-        name = name,
-        require_full_feature_match = true,
-        features...,
-    )
-    query = "SELECT $column FROM $METADATA_TABLE_NAME $where_clause"
-    return Tables.rowtable(_execute_cached(store, query, params))
 end
 
 function compare_values(
@@ -1085,7 +1113,18 @@ end
 
 ### Non-TimeSeriesMetadataStore functions ###
 
+const _DETERMINISTIC_AS_STRING = string(nameof(Deterministic))
+const _DETERMINISTIC_STS_AS_STRING = string(nameof(DeterministicSingleTimeSeries))
+const _STS_AS_STRING = string(nameof(SingleTimeSeries))
+const _PROBABILISTIC_AS_STRING = string(nameof(Probabilistic))
+const _SCENARIOS_AS_STRING = string(nameof(Scenarios))
+
 _convert_ts_type_to_string(ts_type::Type{<:TimeSeriesData}) = string(nameof(ts_type))
+_convert_ts_type_to_string(::Type{<:Deterministic}) = _DETERMINISTIC_AS_STRING
+_convert_ts_type_to_string(::Type{<:DeterministicSingleTimeSeries}) =
+    _DETERMINISTIC_STS_AS_STRING
+_convert_ts_type_to_string(::Type{<:Probabilistic}) = _PROBABILISTIC_AS_STRING
+_convert_ts_type_to_string(::Type{<:Scenarios}) = _SCENARIOS_AS_STRING
 
 function _deserialize_metadata(text::String)
     val = JSON3.read(text, Dict)
@@ -1177,9 +1216,16 @@ function _make_where_clause(;
         push!(vals, "name = ?")
         push!(params, name)
     end
-    if !isnothing(time_series_type)
+    num_possible_types = _get_num_possible_types(time_series_type)
+    if num_possible_types == 1
         push!(vals, "time_series_type = ?")
         push!(params, _convert_ts_type_to_string(time_series_type))
+    elseif num_possible_types > 1
+        val = chop(repeat("?,", num_possible_types))
+        push!(vals, "time_series_type IN ($val)")
+        for val in _get_ts_type_params(time_series_type)
+            push!(vals, val)
+        end
     end
     if !isempty(features)
         if require_full_feature_match
