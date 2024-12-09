@@ -87,10 +87,9 @@ function Base.deepcopy_internal(val::SupplementalAttributeAssociations, dict::Id
     end
     new_db = SQLite.DB()
     backup(new_db, val.db)
-    new_cached_statements = deepcopy(val.cached_statements)
-    new_associations = SupplementalAttributeAssociations(new_db, new_cached_statements)
+    new_associations =
+        SupplementalAttributeAssociations(new_db, Dict{String, SQLite.Stmt}())
     dict[val] = new_associations
-    dict[val.cached_statements] = new_cached_statements
     return new_associations
 end
 
@@ -270,7 +269,7 @@ function list_associated_component_uuids(
         FROM $SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME
         WHERE attribute_uuid = '$(get_uuid(attribute))'
     """
-    table = Tables.columntable(_execute(associations, query))
+    table = Tables.columntable(_execute_cached(associations, query))
     return Base.UUID.(table.component_uuid)
 end
 
@@ -295,7 +294,7 @@ function list_associated_supplemental_attribute_uuids(
         FROM $SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME
         WHERE $where_clause
     """
-    table = Tables.columntable(_execute(associations, query, params))
+    table = Tables.columntable(_execute_cached(associations, query, params))
     return Base.UUID.(table.attribute_uuid)
 end
 
@@ -402,7 +401,7 @@ function _has_association(
         WHERE $column = '$uuid'
         LIMIT 1
     """
-    return !isempty(Tables.rowtable(_execute(associations, query)))
+    return !isempty(Tables.rowtable(_execute_cached(associations, query)))
 end
 
 function _remove_associations!(
@@ -439,7 +438,7 @@ function compare_values(
     return match_fn(table_x, table_y)
 end
 
-function make_stmt(associations::SupplementalAttributeAssociations, query::String)
+function _make_stmt(associations::SupplementalAttributeAssociations, query::String)
     return get!(
         () -> SQLite.Stmt(associations.db, query),
         associations.cached_statements,
@@ -448,7 +447,7 @@ function make_stmt(associations::SupplementalAttributeAssociations, query::Strin
 end
 
 _execute_cached(s::SupplementalAttributeAssociations, q, p = nothing) =
-    execute(make_stmt(s, q), p, LOG_GROUP_TIME_SERIES)
+    execute(_make_stmt(s, q), p, LOG_GROUP_TIME_SERIES)
 _execute(s::SupplementalAttributeAssociations, q, p = nothing) =
     execute(s.db, q, p, LOG_GROUP_SUPPLEMENTAL_ATTRIBUTES)
 _execute_count(s::SupplementalAttributeAssociations, q, p = nothing) =

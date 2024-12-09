@@ -12,6 +12,7 @@ using DataStructures: SortedDict
 using DataFrames
 using Random
 using ProgressLogging
+import SQLite
 
 import InfrastructureSystems
 
