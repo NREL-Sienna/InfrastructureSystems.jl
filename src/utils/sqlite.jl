@@ -47,7 +47,7 @@ as well as log messages.
 function execute(
     db::SQLite.DB,
     query::AbstractString,
-    params::Union{Nothing, Vector},
+    params::Union{Nothing, Vector, Tuple},
     log_group::Symbol,
 )
     @debug "Execute SQL" _group = log_group query params

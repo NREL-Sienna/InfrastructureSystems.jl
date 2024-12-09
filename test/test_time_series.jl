@@ -2989,3 +2989,46 @@ end
     @test sort(ts_uuids[1:5]; by = x -> string(x)) ==
           sort(existing_uuids[1:5]; by = x -> string(x))
 end
+
+@testset "Test migration of legacy time series schema" begin
+    sys = IS.SystemData()
+    name = "Component1"
+    component = IS.TestComponent(name, 5)
+    IS.add_component!(sys, component)
+
+    initial_time = Dates.DateTime("2020-09-01")
+    resolution = Dates.Hour(1)
+
+    data = TimeSeries.TimeArray(
+        range(initial_time; length = 5, step = resolution),
+        rand(5),
+    )
+    ts_name = "test_c"
+    ts = IS.SingleTimeSeries(; data = data, name = ts_name)
+    IS.add_time_series!(sys, component, ts; scenario = "low", model_year = "2030")
+    IS.add_time_series!(sys, component, ts; scenario = "high", model_year = "2030")
+    IS.add_time_series!(sys, component, ts; scenario = "low", model_year = "2035")
+    IS.add_time_series!(sys, component, ts; scenario = "high", model_year = "2035")
+
+    filename, io = mktemp()
+    close(io)
+    new_db = SQLite.DB(filename)
+    IS.backup(new_db, sys.time_series_manager.metadata_store.db)
+    query = """
+        CREATE TABLE new_tbl AS
+        SELECT $(IS.ASSOCIATIONS_TABLE_NAME).*, $(IS.METADATA_TABLE_NAME).metadata
+        FROM $(IS.ASSOCIATIONS_TABLE_NAME)
+        JOIN $(IS.METADATA_TABLE_NAME)
+            ON $(IS.ASSOCIATIONS_TABLE_NAME).metadata_uuid = $(IS.METADATA_TABLE_NAME).metadata_uuid
+    """
+    SQLite.DBInterface.execute(new_db, query)
+    SQLite.DBInterface.execute(new_db, "DROP TABLE $(IS.ASSOCIATIONS_TABLE_NAME)")
+    SQLite.DBInterface.execute(new_db, "DROP TABLE $(IS.METADATA_TABLE_NAME)")
+    SQLite.DBInterface.execute(
+        new_db,
+        "ALTER TABLE new_tbl RENAME TO $(IS.METADATA_TABLE_NAME)",
+    )
+    new_store = IS.TimeSeriesMetadataStore(filename)
+    result = IS.list_metadata(new_store, component)
+    @test length(result) == 4
+end
