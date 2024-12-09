@@ -759,10 +759,10 @@ end
 """
 Return true if the component or supplemental attribute has time series data.
 """
-function has_time_series(owner::TimeSeriesOwners)
+function has_time_series(owner::TimeSeriesOwners; kwargs...)
     mgr = get_time_series_manager(owner)
     isnothing(mgr) && return false
-    return has_metadata(mgr.metadata_store, owner)
+    return has_metadata(mgr.metadata_store, owner; kwargs...)
 end
 
 """
@@ -774,16 +774,7 @@ function has_time_series(
 ) where {T <: TimeSeriesData}
     mgr = get_time_series_manager(val)
     isnothing(mgr) && return false
-    return has_metadata(mgr.metadata_store, val, T)
-end
-
-function has_time_series(
-    val::TimeSeriesOwners,
-    name::AbstractString,
-)
-    mgr = get_time_series_manager(val)
-    isnothing(mgr) && return false
-    return has_metadata(mgr.metadata_store, val, name)
+    return has_metadata(mgr.metadata_store, val; time_series_type = T)
 end
 
 function has_time_series(
@@ -794,7 +785,13 @@ function has_time_series(
 ) where {T <: TimeSeriesData}
     mgr = get_time_series_manager(val)
     isnothing(mgr) && return false
-    return has_metadata(mgr.metadata_store, val, T, name; features...)
+    return has_metadata(
+        mgr.metadata_store,
+        val;
+        time_series_type = T,
+        name = name,
+        features...,
+    )
 end
 
 has_time_series(

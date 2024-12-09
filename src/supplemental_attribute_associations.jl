@@ -23,6 +23,8 @@ const SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME = "supplemental_attributes"
 
 mutable struct SupplementalAttributeAssociations
     db::SQLite.DB
+    # If we don't cache SQL statements, there is a cost of 3-4 us on every query.
+    cached_statements::Dict{String, SQLite.Stmt}
     # If you add any fields, ensure they are managed in deepcopy_internal below.
 end
 
@@ -30,7 +32,8 @@ end
 Construct a new SupplementalAttributeAssociations with an in-memory database.
 """
 function SupplementalAttributeAssociations()
-    associations = SupplementalAttributeAssociations(SQLite.DB())
+    associations =
+        SupplementalAttributeAssociations(SQLite.DB(), Dict{String, SQLite.Stmt}())
     _create_attribute_associations_table!(associations)
     _create_indexes!(associations)
     @debug "Initialized new supplemental attributes association table" _group =
@@ -84,8 +87,10 @@ function Base.deepcopy_internal(val::SupplementalAttributeAssociations, dict::Id
     end
     new_db = SQLite.DB()
     backup(new_db, val.db)
-    new_associations = SupplementalAttributeAssociations(new_db)
+    new_cached_statements = deepcopy(val.cached_statements)
+    new_associations = SupplementalAttributeAssociations(new_db, new_cached_statements)
     dict[val] = new_associations
+    dict[val.cached_statements] = new_cached_statements
     return new_associations
 end
 
@@ -212,14 +217,28 @@ function has_association(
         WHERE attribute_uuid = ? AND component_uuid = ?
         LIMIT 1
     """
-    params = [string(a_uuid), string(c_uuid)]
-    return !isempty(Tables.rowtable(_execute(associations, query, params)))
+    params = (string(a_uuid), string(c_uuid))
+    return !isempty(_execute_cached(associations, query, params))
 end
 
 function has_association(
     associations::SupplementalAttributeAssociations,
     component::InfrastructureSystemsComponent,
-    attribute_type::Union{Nothing, Type{<:SupplementalAttribute}} = nothing,
+)
+    params = (string(get_uuid(component)),)
+    query = """
+        SELECT attribute_uuid
+        FROM $SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME
+        WHERE component_uuid = ?
+        LIMIT 1
+    """
+    return !isempty(Tables.rowtable(_execute_cached(associations, query, params)))
+end
+
+function has_association(
+    associations::SupplementalAttributeAssociations,
+    component::InfrastructureSystemsComponent,
+    attribute_type::Type{<:SupplementalAttribute},
 )
     c_str = "component_uuid = ?"
     params = [string(get_uuid(component))]
@@ -236,7 +255,7 @@ function has_association(
         WHERE $where_clause
         LIMIT 1
     """
-    return !isempty(Tables.rowtable(_execute(associations, query, params)))
+    return !isempty(Tables.rowtable(_execute_cached(associations, query, params)))
 end
 
 """
@@ -420,6 +439,16 @@ function compare_values(
     return match_fn(table_x, table_y)
 end
 
+function make_stmt(associations::SupplementalAttributeAssociations, query::String)
+    return get!(
+        () -> SQLite.Stmt(associations.db, query),
+        associations.cached_statements,
+        query,
+    )
+end
+
+_execute_cached(s::SupplementalAttributeAssociations, q, p = nothing) =
+    execute(make_stmt(s, q), p, LOG_GROUP_TIME_SERIES)
 _execute(s::SupplementalAttributeAssociations, q, p = nothing) =
     execute(s.db, q, p, LOG_GROUP_SUPPLEMENTAL_ATTRIBUTES)
 _execute_count(s::SupplementalAttributeAssociations, q, p = nothing) =
