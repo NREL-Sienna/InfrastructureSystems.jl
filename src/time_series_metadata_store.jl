@@ -1390,7 +1390,6 @@ function _make_feature_filter!(params; features...)
         else
             push!(params, "%$(key)\":$(val)%")
         end
-        #push!(strings, "metadata->>'\$.features.$key' = ?")
     end
     return join(strings, " AND ")
 end
