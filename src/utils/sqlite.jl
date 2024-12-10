@@ -38,13 +38,16 @@ function backup(
     end
 end
 
+const STATEMENT_CACHE = Dict{String, SQLite.Stmt}()
+
 """
-Wrapper around SQLite.DBInterface.execute to provide log messages.
+Wrapper around SQLite.DBInterface.execute to provide caching of compiled statements
+as well as log messages.
 """
 function execute(
     db::SQLite.DB,
     query::AbstractString,
-    params::Union{Nothing, Vector},
+    params::Union{Nothing, Vector, Tuple},
     log_group::Symbol,
 )
     @debug "Execute SQL" _group = log_group query params
@@ -56,6 +59,24 @@ function execute(
         end
     catch
         @error "Failed to send SQL query" query params
+        rethrow()
+    end
+end
+
+function execute(
+    stmt::SQLite.Stmt,
+    params::Union{Nothing, Vector, Tuple},
+    log_group::Symbol,
+)
+    @debug "Execute SQL" _group = log_group params
+    try
+        return if isnothing(params)
+            SQLite.DBInterface.execute(stmt)
+        else
+            SQLite.DBInterface.execute(stmt, params)
+        end
+    catch
+        @error "Failed to send SQL query" params
         rethrow()
     end
 end
