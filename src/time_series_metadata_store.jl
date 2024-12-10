@@ -74,15 +74,6 @@ function _list_columns(db::SQLite.DB, table_name::String)
     )[1]
 end
 
-function _list_indexes(db::SQLite.DB, table_name::String)
-    return Tables.columntable(
-        SQLite.DBInterface.execute(
-            db,
-            "SELECT name FROM pragma_index_list('$table_name')",
-        ),
-    )[1]
-end
-
 function _needs_migration(db::SQLite.DB)
     return "time_series_uuid" in _list_columns(db, METADATA_TABLE_NAME)
 end
@@ -251,35 +242,30 @@ function _create_indexes!(store::TimeSeriesMetadataStore)
     #    1c. time series for one component/attribute with all features
     # 2. Optimize for checks at system.add_time_series. Use all fields and features.
     # 3. Optimize for returning all metadata for a time series UUID.
-    existing_assoc_indexes = Set(_list_indexes(store.db, ASSOCIATIONS_TABLE_NAME))
-    existing_metadata_indexes = Set(_list_indexes(store.db, METADATA_TABLE_NAME))
-    if !in("by_c_n_tst_features", existing_assoc_indexes)
-        SQLite.createindex!(
-            store.db,
-            ASSOCIATIONS_TABLE_NAME,
-            "by_c_n_tst_features",
-            ["owner_uuid", "time_series_type", "name", "features"];
-            unique = true,
-        )
-    end
-    if !in("by_ts_uuid", existing_assoc_indexes)
-        SQLite.createindex!(
-            store.db,
-            ASSOCIATIONS_TABLE_NAME,
-            "by_ts_uuid",
-            "time_series_uuid";
-            unique = false,
-        )
-    end
-    if !in("by_m_uuid", existing_metadata_indexes)
-        SQLite.createindex!(
-            store.db,
-            METADATA_TABLE_NAME,
-            "by_m_uuid",
-            ["metadata_uuid"];
-            unique = true,
-        )
-    end
+    SQLite.createindex!(
+        store.db,
+        ASSOCIATIONS_TABLE_NAME,
+        "by_c_n_tst_features",
+        ["owner_uuid", "time_series_type", "name", "features"];
+        unique = true,
+        ifnotexists = true,
+    )
+    SQLite.createindex!(
+        store.db,
+        ASSOCIATIONS_TABLE_NAME,
+        "by_ts_uuid",
+        "time_series_uuid";
+        unique = false,
+        ifnotexists = true,
+    )
+    SQLite.createindex!(
+        store.db,
+        METADATA_TABLE_NAME,
+        "by_m_uuid",
+        ["metadata_uuid"];
+        unique = true,
+        ifnotexists = true,
+    )
     return
 end
 
