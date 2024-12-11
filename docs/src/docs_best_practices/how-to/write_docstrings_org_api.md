@@ -43,7 +43,7 @@ Do: migrate all formulation library, and model libraries into the public API
 Do: use auto docs to automatically find all dock strings in a file
 Don’t: manually list out the struts or methods within a topic, because that introduces more work whenever we make a change. Consider re-organizing code if need be, so all related functions are in the same file.
 
-### [Selectively Export Docstrings from `InfrastructureSystems.jl`](@id docs_from_isz)
+### [Selectively Export Docstrings from `InfrastructureSystems.jl`](@id docs_from_is)
 
 If you are working in another Sienna package (e.g., `SomeSiennaPackage.jl`) that imports and
 exports code from `InfrastructureSystems.jl`: 
