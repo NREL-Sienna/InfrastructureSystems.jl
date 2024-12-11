@@ -1,5 +1,10 @@
 const SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME = "supplemental_attributes"
 
+struct ComponentSupplementalAttributeAssociation
+    component::InfrastructureSystemsComponent
+    supplemental_attribute::SupplementalAttribute
+end
+
 # Design note:
 # Supplemental attributes and time series are stored in independent SQLite databases.
 # Ideally, they would be different tables in the same database. This is not practical
@@ -118,6 +123,49 @@ function add_association!(
 end
 
 """
+Add multiple supplemental attribute associations to the associations table.
+The caller must check for duplicates.
+"""
+function add_associations!(
+    associations::SupplementalAttributeAssociations,
+    pairs::Vector{ComponentSupplementalAttributeAssociation},
+)
+    isempty(pairs) && return
+    TimerOutputs.@timeit_debug SYSTEM_TIMERS "add supplemental attribute associations" begin
+        columns = (
+            "attribute_uuid",
+            "attribute_type",
+            "component_uuid",
+            "component_type",
+        )
+        num_rows = length(pairs)
+        num_columns = length(columns)
+        data = OrderedDict(x => Vector{Any}(undef, num_rows) for x in columns)
+        for i in 1:num_rows
+            pair = pairs[i]
+            row = (
+                string(get_uuid(pair.supplemental_attribute)),
+                string(nameof(typeof(pair.supplemental_attribute))),
+                string(get_uuid(pair.component)),
+                string(nameof(typeof(pair.component))),
+            )
+            for (j, column) in enumerate(columns)
+                data[column][i] = row[j]
+            end
+        end
+        params = chop(repeat("?,", num_columns))
+        SQLite.DBInterface.executemany(
+            associations.db,
+            "INSERT INTO $SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME VALUES($params)",
+            NamedTuple(Symbol(k) => v for (k, v) in data),
+        )
+    end
+    @debug "Added $num_rows instances of time series metadata" _group =
+        LOG_GROUP_TIME_SERIES
+    return
+end
+
+"""
 Drop the supplemental attribute associations table.
 """
 function drop_table(associations::SupplementalAttributeAssociations)
@@ -230,6 +278,29 @@ function has_association(
         "$c_str AND $a_str"
     end
 
+    query = """
+        SELECT attribute_uuid
+        FROM $SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME
+        WHERE $where_clause
+        LIMIT 1
+    """
+    return !isempty(Tables.rowtable(_execute(associations, query, params)))
+end
+
+function has_associations(
+    associations::SupplementalAttributeAssociations,
+    component_attribute_pairs::Vector{ComponentSupplementalAttributeAssociation},
+)
+    isempty(component_attribute_pairs) && return false
+    clauses = Vector{String}(undef, length(component_attribute_pairs))
+    params = Vector{String}(undef, length(component_attribute_pairs) * 2)
+    for (i, pair) in enumerate(component_attribute_pairs)
+        clauses[i] = "(attribute_uuid = ? AND component_uuid = ?)"
+        index = i * 2 - 1
+        params[index] = string(get_uuid(pair.supplemental_attribute))
+        params[index + 1] = string(get_uuid(pair.component))
+    end
+    where_clause = join(clauses, " OR ")
     query = """
         SELECT attribute_uuid
         FROM $SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME

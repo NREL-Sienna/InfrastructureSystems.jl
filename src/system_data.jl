@@ -1152,6 +1152,34 @@ function add_supplemental_attribute!(data::SystemData, component, attribute; kwa
     return
 end
 
+function add_supplemental_attributes!(
+    data::SystemData,
+    ca_pairs;
+    batch_size = ADD_TIME_SERIES_BATCH_SIZE,
+    kwargs...,
+)
+    for pair in ca_pairs
+        throw_if_not_attached(data.components, pair.component)
+    end
+
+    add_supplemental_attributes!(
+        data.supplemental_attribute_manager,
+        ca_pairs;
+        batch_size = batch_size,
+        kwargs...,
+    )
+
+    for pair in ca_pairs
+        set_shared_system_references!(
+            pair.supplemental_attribute,
+            SharedSystemReferences(;
+                supplemental_attribute_manager = data.supplemental_attribute_manager,
+                time_series_manager = data.time_series_manager,
+            ),
+        )
+    end
+end
+
 function get_supplemental_attributes(
     filter_func::Function,
     ::Type{T},
