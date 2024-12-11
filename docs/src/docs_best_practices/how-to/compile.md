@@ -32,7 +32,7 @@ InfrastructureSystems.generate_structs(
 )
 ```
 
-## Step 1: Run the Formatter
+## Step 0c: Run the Formatter (Before Submitting a Pull Request)
 To automatically format the documentation to conform with the [style guide](@ref style_guide),
 run in a terminal at the root of the repository:
 ```
@@ -42,7 +42,10 @@ julia scripts/formatter/formatter_code.jl
 Resolve any errors and re-run until error-free. See how to [Troubleshoot Common Errors](@ref)
 for help.
 
-## Step 2: Compile
+This is not a necessary step to compile, but needs to be done at least once to pass pull
+request checks. 
+
+## Step 1: Compile
 
 To compile, run in a terminal at the root of the repository:
 ```
@@ -52,7 +55,7 @@ julia --project=docs docs/make.jl
 Resolve any errors and re-run until error-free. See how to [Troubleshoot Common Errors](@ref)
 for help.
 
-## Step 3: View
+## Step 2: View
 Click on the newly-created `index.html` file (e.g.,
 `SomeSiennaPackage/docs/build/index.html`) to view your locally compiled documentation in a
 browser. 
