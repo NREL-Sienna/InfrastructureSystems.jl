@@ -94,12 +94,6 @@ passed in at creation time.
 get_name(selector::ComponentSelector) = selector.name
 
 """
-    get_components(selector, sys)
-Get the components of the collection that make up the `ComponentSelector`.
-"""
-function get_components end
-
-"""
     get_available_components(selector, sys)
 Get the available components of the collection that make up the `ComponentSelector`.
 """
@@ -168,13 +162,6 @@ end
 
 "Get the single group that corresponds to the `SingularComponentSelector`, i.e., itself"
 get_groups(selector::SingularComponentSelector, sys; kwargs...) = [selector]
-
-"""
-    get_component(selector, sys)
-Get the component of the collection that makes up the `SingularComponentSelector`; `nothing`
-if there is none.
-"""
-function get_component end
 
 # Fallback `rebuild_selector` that only handles `name`
 """
