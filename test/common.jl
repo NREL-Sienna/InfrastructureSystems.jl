@@ -79,3 +79,26 @@ function verify_show(obj)
     @test !isempty(val)
     return
 end
+
+get_simple_test_components() = [
+    IS.TestComponent("DuplicateName", 10),
+    IS.TestComponent("Component1", 11),
+    IS.TestComponent("Component2", 12),
+    IS.AdditionalTestComponent("DuplicateName", 20),
+    IS.AdditionalTestComponent("Component3", 23),
+    IS.AdditionalTestComponent("Component4", 24),
+]
+
+function create_simple_components()
+    container = IS.Components(IS.TimeSeriesManager(; in_memory = true))
+    IS.add_component!.(Ref(container), get_simple_test_components())
+    return container
+end
+
+function create_simple_system_data()
+    data = IS.SystemData()
+    IS.add_component!.(Ref(data), get_simple_test_components())
+    return data
+end
+
+sort_name!(x) = sort!(collect(x); by = IS.get_name)

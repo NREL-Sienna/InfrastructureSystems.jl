@@ -1,28 +1,5 @@
 # Tests `src/component_selector.jl`
 
-cstest_get_test_components() = [
-    IS.TestComponent("DuplicateName", 10),
-    IS.TestComponent("Component1", 11),
-    IS.TestComponent("Component2", 12),
-    IS.AdditionalTestComponent("DuplicateName", 20),
-    IS.AdditionalTestComponent("Component3", 23),
-    IS.AdditionalTestComponent("Component4", 24),
-]
-
-function cstest_make_components()
-    container = IS.Components(IS.TimeSeriesManager(; in_memory = true))
-    IS.add_component!.(Ref(container), cstest_get_test_components())
-    return container
-end
-
-function cstest_make_system_data()
-    data = IS.SystemData()
-    IS.add_component!.(Ref(data), cstest_get_test_components())
-    return data
-end
-
-sort_name!(x) = sort!(collect(x); by = IS.get_name)
-
 # NOTE we are not constraining the second type parameter
 const GCReturnType = IS.FlattenIteratorWrapper{<:IS.InfrastructureSystemsComponent, <:Any}
 
@@ -48,7 +25,7 @@ end
 
 @testset "Test NameComponentSelector" begin
     # Everything should work for both Components and SystemData
-    @testset for test_sys in [cstest_make_components(), cstest_make_system_data()]
+    @testset for test_sys in [create_simple_components(), create_simple_system_data()]
         test_gen_ent = IS.NameComponentSelector(IS.TestComponent, "Component1", nothing)
         named_test_gen_ent =
             IS.NameComponentSelector(IS.TestComponent, "Component1", "CompOne")
@@ -96,7 +73,7 @@ end
 end
 
 @testset "Test ListComponentSelector" begin
-    @testset for test_sys in [cstest_make_components(), cstest_make_system_data()]
+    @testset for test_sys in [create_simple_components(), create_simple_system_data()]
         comp_ent_1 = IS.make_selector(IS.TestComponent, "Component1")
         comp_ent_2 = IS.make_selector(IS.AdditionalTestComponent, "Component3")
         test_list_ent = IS.ListComponentSelector((comp_ent_1, comp_ent_2), nothing)
@@ -149,7 +126,7 @@ end
 end
 
 @testset "Test TypeComponentSelector" begin
-    @testset for test_sys in [cstest_make_components(), cstest_make_system_data()]
+    @testset for test_sys in [create_simple_components(), create_simple_system_data()]
         test_sub_ent = IS.TypeComponentSelector(IS.TestComponent, :all, nothing)
         named_test_sub_ent = IS.TypeComponentSelector(IS.TestComponent, :all, "TComps")
 
@@ -191,7 +168,7 @@ end
 end
 
 @testset "Test FilterComponentSelector" begin
-    @testset for test_sys in [cstest_make_components(), cstest_make_system_data()]
+    @testset for test_sys in [create_simple_components(), create_simple_system_data()]
         val_over_ten(x) = IS.get_val(x) > 10
         test_filter_ent =
             IS.FilterComponentSelector(IS.TestComponent, val_over_ten, :all, nothing)
@@ -260,7 +237,7 @@ end
 end
 
 @testset "Test RegroupedComponentSelector" begin
-    @testset for test_sys in [cstest_make_components(), cstest_make_system_data()]
+    @testset for test_sys in [create_simple_components(), create_simple_system_data()]
         comp_ent_1 = IS.make_selector(IS.TestComponent, "Component1")
         comp_ent_2 = IS.make_selector(IS.AdditionalTestComponent, "Component3")
         test_list_ent = IS.ListComponentSelector((comp_ent_1, comp_ent_2), nothing)
@@ -289,7 +266,7 @@ end
     partition_selector = IS.make_selector(IS.TestComponent;
         groupby = x -> length(IS.get_name(x)))
 
-    for test_sys in [cstest_make_components(), cstest_make_system_data()]
+    for test_sys in [create_simple_components(), create_simple_system_data()]
         @test only(IS.get_groups(all_selector, test_sys)) == all_selector
         @test Set(IS.get_name.(IS.get_groups(each_selector, test_sys))) ==
               Set(
@@ -334,43 +311,9 @@ end
     @test IS.rebuild_selector(sel3; name = "newname") ==
           IS.make_selector(sel1, sel2; name = "newname")
     regrouped = IS.rebuild_selector(sel3; name = "newname", groupby = :all)
-    for test_sys in [cstest_make_components(), cstest_make_system_data()]
+    for test_sys in [create_simple_components(), create_simple_system_data()]
         @test Set(collect(get_components_rt(regrouped, test_sys))) ==
               Set(collect(get_components_rt(sel3, test_sys)))
         @test length(IS.get_groups(regrouped, test_sys)) == 1
-    end
-end
-
-@testset "Test default availability behavior" begin
-    cse(x, y) = (sort_name!(x) == sort_name!(y))  # collect, sort, equality
-    @testset for test_sys in [cstest_make_components(), cstest_make_system_data()]
-        component1 = IS.get_component(IS.TestComponent, test_sys, "Component1")
-        test_uuid = IS.get_uuid(component1)
-        test_type_sel = IS.TypeComponentSelector(IS.TestComponent, :all, nothing)
-        test_name_sel = IS.NameComponentSelector(IS.TestComponent, "Component1", nothing)
-
-        @test cse(IS.get_available_components(IS.TestComponent, test_sys),
-            IS.get_components(IS.TestComponent, test_sys))
-        @test cse(IS.get_available_components(x -> true, IS.TestComponent, test_sys),
-            IS.get_components(x -> true, IS.TestComponent, test_sys))
-        @test cse(IS.get_available_components(test_type_sel, test_sys),
-            IS.get_components(test_type_sel, test_sys))
-
-        if test_sys isa IS.SystemData
-            @test IS.get_available_component(test_sys, test_uuid) ==
-                  IS.get_component(test_sys, test_uuid)
-            geo_supplemental_attribute = IS.GeographicInfo()
-            IS.add_supplemental_attribute!(test_sys, component1, geo_supplemental_attribute)
-            @test cse(IS.get_available_components(test_sys, geo_supplemental_attribute),
-                IS.get_components(test_sys, geo_supplemental_attribute))
-        end
-
-        @test IS.get_available_component(IS.TestComponent, test_sys, "Component1") ==
-              IS.get_component(IS.TestComponent, test_sys, "Component1")
-        @test IS.get_available_component(test_name_sel, test_sys) ==
-              IS.get_component(test_name_sel, test_sys)
-
-        @test sort!(collect(IS.get_available_groups(test_type_sel, test_sys))) ==
-              sort!(collect(IS.get_groups(test_type_sel, test_sys)))
     end
 end
