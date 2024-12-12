@@ -224,11 +224,11 @@ end
     name::String
 end
 
-# Construction
+# Construction (default constructor works if name is not nothing)
 NameComponentSelector(
     component_type::Type{<:InfrastructureSystemsComponent},
     component_name::AbstractString,
-    name::Nothing = nothing,
+    ::Nothing = nothing,
 ) =
     NameComponentSelector(
         component_type,
@@ -280,8 +280,8 @@ end
     name::String
 end
 
-# Construction
-ListComponentSelector(content::Tuple{Vararg{ComponentSelector}}, name::Nothing = nothing) =
+# Construction (default constructor works if name is not nothing)
+ListComponentSelector(content::Tuple{Vararg{ComponentSelector}}, ::Nothing = nothing) =
     ListComponentSelector(content, "[$(join(get_name.(content), ", "))]")
 
 """
@@ -351,7 +351,7 @@ end
 TypeComponentSelector(
     component_type::Type{<:InfrastructureSystemsComponent},
     groupby::Union{Symbol, Function},
-    name::Nothing = nothing,
+    ::Nothing = nothing,
 ) = TypeComponentSelector(component_type, groupby, subtype_to_string(component_type))
 
 """
@@ -392,7 +392,7 @@ FilterComponentSelector(
     component_type::Type{<:InfrastructureSystemsComponent},
     filter_func::Function,
     groupby::Union{Symbol, Function},
-    name::Nothing = nothing,
+    ::Nothing = nothing,
 ) =
     FilterComponentSelector(
         component_type,
