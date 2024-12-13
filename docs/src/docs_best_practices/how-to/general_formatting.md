@@ -39,8 +39,13 @@ signature with types into the hyperlink reference.
     ))
     ```
 !!! warning "Don't" 
-    - ``` `get_time_series_values` ```
-    - ```get_time_series_values```
+    ```
+    `get_time_series_values`
+    ```
+    Or
+    ```
+    get_time_series_values
+    ```
 
 ## Add links to other Sienna packages
 
@@ -48,5 +53,14 @@ All other Sienna package names should have documentation (not Git repo) hyperlin
 !!! tip "Do"
     ``` [`PowerSystems.jl`](https://nrel-sienna.github.io/PowerSystems.jl/stable/) ```
 !!! warning "Don't" 
-    - ``` `PowerSystems.jl` ```
-    - ``` [`PowerSystems.jl`](https://github.com/NREL-Sienna/PowerSystems.jl)```
+    ```
+    `PowerSystems.jl`
+    ```
+    Or
+    ```
+    PSY
+    ```
+    Or
+    ```
+    [`PowerSystems.jl`](https://github.com/NREL-Sienna/PowerSystems.jl)
+    ```
