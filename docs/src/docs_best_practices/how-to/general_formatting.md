@@ -18,7 +18,7 @@ back-ticks:
     ```
     compiles as max_active_power
 
-## Put hyperlinks everywhere
+## [Put hyperlinks everywhere](@id hyperlinks)
 All types, function, and methods should have hyperlinks to the correct docstring, accounting
 for multiple methods of the same name due to Julia's multiple dispatch.
 [`Documenter.jl`](https://documenter.juliadocs.org/stable/) will link to the first
