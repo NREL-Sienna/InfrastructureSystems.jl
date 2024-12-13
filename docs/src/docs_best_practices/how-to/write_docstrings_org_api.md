@@ -27,6 +27,12 @@ Pages = ["write_docstrings_org_api.md"]
 Depth = 3:3
 ```
 
+### Look at the compiled .html!
+!!! tip "Do"
+    - [Compile](@ref "Compile and View Documentation Locally") regularly and
+        look at the APIs
+    - Check method signatures and argument lists are formatted correctly
+
 ### Ensure All Docstrings Are Located in the APIs
 
 !!! tip "Do"
@@ -44,7 +50,7 @@ Depth = 3:3
     If you want to make a docstring visible outside of the API (e.g., in a tutorial), use
     a [non-canonical reference](@extref noncanonical-block). 
 
-### [Automate Updating the Docstrings in the API with `@autodocs`](@id use_autodocs)
+### [Automate Adding Docstrings in the Public API with `@autodocs`](@id use_autodocs)
 
 !!! tip "Do"
     Use [`@autodocs` block](@extref)s in the Public API to automatically find all
@@ -114,7 +120,7 @@ exports code from `InfrastructureSystems.jl`:
 ### Ensure All Docstrings Have a Function Signature and Arguments List
 
 !!! tip "Do"
-    Check all docstrings have a function signature and detailed arguments list
+    Check all exported docstrings have a function signature and detailed arguments list
     *visible in the API when you compile it*. Example:
 
     ![A docstring with function signature and args list](../../assets/comp_after.png)
@@ -124,25 +130,79 @@ exports code from `InfrastructureSystems.jl`:
 
     ![A single line docstring](../../assets/comp_before.png)
 
-
-
 ### Automate Updating Docstring Arguments Lists
-
-# TODO EXAMPLES
+This is not commonly done in Sienna yet, but a goal is to improve our use of
+[`DocStringExtensions.jl`](https://docstringextensions.juliadocs.org/stable) for automation:
 
 !!! tip "Do"
-    Use autodocs typed signatures to automatically compile arguments lists
+    Use
+    [`DocStringExtensions.TYPEDFIELDS`](https://docstringextensions.juliadocs.org/stable/#DocStringExtensions.TYPEDFIELDS)
+    to automatically compile arguments lists. Example:
+    ````markdown
+    """
+        SomeSiennaStruct(arg1, arg2)
+    
+    # Arguments
+    $(TYPEDFIELDS)
+
+    This is the docstring line.
+    """
+    struct SomeSiennaStruct <: OperationalCost
+        "Documentation for argument 1"
+        arg1::ProductionVariableCostCurve
+        "Documentation for argument 2"
+        arg2::Float64
+    end
+    ````
 
 !!! warning "Don't"
     Copy and paste arguments lists into the docstring, which opens opportunity for
-    out-of-date errors from changes in the future.
+    out-of-date errors when arguments are added or regorded. Example:
+    ````markdown
+    """
+        SomeSiennaStruct(arg1, arg2)
 
-### Extract Docstring Information from Other Types of Documentation
+    This is the docstring line.
 
-# TODO HERE
+    # Arguments
+      - `arg2::Float64`: Documentation for argument 2
+      - `arg1::ProductionVariableCostCurve`: Documentation for argument 1
+    """
+    struct SomeSiennaStruct <: OperationalCost
+        arg1::ProductionVariableCostCurve
+        arg2::Float64
+    end
+    ````
 
-### Look at the compiled .html!
+### Add `See also` Links to Functions with the Same Name 
+
 !!! tip "Do"
-    - [Compile](@ref "Compile and View Documentation Locally") the tutorial regularly and
-        look at it
-    - Check method signatures and argument lists are formatted correctly 
+    To help users navigate Julia's multiple dispatch, add `See also` to other versions of
+    the function with the same name, using the guidance on
+    [adding a specific hyperlink](@ref hyperlinks).
+    Example:
+    ```
+    See also 
+    [`get_time_series_array` by name from storage](@ref get_time_series_array(
+        ::Type{T},
+        owner::TimeSeriesOwners,
+        name::AbstractString;
+        start_time::Union{Nothing, Dates.DateTime} = nothing,
+        len::Union{Nothing, Int} = nothing,
+        ignore_scaling_factors = false,
+        features...,
+    ) where {T <: TimeSeriesData}),
+    [`get_time_series_array` from a `StaticTimeSeriesCache`](@ref get_time_series_array(
+        owner::TimeSeriesOwners,
+        time_series::StaticTimeSeries,
+        start_time::Union{Nothing, Dates.DateTime} = nothing;
+        len::Union{Nothing, Int} = nothing,
+        ignore_scaling_factors = false,
+    ))
+    ```
+
+### Follow the Guidelines on Cleaning Up General Formatting
+
+!!! tip "Do"
+    Follow How-to [Clean Up General Formatting](@ref), especially by adding
+    hyperlinks to other Sienna structs that appear within an arguments list.
