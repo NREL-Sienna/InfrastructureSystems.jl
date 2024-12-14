@@ -29,10 +29,11 @@ pages = OrderedDict(
             "How to..." => Any[
                 "Clean Up General Formatting" => "docs_best_practices/how-to/general_formatting.md",
                 "Write a Tutorial" => "docs_best_practices/how-to/write_a_tutorial.md",
+                "Write a How-To Guide" => "docs_best_practices/how-to/write_a_how-to.md",
                 "Organize APIs and Write Docstrings" => "docs_best_practices/how-to/write_docstrings_org_api.md",
+                "Troubleshoot Common Errors" => "docs_best_practices/how-to/troubleshoot.md",
                 "Compile and View Documentation Locally" => "docs_best_practices/how-to/compile.md",
-                "View Draft Documentation on Github" => "docs_best_practices/how-to/view_github.md",
-                "Troubleshoot Common Errors" => "docs_best_practices/how-to/troubleshoot.md",],
+                "View Draft Documentation on Github" => "docs_best_practices/how-to/view_github.md",],
             "Reference" => Any["docs_best_practices/reference/requirements_checklist.md",
                 "docs_best_practices/reference/useful_links.md",],
         ],
