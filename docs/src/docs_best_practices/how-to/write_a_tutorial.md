@@ -1,7 +1,7 @@
 # Write a Tutorial
 
 Tutorials are learning experiences to give our users confidence and experience in using
-Sienna.
+Sienna. 
 
 ## Prepare
 
@@ -12,6 +12,14 @@ Sienna.
 - Look at an example: `PowerSystems.jl`'s
     [Working with Time Series](https://nrel-sienna.github.io/PowerSystems.jl/stable/tutorials/working_with_time_series/)
 
+!!! warning
+    Historically, many of Sienna's "tutorials" have blended all 4 types of documentation in
+    the [Diataxis](https://diataxis.fr/) framework. Be prepared to move material to related
+    Explanation and How-to pages and into function docstrings in the APIs as you work.
+    
+    If you starting a new tutorial, ask yourself if a tutorial is appropriate for what
+    you're trying to show, or if you should be writing a how-to instead.
+    See also how to [Write a How-to Guide](@ref).
 
 ## Follow the Do's and Don't's
 
@@ -84,16 +92,16 @@ the exact results seen on the documentation page.
     information that isn't directly relevant to what you're trying to teach.
 
 ### Remove other types of documentation
-Particularly when editting existing material, watch out for material that should be
-moved elsewhere according to Diataxis principles, especially details and examples
-that should live in the docstrings.
+Particularly when editing existing material, watch out for material that should be
+moved elsewhere according to Diataxis principles:
 !!! tip "Do"
     Preface each call to a new function with a hyperlink to that function's
         docstring so the user can find more detail
 !!! warning "Don't"
-    Include details about different keyword argument functions or versions of
-        a function in the tutorial itself. Some repetition is OK, but details and examples
-        live in the docstrings. 
+    Include definitions and details about different keyword arguments or versions of
+        a function in the tutorial itself. Some basic information is OK, but details and
+        examples live in the docstrings, and they especially shouldn't be included in the
+        tutorial **in lieu of** being in the docstrings.
 
 ### Look at the compiled .html!
 !!! tip "Do"
