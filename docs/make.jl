@@ -27,6 +27,7 @@ pages = OrderedDict(
         "Documentation Best Practices" => Any[
             "Explanation" => "docs_best_practices/explanation.md",
             "How to..." => Any[
+                "Complete Basic Requirements Checklist" => "docs_best_practices/how-to/requirements_checklist.md",
                 "Clean Up General Formatting" => "docs_best_practices/how-to/general_formatting.md",
                 "Write a Tutorial" => "docs_best_practices/how-to/write_a_tutorial.md",
                 "Write a How-To Guide" => "docs_best_practices/how-to/write_a_how-to.md",
@@ -34,8 +35,7 @@ pages = OrderedDict(
                 "Troubleshoot Common Errors" => "docs_best_practices/how-to/troubleshoot.md",
                 "Compile and View Documentation Locally" => "docs_best_practices/how-to/compile.md",
                 "View Draft Documentation on Github" => "docs_best_practices/how-to/view_github.md",],
-            "Reference" => Any["docs_best_practices/reference/requirements_checklist.md",
-                "docs_best_practices/reference/useful_links.md",],
+            "Reference" => Any["docs_best_practices/reference/useful_links.md",],
         ],
         "API" => "InfrastructureSystems.md"
 )
