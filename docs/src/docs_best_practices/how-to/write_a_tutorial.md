@@ -103,6 +103,11 @@ moved elsewhere according to Diataxis principles:
         examples live in the docstrings, and they especially shouldn't be included in the
         tutorial **in lieu of** being in the docstrings.
 
+### Follow the Guidelines on Cleaning Up General Formatting
+
+!!! tip "Do"
+    Follow How-to [Clean Up General Formatting](@ref). 
+
 ### Look at the compiled .html!
 !!! tip "Do"
     - [Compile](@ref "Compile and View Documentation Locally") the tutorial regularly and

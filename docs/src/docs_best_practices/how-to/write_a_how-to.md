@@ -63,6 +63,11 @@ Particularly when editing existing pages, watch out for other
 !!! tip "Do"
     Move tables and lists of information into Reference pages and link to them instead
 
+### Follow the Guidelines on Cleaning Up General Formatting
+
+!!! tip "Do"
+    Follow How-to [Clean Up General Formatting](@ref). 
+
 ### Look at the compiled .html!
 !!! tip "Do"
     - [Compile](@ref "Compile and View Documentation Locally") the how-to guide regularly and
