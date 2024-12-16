@@ -15,8 +15,9 @@ Sienna.
 !!! warning
     
     Historically, many of Sienna's "tutorials" have blended all 4 types of documentation in
-    the [Diataxis](https://diataxis.fr/) framework. Be prepared to move material to related
-    Explanation and How-to pages and into function docstrings in the APIs as you work.
+    the [Diataxis](https://diataxis.fr/) framework. If you are editing, be prepared to move
+    material to related Explanation and How-to pages and into function docstrings in the APIs
+    as you work.
     
     If you starting a new tutorial, ask yourself if a tutorial is appropriate for what
     you're trying to show, or if you should be writing a how-to instead.
