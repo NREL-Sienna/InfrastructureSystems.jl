@@ -22,7 +22,7 @@ for main_path in main_paths
             separate_kwargs_with_semicolon = true,
             format_markdown = true,
             # Brackets in code blocks cause formatter to fail, ignore for now
-            ignore = ["style.md", "index.md", "tests.md"],
+            ignore = ["style.md", "index.md", "tests.md", "troubleshoot.md"],
 
             # always_use_return = true. # Disabled since it throws a lot of false positives
             )
