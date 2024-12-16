@@ -3,21 +3,29 @@
 ## [`Error: ## docstrings not included in the manual`](@id miss_doc)
 
 **Problem**: Docstrings have been written, but have not been properly mapped to either a
-public or internal API. There may be multiple issues:
+public or internal API. There may be multiple issues to iterate through:
 
 1. Verify there is an Internal API .md file to catch doctrings for structs/functions that are
     not exported.
     [Example here](https://github.com/NREL-Sienna/SiennaTemplate.jl/blob/main/docs/src/reference/internal.md)
 1. Identify the `*.jl` file for one of your missing docstrings. Are other docstrings in that file
     visible in the compiled API .html?
-    - If yes, check whether those other docstrings are listed in the Public API .md file in a
-        `@docs` block and [switch to `@autodocs`](@ref use_autodocs) with the `*.jl` file as
-        one of its `Pages` instead. 
-    - If no, add a new [`@autodocs` block](@extref) in the Public API .md file with that `*.jl` file
-        as one of its `Pages`.
-    - Iterate through the missing docstrings to find other missing `*.jl` files.
+    - **YES**: Check whether those other docstrings are listed in the Public API .md file in a
+        [`@docs` block](@extref). Either:
+        - Add the missing struct/function names to an appropriate `@docs` block in the
+            API .md if it is manually organized. See below if this creates a
+            [`no docs found`](@ref no_docs) error.
+        - Preferrably, [switch to `@autodocs`](@ref use_autodocs) with the `*.jl` file
+            as one of its `Pages` instead.
+    - **No**: add a new [`@autodocs` block](@extref) in the Public API .md file with that
+        `*.jl` file as one of its `Pages`.
 1. Are these docstrings from `InfrastructureSystems.jl`? Follow how-to
     [selectively export docstrings from `InfrastructureSystems.jl`](@ref docs_from_is).
+
+##  [`Error: no docs found for SomeFunction` or `[:docs_block]` error](@id no_docs)
+
+No docstring has been written for `SomeFunction`.
+Find the `*.jl` file containing `SomeFunction` and add a docstring.
 
 ## `Error: duplicate docs found`
 
