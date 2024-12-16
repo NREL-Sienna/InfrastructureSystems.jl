@@ -36,8 +36,8 @@ Depth = 3:3
 ### Ensure All Docstrings Are Located in the APIs
 
 !!! tip "Do"
-    Include a Public API for exported structs, functions, and methods, and an Internals API
-    for private functions. See
+    Include a Public API markdown file for exported structs, functions, and methods, and an
+    Internals API for private functions. See
     [`PowerSystems.jl`](https://nrel-sienna.github.io/PowerSystems.jl/stable/)
     for an example with a Public API organized with `@autodocs` ([see next](@ref use_autodocs))
     or [`SiennaTemplate.jl`](https://github.com/NREL-Sienna/SiennaTemplate.jl) for a basic
@@ -53,8 +53,8 @@ Depth = 3:3
 ### [Automate Adding Docstrings in the Public API with `@autodocs`](@id use_autodocs)
 
 !!! tip "Do"
-    Use [`@autodocs` block](@extref)s in the Public API to automatically find all
-    docstrings in a file. Example:
+    Use [`@autodocs` block](@extref)s in the Public API markdown file to automatically find
+    all docstrings in a file. Example:
     ````markdown
     ## Variables
     ```@autodocs
@@ -86,7 +86,7 @@ exports code from `InfrastructureSystems.jl`:
 
 !!! tip "Do"
     List the files containing necessary `InfrastructureSystems.jl` structs and methods in
-    `SomeSiennaPackage.jl`'s Public API, then explicitly filter by what
+    `SomeSiennaPackage.jl`'s Public API markdown file, then explicitly filter by what
     `SomeSiennaPackage.jl` exports. Example:
 
     ````markdown
@@ -101,8 +101,8 @@ exports code from `InfrastructureSystems.jl`:
     ````
 
 !!! warning "Don't"
-    List `InfrastructureSystems` as one of the `modules` in [`Documenter.makedocs`](@extref).
-    `Documenter.jl` will
+    List `InfrastructureSystems` as one of the `modules` in [`Documenter.makedocs`](@extref)
+    in the `make.jl` file. `Documenter.jl` will
     look to map **all** `InfrastructureSystems.jl` docstrings into the API, resulting in
     hundreds of [missing docstring](@ref miss_doc) errors. Example:
 
@@ -157,7 +157,7 @@ This is not commonly done in Sienna yet, but a goal is to improve our use of
 
 !!! warning "Don't"
     Copy and paste arguments lists into the docstring, which opens opportunity for
-    out-of-date errors when arguments are added or regorded. Example:
+    out-of-date errors when arguments are added or reordered. Example:
     ````markdown
     """
         SomeSiennaStruct(arg1, arg2)
@@ -177,9 +177,9 @@ This is not commonly done in Sienna yet, but a goal is to improve our use of
 ### Add `See also` Links to Functions with the Same Name 
 
 !!! tip "Do"
-    To help users navigate Julia's multiple dispatch, add `See also` to other versions of
-    the function with the same name, using the guidance on
-    [adding a specific hyperlink](@ref hyperlinks).
+    To help users navigate Julia's multiple dispatch, add `See also` paragraphs at the
+    bottom of  function docstrings other versions of the function with the same name, using
+    the guidance on [adding a specific hyperlink](@ref hyperlinks).
     Example:
     ```
     See also 
