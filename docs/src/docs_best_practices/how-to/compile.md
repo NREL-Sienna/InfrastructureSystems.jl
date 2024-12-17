@@ -1,6 +1,6 @@
 # Compile and View Documentation Locally
 
-## Step 0a: Update Docs Environment (First Time)
+## Pre-Step a: Update Docs Environment (First Time)
 
 The first time you compile documentation for a package, make sure the `docs/` environment
 (i.e., `docs/Manifest.toml`, not the main `Manifest.toml` in the root of the repository)
@@ -12,7 +12,7 @@ using Pkg
 Pkg.develop(path = "..")
 ```
 
-## Step 0b: Auto-Generate Structs (If Needed)
+## Pre-Step b: Auto-Generate Structs (If Needed)
 
 Most documentation changes are made directly to markdown (.md) files, but if you changed one
 of Sienna's .json descriptor files, you must first
@@ -35,7 +35,7 @@ InfrastructureSystems.generate_structs(
 )
 ```
 
-## Step 0c: Run the Formatter (Before Submitting a Pull Request)
+## Pre-Step c: Run the Formatter (Before Submitting a Pull Request)
 
 To automatically format the documentation to conform with the [style guide](@ref style_guide),
 run in a terminal at the root of the repository:
