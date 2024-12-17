@@ -320,8 +320,7 @@ end
 
 """
 Return the values for the requested variable key for a problem.
-Accepts a vector of keys for the return of the values. If the time stamps and keys are
-loaded using the [`load_results!`](@ref) function it will read from memory.
+Accepts a vector of keys for the return of the values.
 
 # Arguments
 
@@ -349,8 +348,7 @@ end
 
 """
 Return the values for the requested variable keys for a problem.
-Accepts a vector of keys for the return of the values. If the time stamps and keys are
-loaded using the [`load_results!`](@ref) function it will read from memory.
+Accepts a vector of keys for the return of the values.
 
 # Arguments
 
@@ -394,8 +392,7 @@ end
 
 """
 Return the values for the requested dual key for a problem.
-Accepts a vector of keys for the return of the values. If the time stamps and keys are
-loaded using the [`load_results!`](@ref) function it will read from memory.
+Accepts a vector of keys for the return of the values.
 
 # Arguments
 
@@ -423,8 +420,7 @@ end
 
 """
 Return the values for the requested dual keys for a problem.
-Accepts a vector of keys for the return of the values. If the time stamps and keys are
-loaded using the [`load_results!`](@ref) function it will read from memory.
+Accepts a vector of keys for the return of the values.
 
 # Arguments
 
@@ -467,8 +463,7 @@ end
 
 """
 Return the values for the requested parameter key for a problem.
-Accepts a vector of keys for the return of the values. If the time stamps and keys are
-loaded using the [`load_results!`](@ref) function it will read from memory.
+Accepts a vector of keys for the return of the values.
 
 # Arguments
 
@@ -496,8 +491,7 @@ end
 
 """
 Return the values for the requested parameter keys for a problem.
-Accepts a vector of keys for the return of the values. If the time stamps and keys are
-loaded using the [`load_results!`](@ref) function it will read from memory.
+Accepts a vector of keys for the return of the values.
 
 # Arguments
 
@@ -541,8 +535,7 @@ end
 
 """
 Return the values for the requested aux_variable key for a problem.
-Accepts a vector of keys for the return of the values. If the time stamps and keys are
-loaded using the [`load_results!`](@ref) function it will read from memory.
+Accepts a vector of keys for the return of the values.
 
 # Arguments
 
@@ -570,8 +563,7 @@ end
 
 """
 Return the values for the requested aux_variable keys for a problem.
-Accepts a vector of keys for the return of the values. If the time stamps and keys are
-loaded using the [`load_results!`](@ref) function it will read from memory.
+Accepts a vector of keys for the return of the values.
 
 # Arguments
 
@@ -615,8 +607,7 @@ end
 
 """
 Return the values for the requested expression key for a problem.
-Accepts a vector of keys for the return of the values. If the time stamps and keys are
-loaded using the [`load_results!`](@ref) function it will read from memory.
+Accepts a vector of keys for the return of the values.
 
 # Arguments
 
@@ -644,8 +635,7 @@ end
 
 """
 Return the values for the requested expression keys for a problem.
-Accepts a vector of keys for the return of the values. If the time stamps and keys are
-loaded using the [`load_results!`](@ref) function it will read from memory.
+Accepts a vector of keys for the return of the values.
 
 # Arguments
 

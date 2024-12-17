@@ -1,4 +1,4 @@
-# Logging
+# [Logging](@id log)
 
 `InfrastructureSystems.jl` provides a `MultiLogger` object that allows customized
 logging to console and file. Refer to the [logging
