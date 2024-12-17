@@ -1,5 +1,7 @@
 # [InfrastructureSystems API Reference](@id API_ref)
 
 ```@autodocs
-Modules = [InfrastructureSystems]
+Modules = [InfrastructureSystems,
+    InfrastructureSystems.Simulation,
+    InfrastructureSystems.Optimization]
 ```

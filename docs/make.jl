@@ -1,6 +1,13 @@
 using Documenter, InfrastructureSystems
 import DataStructures: OrderedDict
 using Literate
+using DocumenterInterLinks
+
+links = InterLinks(
+    "Documenter" => "https://documenter.juliadocs.org/stable/",
+    "Julia" => "https://docs.julialang.org/en/v1/",
+    "JuliaFormatter" => "https://domluna.github.io/JuliaFormatter.jl/stable/",
+)
 
 if haskey(ENV, "GITHUB_ACTIONS")
     ENV["JULIA_DEBUG"] = "Documenter"
@@ -17,6 +24,19 @@ pages = OrderedDict(
             "dev_guide/logging.md",
         ],
         "Style Guide" => "style.md",
+        "Documentation Best Practices" => Any[
+            "Explanation" => "docs_best_practices/explanation.md",
+            "How to..." => Any[
+                "Complete Basic Requirements Checklist" => "docs_best_practices/how-to/requirements_checklist.md",
+                "Clean Up General Formatting" => "docs_best_practices/how-to/general_formatting.md",
+                "Write a Tutorial" => "docs_best_practices/how-to/write_a_tutorial.md",
+                "Write a How-To Guide" => "docs_best_practices/how-to/write_a_how-to.md",
+                "Organize APIs and Write Docstrings" => "docs_best_practices/how-to/write_docstrings_org_api.md",
+                "Troubleshoot Common Errors" => "docs_best_practices/how-to/troubleshoot.md",
+                "Compile and View Documentation Locally" => "docs_best_practices/how-to/compile.md",
+                "View Draft Documentation on Github" => "docs_best_practices/how-to/view_github.md",],
+            "Reference" => Any["docs_best_practices/reference/useful_links.md",],
+        ],
         "API" => "InfrastructureSystems.md"
 )
 
@@ -51,7 +71,7 @@ makedocs(
         size_threshold = nothing),
     sitename = "InfrastructureSystems.jl",
     pages = Any[p for p in pages],
-    warnonly = Documenter.except(),
+    plugins = [links],
 )
 
 
