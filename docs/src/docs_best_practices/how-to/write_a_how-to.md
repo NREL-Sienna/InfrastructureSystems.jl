@@ -28,10 +28,9 @@ Depth = 3:3
 
 !!! tip "Do"
     
-
-Jump the user right to a logical starting point in the code using `#hide` or
-[`@setup`](https://documenter.juliadocs.org/stable/man/syntax/#reference-at-setup)
-blocks.
+    Jump the user right to a logical starting point in the code using `#hide` or
+    [`@setup`](https://documenter.juliadocs.org/stable/man/syntax/#reference-at-setup)
+    blocks.
 
 !!! tip "Do"
     

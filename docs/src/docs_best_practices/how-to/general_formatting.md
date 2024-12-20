@@ -52,10 +52,15 @@ signature with types into the hyperlink reference.
 
 !!! warning "Don't"
     
+    ```
+    `get_time_series_values`
+    ```
 
-``get_time_series_values``
-Or
-`get_time_series_values`
+    Or
+
+    ```
+    get_time_series_values
+    ```
 
 ## Add links to other Sienna packages
 
