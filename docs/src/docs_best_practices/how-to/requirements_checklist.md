@@ -22,8 +22,8 @@ only need to be addressed once:
       + How to [Write a Tutorial](@ref)
       + How to [Organize APIs and Write Docstrings](@ref)
 
- 2. Replace `compat` requirements of `Documenter = "0.27"` in `docs/` environment with
-    `Documenter = "1.0"`
+ 2. Update the Project.toml file in the `docs/` folder to replace `compat` requirements of
+    `Documenter = "0.27"` with `Documenter = "1.0"`
  3. Update the `docs/make.jl` file to call
     [`Documenter.makedocs`](https://documenter.juliadocs.org/stable/lib/public/#Documenter.makedocs)
     *without* the `warnonly` `kwarg` (i.e., all errors caught by `makedocs` must be resolved before
