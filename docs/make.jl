@@ -7,6 +7,7 @@ links = InterLinks(
     "Documenter" => "https://documenter.juliadocs.org/stable/",
     "Julia" => "https://docs.julialang.org/en/v1/",
     "JuliaFormatter" => "https://domluna.github.io/JuliaFormatter.jl/stable/",
+    "PowerSystems" => "https://nrel-sienna.github.io/PowerSystems.jl/stable/",
 )
 
 if haskey(ENV, "GITHUB_ACTIONS")
