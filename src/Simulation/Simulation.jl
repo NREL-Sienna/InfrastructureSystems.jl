@@ -11,4 +11,11 @@ import ..InfrastructureSystems:
 
 include("enums.jl")
 
+using DocStringExtensions
+
+@template (FUNCTIONS, METHODS) = """
+                                 $(TYPEDSIGNATURES)
+                                 $(DOCSTRING)
+                                 """
+
 end
