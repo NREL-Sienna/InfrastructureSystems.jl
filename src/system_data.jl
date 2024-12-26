@@ -1198,3 +1198,67 @@ clear_supplemental_attributes!(data::SystemData) =
 
 stores_time_series_in_memory(data::SystemData) =
     data.time_series_manager.data_store isa InMemoryTimeSeriesStorage
+
+"""
+Make a `deepcopy` of a [`SystemData`](@ref) more quickly by skipping the copying of time
+series and/or supplemental attributes.
+
+# Arguments
+
+  - `data::SystemData`: the `SystemData` to copy
+  - `skip_time_series::Bool = true`: whether to skip copying time series
+  - `skip_supplemental_attributes::Bool = true`: whether to skip copying supplemental
+    attributes
+
+Note that setting both `skip_time_series` and `skip_supplemental_attributes` to `false`
+results in the same behavior as `deepcopy` with no performance improvement.
+"""
+function fast_deepcopy_system(
+    data::SystemData;
+    skip_time_series::Bool = true,
+    skip_supplemental_attributes::Bool = true,
+)
+    # The approach taken here is to swap out the data we don't want to copy with blank data,
+    # then do a deepcopy, then swap it back. We can't just construct a new instance with
+    # different fields because we also need to change references within components.
+    old_time_series_manager = data.time_series_manager
+    old_supplemental_attribute_manager = data.supplemental_attribute_manager
+
+    new_time_series_manager = if skip_time_series
+        TimeSeriesManager(InMemoryTimeSeriesStorage(), TimeSeriesMetadataStore(), true)
+    else
+        old_time_series_manager
+    end
+    new_supplemental_attribute_manager = if skip_supplemental_attributes
+        SupplementalAttributeManager()
+    else
+        old_supplemental_attribute_manager
+    end
+
+    data.time_series_manager = new_time_series_manager
+    data.supplemental_attribute_manager = new_supplemental_attribute_manager
+
+    old_refs = Dict{Tuple{DataType, String}, SharedSystemReferences}()
+    for comp in iterate_components(data)
+        old_refs[(typeof(comp), get_name(comp))] =
+            comp.internal.shared_system_references
+        new_refs = SharedSystemReferences(;
+            time_series_manager = new_time_series_manager,
+            supplemental_attribute_manager = new_supplemental_attribute_manager,
+        )
+        set_shared_system_references!(comp, new_refs)
+    end
+
+    new_data = try
+        deepcopy(data)
+    finally
+        data.time_series_manager = old_time_series_manager
+        data.supplemental_attribute_manager = old_supplemental_attribute_manager
+
+        for comp in iterate_components(data)
+            set_shared_system_references!(comp,
+                old_refs[(typeof(comp), get_name(comp))])
+        end
+    end
+    return new_data
+end

@@ -650,3 +650,31 @@ end
         @test ts2.data == array
     end
 end
+
+@testset "Test fast deepcopy of system" begin
+    @testset for (in_memory, skip_ts, skip_sa) in  # Iterate over all permutations
+                 Iterators.product(repeat([(true, false)], 3)...)
+        sys = IS.SystemData(; time_series_in_memory = in_memory)
+        initial_time = Dates.DateTime("2020-09-01")
+        resolution = Dates.Hour(1)
+        len = 24
+        timestamps = range(initial_time; length = len, step = resolution)
+        array = TimeSeries.TimeArray(timestamps, rand(len))
+        ts_name = "test"
+        name = "component"
+        component = IS.TestComponent(name, 3)
+        IS.add_component!(sys, component)
+        ts = IS.SingleTimeSeries(; data = array, name = ts_name)
+        IS.add_time_series!(sys, component, ts)
+
+        sys2 = IS.fast_deepcopy_system(sys;
+            skip_time_series = skip_ts, skip_supplemental_attributes = skip_sa)
+        @test IS.compare_values(
+            sys,
+            sys2;
+            exclude = Set(
+                [:time_series_manager, :supplemental_attribute_manager][[skip_ts, skip_sa]],
+            ),
+        )
+    end
+end
