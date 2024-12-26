@@ -110,7 +110,11 @@ function add_time_series!(mgr::TimeSeriesManager, batch::Vector{TimeSeriesAssoci
         for uuid in new_ts_uuids
             serialize_time_series!(mgr.data_store, time_series_uuids[uuid])
         end
-        add_metadata!(mgr.metadata_store, owners, all_metadata)
+        if length(all_metadata) == 1
+            add_metadata!(mgr.metadata_store, owners[1], all_metadata[1])
+        else
+            add_metadata!(mgr.metadata_store, owners, all_metadata)
+        end
     end
     return ts_keys
 end
@@ -145,10 +149,6 @@ function clear_time_series!(mgr::TimeSeriesManager, component::TimeSeriesOwners)
         LOG_GROUP_TIME_SERIES
     return
 end
-
-has_time_series(mgr::TimeSeriesManager, component::TimeSeriesOwners) =
-    has_time_series(mgr.metadata_store, component)
-has_time_series(::Nothing, component::TimeSeriesOwners) = false
 
 get_metadata(
     mgr::TimeSeriesManager,
@@ -227,7 +227,7 @@ function remove_time_series!(
 end
 
 function _remove_data_if_no_more_references(mgr::TimeSeriesManager, uuid::Base.UUID)
-    if !has_time_series(mgr.metadata_store, uuid)
+    if !has_metadata(mgr.metadata_store, uuid)
         remove_time_series!(mgr.data_store, uuid)
         @debug "Removed time_series data $uuid." _group = LOG_GROUP_TIME_SERIES
     end
