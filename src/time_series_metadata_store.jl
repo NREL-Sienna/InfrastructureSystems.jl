@@ -295,40 +295,40 @@ function add_metadata!(
     metadata::TimeSeriesMetadata,
 )
     TimerOutputs.@timeit_debug SYSTEM_TIMERS "add time series metadata single" begin
-        SQLite.transaction(store.db) do
-            owner_category = _get_owner_category(owner)
-            time_series_type = time_series_metadata_to_data(metadata)
-            ts_category = _get_time_series_category(time_series_type)
-            features = make_features_string(metadata.features)
-            vals = _create_row(
-                metadata,
-                owner,
-                owner_category,
-                _convert_ts_type_to_string(time_series_type),
-                ts_category,
-                features,
-            )
-            params = chop(repeat("?,", length(vals)))
-            _execute_cached(
-                store,
-                "INSERT INTO $ASSOCIATIONS_TABLE_NAME VALUES($params)",
-                vals,
-            )
-            metadata_uuid = get_uuid(metadata)
-            metadata_row =
-                (missing, string(metadata_uuid), JSON3.write(serialize(metadata)))
-            metadata_params = ("?,?,jsonb(?)")
+        owner_category = _get_owner_category(owner)
+        time_series_type = time_series_metadata_to_data(metadata)
+        ts_category = _get_time_series_category(time_series_type)
+        features = make_features_string(metadata.features)
+        vals = _create_row(
+            metadata,
+            owner,
+            owner_category,
+            _convert_ts_type_to_string(time_series_type),
+            ts_category,
+            features,
+        )
+        params = chop(repeat("?,", length(vals)))
+        _execute_cached(
+            store,
+            "INSERT INTO $ASSOCIATIONS_TABLE_NAME VALUES($params)",
+            vals,
+        )
+        metadata_uuid = get_uuid(metadata)
+        metadata_row =
+            (missing, string(metadata_uuid), JSON3.write(serialize(metadata)))
+        metadata_params = ("?,?,jsonb(?)")
+        TimerOutputs.@timeit_debug SYSTEM_TIMERS "add ts_metadata row" begin
             _execute_cached(
                 store,
                 "INSERT OR IGNORE INTO $METADATA_TABLE_NAME VALUES($metadata_params)",
                 metadata_row,
             )
-            if !haskey(store.metadata_uuids, metadata_uuid)
-                store.metadata_uuids[metadata_uuid] = metadata
-            end
-            @debug "Added metadata = $metadata to $(summary(owner))" _group =
-                LOG_GROUP_TIME_SERIES
         end
+        if !haskey(store.metadata_uuids, metadata_uuid)
+            store.metadata_uuids[metadata_uuid] = metadata
+        end
+        @debug "Added metadata = $metadata to $(summary(owner))" _group =
+            LOG_GROUP_TIME_SERIES
     end
     return
 end
@@ -806,15 +806,17 @@ function has_metadata(
     return _has_metadata(stmt, params2)
 end
 
+const _HAS_METADATA_BY_TS_UUID = "SELECT id FROM $ASSOCIATIONS_TABLE_NAME WHERE time_series_uuid = ?"
+
 """
 Return True if there is time series matching the UUID.
 """
 function has_metadata(store::TimeSeriesMetadataStore, time_series_uuid::Base.UUID)
-    query = "SELECT id FROM $ASSOCIATIONS_TABLE_NAME WHERE time_series_uuid = ?"
     params = (string(time_series_uuid),)
-    return _has_metadata(store, query, params)
+    return _has_metadata(store, _HAS_METADATA_BY_TS_UUID, params)
 end
 
+const _BASE_HAS_METADATA = "SELECT id FROM $ASSOCIATIONS_TABLE_NAME WHERE owner_uuid = ?"
 function _make_has_metadata_statement!(
     store::TimeSeriesMetadataStore,
     key::HasMetadataQueryKey;
@@ -824,7 +826,6 @@ function _make_has_metadata_statement!(
         return stmt
     end
 
-    query = "SELECT id FROM $ASSOCIATIONS_TABLE_NAME WHERE owner_uuid = ?"
     where_clauses = String[]
     if key.has_name
         push!(where_clauses, "name = ?")
@@ -847,10 +848,10 @@ function _make_has_metadata_statement!(
     end
 
     if isempty(where_clauses)
-        final = "$query LIMIT 1"
+        final = "$_BASE_HAS_METADATA LIMIT 1"
     else
         where_clause = join(where_clauses, " AND ")
-        final = "$query AND $where_clause LIMIT 1"
+        final = "$_BASE_HAS_METADATA AND $where_clause LIMIT 1"
     end
 
     stmt = SQLite.Stmt(store.db, final)
@@ -1162,18 +1163,18 @@ function _handle_removed_metadata(store::TimeSeriesMetadataStore, metadata_uuid:
     end
 end
 
+const _REPLACE_COMP_UUID_TS = """
+    UPDATE $ASSOCIATIONS_TABLE_NAME
+    SET owner_uuid = ?
+    WHERE owner_uuid = ?
+"""
 function replace_component_uuid!(
     store::TimeSeriesMetadataStore,
     old_uuid::Base.UUID,
     new_uuid::Base.UUID,
 )
-    query = """
-        UPDATE $ASSOCIATIONS_TABLE_NAME
-        SET owner_uuid = ?
-        WHERE owner_uuid = ?
-    """
-    params = [string(new_uuid), string(old_uuid)]
-    _execute(store, query, params)
+    params = (string(new_uuid), string(old_uuid))
+    _execute(store, _REPLACE_COMP_UUID_TS, params)
     return
 end
 
@@ -1306,10 +1307,14 @@ function _try_get_time_series_metadata_by_full_params(
     end
 end
 
+const _GET_METADATA_BY_UUID = """
+    SELECT json(metadata) AS metadata FROM $METADATA_TABLE_NAME WHERE metadata_uuid = ?
+"""
 function _get_metadata_by_uuid!(store::TimeSeriesMetadataStore, metadata_uuid::Base.UUID)
     return get!(store.metadata_uuids, metadata_uuid) do
-        query = "SELECT json(metadata) AS metadata FROM $METADATA_TABLE_NAME WHERE metadata_uuid = ?"
-        rows = Tables.rowtable(_execute_cached(store, query, (string(metadata_uuid),)))
+        rows = Tables.rowtable(
+            _execute_cached(store, _GET_METADATA_BY_UUID, (string(metadata_uuid),)),
+        )
         if length(rows) != 1
             error(
                 "Bug: _get_metadata returned $(length(rows)) entries instead of 1 for $metadata_uuid",

@@ -6,12 +6,11 @@ struct SupplementalAttributeManager <: InfrastructureSystemsContainer
     associations::SupplementalAttributeAssociations
 end
 
-function SupplementalAttributeManager(data::SupplementalAttributesByType)
-    return SupplementalAttributeManager(data, SupplementalAttributeAssociations())
-end
-
 function SupplementalAttributeManager()
-    return SupplementalAttributeManager(SupplementalAttributesByType())
+    return SupplementalAttributeManager(
+        SupplementalAttributesByType(),
+        SupplementalAttributeAssociations(),
+    )
 end
 
 get_member_string(::SupplementalAttributeManager) = "supplemental attributes"
@@ -244,7 +243,9 @@ function deserialize(
         @debug "Deserialized $(summary(attr))" _group = LOG_GROUP_SERIALIZATION
     end
 
-    mgr = SupplementalAttributeManager(SupplementalAttributesByType(attributes))
-    load_records!(mgr.associations, data["associations"])
+    mgr = SupplementalAttributeManager(
+        SupplementalAttributesByType(attributes),
+        from_records(SupplementalAttributeAssociations, data["associations"]),
+    )
     return mgr
 end
