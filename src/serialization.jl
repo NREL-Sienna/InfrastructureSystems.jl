@@ -273,9 +273,7 @@ deserialize(::Type{Vector{Symbol}}, data::Vector) = Symbol.(data)
 
 function serialize_julia_info()
     data = Dict{String, Any}("julia_version" => string(VERSION))
-    io = IOBuffer()
-    Pkg.status(; io = io, mode = Pkg.PKGMODE_MANIFEST)
-    data["package_info"] = String(take!(io))
+    data["package_info"] = Pkg.dependencies()
     return data
 end
 
