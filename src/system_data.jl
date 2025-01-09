@@ -1152,16 +1152,6 @@ function add_supplemental_attribute!(data::SystemData, component, attribute; kwa
     return
 end
 
-"""
-Begin a transaction to add supplemental attributes. Use this function when adding
-many supplemental attributes in order to improve performance.
-"""
-function begin_supplemental_attributes_transaction(func::Function, data::SystemData)
-    SQLite.transaction(data.supplemental_attribute_manager.associations.db) do
-        func()
-    end
-end
-
 function get_supplemental_attributes(
     filter_func::Function,
     ::Type{T},

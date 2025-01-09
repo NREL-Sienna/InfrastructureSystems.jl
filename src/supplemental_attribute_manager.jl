@@ -1,7 +1,7 @@
 const SupplementalAttributesByType =
     Dict{DataType, Dict{Base.UUID, <:SupplementalAttribute}}
 
-struct SupplementalAttributeManager <: InfrastructureSystemsContainer
+mutable struct SupplementalAttributeManager <: InfrastructureSystemsContainer
     data::SupplementalAttributesByType
     associations::SupplementalAttributeAssociations
 end
@@ -14,6 +14,31 @@ function SupplementalAttributeManager()
 end
 
 get_member_string(::SupplementalAttributeManager) = "supplemental attributes"
+
+"""
+Begin an update of supplemental attributes. Use this function when adding
+or removing many supplemental attributes in order to improve performance.
+
+If an error occurs during the update, changes will be reverted.
+"""
+function begin_supplemental_attributes_update(
+    func::Function,
+    mgr::SupplementalAttributeManager,
+)
+    orig_data = SupplementalAttributesByType()
+    for (key, val) in mgr.data
+        orig_data[key] = copy(val)
+    end
+
+    try
+        SQLite.transaction(mgr.associations.db) do
+            func()
+        end
+    catch
+        mgr.data = orig_data
+        rethrow()
+    end
+end
 
 function add_supplemental_attribute!(
     mgr::SupplementalAttributeManager,
