@@ -66,6 +66,17 @@ function _create_indexes!(associations::SupplementalAttributeAssociations)
     SQLite.createindex!(
         associations.db,
         SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME,
+        "by_attribute",
+        [
+            "attribute_uuid",
+            "component_uuid",
+            "component_type",
+        ];
+        unique = false,
+    )
+    SQLite.createindex!(
+        associations.db,
+        SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME,
         "by_component",
         [
             "component_uuid",
