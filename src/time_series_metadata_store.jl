@@ -18,7 +18,7 @@ mutable struct TimeSeriesMetadataStore
     cached_statements::Dict{String, SQLite.Stmt}
     # This caching allows the code to skip some string interpolations.
     # It is experimental for PowerSimulations, which calls has_metadata frequently.
-    # It may not be necessary. Savings are less than 1 us.
+    # It may not be necessary. Savings are minimal.
     has_metadata_statements::Dict{HasMetadataQueryKey, SQLite.Stmt}
     metadata_uuids::Dict{Base.UUID, TimeSeriesMetadata}
     # If you add any fields, ensure they are managed in deepcopy_internal below.
@@ -294,121 +294,38 @@ function add_metadata!(
     owner::TimeSeriesOwners,
     metadata::TimeSeriesMetadata,
 )
-    TimerOutputs.@timeit_debug SYSTEM_TIMERS "add time series metadata single" begin
-        owner_category = _get_owner_category(owner)
-        time_series_type = time_series_metadata_to_data(metadata)
-        ts_category = _get_time_series_category(time_series_type)
-        features = make_features_string(metadata.features)
-        vals = _create_row(
-            metadata,
-            owner,
-            owner_category,
-            _convert_ts_type_to_string(time_series_type),
-            ts_category,
-            features,
-        )
-        params = chop(repeat("?,", length(vals)))
-        _execute_cached(
-            store,
-            "INSERT INTO $ASSOCIATIONS_TABLE_NAME VALUES($params)",
-            vals,
-        )
-        metadata_uuid = get_uuid(metadata)
-        metadata_row =
-            (missing, string(metadata_uuid), JSON3.write(serialize(metadata)))
-        metadata_params = ("?,?,jsonb(?)")
-        TimerOutputs.@timeit_debug SYSTEM_TIMERS "add ts_metadata row" begin
-            _execute_cached(
-                store,
-                "INSERT OR IGNORE INTO $METADATA_TABLE_NAME VALUES($metadata_params)",
-                metadata_row,
-            )
-        end
-        if !haskey(store.metadata_uuids, metadata_uuid)
-            store.metadata_uuids[metadata_uuid] = metadata
-        end
-        @debug "Added metadata = $metadata to $(summary(owner))" _group =
-            LOG_GROUP_TIME_SERIES
+    owner_category = _get_owner_category(owner)
+    time_series_type = time_series_metadata_to_data(metadata)
+    ts_category = _get_time_series_category(time_series_type)
+    features = make_features_string(metadata.features)
+    vals = _create_row(
+        metadata,
+        owner,
+        owner_category,
+        _convert_ts_type_to_string(time_series_type),
+        ts_category,
+        features,
+    )
+    params = chop(repeat("?,", length(vals)))
+    _execute_cached(
+        store,
+        "INSERT INTO $ASSOCIATIONS_TABLE_NAME VALUES($params)",
+        vals,
+    )
+    metadata_uuid = get_uuid(metadata)
+    metadata_row =
+        (missing, string(metadata_uuid), JSON3.write(serialize(metadata)))
+    metadata_params = ("?,?,jsonb(?)")
+    _execute_cached(
+        store,
+        "INSERT OR IGNORE INTO $METADATA_TABLE_NAME VALUES($metadata_params)",
+        metadata_row,
+    )
+    if !haskey(store.metadata_uuids, metadata_uuid)
+        store.metadata_uuids[metadata_uuid] = metadata
     end
-    return
-end
-
-function add_metadata!(
-    store::TimeSeriesMetadataStore,
-    owners::Vector{<:TimeSeriesOwners},
-    all_metadata::Vector{<:TimeSeriesMetadata},
-)
-    TimerOutputs.@timeit_debug SYSTEM_TIMERS "add time series metadata bulk" begin
-        @assert_op length(owners) == length(all_metadata)
-        columns = (
-            "id",
-            "time_series_uuid",
-            "time_series_type",
-            "time_series_category",
-            "initial_timestamp",
-            "resolution_ms",
-            "horizon_ms",
-            "interval_ms",
-            "window_count",
-            "length",
-            "name",
-            "owner_uuid",
-            "owner_type",
-            "owner_category",
-            "features",
-            "metadata_uuid",
-        )
-        num_rows = length(all_metadata)
-        num_columns = length(columns)
-        data = OrderedDict(x => Vector{Any}(undef, num_rows) for x in columns)
-        metadata_rows = Tuple[]
-        new_metadata = TimeSeriesMetadata[]
-        for i in 1:num_rows
-            owner = owners[i]
-            metadata = all_metadata[i]
-            metadata_uuid = get_uuid(metadata)
-            if !haskey(store.metadata_uuids, metadata_uuid)
-                push!(
-                    metadata_rows,
-                    (missing, string(metadata_uuid), JSON3.write(serialize(metadata))),
-                )
-                push!(new_metadata, metadata)
-            end
-            owner_category = _get_owner_category(owner)
-            time_series_type = time_series_metadata_to_data(metadata)
-            ts_category = _get_time_series_category(time_series_type)
-            features = make_features_string(metadata.features)
-            row = _create_row(
-                metadata,
-                owner,
-                owner_category,
-                _convert_ts_type_to_string(time_series_type),
-                ts_category,
-                features,
-            )
-            for (j, column) in enumerate(columns)
-                data[column][i] = row[j]
-            end
-        end
-
-        placeholder = chop(repeat("?,", num_columns))
-        SQLite.DBInterface.executemany(
-            store.db,
-            "INSERT INTO $ASSOCIATIONS_TABLE_NAME VALUES($placeholder)",
-            NamedTuple(Symbol(k) => v for (k, v) in data),
-        )
-        _add_rows!(
-            store,
-            metadata_rows,
-            ("id", "metadata_uuid", "metadata"),
-            METADATA_TABLE_NAME,
-        )
-        for metadata in new_metadata
-            store.metadata_uuids[get_uuid(metadata)] = metadata
-        end
-        @debug "Added $num_rows instances of time series metadata" _group =
-            LOG_GROUP_TIME_SERIES
-    end
+    @debug "Added metadata = $metadata to $(summary(owner))" _group =
+        LOG_GROUP_TIME_SERIES
     return
 end
 
@@ -531,19 +448,19 @@ function get_forecast_initial_times(store::TimeSeriesMetadataStore)
     return get_initial_times(params.initial_timestamp, params.count, params.interval)
 end
 
+const _GET_FORECAST_PARAMS = """
+    SELECT
+        horizon_ms
+        ,initial_timestamp
+        ,interval_ms
+        ,resolution_ms
+        ,window_count
+    FROM $ASSOCIATIONS_TABLE_NAME
+    WHERE horizon_ms IS NOT NULL
+    LIMIT 1
+"""
 function get_forecast_parameters(store::TimeSeriesMetadataStore)
-    query = """
-        SELECT
-            horizon_ms
-            ,initial_timestamp
-            ,interval_ms
-            ,resolution_ms
-            ,window_count
-        FROM $ASSOCIATIONS_TABLE_NAME
-        WHERE horizon_ms IS NOT NULL
-        LIMIT 1
-        """
-    table = Tables.rowtable(_execute_cached(store, query))
+    table = Tables.rowtable(_execute_cached(store, _GET_FORECAST_PARAMS))
     isempty(table) && return nothing
     row = table[1]
     return ForecastParameters(;
@@ -991,7 +908,14 @@ function list_existing_time_series_uuids(store::TimeSeriesMetadataStore, uuids)
             FROM $ASSOCIATIONS_TABLE_NAME
             WHERE time_series_uuid IN ($placeholder)
     """
-    table = Tables.columntable(_execute(store, query, uuids_str))
+    table = Tables.columntable(_execute_cached(store, query, uuids_str))
+    return Base.UUID.(table.time_series_uuid)
+end
+
+const _LIST_EXISTING_TS_UUIDS = "SELECT DISTINCT time_series_uuid FROM $ASSOCIATIONS_TABLE_NAME"
+
+function list_existing_time_series_uuids(store::TimeSeriesMetadataStore)
+    table = Tables.columntable(_execute_cached(store, _LIST_EXISTING_TS_UUIDS))
     return Base.UUID.(table.time_series_uuid)
 end
 

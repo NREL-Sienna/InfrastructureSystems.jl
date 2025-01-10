@@ -574,7 +574,11 @@ function _transform_single_time_series!(
     end
 
     try
-        add_metadata!(data.time_series_manager.metadata_store, components, all_metadata)
+        begin_time_series_update(data.time_series_manager) do
+            for (component, metadata) in zip(components, all_metadata)
+                add_metadata!(data.time_series_manager.metadata_store, component, metadata)
+            end
+        end
     catch
         # This shouldn't be needed, but just in case there is a bug, remove all
         # DeterministicSingleTimeSeries to keep our guarantee.
@@ -1225,7 +1229,7 @@ function fast_deepcopy_system(
     old_supplemental_attribute_manager = data.supplemental_attribute_manager
 
     new_time_series_manager = if skip_time_series
-        TimeSeriesManager(InMemoryTimeSeriesStorage(), TimeSeriesMetadataStore(), true)
+        TimeSeriesManager(InMemoryTimeSeriesStorage(), TimeSeriesMetadataStore(), true, nothing)
     else
         old_time_series_manager
     end

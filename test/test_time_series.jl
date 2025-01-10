@@ -753,8 +753,7 @@ end
 end
 
 @testset "Test Deterministic with a wrapped SingleTimeSeries" begin
-    #for in_memory in (true, false)
-    for in_memory in (true,)
+    for in_memory in (true, false)
         sys = IS.SystemData(; time_series_in_memory = in_memory)
 
         # This is allowed when there are no time series.
@@ -2941,6 +2940,102 @@ end
             IS.TimeSeriesAssociation(component, forecast),
         ],
     )
+end
+
+@testset "Test bulk addition of time series with transaction" begin
+    sys = IS.SystemData()
+    name = "Component1"
+    component = IS.TestComponent(name, 5)
+    IS.add_component!(sys, component)
+
+    initial_time = Dates.DateTime("2020-09-01")
+    resolution = Dates.Hour(1)
+
+    other_time = initial_time + resolution
+    name = "test"
+    horizon_count = 24
+
+    make_values(count, index) = ones(count) * index
+    IS.begin_time_series_update(sys.time_series_manager) do
+        for i in 1:5
+            forecast = IS.Deterministic(;
+                data = SortedDict(
+                    initial_time => make_values(horizon_count, i),
+                    other_time => make_values(horizon_count, i),
+                ),
+                name = "ts_$(i)", resolution = resolution,
+            )
+            IS.add_time_series!(sys, component, forecast; model_year = "high")
+        end
+    end
+    ts_keys = IS.get_time_series_keys(component)
+    @test length(ts_keys) == 5
+    actual_ts_data = Dict(IS.get_name(x) => x for x in ts_keys)
+    for i in 1:5
+        name = "ts_$(i)"
+        @test haskey(actual_ts_data, name)
+        key = actual_ts_data[name]
+        ts = IS.get_time_series(component, key)
+        @test ts isa IS.Deterministic
+        data = IS.get_data(ts)
+        @test !isempty(values(data))
+        for val in values(data)
+            @test val == make_values(horizon_count, i)
+        end
+    end
+end
+
+@testset "Test bulk addition of time series with transaction and error" begin
+    sys = IS.SystemData()
+    name = "Component1"
+    component = IS.TestComponent(name, 5)
+    IS.add_component!(sys, component)
+
+    initial_time = Dates.DateTime("2020-09-01")
+    resolution = Dates.Hour(1)
+
+    other_time = initial_time + resolution
+    name = "test"
+    horizon_count = 24
+
+    make_values(count, index) = ones(count) * index
+
+    bystander = IS.Deterministic(;
+        data = SortedDict(
+            initial_time => rand(horizon_count),
+            other_time => rand(horizon_count),
+        ),
+        name = "bystander", resolution = resolution,
+    )
+    IS.add_time_series!(sys, component, bystander)
+
+    @test_throws(
+        ArgumentError,
+        IS.begin_time_series_update(sys.time_series_manager) do
+            for i in 1:5
+                if i < 5
+                    name = "ts_$i"
+                else
+                    name = "ts_$(i - 1)"
+                end
+                forecast = IS.Deterministic(;
+                    data = SortedDict(
+                        initial_time => make_values(horizon_count, i),
+                        other_time => make_values(horizon_count, i),
+                    ),
+                    name = name, resolution = resolution,
+                )
+                IS.add_time_series!(sys, component, forecast)
+            end
+        end,
+    )
+    ts_keys = IS.get_time_series_keys(component)
+    @test length(ts_keys) == 1
+    key = ts_keys[1]
+    @test IS.get_name(key) == "bystander"
+    res = IS.get_time_series(component, key)
+    @test res isa IS.Deterministic
+    @test IS.get_data(res) == IS.get_data(bystander)
 end
 
 @testset "Test list_existing_metadata" begin
