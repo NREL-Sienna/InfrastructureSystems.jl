@@ -678,3 +678,12 @@ end
         )
     end
 end
+
+@testset "Test component added to two systems" begin
+    sys1 = IS.SystemData()
+    sys2 = IS.SystemData()
+    name = "component"
+    component = IS.TestComponent(name, 1)
+    IS.add_component!(sys1, component)
+    @test_throws ErrorException IS.add_component!(sys2, component)
+end
