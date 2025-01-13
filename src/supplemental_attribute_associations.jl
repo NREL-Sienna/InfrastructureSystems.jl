@@ -23,16 +23,21 @@ const SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME = "supplemental_attributes"
 
 mutable struct SupplementalAttributeAssociations
     db::SQLite.DB
+    # If we don't cache SQL statements, there is a cost of 3-4 us on every query.
+    cached_statements::Dict{String, SQLite.Stmt}
     # If you add any fields, ensure they are managed in deepcopy_internal below.
 end
 
 """
 Construct a new SupplementalAttributeAssociations with an in-memory database.
 """
-function SupplementalAttributeAssociations()
-    associations = SupplementalAttributeAssociations(SQLite.DB())
+function SupplementalAttributeAssociations(; create_indexes = true)
+    associations =
+        SupplementalAttributeAssociations(SQLite.DB(), Dict{String, SQLite.Stmt}())
     _create_attribute_associations_table!(associations)
-    _create_indexes!(associations)
+    if create_indexes
+        _create_indexes!(associations)
+    end
     @debug "Initialized new supplemental attributes association table" _group =
         LOG_GROUP_SUPPLEMENTAL_ATTRIBUTES
     return associations
@@ -61,10 +66,11 @@ function _create_indexes!(associations::SupplementalAttributeAssociations)
     SQLite.createindex!(
         associations.db,
         SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME,
-        "by_attribute_and_component",
+        "by_attribute",
         [
             "attribute_uuid",
             "component_uuid",
+            "component_type",
         ];
         unique = false,
     )
@@ -72,7 +78,11 @@ function _create_indexes!(associations::SupplementalAttributeAssociations)
         associations.db,
         SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME,
         "by_component",
-        "component_uuid";
+        [
+            "component_uuid",
+            "attribute_uuid",
+            "attribute_type",
+        ];
         unique = false,
     )
     return
@@ -84,7 +94,8 @@ function Base.deepcopy_internal(val::SupplementalAttributeAssociations, dict::Id
     end
     new_db = SQLite.DB()
     backup(new_db, val.db)
-    new_associations = SupplementalAttributeAssociations(new_db)
+    new_associations =
+        SupplementalAttributeAssociations(new_db, Dict{String, SQLite.Stmt}())
     dict[val] = new_associations
     return new_associations
 end
@@ -106,8 +117,8 @@ function add_association!(
             string(nameof(typeof(component))),
         )
         params = chop(repeat("?,", length(row)))
-        SQLite.DBInterface.execute(
-            associations.db,
+        _execute_cached(
+            associations,
             "INSERT INTO $SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME VALUES($params)",
             row,
         )
@@ -189,6 +200,13 @@ function get_num_components_with_attributes(associations::SupplementalAttributeA
     return _execute_count(associations, query)
 end
 
+const _HAS_ASSOCIATION_BY_ATTRIBUTE = """
+    SELECT attribute_uuid
+    FROM $SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME
+    WHERE attribute_uuid = ?
+    LIMIT 1
+"""
+
 """
 Return true if there is at least one association matching the inputs.
 """
@@ -196,9 +214,21 @@ function has_association(
     associations::SupplementalAttributeAssociations,
     attribute::SupplementalAttribute,
 )
-    return _has_association(associations, attribute, "attribute_uuid")
+    # Note: Unlike the other has_association methods, this is not covered by an index.
+    params = (string(get_uuid(attribute)),)
+    return !isempty(
+        Tables.rowtable(
+            _execute_cached(associations, _HAS_ASSOCIATION_BY_ATTRIBUTE, params),
+        ),
+    )
 end
 
+const _HAS_ASSOCIATION_BY_COMPONENT_ATTRIBUTE = """
+    SELECT attribute_uuid
+    FROM $SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME
+    WHERE attribute_uuid = ? AND component_uuid = ?
+    LIMIT 1
+"""
 function has_association(
     associations::SupplementalAttributeAssociations,
     component::InfrastructureSystemsComponent,
@@ -206,38 +236,54 @@ function has_association(
 )
     a_uuid = get_uuid(attribute)
     c_uuid = get_uuid(component)
-    query = """
-        SELECT attribute_uuid
-        FROM $SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME
-        WHERE attribute_uuid = ? AND component_uuid = ?
-        LIMIT 1
-    """
-    params = [string(a_uuid), string(c_uuid)]
-    return !isempty(Tables.rowtable(_execute(associations, query, params)))
+    params = (string(a_uuid), string(c_uuid))
+    return !isempty(
+        _execute_cached(associations, _HAS_ASSOCIATION_BY_COMPONENT_ATTRIBUTE, params),
+    )
 end
 
+const _HAS_ASSOCIATION_BY_COMPONENT = """
+    SELECT attribute_uuid
+    FROM $SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME
+    WHERE component_uuid = ?
+    LIMIT 1
+"""
 function has_association(
     associations::SupplementalAttributeAssociations,
     component::InfrastructureSystemsComponent,
-    attribute_type::Union{Nothing, Type{<:SupplementalAttribute}} = nothing,
 )
-    c_str = "component_uuid = ?"
-    params = [string(get_uuid(component))]
-    where_clause = if isnothing(attribute_type)
-        c_str
-    else
-        a_str = _get_attribute_type_string!(params, attribute_type)
-        "$c_str AND $a_str"
-    end
-
-    query = """
-        SELECT attribute_uuid
-        FROM $SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME
-        WHERE $where_clause
-        LIMIT 1
-    """
-    return !isempty(Tables.rowtable(_execute(associations, query, params)))
+    params = (string(get_uuid(component)),)
+    return !isempty(
+        Tables.rowtable(
+            _execute_cached(associations, _HAS_ASSOCIATION_BY_COMPONENT, params),
+        ),
+    )
 end
+
+const _HAS_ASSOCIATION_BY_COMP_ATTR_TYPE = """
+    SELECT attribute_uuid
+    FROM $SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME
+    WHERE component_uuid = ? AND attribute_type = ?
+    LIMIT 1
+"""
+function has_association(
+    associations::SupplementalAttributeAssociations,
+    component::InfrastructureSystemsComponent,
+    attribute_type::Type{<:SupplementalAttribute},
+)
+    params = (string(get_uuid(component)), string(nameof(attribute_type)))
+    return !isempty(
+        Tables.rowtable(
+            _execute_cached(associations, _HAS_ASSOCIATION_BY_COMP_ATTR_TYPE, params),
+        ),
+    )
+end
+
+const _LIST_ASSOCIATED_COMP_UUIDS = """
+    SELECT component_uuid
+    FROM $SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME
+    WHERE attribute_uuid = ?
+"""
 
 """
 Return the component UUIDs associated with the attribute.
@@ -246,12 +292,10 @@ function list_associated_component_uuids(
     associations::SupplementalAttributeAssociations,
     attribute::SupplementalAttribute,
 )
-    query = """
-        SELECT component_uuid
-        FROM $SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME
-        WHERE attribute_uuid = '$(get_uuid(attribute))'
-    """
-    table = Tables.columntable(_execute(associations, query))
+    params = (string(get_uuid(attribute)),)
+    table = Tables.columntable(
+        _execute_cached(associations, _LIST_ASSOCIATED_COMP_UUIDS, params),
+    )
     return Base.UUID.(table.component_uuid)
 end
 
@@ -276,7 +320,7 @@ function list_associated_supplemental_attribute_uuids(
         FROM $SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME
         WHERE $where_clause
     """
-    table = Tables.columntable(_execute(associations, query, params))
+    table = Tables.columntable(_execute_cached(associations, query, params))
     return Base.UUID.(table.attribute_uuid)
 end
 
@@ -288,10 +332,9 @@ function remove_association!(
     component::InfrastructureSystemsComponent,
     attribute::SupplementalAttribute,
 )
-    a_uuid = get_uuid(attribute)
-    c_uuid = get_uuid(component)
-    where_clause = "WHERE attribute_uuid = '$a_uuid' AND component_uuid = '$c_uuid'"
-    num_deleted = _remove_associations!(associations, where_clause)
+    where_clause = "WHERE attribute_uuid = ? AND component_uuid = ?"
+    params = (string(get_uuid(attribute)), string(get_uuid(component)))
+    num_deleted = _remove_associations!(associations, where_clause, params)
     if num_deleted != 1
         error("Bug: unexpected number of deletions: $num_deleted. Should have been 1.")
     end
@@ -304,12 +347,19 @@ function remove_associations!(
     associations::SupplementalAttributeAssociations,
     type::Type{<:SupplementalAttribute},
 )
-    where_clause = "WHERE attribute_type = '$(nameof(type))'"
-    num_deleted = _remove_associations!(associations, where_clause)
+    where_clause = "WHERE attribute_type = ?"
+    params = (string(nameof(type)),)
+    num_deleted = _remove_associations!(associations, where_clause, params)
     @debug "Deleted $num_deleted supplemental attribute associations" _group =
         LOG_GROUP_SUPPLEMENTAL_ATTRIBUTES
     return
 end
+
+const _REPLACE_COMP_UUID_SA = """
+    UPDATE $SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME
+    SET component_uuid = ?
+    WHERE component_uuid = ?
+"""
 
 """
 Replace the component UUID in the table.
@@ -319,12 +369,8 @@ function replace_component_uuid!(
     old_uuid::Base.UUID,
     new_uuid::Base.UUID,
 )
-    query = """
-        UPDATE $SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME
-        SET component_uuid = '$new_uuid'
-        WHERE component_uuid = '$old_uuid'
-    """
-    _execute(associations, query)
+    params = (string(new_uuid), string(old_uuid))
+    _execute_cached(associations, _REPLACE_COMP_UUID_SA, params)
     return
 end
 
@@ -350,8 +396,9 @@ end
 """
 Add records to the database. Expects output from [`to_records`](@ref).
 """
-function load_records!(associations::SupplementalAttributeAssociations, records)
-    isempty(records) && return
+function from_records(::Type{SupplementalAttributeAssociations}, records)
+    associations = SupplementalAttributeAssociations(; create_indexes = false)
+    isempty(records) && return associations
 
     columns = ("attribute_uuid", "attribute_type", "component_uuid", "component_type")
     num_rows = length(records)
@@ -368,31 +415,19 @@ function load_records!(associations::SupplementalAttributeAssociations, records)
         "INSERT INTO $SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME VALUES($params)",
         NamedTuple(Symbol(k) => v for (k, v) in data),
     )
-    return
-end
-
-function _has_association(
-    associations::SupplementalAttributeAssociations,
-    val::Union{InfrastructureSystemsComponent, SupplementalAttribute},
-    column::String,
-)
-    uuid = get_uuid(val)
-    query = """
-        SELECT attribute_uuid
-        FROM $SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME
-        WHERE $column = '$uuid'
-        LIMIT 1
-    """
-    return !isempty(Tables.rowtable(_execute(associations, query)))
+    _create_indexes!(associations)
+    return associations
 end
 
 function _remove_associations!(
     associations::SupplementalAttributeAssociations,
     where_clause::AbstractString,
+    params,
 )
-    _execute(
+    _execute_cached(
         associations,
         "DELETE FROM $SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME $where_clause",
+        params,
     )
     table = Tables.rowtable(_execute(associations, "SELECT CHANGES() AS changes"))
     @assert_op length(table) == 1
@@ -420,6 +455,16 @@ function compare_values(
     return match_fn(table_x, table_y)
 end
 
+function _make_stmt(associations::SupplementalAttributeAssociations, query::String)
+    return get!(
+        () -> SQLite.Stmt(associations.db, query),
+        associations.cached_statements,
+        query,
+    )
+end
+
+_execute_cached(s::SupplementalAttributeAssociations, q, p = nothing) =
+    execute(_make_stmt(s, q), p, LOG_GROUP_TIME_SERIES)
 _execute(s::SupplementalAttributeAssociations, q, p = nothing) =
     execute(s.db, q, p, LOG_GROUP_SUPPLEMENTAL_ATTRIBUTES)
 _execute_count(s::SupplementalAttributeAssociations, q, p = nothing) =

@@ -1,20 +1,44 @@
 const SupplementalAttributesByType =
     Dict{DataType, Dict{Base.UUID, <:SupplementalAttribute}}
 
-struct SupplementalAttributeManager <: InfrastructureSystemsContainer
+mutable struct SupplementalAttributeManager <: InfrastructureSystemsContainer
     data::SupplementalAttributesByType
     associations::SupplementalAttributeAssociations
 end
 
-function SupplementalAttributeManager(data::SupplementalAttributesByType)
-    return SupplementalAttributeManager(data, SupplementalAttributeAssociations())
-end
-
 function SupplementalAttributeManager()
-    return SupplementalAttributeManager(SupplementalAttributesByType())
+    return SupplementalAttributeManager(
+        SupplementalAttributesByType(),
+        SupplementalAttributeAssociations(),
+    )
 end
 
 get_member_string(::SupplementalAttributeManager) = "supplemental attributes"
+
+"""
+Begin an update of supplemental attributes. Use this function when adding
+or removing many supplemental attributes in order to improve performance.
+
+If an error occurs during the update, changes will be reverted.
+"""
+function begin_supplemental_attributes_update(
+    func::Function,
+    mgr::SupplementalAttributeManager,
+)
+    orig_data = SupplementalAttributesByType()
+    for (key, val) in mgr.data
+        orig_data[key] = copy(val)
+    end
+
+    try
+        SQLite.transaction(mgr.associations.db) do
+            func()
+        end
+    catch
+        mgr.data = orig_data
+        rethrow()
+    end
+end
 
 function add_supplemental_attribute!(
     mgr::SupplementalAttributeManager,
@@ -244,7 +268,9 @@ function deserialize(
         @debug "Deserialized $(summary(attr))" _group = LOG_GROUP_SERIALIZATION
     end
 
-    mgr = SupplementalAttributeManager(SupplementalAttributesByType(attributes))
-    load_records!(mgr.associations, data["associations"])
+    mgr = SupplementalAttributeManager(
+        SupplementalAttributesByType(attributes),
+        from_records(SupplementalAttributeAssociations, data["associations"]),
+    )
     return mgr
 end

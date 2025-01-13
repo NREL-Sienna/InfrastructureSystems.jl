@@ -497,7 +497,16 @@ end
     ) isa IS.SingleTimeSeries
     @test IS.has_time_series(component, IS.SingleTimeSeries)
     @test IS.has_time_series(component, IS.SingleTimeSeries, ts_name)
+    @test IS.has_time_series(component; name = ts_name)
+    @test IS.has_time_series(component; name = ts_name, resolution = resolution)
     @test IS.has_time_series(component, IS.SingleTimeSeries, ts_name, scenario = "low")
+    @test IS.has_time_series(
+        component,
+        IS.SingleTimeSeries,
+        ts_name,
+        resolution = resolution,
+        scenario = "low",
+    )
     @test IS.has_time_series(
         component,
         IS.SingleTimeSeries,
@@ -849,7 +858,7 @@ end
         forecasts = collect(IS.get_time_series_multiple(sys))
         @test length(forecasts) == 3
         forecasts = collect(IS.get_time_series_multiple(sys; type = IS.Deterministic))
-        @test length(forecasts) == 1
+        @test length(forecasts) == 2
         forecasts =
             collect(
                 IS.get_time_series_multiple(
@@ -2933,6 +2942,102 @@ end
     )
 end
 
+@testset "Test bulk addition of time series with transaction" begin
+    sys = IS.SystemData()
+    name = "Component1"
+    component = IS.TestComponent(name, 5)
+    IS.add_component!(sys, component)
+
+    initial_time = Dates.DateTime("2020-09-01")
+    resolution = Dates.Hour(1)
+
+    other_time = initial_time + resolution
+    name = "test"
+    horizon_count = 24
+
+    make_values(count, index) = ones(count) * index
+    IS.begin_time_series_update(sys.time_series_manager) do
+        for i in 1:5
+            forecast = IS.Deterministic(;
+                data = SortedDict(
+                    initial_time => make_values(horizon_count, i),
+                    other_time => make_values(horizon_count, i),
+                ),
+                name = "ts_$(i)", resolution = resolution,
+            )
+            IS.add_time_series!(sys, component, forecast; model_year = "high")
+        end
+    end
+    ts_keys = IS.get_time_series_keys(component)
+    @test length(ts_keys) == 5
+    actual_ts_data = Dict(IS.get_name(x) => x for x in ts_keys)
+    for i in 1:5
+        name = "ts_$(i)"
+        @test haskey(actual_ts_data, name)
+        key = actual_ts_data[name]
+        ts = IS.get_time_series(component, key)
+        @test ts isa IS.Deterministic
+        data = IS.get_data(ts)
+        @test !isempty(values(data))
+        for val in values(data)
+            @test val == make_values(horizon_count, i)
+        end
+    end
+end
+
+@testset "Test bulk addition of time series with transaction and error" begin
+    sys = IS.SystemData()
+    name = "Component1"
+    component = IS.TestComponent(name, 5)
+    IS.add_component!(sys, component)
+
+    initial_time = Dates.DateTime("2020-09-01")
+    resolution = Dates.Hour(1)
+
+    other_time = initial_time + resolution
+    name = "test"
+    horizon_count = 24
+
+    make_values(count, index) = ones(count) * index
+
+    bystander = IS.Deterministic(;
+        data = SortedDict(
+            initial_time => rand(horizon_count),
+            other_time => rand(horizon_count),
+        ),
+        name = "bystander", resolution = resolution,
+    )
+    IS.add_time_series!(sys, component, bystander)
+
+    @test_throws(
+        ArgumentError,
+        IS.begin_time_series_update(sys.time_series_manager) do
+            for i in 1:5
+                if i < 5
+                    name = "ts_$i"
+                else
+                    name = "ts_$(i - 1)"
+                end
+                forecast = IS.Deterministic(;
+                    data = SortedDict(
+                        initial_time => make_values(horizon_count, i),
+                        other_time => make_values(horizon_count, i),
+                    ),
+                    name = name, resolution = resolution,
+                )
+                IS.add_time_series!(sys, component, forecast)
+            end
+        end,
+    )
+    ts_keys = IS.get_time_series_keys(component)
+    @test length(ts_keys) == 1
+    key = ts_keys[1]
+    @test IS.get_name(key) == "bystander"
+    res = IS.get_time_series(component, key)
+    @test res isa IS.Deterministic
+    @test IS.get_data(res) == IS.get_data(bystander)
+end
+
 @testset "Test list_existing_metadata" begin
     sys = IS.SystemData()
     initial_time = Dates.DateTime("2020-09-01")
@@ -2978,4 +3083,47 @@ end
     @test length(existing_uuids) == 5
     @test sort(ts_uuids[1:5]; by = x -> string(x)) ==
           sort(existing_uuids[1:5]; by = x -> string(x))
+end
+
+@testset "Test migration of legacy time series schema" begin
+    sys = IS.SystemData()
+    name = "Component1"
+    component = IS.TestComponent(name, 5)
+    IS.add_component!(sys, component)
+
+    initial_time = Dates.DateTime("2020-09-01")
+    resolution = Dates.Hour(1)
+
+    data = TimeSeries.TimeArray(
+        range(initial_time; length = 5, step = resolution),
+        rand(5),
+    )
+    ts_name = "test_c"
+    ts = IS.SingleTimeSeries(; data = data, name = ts_name)
+    IS.add_time_series!(sys, component, ts; scenario = "low", model_year = "2030")
+    IS.add_time_series!(sys, component, ts; scenario = "high", model_year = "2030")
+    IS.add_time_series!(sys, component, ts; scenario = "low", model_year = "2035")
+    IS.add_time_series!(sys, component, ts; scenario = "high", model_year = "2035")
+
+    filename, io = mktemp()
+    close(io)
+    new_db = SQLite.DB(filename)
+    IS.backup(new_db, sys.time_series_manager.metadata_store.db)
+    query = """
+        CREATE TABLE new_tbl AS
+        SELECT $(IS.ASSOCIATIONS_TABLE_NAME).*, $(IS.METADATA_TABLE_NAME).metadata
+        FROM $(IS.ASSOCIATIONS_TABLE_NAME)
+        JOIN $(IS.METADATA_TABLE_NAME)
+            ON $(IS.ASSOCIATIONS_TABLE_NAME).metadata_uuid = $(IS.METADATA_TABLE_NAME).metadata_uuid
+    """
+    SQLite.DBInterface.execute(new_db, query)
+    SQLite.DBInterface.execute(new_db, "DROP TABLE $(IS.ASSOCIATIONS_TABLE_NAME)")
+    SQLite.DBInterface.execute(new_db, "DROP TABLE $(IS.METADATA_TABLE_NAME)")
+    SQLite.DBInterface.execute(
+        new_db,
+        "ALTER TABLE new_tbl RENAME TO $(IS.METADATA_TABLE_NAME)",
+    )
+    new_store = IS.TimeSeriesMetadataStore(filename)
+    result = IS.list_metadata(new_store, component)
+    @test length(result) == 4
 end

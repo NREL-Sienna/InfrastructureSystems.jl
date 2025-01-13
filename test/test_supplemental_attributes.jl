@@ -13,6 +13,89 @@
     )
 end
 
+@testset "Test bulk addition of supplemental attributes" begin
+    mgr = IS.SupplementalAttributeManager()
+    attr1 = IS.GeographicInfo(; geo_json = Dict("x" => 1.0))
+    attr2 = IS.GeographicInfo(; geo_json = Dict("x" => 2.0))
+    component = IS.TestComponent("component1", 1)
+    IS.begin_supplemental_attributes_update(mgr) do
+        IS.add_supplemental_attribute!(mgr, component, attr1)
+        IS.add_supplemental_attribute!(mgr, component, attr2)
+    end
+    @test length(mgr.data) == 1
+    @test length(mgr.data[IS.GeographicInfo]) == 2
+    @test IS.get_num_attributes(mgr.associations) == 2
+end
+
+@testset "Test bulk addition of supplemental attributes with error" begin
+    mgr = IS.SupplementalAttributeManager()
+    attr1 = IS.TestSupplemental(; value = 1.0)
+    attr2 = IS.GeographicInfo(; geo_json = Dict("x" => 2.0))
+    component = IS.TestComponent("component1", 1)
+    @test_throws(
+        ArgumentError,
+        IS.begin_supplemental_attributes_update(mgr) do
+            IS.add_supplemental_attribute!(mgr, component, attr1)
+            IS.add_supplemental_attribute!(mgr, component, attr2)
+            IS.add_supplemental_attribute!(mgr, component, attr2)
+        end,
+    )
+    @test length(mgr.data) == 0
+    @test IS.get_num_attributes(mgr.associations) == 0
+end
+
+@testset "Test bulk addition of supplemental attributes with error, existing attrs" begin
+    mgr = IS.SupplementalAttributeManager()
+    attr1 = IS.TestSupplemental(; value = 1.0)
+    attr2 = IS.GeographicInfo(; geo_json = Dict("x" => 2.0))
+    component = IS.TestComponent("component1", 1)
+    IS.begin_supplemental_attributes_update(mgr) do
+        IS.add_supplemental_attribute!(mgr, component, attr1)
+        IS.add_supplemental_attribute!(mgr, component, attr2)
+    end
+
+    attr3 = IS.TestSupplemental(; value = 3.0)
+    attr4 = IS.GeographicInfo(; geo_json = Dict("x" => 3.0))
+    @test_throws(
+        ArgumentError,
+        IS.begin_supplemental_attributes_update(mgr) do
+            IS.add_supplemental_attribute!(mgr, component, attr3)
+            IS.add_supplemental_attribute!(mgr, component, attr4)
+            IS.add_supplemental_attribute!(mgr, component, attr4)
+        end,
+    )
+    @test length(mgr.data) == 2
+    @test length(mgr.data[IS.TestSupplemental]) == 1
+    @test length(mgr.data[IS.GeographicInfo]) == 1
+    @test IS.get_num_attributes(mgr.associations) == 2
+end
+
+@testset "Test bulk removal of supplemental attributes with error" begin
+    mgr = IS.SupplementalAttributeManager()
+    attr1 = IS.TestSupplemental(; value = 1.0)
+    attr2 = IS.TestSupplemental(; value = 2.0)
+    attr3 = IS.GeographicInfo(; geo_json = Dict("x" => 3.0))
+    component = IS.TestComponent("component1", 1)
+    IS.begin_supplemental_attributes_update(mgr) do
+        IS.add_supplemental_attribute!(mgr, component, attr1)
+        IS.add_supplemental_attribute!(mgr, component, attr2)
+        IS.add_supplemental_attribute!(mgr, component, attr3)
+    end
+
+    @test_throws(
+        ArgumentError,
+        IS.begin_supplemental_attributes_update(mgr) do
+            IS.remove_supplemental_attribute!(mgr, component, attr2)
+            IS.remove_supplemental_attribute!(mgr, component, attr3)
+            IS.remove_supplemental_attribute!(mgr, component, attr3)
+        end,
+    )
+    @test length(mgr.data) == 2
+    @test length(mgr.data[IS.TestSupplemental]) == 2
+    @test length(mgr.data[IS.GeographicInfo]) == 1
+    @test IS.get_num_attributes(mgr.associations) == 3
+end
+
 @testset "Test clear_supplemental_attributes" begin
     data = IS.SystemData(; time_series_in_memory = true)
     geo_supplemental_attribute = IS.GeographicInfo()
