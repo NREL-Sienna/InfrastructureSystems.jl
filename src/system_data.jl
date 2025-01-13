@@ -401,6 +401,7 @@ function _handle_component_removal!(data::SystemData, component)
 
     pop!(data.component_uuids, uuid)
     remove_component_from_subsystems!(data, component)
+    set_shared_system_references!(component, nothing)
     return
 end
 
@@ -413,6 +414,7 @@ function mask_component!(
     remove_time_series = false,
 )
     remove_component!(data.components, component; remove_time_series = remove_time_series)
+    _handle_component_removal!(data, component)
     return add_masked_component!(
         data,
         component;
