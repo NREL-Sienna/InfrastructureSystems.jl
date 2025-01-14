@@ -401,6 +401,7 @@ function _handle_component_removal!(data::SystemData, component)
 
     pop!(data.component_uuids, uuid)
     remove_component_from_subsystems!(data, component)
+    set_shared_system_references!(component, nothing)
     return
 end
 
@@ -413,6 +414,7 @@ function mask_component!(
     remove_time_series = false,
 )
     remove_component!(data.components, component; remove_time_series = remove_time_series)
+    _handle_component_removal!(data, component)
     return add_masked_component!(
         data,
         component;
@@ -917,7 +919,7 @@ end
 # Redirect functions to Components
 
 function add_component!(data::SystemData, component; kwargs...)
-    _check_duplicate_component_uuid(data, component)
+    _check_add_component(data, component)
     add_component!(data.components, component; kwargs...)
     data.component_uuids[get_uuid(component)] = component
     refs = SharedSystemReferences(;
@@ -929,6 +931,7 @@ function add_component!(data::SystemData, component; kwargs...)
 end
 
 function add_masked_component!(data::SystemData, component; kwargs...)
+    _check_add_component(data, component)
     add_component!(
         data.masked_components,
         component;
@@ -948,6 +951,13 @@ function remove_masked_component!(data::SystemData, component)
     component = remove_component!(data.masked_components, component)
     _handle_component_removal!(data, component)
     return component
+end
+
+function _check_add_component(data::SystemData, component)
+    _check_duplicate_component_uuid(data, component)
+    if !isnothing(get_shared_system_references(component))
+        error("$(summary(component)) is already attached to a system")
+    end
 end
 
 function _check_duplicate_component_uuid(data::SystemData, component)

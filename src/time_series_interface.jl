@@ -940,6 +940,8 @@ set_shared_system_references!(
 ) =
     set_shared_system_references!(get_internal(owner), refs)
 
+get_shared_system_references(o::TimeSeriesOwners) = o.internal.shared_system_references
+
 function throw_if_does_not_support_time_series(owner::TimeSeriesOwners)
     if !supports_time_series(owner)
         throw(ArgumentError("$(summary(owner)) does not support time series"))
