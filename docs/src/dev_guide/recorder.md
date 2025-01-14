@@ -16,7 +16,7 @@ of that data to figure out what went wrong.
     `RecorderEventCommon` in each struct.
 
  2. Call [`InfrastructureSystems.register_recorder!`](@ref) with arguments `recorder-name` for each recorder object you want to create.
-    
+
       + Depending on how often your code create events you may want to make this
         conditional. You may only need it for debug runs.
       + PowerSimulations creates one recorder for simulation step and stage
@@ -27,5 +27,5 @@ of that data to figure out what went wrong.
  5. After your code runs call [`InfrastructureSystems.show_recorder_events`](@ref) to
     view events.  Refer to the docstrings for more information.
  6. Refer to
-    [`PowerSimulations.show_simulation_events`](https://nrel-siip.github.io/PowerSimulations.jl/latest/api/PowerSimulations/#PowerSimulations.show_simulation_events-Union%7BTuple%7BT%7D,%20Tuple%7BType%7BT%7D,AbstractString%7D,%20Tuple%7BType%7BT%7D,AbstractString,Union%7BNothing,%20Function%7D%7D%7D%20where%20T%3C:InfrastructureSystems.AbstractRecorderEvent)
+    [`PowerSimulations.show_simulation_events`](https://nrel-sienna.github.io/PowerSimulations.jl/latest/api/PowerSimulations/#PowerSimulations.show_simulation_events-Union%7BTuple%7BT%7D,%20Tuple%7BType%7BT%7D,AbstractString%7D,%20Tuple%7BType%7BT%7D,AbstractString,Union%7BNothing,%20Function%7D%7D%7D%20where%20T%3C:InfrastructureSystems.AbstractRecorderEvent)
     for an example on how to customize this behavior for your package.
