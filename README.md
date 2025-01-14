@@ -11,8 +11,8 @@ This package is only compatible with Julia 1.6 or higher.
 
 ## Development
 
-Contributions to the development and enahancement of InfrastructureSystems is welcome. Please see [CONTRIBUTING.md](https://github.com/NREL-Sienna/InfrastructureSystems.jl/blob/master/CONTRIBUTING.md) for code contribution guidelines.
+Contributions to the development and enahancement of InfrastructureSystems is welcome. Please see [CONTRIBUTING.md](https://github.com/NREL-Sienna/InfrastructureSystems.jl/blob/main/CONTRIBUTING.md) for code contribution guidelines.
 
 ## License
 
-InfrastructureSystems is released under a BSD [license](https://github.com/NREL-Sienna/InfrastructureSystems.jl/blob/master/LICENSE). InfrastructureSystems has been developed as part of the Scalable Integrated Infrastructure Planning (SIIP) initiative at the U.S. Department of Energy's National Renewable Energy Laboratory ([NREL](https://www.nrel.gov/)) Software Record SWR-20-52
+InfrastructureSystems is released under a BSD [license](https://github.com/NREL-Sienna/InfrastructureSystems.jl/blob/main/LICENSE). InfrastructureSystems has been developed as part of the Scalable Integrated Infrastructure Planning (SIIP) initiative at the U.S. Department of Energy's National Renewable Energy Laboratory ([NREL](https://www.nrel.gov/)) Software Record SWR-20-52
