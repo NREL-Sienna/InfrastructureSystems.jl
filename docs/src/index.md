@@ -28,7 +28,7 @@ package manager with
 For the current development version, "checkout" this package with
 
 ```julia
-] add InfrastructureSystems#master
+] add InfrastructureSystems#main
 ```
 
 ### Usage

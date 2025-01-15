@@ -11,7 +11,7 @@
     [Julia style guide](https://docs.julialang.org/en/v1/manual/style-guide/index.html)
     except for deviations noted here.
 
-  - Follow [Julia contribution guidelines](https://github.com/JuliaLang/julia/blob/master/CONTRIBUTING.md#general-formatting-guidelines-for-julia-code-contributions),
+  - Follow [Julia contribution guidelines](https://github.com/JuliaLang/julia/blob/main/CONTRIBUTING.md#general-formatting-guidelines-for-julia-code-contributions),
     notably its line length limit.
   - Follow [Julia guidelines for docstrings](https://docs.julialang.org/en/v1/manual/documentation/index.html).
   - Follow [JuMP coding standards](http://www.juliaopt.org/JuMP.jl/dev/style),
@@ -31,7 +31,7 @@
 ## Module
 
   - When writing a module locate all the exports in the main module file.
-  - Please include a copy of [this .gitignore file](https://github.com/NREL-Sienna/InfrastructureSystems.jl/blob/master/.gitignore)
+  - Please include a copy of [this .gitignore file](https://github.com/NREL-Sienna/InfrastructureSystems.jl/blob/main/.gitignore)
 
 ## Comments
 
@@ -137,7 +137,7 @@ add their own as needed.
 ## Unit Tests
 
 All code should be tested. The packages in Sienna have a minimum of 70% coverage to be merged
-into master. This functionality is provided using Codecov
+into main. This functionality is provided using Codecov
 
 ## Whitespace
 
