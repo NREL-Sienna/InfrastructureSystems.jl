@@ -57,15 +57,15 @@ end
         @test typeof(first(the_components)) == IS.TestComponent
         @test IS.get_name(first(the_components)) == "Component1"
         @test Set(
-            collect(get_components_rt(test_gen_ent, test_sys; scope_limiter = x -> true)),
+            collect(get_components_rt(x -> true, test_gen_ent, test_sys)),
         ) == Set(the_components)
         @test length(
-            collect(get_components_rt(test_gen_ent, test_sys; scope_limiter = x -> false)),
+            collect(get_components_rt(x -> false, test_gen_ent, test_sys)),
         ) == 0
-        @test IS.get_component(test_gen_ent, test_sys; scope_limiter = x -> true) ==
+        @test IS.get_component(x -> true, test_gen_ent, test_sys) ==
               first(the_components)
         @test isnothing(
-            IS.get_component(test_gen_ent, test_sys; scope_limiter = x -> false),
+            IS.get_component(x -> false, test_gen_ent, test_sys),
         )
 
         @test only(IS.get_groups(test_gen_ent, test_sys)) == test_gen_ent
@@ -103,10 +103,10 @@ end
         @test IS.get_component(IS.AdditionalTestComponent, test_sys, "Component3") in
               the_components
         @test Set(
-            collect(get_components_rt(test_list_ent, test_sys; scope_limiter = x -> true)),
+            collect(get_components_rt(x -> true, test_list_ent, test_sys)),
         ) == Set(the_components)
         @test length(
-            collect(get_components_rt(test_list_ent, test_sys; scope_limiter = x -> false)),
+            collect(get_components_rt(x -> false, test_list_ent, test_sys)),
         ) == 0
 
         @test collect(IS.get_groups(IS.make_selector(), test_sys)) ==
@@ -116,11 +116,11 @@ end
         @test comp_ent_1 in the_groups
         @test comp_ent_2 in the_groups
         @test Set(
-            collect(IS.get_groups(test_list_ent, test_sys; scope_limiter = x -> true)),
+            collect(IS.get_groups(x -> true, test_list_ent, test_sys)),
         ) == Set(the_groups)
         # Even if we eventually filter out all the components, ListComponentSelector says we must have exactly the groups specified
         @test length(
-            collect(IS.get_groups(test_list_ent, test_sys; scope_limiter = x -> false)),
+            collect(IS.get_groups(x -> false, test_list_ent, test_sys)),
         ) == 2
     end
 end
@@ -157,10 +157,10 @@ end
         the_components = get_components_rt(test_sub_ent, test_sys)
         @test all(sort_name!(the_components) .== answer)
         @test Set(
-            collect(get_components_rt(test_sub_ent, test_sys; scope_limiter = x -> true)),
+            collect(get_components_rt(x -> true, test_sub_ent, test_sys)),
         ) == Set(the_components)
         @test length(
-            collect(get_components_rt(test_sub_ent, test_sys; scope_limiter = x -> false)),
+            collect(get_components_rt(x -> false, test_sub_ent, test_sys)),
         ) == 0
 
         # Grouping inherits from `DynamicallyGroupedComponentSelector` and is tested elsewhere
@@ -225,12 +225,12 @@ end
         the_components = get_components_rt(test_filter_ent, test_sys)
         @test all(sort_name!(the_components) .== answer)
         @test Set(
-            get_components_rt(test_filter_ent, test_sys; scope_limiter = x -> true),
+            get_components_rt(x -> true, test_filter_ent, test_sys),
         ) ==
               Set(the_components)
         @test length(
             collect(
-                get_components_rt(test_filter_ent, test_sys; scope_limiter = x -> false),
+                get_components_rt(x -> false, test_filter_ent, test_sys),
             ),
         ) == 0
     end
@@ -275,16 +275,18 @@ end
         )
         @test length(
             collect(
-                IS.get_groups(each_selector, test_sys;
-                    scope_limiter = x -> length(IS.get_name(x)) < 11),
+                IS.get_groups(x -> length(IS.get_name(x)) < 11, each_selector, test_sys),
             ),
         ) == 2
         @test Set(IS.get_name.(IS.get_groups(partition_selector, test_sys))) ==
               Set(["13", "10"])
         @test length(
             collect(
-                IS.get_groups(partition_selector, test_sys;
-                    scope_limiter = x -> length(IS.get_name(x)) < 11),
+                IS.get_groups(
+                    x -> length(IS.get_name(x)) < 11,
+                    partition_selector,
+                    test_sys,
+                ),
             ),
         ) == 1
     end

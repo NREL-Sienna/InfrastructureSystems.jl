@@ -2,9 +2,9 @@
 #=
 `ComponentSelector` extension notes:
 Concrete subtypes MUST implement:
- - `get_components`: returns an iterable of components
+ - `get_components(scope_limiter, selector, sys)`: returns an iterable of components
  - `get_name`: returns a name for the selector -- or use the default by having a `name::String` field
- - `get_groups`: returns an iterable of `ComponentSelector`s
+ - `get_groups(scope_limiter, selector, sys)`: returns an iterable of `ComponentSelector`s
  - `rebuild_selector`: returns a new `ComponentSelector` (need not be the same concrete
    type) with the changes given in the keyword arguments. `name` MUST be a valid keyword
    argument; it is up to the extender what other attributes of the selector may be rebuilt.
@@ -78,27 +78,76 @@ validate_groupby(groupby::Symbol) =
     end
 validate_groupby(groupby::Function) = groupby  # Don't try to validate functions for now
 
+"""
+Return a function that computes the conjunction of the two functions with short-circuit
+evaluation, where if either of the functions is `nothing` it is as if its result is `true`.
+"""
+optional_and_fns(fn1::Function, fn2::Function) = x -> fn1(x) && fn2(x)
+optional_and_fns(::Nothing, fn2::Function) = fn2
+optional_and_fns(fn1::Function, ::Nothing) = fn1
+optional_and_fns(::Nothing, ::Nothing) = Returns(true)
+
+"Use `optional_and_fns` to return a function that computes the conjunction of get_available and the given function"
+available_and_fn(fn::Union{Function, Nothing}, sys) =
+    optional_and_fns(Base.Fix1(get_available, sys), fn)
+
 # Generic implementations/generic docstrings for simple functions with many methods
 """
 Factory function to create the appropriate subtype of `ComponentSelector` given the
-arguments. Users should call this rather than manually constructing `ComponentSelector`
-subtypes.
+arguments. Users should call this rather than manually constructing `ComponentSelector`s.
 """
 function make_selector end
 
 # Override this if you define a ComponentSelector subtype with no name field
 """
 Get the name of the `ComponentSelector`. This is either the default name or a custom name
-passed in at creation time.
+passed in at creation.
 """
 get_name(selector::ComponentSelector) = selector.name
+
+"""
+    get_components(selector, sys)
+Get the components that make up the `ComponentSelector`.
+"""
+get_components(selector::ComponentSelector, sys) = get_components(nothing, selector, sys)
+
+"""
+    get_component(selector, sys)
+Get the component that matches the `SingleComponentSelector`, or `nothing` if there is no match.
+"""
+get_component(selector::SingularComponentSelector, sys) =
+    get_component(nothing, selector, sys)
+
+"""
+    get_available_components(scope_limiter, selector, sys)
+Get the available components of the collection that make up the `ComponentSelector`.
+"""
+function get_available_components(
+    scope_limiter::Union{Function, Nothing},
+    selector::ComponentSelector,
+    sys,
+)
+    filter_func = optional_and_fns(Base.Fix1(get_available, sys), scope_limiter)
+    get_components(filter_func, selector, sys)
+end
 
 """
     get_available_components(selector, sys)
 Get the available components of the collection that make up the `ComponentSelector`.
 """
 get_available_components(selector::ComponentSelector, sys) =
-    get_components(selector, sys; scope_limiter = x -> get_available(sys, x))
+    get_available_components(nothing, selector, sys)
+
+"""
+    get_available_component(scope_limiter, selector, sys)
+Get the available component of the collection that makes up the `SingularComponentSelector`;
+`nothing` if there is none.
+"""
+get_available_component(
+    scope_limiter::Union{Function, Nothing},
+    selector::ComponentSelector,
+    sys,
+) = get_component(available_and_fn(scope_limiter, sys), selector, sys)
 
 """
     get_available_component(selector, sys)
@@ -106,20 +155,37 @@ Get the available component of the collection that makes up the `SingularCompone
 `nothing` if there is none.
 """
 get_available_component(selector::ComponentSelector, sys) =
-    get_component(selector, sys; scope_limiter = x -> get_available(sys, x))
+    get_available_component(nothing, selector, sys)
+
+"""
+    get_groups(scope_limiter, selector, sys)
+Get the groups that make up the `ComponentSelector`, first filtering using the filter
+function `scope_limiter`.
+"""
+function get_groups end
 
 """
     get_groups(selector, sys)
 Get the groups that make up the `ComponentSelector`.
 """
-function get_groups end
+get_groups(selector::ComponentSelector, sys) = get_groups(nothing, selector, sys)
+
+"""
+    get_available_groups(scope_limiter, selector, sys)
+Get the available groups of the collection that make up the `ComponentSelector`.
+"""
+get_available_groups(
+    scope_limiter::Union{Function, Nothing},
+    selector::ComponentSelector,
+    sys,
+) = get_groups(available_and_fn(scope_limiter, sys), selector, sys)
 
 """
     get_available_groups(selector, sys)
 Get the available groups of the collection that make up the `ComponentSelector`.
 """
 get_available_groups(selector::ComponentSelector, sys) =
-    get_groups(selector, sys; scope_limiter = x -> get_available(sys, x))
+    get_available_groups(nothing, selector, sys)
 
 """
 Make a `ComponentSelector` containing the components in `all_components` whose corresponding
@@ -136,16 +202,16 @@ Use the `groupby` property to get the groups that make up the
 `DynamicallyGroupedComponentSelector`
 """
 function get_groups(
+    scope_limiter::Union{Function, Nothing},
     selector::DynamicallyGroupedComponentSelector,
-    sys;
-    kwargs...,
+    sys,
 )
     (selector.groupby == :all) && return [selector]
     (selector.groupby == :each) &&
         return Iterators.map(make_selector,
-            get_components(selector, sys; kwargs...))
+            get_components(scope_limiter, selector, sys))
     @assert selector.groupby isa Function
-    components = collect(get_components(selector, sys; kwargs...))
+    components = collect(get_components(scope_limiter, selector, sys))
 
     partition_results = (selector.groupby).(components)
     unique_partitions = unique(partition_results)
@@ -161,7 +227,8 @@ function get_groups(
 end
 
 "Get the single group that corresponds to the `SingularComponentSelector`, i.e., itself"
-get_groups(selector::SingularComponentSelector, sys; kwargs...) = [selector]
+get_groups(::Union{Function, Nothing}, selector::SingularComponentSelector, sys) =
+    [selector]
 
 # Fallback `rebuild_selector` that only handles `name`
 """
@@ -243,16 +310,23 @@ make_selector(
     make_selector(typeof(component), get_name(component)::AbstractString; name = name)
 
 # Contents
-function get_component(selector::NameComponentSelector, sys; kwargs...)
+function get_component(
+    scope_limiter::Union{Function, Nothing},
+    selector::NameComponentSelector,
+    sys,
+)
     com = get_component(selector.component_type, sys, selector.component_name)
     isnothing(com) && return nothing
-    scope_limiter = get(kwargs, :scope_limiter, nothing)
     (!isnothing(scope_limiter) && !scope_limiter(com)) && return nothing
     return com
 end
 
-function get_components(selector::NameComponentSelector, sys; kwargs...)
-    com = get_component(selector, sys; kwargs...)
+function get_components(
+    scope_limiter::Union{Function, Nothing},
+    selector::NameComponentSelector,
+    sys,
+)
+    com = get_component(scope_limiter, selector, sys)
     isnothing(com) && return _make_empty_iterator(selector.component_type)
     # Wrap the one component up in a bunch of other data structures to get the Sienna standard type for this
     com_dict = Dict(selector.component_name => com)
@@ -279,14 +353,18 @@ make_selector(content::ComponentSelector...; name::Union{String, Nothing} = noth
     ListComponentSelector(content, name)
 
 # Contents
-function get_groups(selector::ListComponentSelector, sys; kwargs...)
+function get_groups(::Union{Function, Nothing}, selector::ListComponentSelector, sys)
     return selector.content
 end
 
-function get_components(selector::ListComponentSelector, sys; kwargs...)
+function get_components(
+    scope_limiter::Union{Function, Nothing},
+    selector::ListComponentSelector,
+    sys,
+)
     sub_components =
         map(
-            x -> get_components(x, sys; kwargs...),
+            x -> get_components(scope_limiter, x, sys),
             selector.content,
         )
     my_supertype = typejoin(eltype.(sub_components)...)
@@ -352,8 +430,11 @@ make_selector(
 ) = TypeComponentSelector(component_type, groupby, name)
 
 # Contents
-function get_components(selector::TypeComponentSelector, sys; kwargs...)
-    scope_limiter = get(kwargs, :scope_limiter, nothing)
+function get_components(
+    scope_limiter::Union{Function, Nothing},
+    selector::TypeComponentSelector,
+    sys,
+)
     isnothing(scope_limiter) && return get_components(selector.component_type, sys)
     return get_components(scope_limiter, selector.component_type, sys)
 end
@@ -401,15 +482,14 @@ make_selector(
 ) = FilterComponentSelector(component_type, filter_func, groupby, name)
 
 # Contents
-function get_components(selector::FilterComponentSelector, sys; kwargs...)
+function get_components(
+    scope_limiter::Union{Function, Nothing},
+    selector::FilterComponentSelector,
+    sys,
+)
     # Short-circuit-evaluate the `scope_limiter` first so `filter_func` may refer to
     # component attributes that do not exist in components outside the scope
-    scope_limiter = get(kwargs, :scope_limiter, nothing)
-    combo_filter = if isnothing(scope_limiter)
-        selector.filter_func
-    else
-        x -> scope_limiter(x) && selector.filter_func(x)
-    end
+    combo_filter = optional_and_fns(scope_limiter, selector.filter_func)
     components = get_components(combo_filter, selector.component_type, sys)
     return components
 end
@@ -430,5 +510,9 @@ end
 get_name(selector::RegroupedComponentSelector) = get_name(selector.wrapped_selector)
 
 # Contents
-get_components(selector::RegroupedComponentSelector, sys; kwargs...) =
-    get_components(selector.wrapped_selector, sys; kwargs...)
+get_components(
+    scope_limiter::Union{Function, Nothing},
+    selector::RegroupedComponentSelector,
+    sys,
+) =
+    get_components(scope_limiter, selector.wrapped_selector, sys)
