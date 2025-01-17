@@ -106,20 +106,17 @@ passed in at creation.
 get_name(selector::ComponentSelector) = selector.name
 
 """
-    get_components(selector, sys)
 Get the components that make up the `ComponentSelector`.
 """
 get_components(selector::ComponentSelector, sys) = get_components(nothing, selector, sys)
 
 """
-    get_component(selector, sys)
 Get the component that matches the `SingleComponentSelector`, or `nothing` if there is no match.
 """
 get_component(selector::SingularComponentSelector, sys) =
     get_component(nothing, selector, sys)
 
 """
-    get_available_components(scope_limiter, selector, sys)
 Get the available components of the collection that make up the `ComponentSelector`.
 """
 function get_available_components(
@@ -132,14 +129,12 @@ function get_available_components(
 end
 
 """
-    get_available_components(selector, sys)
 Get the available components of the collection that make up the `ComponentSelector`.
 """
 get_available_components(selector::ComponentSelector, sys) =
     get_available_components(nothing, selector, sys)
 
 """
-    get_available_component(scope_limiter, selector, sys)
 Get the available component of the collection that makes up the `SingularComponentSelector`;
 `nothing` if there is none.
 """
@@ -150,7 +145,6 @@ get_available_component(
 ) = get_component(available_and_fn(scope_limiter, sys), selector, sys)
 
 """
-    get_available_component(selector, sys)
 Get the available component of the collection that makes up the `SingularComponentSelector`;
 `nothing` if there is none.
 """
@@ -158,20 +152,17 @@ get_available_component(selector::ComponentSelector, sys) =
     get_available_component(nothing, selector, sys)
 
 """
-    get_groups(scope_limiter, selector, sys)
 Get the groups that make up the `ComponentSelector`, first filtering using the filter
 function `scope_limiter`.
 """
 function get_groups end
 
 """
-    get_groups(selector, sys)
 Get the groups that make up the `ComponentSelector`.
 """
 get_groups(selector::ComponentSelector, sys) = get_groups(nothing, selector, sys)
 
 """
-    get_available_groups(scope_limiter, selector, sys)
 Get the available groups of the collection that make up the `ComponentSelector`.
 """
 get_available_groups(
@@ -181,7 +172,6 @@ get_available_groups(
 ) = get_groups(available_and_fn(scope_limiter, sys), selector, sys)
 
 """
-    get_available_groups(selector, sys)
 Get the available groups of the collection that make up the `ComponentSelector`.
 """
 get_available_groups(selector::ComponentSelector, sys) =
