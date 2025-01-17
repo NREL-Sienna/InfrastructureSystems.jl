@@ -270,6 +270,10 @@ deserialize(::Type{Complex{T}}, data::Dict) where {T} =
     Complex(T(data["real"]), T(data["imag"]))
 
 deserialize(::Type{Vector{Symbol}}, data::Vector) = Symbol.(data)
+serialize(value::Vector{Complex{T}}) where {T} =
+    [Dict("real" => real(x), "imag" => imag(x)) for x in value]
+deserialize(::Type{Vector{Complex{T}}}, data::Array) where {T} =
+    [Complex(T(x["real"]), T(x["imag"])) for x in data]
 
 function serialize_julia_info()
     data = Dict{String, Any}("julia_version" => string(VERSION))

@@ -60,6 +60,18 @@ end
     @test_throws ArgumentError IS.deserialize(Union{nt_type, Dict}, nt_data)
 end
 
+@testset "Test Vector{Complex} Serialization/Deserialization" begin
+    nt_data = [
+        Dict("real" => 1.1, "imag" => 0.9),
+        Dict("real" => 0.0, "imag" => 0.1),
+        Dict("real" => 0.1, "imag" => 0.0),
+    ]
+    nt_type = Vector{Complex{Float64}}
+    nt_result = [1.1 + 0.9im, 0.0 + 0.1im, 0.1 + 0.0im]
+    @test IS.deserialize(nt_type, nt_data) == nt_result
+    @test IS.serialize(nt_result) == nt_data
+end
+
 @testset "Test JSON serialization of system data" begin
     for in_memory in (true, false)
         sys = create_system_data_shared_time_series(; time_series_in_memory = in_memory)
