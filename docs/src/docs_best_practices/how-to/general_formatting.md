@@ -67,13 +67,13 @@ signature with types into the hyperlink reference.
     Define hyperlinks to other packages with an `@extref` reference, rather than hard-coded
     references which might change, using
     [`DocumenterInterLinks.jl`](http://juliadocs.org/DocumenterInterLinks.jl/stable/):
-
+    
     ```
     [`PowerSystems.System`](@extref)
     ```
-
+    
     compiles as [`PowerSystems.System`](@extref). See [Declaring External Projects](@extref)
-    for help setting up a connection to a new package for the first time. 
+    for help setting up a connection to a new package for the first time.
 
 ## Add links to other Sienna packages
 
