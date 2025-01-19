@@ -2,6 +2,7 @@
 
   - [Diataxis](https://diataxis.fr/): Reference for the new
     documentation framework Sienna is striving to follow (not specific to Julia)
+
   - Julia's guidance on [Writing Documentation](@extref)
   - [`Documenter.jl`](https://documenter.juliadocs.org/stable/): Julia's documentation
     package, the [Syntax](https://documenter.juliadocs.org/stable/man/syntax/) and
