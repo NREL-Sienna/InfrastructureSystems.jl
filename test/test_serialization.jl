@@ -125,7 +125,7 @@ end
     sys = IS.SystemData()
     initial_time = Dates.DateTime("2020-09-01")
     resolution = Dates.Hour(1)
-    ta = TimeSeries.TimeArray(range(initial_time; length = 24, step = resolution), ones(24))
+    ta = TimeSeries.TimeArray(range(initial_time; length = 24, step = resolution), rand(24))
     ts = IS.SingleTimeSeries(; data = ta, name = "test")
     geo = IS.GeographicInfo(; geo_json = Dict("x" => 1.0, "y" => 2.0))
 
@@ -139,8 +139,15 @@ end
         IS.add_supplemental_attribute!(sys, component, geo)
     end
 
-    _, result = validate_serialization(sys)
+    sys2, result = validate_serialization(sys)
     @test result
+    attrs = collect(IS.get_supplemental_attributes(IS.TestSupplemental, sys2))
+    @test length(attrs) == 2
+    for attr in attrs
+        @test IS.has_time_series(IS.SingleTimeSeries, attr)
+        ts2 = IS.get_time_series(IS.SingleTimeSeries, attr, "test")
+        @test ts2.data == ta
+    end
 end
 
 @testset "Test version info" begin
