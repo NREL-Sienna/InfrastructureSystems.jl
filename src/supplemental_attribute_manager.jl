@@ -252,25 +252,28 @@ function deserialize(
     data::Dict,
     time_series_manager::TimeSeriesManager,
 )
-    attributes = SupplementalAttributesByType()
+    mgr = SupplementalAttributeManager(
+        SupplementalAttributesByType(SupplementalAttributesByType()),
+        from_records(SupplementalAttributeAssociations, data["associations"]),
+    )
+    refs = SharedSystemReferences(;
+        supplemental_attribute_manager = mgr,
+        time_series_manager = time_series_manager,
+    )
     for attr_dict in data["attributes"]
         type = get_type_from_serialization_metadata(get_serialization_metadata(attr_dict))
-        if !haskey(attributes, type)
-            attributes[type] =
-                Dict{Base.UUID, SupplementalAttribute}()
+        if !haskey(mgr.data, type)
+            mgr.data[type] = Dict{Base.UUID, SupplementalAttribute}()
         end
         attr = deserialize(type, attr_dict)
         uuid = get_uuid(attr)
-        if haskey(attributes[type], uuid)
+        if haskey(mgr.data[type], uuid)
             error("Bug: duplicate UUID in attributes container: type=$type uuid=$uuid")
         end
-        attributes[type][uuid] = attr
+        mgr.data[type][uuid] = attr
+        set_shared_system_references!(attr, refs)
         @debug "Deserialized $(summary(attr))" _group = LOG_GROUP_SERIALIZATION
     end
 
-    mgr = SupplementalAttributeManager(
-        SupplementalAttributesByType(attributes),
-        from_records(SupplementalAttributeAssociations, data["associations"]),
-    )
     return mgr
 end
