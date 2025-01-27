@@ -99,4 +99,4 @@ By setting `warnonly=true` in [`makedocs`](@extref Documenter.makedocs) at `make
 *temporarily* disable errors and build regardless. This makes it easy to track down
 cross-reference errors by clicking a link and seeing what fails.
 
-
+We do not allow `warnonly=true` to be used in production, so if used, this **must be removed** before a pull request is submitted. 
