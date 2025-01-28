@@ -176,11 +176,17 @@ function handle_normalization_factor(
     if normalization_factor isa NormalizationTypes
         if normalization_factor == NormalizationTypes.MAX
             max_value = get_max_value(ta)
+            if max_value == 0.0
+                error("normalization_factor = max with a max value of 0.0 is not supported")
+            end
             ta = ta ./ max_value
         else
             error("support for normalization_factor=$normalization_factor not implemented")
         end
     else
+        if normalization_factor == 0.0
+            error("A normalization_factor of 0.0 is not supported.")
+        end
         if normalization_factor != 1.0
             ta = ta ./ normalization_factor
         end
