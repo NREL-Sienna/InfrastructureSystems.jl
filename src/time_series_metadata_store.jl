@@ -37,7 +37,6 @@ function TimeSeriesMetadataStore()
         Dict{Base.UUID, TimeSeriesMetadata}(),
     )
     _create_associations_table!(store)
-    _create_metadata_table!(store)
     _create_indexes!(store)
     @debug "Initialized new time series metadata table" _group = LOG_GROUP_TIME_SERIES
     return store
@@ -60,9 +59,27 @@ function TimeSeriesMetadataStore(filename::AbstractString)
         _migrate_legacy_schema(store)
     end
 
+    _load_metadata_into_memory!(store)
     _create_indexes!(store)
     @debug "Loaded time series metadata from file" _group = LOG_GROUP_TIME_SERIES filename
     return store
+end
+
+function _load_metadata_into_memory!(store::TimeSeriesMetadataStore)
+    stmt =
+        SQLite.Stmt(store.db, "SELECT json(metadata) AS metadata FROM $METADATA_TABLE_NAME")
+    for metadata_as_str in Tables.columntable(SQLite.DBInterface.execute(stmt)).metadata
+        metadata = _deserialize_metadata(metadata_as_str)
+        uuid = get_uuid(metadata)
+        if haskey(store.metadata_uuids, uuid)
+            error("Bug: duplicate metadata UUID $(uuid)")
+        end
+        store.metadata_uuids[uuid] = metadata
+    end
+
+    # There is no need to keep this table around.
+    # We will create it again if the system is serialized.
+    SQLite.DBInterface.execute(store.db, "DROP TABLE $METADATA_TABLE_NAME")
 end
 
 function _list_columns(db::SQLite.DB, table_name::String)
@@ -160,7 +177,7 @@ function _migrate_legacy_schema(store::TimeSeriesMetadataStore)
         ASSOCIATIONS_TABLE_NAME,
     )
     SQLite.DBInterface.execute(store.db, "DROP TABLE $METADATA_TABLE_NAME")
-    _create_metadata_table!(store)
+    _create_metadata_table!(store.db)
     _add_rows!(
         store,
         metadata_rows,
@@ -219,7 +236,7 @@ function _create_associations_table!(store::TimeSeriesMetadataStore)
     return
 end
 
-function _create_metadata_table!(store::TimeSeriesMetadataStore)
+function _create_metadata_table!(db::SQLite.DB)
     schema = [
         "id INTEGER PRIMARY KEY",
         "metadata_uuid TEXT NOT NULL",
@@ -227,7 +244,7 @@ function _create_metadata_table!(store::TimeSeriesMetadataStore)
     ]
     schema_text = join(schema, ",")
     SQLite.DBInterface.execute(
-        store.db,
+        db,
         "CREATE TABLE $(METADATA_TABLE_NAME)($(schema_text))",
     )
     @debug "Created time series metadata table" schema _group = LOG_GROUP_TIME_SERIES
@@ -258,14 +275,6 @@ function _create_indexes!(store::TimeSeriesMetadataStore)
         unique = false,
         ifnotexists = true,
     )
-    SQLite.createindex!(
-        store.db,
-        METADATA_TABLE_NAME,
-        "by_m_uuid",
-        ["metadata_uuid"];
-        unique = true,
-        ifnotexists = true,
-    )
     return
 end
 
@@ -280,7 +289,7 @@ function Base.deepcopy_internal(store::TimeSeriesMetadataStore, dict::IdDict)
         new_db,
         Dict{String, SQLite.Stmt}(),
         Dict{HasMetadataQueryKey, SQLite.Stmt}(),
-        Dict{Base.UUID, TimeSeriesMetadata}(),
+        deepcopy(store.metadata_uuids),
     )
     dict[store] = new_store
     return new_store
@@ -313,14 +322,6 @@ function add_metadata!(
         vals,
     )
     metadata_uuid = get_uuid(metadata)
-    metadata_row =
-        (missing, string(metadata_uuid), JSON3.write(serialize(metadata)))
-    metadata_params = ("?,?,jsonb(?)")
-    _execute_cached(
-        store,
-        "INSERT OR IGNORE INTO $METADATA_TABLE_NAME VALUES($metadata_params)",
-        metadata_row,
-    )
     if !haskey(store.metadata_uuids, metadata_uuid)
         store.metadata_uuids[metadata_uuid] = metadata
     end
@@ -356,12 +357,22 @@ end
 
 """
 Backup the database to a file on the temporary filesystem and return that filename.
+Serialize the metadata in JSON format to a metadata table.
 """
 function backup_to_temp(store::TimeSeriesMetadataStore)
     filename, io = mktemp()
     close(io)
     dst = SQLite.DB(filename)
     backup(dst, store.db)
+    _create_metadata_table!(dst)
+    query = "INSERT INTO $METADATA_TABLE_NAME VALUES(?,?,jsonb(?))"
+    SQLite.transaction(dst) do
+        stmt = SQLite.Stmt(dst, query)
+        for metadata in values(store.metadata_uuids)
+            params = (missing, string(get_uuid(metadata)), JSON3.write(serialize(metadata)))
+            SQLite.DBInterface.execute(stmt, params)
+        end
+    end
     close(dst)
     return filename
 end
@@ -371,7 +382,6 @@ Clear all time series metadata from the store.
 """
 function clear_metadata!(store::TimeSeriesMetadataStore)
     _execute(store, "DELETE FROM $ASSOCIATIONS_TABLE_NAME")
-    _execute(store, "DELETE FROM $METADATA_TABLE_NAME")
 end
 
 function check_params_compatibility(
@@ -957,7 +967,7 @@ function list_metadata(
         $where_clause
     """
     table = Tables.rowtable(_execute_cached(store, query, params))
-    return [_get_metadata_by_uuid!(store, Base.UUID(x.metadata_uuid)) for x in table]
+    return [store.metadata_uuids[Base.UUID(x.metadata_uuid)] for x in table]
 end
 
 """
@@ -985,7 +995,7 @@ function list_metadata_with_owner_uuid(
     return [
         (
             owner_uuid = Base.UUID(x.owner_uuid),
-            metadata = _get_metadata_by_uuid!(store, Base.UUID(x.metadata_uuid)),
+            metadata = store.metadata_uuids[Base.UUID(x.metadata_uuid)],
         ) for x in table
     ]
 end
@@ -1057,13 +1067,14 @@ function remove_metadata!(
 
     # The metadata in the rows about to be deleted need to be deleted if there are no more
     # associations with them.
-    metadata_uuids = Tables.columntable(
-        _execute(
-            store,
-            "SELECT metadata_uuid FROM $ASSOCIATIONS_TABLE_NAME $where_clause",
-            params,
-        ),
-    )[1]
+    metadata_uuids =
+        Tables.columntable(
+            _execute(
+                store,
+                "SELECT metadata_uuid FROM $ASSOCIATIONS_TABLE_NAME $where_clause",
+                params,
+            ),
+        ).metadata_uuid
     num_deleted = _remove_metadata!(store, where_clause, params)
     if num_deleted == 0
         @warn "No time series metadata was deleted."
@@ -1078,12 +1089,7 @@ function _handle_removed_metadata(store::TimeSeriesMetadataStore, metadata_uuid:
     query = "SELECT count(*) FROM $ASSOCIATIONS_TABLE_NAME WHERE metadata_uuid = ?"
     params = (metadata_uuid,)
     if isempty(_execute_cached(store, query, params))
-        _execute_cached(
-            store,
-            "DELETE FROM $METADATA_TABLE_NAME WHERE metadata_uuid = ?",
-            params,
-        )
-        pop!(store.metadata_uuids, metadata_uuid)
+        pop!(store.metadata_uuids, Base.UUID(metadata_uuid))
     end
 end
 
@@ -1225,26 +1231,9 @@ function _try_get_time_series_metadata_by_full_params(
     if len == 0
         return nothing
     elseif len == 1
-        return _get_metadata_by_uuid!(store, Base.UUID(rows[1].metadata_uuid))
+        return store.metadata_uuids[Base.UUID(rows[1].metadata_uuid)]
     else
         throw(ArgumentError("Found more than one matching time series: $len"))
-    end
-end
-
-const _GET_METADATA_BY_UUID = """
-    SELECT json(metadata) AS metadata FROM $METADATA_TABLE_NAME WHERE metadata_uuid = ?
-"""
-function _get_metadata_by_uuid!(store::TimeSeriesMetadataStore, metadata_uuid::Base.UUID)
-    return get!(store.metadata_uuids, metadata_uuid) do
-        rows = Tables.rowtable(
-            _execute_cached(store, _GET_METADATA_BY_UUID, (string(metadata_uuid),)),
-        )
-        if length(rows) != 1
-            error(
-                "Bug: _get_metadata returned $(length(rows)) entries instead of 1 for $metadata_uuid",
-            )
-        end
-        _deserialize_metadata(rows[1].metadata)
     end
 end
 

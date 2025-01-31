@@ -534,7 +534,7 @@ end
     @test Tables.rowtable(
         IS.sql(
             sys.time_series_manager.metadata_store,
-            "SELECT COUNT(*) AS count FROM $(IS.METADATA_TABLE_NAME)",
+            "SELECT COUNT (DISTINCT metadata_uuid) AS count FROM $(IS.ASSOCIATIONS_TABLE_NAME)",
         ),
     )[1].count == 4
     for key in IS.get_time_series_keys(component)
@@ -3105,10 +3105,8 @@ end
     IS.add_time_series!(sys, component, ts; scenario = "low", model_year = "2035")
     IS.add_time_series!(sys, component, ts; scenario = "high", model_year = "2035")
 
-    filename, io = mktemp()
-    close(io)
+    filename = IS.backup_to_temp(sys.time_series_manager.metadata_store)
     new_db = SQLite.DB(filename)
-    IS.backup(new_db, sys.time_series_manager.metadata_store.db)
     query = """
         CREATE TABLE new_tbl AS
         SELECT $(IS.ASSOCIATIONS_TABLE_NAME).*, $(IS.METADATA_TABLE_NAME).metadata
