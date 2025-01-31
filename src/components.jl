@@ -365,7 +365,7 @@ function set_name!(
 ) where {T <: InfrastructureSystemsComponent}
     throw_if_not_attached(components, component)
     if haskey(components.data[T], name)
-        if components.data[T][name] == component
+        if components.data[T][name] === component
             return
         end
         throw(ArgumentError("A component of type $T and name = $name is already stored"))
