@@ -90,3 +90,13 @@ ignore = ["problem-file.md"]
 ```
 
 You might need to iterate through multiple files.
+
+## [How can I see the output even with errors?](@id ignore_errors)
+
+Sometimes the easiest way to diagnose an error is to look at the generated webpage locally.
+
+By setting `warnonly=true` in [`makedocs`](@extref Documenter.makedocs) at `make.jl`, you can
+*temporarily* disable errors and build regardless. This makes it easy to track down
+cross-reference errors by clicking a link and seeing what fails.
+
+We do not allow `warnonly=true` to be used in production, so if used, this **must be removed** before a pull request is submitted. 
