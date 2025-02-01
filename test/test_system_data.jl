@@ -63,6 +63,7 @@ end
     name = "component1"
     component = IS.TestComponent(name, 5)
     IS.add_component!(data, component)
+    @test IS.set_name!(data, component, name) isa Any # shouldn't throw.
 
     new_name = "component1-new"
     IS.set_name!(data, component, new_name)
