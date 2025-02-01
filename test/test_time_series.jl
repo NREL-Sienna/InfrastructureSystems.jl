@@ -3125,3 +3125,27 @@ end
     result = IS.list_metadata(new_store, component)
     @test length(result) == 4
 end
+
+@testset "Test invalid normalization factors" begin
+    sys = IS.SystemData()
+    name = "Component1"
+    component_val = 5
+    component = IS.TestComponent(name, component_val)
+    IS.add_component!(sys, component)
+
+    dates = create_dates("2020-01-01T00:00:00", Dates.Hour(1), "2020-01-01T02:00:00")
+    data = [0.0, 0.0, 0.0]
+    ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
+    @test_throws ErrorException IS.SingleTimeSeries(
+        "val",
+        ta;
+        normalization_factor = IS.NormalizationTypes.MAX,
+    )
+    data = [1.1, 1.2, 1.3]
+    ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
+    @test_throws ErrorException IS.SingleTimeSeries(
+        "val",
+        ta;
+        normalization_factor = 0.0,
+    )
+end
