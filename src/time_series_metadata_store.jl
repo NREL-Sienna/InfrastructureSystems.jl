@@ -59,6 +59,7 @@ function TimeSeriesMetadataStore(filename::AbstractString)
         _migrate_legacy_schema(store)
     end
 
+    _apply_horizon_type_fix_if_needed(store.db)
     _load_metadata_into_memory!(store)
     _create_indexes!(store)
     @debug "Loaded time series metadata from file" _group = LOG_GROUP_TIME_SERIES filename
@@ -93,6 +94,37 @@ end
 
 function _needs_migration(db::SQLite.DB)
     return "time_series_uuid" in _list_columns(db, METADATA_TABLE_NAME)
+end
+
+function _apply_horizon_type_fix_if_needed(db::SQLite.DB)
+    # Version <= 2.4.1 had a bug where horizon_ms was mistakenly written to the db
+    # as a Serialization.serialize(Dates.Millisecond) instead of an integer.
+    # This function can be removed in in 4.0 when we no longer support deserializing
+    # systems from 2.x.
+    partial_query = """
+        SELECT horizon_ms
+        FROM time_series_associations
+        WHERE horizon_ms IS NOT NULL
+        LIMIT 1
+    """
+    vals = Tables.columntable(SQLite.DBInterface.execute(db, partial_query)).horizon_ms
+    if !isempty(vals) && vals[1] isa Dates.Period
+        query = """
+            SELECT id, horizon_ms
+            FROM $ASSOCIATIONS_TABLE_NAME
+            WHERE horizon_ms IS NOT NULL
+        """
+        update_query = "UPDATE $ASSOCIATIONS_TABLE_NAME SET horizon_ms = ? WHERE id = ?"
+        stmt = SQLite.Stmt(db, update_query)
+        SQLite.transaction(db) do
+            for row in Tables.rowtable(SQLite.DBInterface.execute(db, query))
+                if row.horizon_ms isa Dates.Period
+                    params = (row.horizon_ms.value, row.id)
+                    SQLite.DBInterface.execute(stmt, params)
+                end
+            end
+        end
+    end
 end
 
 function _migrate_legacy_schema(store::TimeSeriesMetadataStore)
@@ -474,7 +506,7 @@ function get_forecast_parameters(store::TimeSeriesMetadataStore)
     isempty(table) && return nothing
     row = table[1]
     return ForecastParameters(;
-        horizon = row.horizon_ms,
+        horizon = Dates.Millisecond(row.horizon_ms),
         initial_timestamp = Dates.DateTime(row.initial_timestamp),
         interval = Dates.Millisecond(row.interval_ms),
         count = row.window_count,
@@ -1146,7 +1178,7 @@ function _create_row(
         ts_category,
         string(get_initial_timestamp(metadata)),
         Dates.Millisecond(get_resolution(metadata)).value,
-        Dates.Millisecond(get_horizon(metadata)),
+        Dates.Millisecond(get_horizon(metadata)).value,
         Dates.Millisecond(get_interval(metadata)).value,
         get_count(metadata),
         missing,
