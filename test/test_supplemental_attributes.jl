@@ -229,6 +229,12 @@ end
     @test IS.get_supplemental_attribute(component1, IS.get_uuid(geo)) isa IS.GeographicInfo
     @test IS.get_supplemental_attribute(component1, IS.get_uuid(other)) isa
           IS.TestSupplemental
+    geo_attrs = collect(IS.get_supplemental_attributes(IS.GeographicInfo, component1))
+    @test length(geo_attrs) == 1
+    @test geo_attrs[1] == geo
+    ts_attrs = collect(IS.get_supplemental_attributes(IS.TestSupplemental, component1))
+    @test length(ts_attrs) == 1
+    @test ts_attrs[1] == other
 end
 
 @testset "Test counts of supplemental attribute" begin
