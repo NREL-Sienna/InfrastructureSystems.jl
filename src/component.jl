@@ -1,7 +1,5 @@
 """
-Return an instance of ForecastParameters for the given inputs.
-
-Throws ConflictingInputsError if horizon and interval are incompatible with the metadata.
+Assign a new UUID to the component.
 """
 function assign_new_uuid_internal!(component::InfrastructureSystemsComponent)
     old_uuid = get_uuid(component)
@@ -9,6 +7,11 @@ function assign_new_uuid_internal!(component::InfrastructureSystemsComponent)
     mgr = get_time_series_manager(component)
     if !isnothing(mgr)
         replace_component_uuid!(mgr.metadata_store, old_uuid, new_uuid)
+    end
+
+    associations = _get_supplemental_attribute_associations(component)
+    if !isnothing(associations)
+        replace_component_uuid!(associations, old_uuid, new_uuid)
     end
 
     set_uuid!(get_internal(component), new_uuid)
