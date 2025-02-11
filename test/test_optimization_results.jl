@@ -64,7 +64,7 @@ const IS = InfrastructureSystems
     )
     # Check that variable has time series
     var_res = read_variable(opt_res1, var_key)
-    @test size(read_variable(opt_res1, var_key)) == (2, 2)
+    @test size(var_res) == (2, 2)
     @test length(var_res[!, "DateTime"]) == 2
     # Check that expression only has a single column
     @test size(read_expression(opt_res2, exp_key)) == (1, 1)
