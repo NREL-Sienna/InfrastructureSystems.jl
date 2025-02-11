@@ -1,13 +1,8 @@
 import InfrastructureSystems.Optimization:
-    OptimizerStats,
     OptimizationContainerMetadata,
     OptimizationProblemResults,
     VariableKey,
-    ConstraintKey,
-    AuxVarKey,
     ExpressionKey,
-    ParameterKey,
-    InitialConditionKey,
     read_variable,
     read_expression
 import Dates:
