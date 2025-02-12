@@ -14,7 +14,11 @@ const IS = InfrastructureSystems
     base_power = 1.0
     # 2 hours timestamp range
     timestamp_range =
-        StepRange(DateTime("2024-01-01T00:00:00"), Hour(1), DateTime("2024-01-01T01:00:00"))
+        StepRange(
+            DateTime("2024-01-01T00:00:00"),
+            Millisecond(3600000),
+            DateTime("2024-01-01T01:00:00"),
+        )
     timestamp_vec = collect(timestamp_range)
     data = IS.SystemData()
     uuid = IS.make_uuid()
