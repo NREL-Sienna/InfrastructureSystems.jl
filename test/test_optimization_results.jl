@@ -7,7 +7,7 @@ import InfrastructureSystems.Optimization:
     read_expression
 import Dates:
     DateTime,
-    Hour
+    Millisecond
 const IS = InfrastructureSystems
 
 @testset "Test OptimizationProblemResults" begin
