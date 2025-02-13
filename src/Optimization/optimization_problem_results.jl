@@ -17,20 +17,20 @@ mutable struct OptimizationProblemResults <: Results
 end
 
 function OptimizationProblemResults(
-    base_power::Float64,
+    base_power,
     timestamps::StepRange{Dates.DateTime, Dates.Millisecond},
-    source_data::Union{Nothing, InfrastructureSystemsType},
-    source_data_uuid::Base.UUID,
-    aux_variable_values::Dict{AuxVarKey, DataFrames.DataFrame},
-    variable_values::Dict{VariableKey, DataFrames.DataFrame},
-    dual_values::Dict{ConstraintKey, DataFrames.DataFrame},
-    parameter_values::Dict{ParameterKey, DataFrames.DataFrame},
-    expression_values::Dict{ExpressionKey, DataFrames.DataFrame},
-    optimizer_stats::DataFrames.DataFrame,
-    optimization_container_metadata::OptimizationContainerMetadata,
-    model_type::String,
-    results_dir::String,
-    output_dir::String,
+    source_data,
+    source_data_uuid,
+    aux_variable_values,
+    variable_values,
+    dual_values,
+    parameter_values,
+    expression_values,
+    optimizer_stats,
+    optimization_container_metadata,
+    model_type,
+    results_dir,
+    output_dir,
 )
     return OptimizationProblemResults(
         base_power,
