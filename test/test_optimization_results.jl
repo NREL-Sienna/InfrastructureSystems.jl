@@ -6,8 +6,7 @@ import InfrastructureSystems.Optimization:
     MockVariable,
     MockExpression,
     read_variable,
-    read_expression,
-    convert_result_to_natural_units
+    read_expression
 import Dates:
     DateTime,
     Millisecond
@@ -74,14 +73,16 @@ const IS = InfrastructureSystems
     @test size(var_res) == (2, 2)
     @test length(var_res[!, "DateTime"]) == 2
     @test [1.0, 2.0] == var_res[!, 2]
-    convert_result_to_natural_units(::Type{<:MockVariable}) = true
+    # Check base power transformation
+    IS.Optimization.convert_result_to_natural_units(::Type{<:MockVariable}) = true
     var_res = IS.Optimization.read_variable(opt_res1, var_key)
     @test var_res[!, 2] == [10.0, 20.0]
     # Check that expression only has a single column
     exp_res = read_expression(opt_res2, exp_key)
     @test size(exp_res) == (1, 1)
-    @test exp_res[!, 1] == 1.0
-    convert_result_to_natural_units(::Type{<:MockExpression}) = true
+    @test exp_res[!, 1] == [1.0]
+    # Check base power transformation
+    IS.Optimization.convert_result_to_natural_units(::Type{<:MockExpression}) = true
     exp_res = read_expression(opt_res2, exp_key)
-    @test exp_res[!, 1] == 10.0
+    @test exp_res[!, 1] == [10.0]
 end
