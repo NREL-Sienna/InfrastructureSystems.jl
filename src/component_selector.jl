@@ -18,7 +18,28 @@ New system-like types MUST ensure that `get_available_components` and `get_avail
 work for them.
 =#
 
-"The base type for all `ComponentSelector`s."
+"""
+The base type for all `ComponentSelector`s.
+
+Instances of `ComponentSelector` represent lazy, grouped collections of
+`InfrastructureSystemsComponent`s. The core interface is:
+
+  - [`make_selector`](@ref): factory function to handle `ComponentSelector` creation; end
+    users should use this rather than calling the constructors directly.
+  - [`get_groups`](@ref): get the groups that make up a `ComponentSelector`, which will
+    themselves be represented as `ComponentSelector`s.
+  - [`get_components`](@ref): get all the components that make up a `ComponentSelector`,
+    ignoring how they are grouped. A component should appear in the `get_components` of a
+    given selector if and only if it appears in the `get_components` of at least one of that
+    selector's groups.
+  - [`get_name`](@ref): get the name of the `ComponentSelector`. All `ComponentSelector`s
+    have a name, whether it is specified by the user or created automatically.
+  - [`rebuild_selector`](@ref): create a new `ComponentSelector` from an existing one with
+    some details (e.g., the name or the grouping behavior) tweaked.
+
+[`SingularComponentSelector`](@ref)s are `ComponentSelector`s designed to only refer to one
+component (or zero). [`PluralComponentSelector`](@ref)s may refer to more components.
+"""
 abstract type ComponentSelector end
 
 #=
@@ -29,14 +50,20 @@ The interface is the same as for `ComponentSelector` except:
    zero components, else return an iterator of the one component
  - there is a sensible default for `get_groups`; it MAY be overridden
 =#
-"`ComponentSelector`s that can only refer to zero or one components."
+"""
+[`ComponentSelector`](@ref) subtype that can only refer to zero or one components.
+[`get_components`](@ref) will always return zero or one components; [`get_component`](@ref)
+will return the component directly if there is one and return `nothing` if there is not.
+"""
 abstract type SingularComponentSelector <: ComponentSelector end
 
 #=
 `PluralComponentSelector` extension notes:
 The interface is the same as for `ComponentSelector`.
 =#
-"""`ComponentSelector`s that may refer to multiple components."""
+"""
+[`ComponentSelector`](@ref) subtype that may refer to multiple components.
+"""
 abstract type PluralComponentSelector <: ComponentSelector end
 
 #=
@@ -44,7 +71,10 @@ abstract type PluralComponentSelector <: ComponentSelector end
 One MAY subtype this and have a `groupby::Union{Symbol, Function}` field to get an automatic
 implementation of `get_groups`.
 =#
-"`PluralComponentSelector`s whose grouping is determined by a `groupby` field."
+"""
+`PluralComponentSelector`s whose grouping is determined by a `groupby` field. The semantics
+of this field are described at [`make_selector`](@ref).
+"""
 abstract type DynamicallyGroupedComponentSelector <: PluralComponentSelector end
 
 # COMMON COMPONENTSELECTOR INFRASTRUCTURE
@@ -93,8 +123,26 @@ available_and_fn(fn::Union{Function, Nothing}, sys) =
 
 # Generic implementations/generic docstrings for simple functions with many methods
 """
-Factory function to create the appropriate subtype of `ComponentSelector` given the
+Factory function to create the appropriate subtype of [`ComponentSelector`](@ref) given the
 arguments. Users should call this rather than manually constructing `ComponentSelector`s.
+
+# Arguments
+
+Several methods of this function have a parameter `groupby::Union{Symbol, Function}`, which
+specifies how the selector is grouped for the purposes of [`get_groups`](@ref). The
+`groupby` argument has the following semantics:
+
+  - `groupby = :each` (default): each component that makes up the selector forms its own
+    group. The number of groups from [`get_groups`](@ref) will be equal to the number of
+    components from [`get_components`](@ref).
+  - `groupby = :all`: all components that make up the selector are put into the same group.
+    [`get_groups`](@ref) will yield one group.
+  - `groupby = partition_function`: if the argument is a user-supplied function, the
+    function will be applied to each component; all components with the same result under
+    the function will be grouped together, with the name of the group specified by the
+    function's output.
+
+Other arguments are documented on a per-method basis.
 """
 function make_selector end
 
@@ -261,7 +309,11 @@ end
 
 # CONCRETE SUBTYPE IMPLEMENTATIONS
 # NameComponentSelector
-"`ComponentSelector` that refers by name to at most a single component."
+"""
+[`ComponentSelector`](@ref) that refers by type and name to at most a single component. Has
+a single group that contains that component if it exists or contains no components if it
+doesn't.
+"""
 @kwdef struct NameComponentSelector <: SingularComponentSelector
     component_type::Type{<:InfrastructureSystemsComponent}
     component_name::AbstractString
@@ -281,8 +333,18 @@ NameComponentSelector(
     )
 
 """
-Make a `ComponentSelector` pointing to a component with the given type and name.
-Optionally provide a name for the `ComponentSelector`.
+Make a [`ComponentSelector`](@ref) pointing to a single component with the given type and
+name. Optionally provide a name for the selector. Selectors constructed this way contain
+exactly one group, which contains one component if the target component exists and zero if
+it doesn't.
+
+# Arguments
+
+  - `component_type::Type{<:InfrastructureSystemsComponent}`: the type of the target
+    component
+  - `component_name::AbstractString`: the name of the target component
+  - `name::Union{String, Nothing} = nothing`: the name of the selector; if not provided, one
+    will be constructed automatically
 """
 make_selector(
     component_type::Type{<:InfrastructureSystemsComponent},
@@ -290,8 +352,17 @@ make_selector(
     name::Union{String, Nothing} = nothing,
 ) = NameComponentSelector(component_type, component_name, name)
 """
-Make a `ComponentSelector` from a component, pointing to components in any collection with
-the given component's type and name. Optionally provide a name for the `ComponentSelector`.
+Make a [`ComponentSelector`](@ref) from a component, pointing to a single component with the
+same type and name as the one given. Optionally provide a name for the selector. Selectors
+constructed this way contain exactly one group, which contains one component if the target
+component exists and zero if it doesn't.
+
+# Arguments
+
+  - `component::InfrastructureSystemsComponent`: the component whose type and name specify
+    the target of this selector
+  - `name::Union{String, Nothing} = nothing`: the name of the selector; if not provided, one
+    will be constructed automatically
 """
 make_selector(
     component::InfrastructureSystemsComponent;
@@ -324,7 +395,10 @@ function get_components(
 end
 
 # ListComponentSelector
-"`PluralComponentSelector` represented by a list of other `ComponentSelector`s."
+"""
+[`ComponentSelector`](@ref) represented by a list of other `ComponentSelector`s. Those
+selectors form the groups.
+"""
 @kwdef struct ListComponentSelector <: PluralComponentSelector
     # Using tuples internally for immutability => `==` is automatically well-behaved
     content::Tuple{Vararg{ComponentSelector}}
@@ -336,8 +410,15 @@ ListComponentSelector(content::Tuple{Vararg{ComponentSelector}}, ::Nothing = not
     ListComponentSelector(content, "[$(join(get_name.(content), ", "))]")
 
 """
-Make a `ComponentSelector` pointing to a list of sub-selectors, which form the groups.
-Optionally provide a name for the `ComponentSelector`.
+Make a [`ComponentSelector`](@ref) from several existing `ComponentSelector`s. Optionally
+provide a name for the selector. Selectors constructed this way contain one group for each
+of the selectors they were constructed with.
+
+# Arguments
+
+  - `content::ComponentSelector...`: the list of selectors that should form the groups
+  - `name::Union{String, Nothing} = nothing`: the name of the selector; if not provided, one
+    will be constructed automatically
 """
 make_selector(content::ComponentSelector...; name::Union{String, Nothing} = nothing) =
     ListComponentSelector(content, name)
@@ -389,7 +470,10 @@ function rebuild_selector(selector::ListComponentSelector;
 end
 
 # TypeComponentSelector
-"`PluralComponentSelector` represented by a type of component."
+"""
+[`ComponentSelector`](@ref) represented by a type of component. Contains all the components
+of that type, grouped by the `groupby` field (see [`make_selector`](@ref)).
+"""
 @kwdef struct TypeComponentSelector <: DynamicallyGroupedComponentSelector
     component_type::Type{<:InfrastructureSystemsComponent}
     groupby::Union{Symbol, Function}
@@ -410,8 +494,19 @@ TypeComponentSelector(
 ) = TypeComponentSelector(component_type, groupby, subtype_to_string(component_type))
 
 """
-Make a `ComponentSelector` from a type of component. Optionally provide a name and/or
-grouping behavior for the `ComponentSelector`.
+Make a [`ComponentSelector`](@ref) from a type of component. Optionally provide a grouping
+behavior and/or name for the selector. Selectors constructed this way point to all the
+components of the given type, grouped by the `groupby` argument (see the base
+[`make_selector`](@ref) documentation).
+
+# Arguments
+
+  - `component_type::Type{<:InfrastructureSystemsComponent}`: the type of component to
+    select
+  - `groupby::Union{Symbol, Function} = :each`: the grouping behavior (see the base
+    [`make_selector`](@ref) documentation)
+  - `name::Union{String, Nothing} = nothing`: the name of the selector; if not provided, one
+    will be constructed automatically
 """
 make_selector(
     component_type::Type{<:InfrastructureSystemsComponent};
@@ -430,7 +525,11 @@ function get_components(
 end
 
 # FilterComponentSelector
-"`PluralComponentSelector` represented by a filter function and a type of component."
+"""
+[`ComponentSelector`](@ref) represented by a filter function and a type of component.
+Contains all the components of that type that satisfy the filter function, grouped by the
+`groupby` field (see [`make_selector`](@ref)).
+"""
 @kwdef struct FilterComponentSelector <: DynamicallyGroupedComponentSelector
     component_type::Type{<:InfrastructureSystemsComponent}
     filter_func::Function
@@ -464,6 +563,25 @@ Make a ComponentSelector from a filter function and a type of component. The fil
 must accept instances of `component_type` as a sole argument and return a `Bool`. Optionally
 provide a name and/or grouping behavior for the `ComponentSelector`.
 """
+
+"""
+Make a [`ComponentSelector`](@ref) from a filter function and a type of component. The
+filter function must accept instances of `component_type` as a sole argument and return a
+`Bool`. Optionally provide a grouping behavior and/or name for the selector. Selectors
+constructed this way point to all the components of the given type that satisfy the filter
+function, grouped by the `groupby` argument (see the base [`make_selector`](@ref)
+documentation).
+
+# Arguments
+
+  - `filter_func::Function`: the filter function to apply to components
+  - `component_type::Type{<:InfrastructureSystemsComponent}`: the type of component to
+    select
+  - `groupby::Union{Symbol, Function} = :each`: the grouping behavior (see the base
+    [`make_selector`](@ref) documentation)
+  - `name::Union{String, Nothing} = nothing`: the name of the selector; if not provided, one
+    will be constructed automatically
+"""
 make_selector(
     filter_func::Function,
     component_type::Type{<:InfrastructureSystemsComponent};
@@ -485,7 +603,11 @@ function get_components(
 end
 
 # RegroupedComponentSelector
-"`PluralComponentSelector` that wraps another `ComponentSelector` and applies dynamic grouping."
+"""
+[`ComponentSelector`] that wraps another `ComponentSelector` and applies dynamic grouping.
+Components are the same as those of the wrapped selector, grouping is by the `groupby` field
+(see [`make_selector`](@ref))
+"""
 @kwdef struct RegroupedComponentSelector <: DynamicallyGroupedComponentSelector
     wrapped_selector::ComponentSelector
     groupby::Union{Symbol, Function}
