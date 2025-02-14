@@ -160,6 +160,10 @@ specifies how the selector is grouped for the purposes of `get_groups`. The
     function's output.
 
 Other arguments are documented on a per-method basis.
+
+# Examples
+
+See the methods.
 """
 function make_selector end
 
@@ -167,6 +171,13 @@ function make_selector end
 """
 Get the name of the [`ComponentSelector`](@ref). This is either a user-specified name passed
 in at creation or a name automatically generated from the selector's specification.
+
+# Examples
+
+```julia
+sel = make_selector(RenewableDispatch)
+get_name(sel)  # "RenewableDispatch"
+```
 """
 get_name(selector::ComponentSelector) = selector.name
 
@@ -331,6 +342,7 @@ Returns a `ComponentSelector` functionally identical to the input `selector` exc
 changes to its fields specified in the keyword arguments.
 
 # Examples
+
 Suppose you have a selector with `name = "my_name`. If you instead wanted `name = "your_name`:
 ```julia
 sel = make_selector(ThermalStandard, "322_CT_6"; name = "my_name")
@@ -349,6 +361,7 @@ Returns a `ComponentSelector` functionally identical to the input `selector` exc
 changes to its fields specified in the keyword arguments.
 
 # Examples
+
 Suppose you have a selector with `groupby = :all`. If you instead wanted `groupby = :each`:
 ```julia
 sel = make_selector(ThermalStandard; groupby = :all)
@@ -402,6 +415,13 @@ it doesn't.
   - `component_name::AbstractString`: the name of the target component
   - `name::Union{String, Nothing} = nothing`: the name of the selector; if not provided, one
     will be constructed automatically
+
+# Examples
+
+```julia
+sel1 = make_selector(ThermalStandard, "322_CT_6")
+sel2 = make_selector(ThermalStandard, "322_CT_6"; name = "my_selector")
+```
 """
 make_selector(
     component_type::Type{<:InfrastructureSystemsComponent},
@@ -420,6 +440,13 @@ component exists and zero if it doesn't.
     the target of this selector
   - `name::Union{String, Nothing} = nothing`: the name of the selector; if not provided, one
     will be constructed automatically
+
+# Examples
+
+```julia
+sel1 = make_selector(my_component)
+sel2 = make_selector(my_component; name = "my_selector")
+```
 """
 make_selector(
     component::InfrastructureSystemsComponent;
@@ -495,6 +522,13 @@ of the selectors they were constructed with.
   - `content::ComponentSelector...`: the list of selectors that should form the groups
   - `name::Union{String, Nothing} = nothing`: the name of the selector; if not provided, one
     will be constructed automatically
+
+# Examples
+
+```julia
+sel1 = make_selector(make_selector(ThermalStandard), make_selector(RenewableDispatch))
+sel2 = make_selector(make_selector(ThermalStandard), make_selector(RenewableDispatch); name = "my_selector")
+```
 """
 make_selector(content::ComponentSelector...; name::Union{String, Nothing} = nothing) =
     ListComponentSelector(content, name)
@@ -544,6 +578,7 @@ changes to its fields specified in the keyword arguments. For `ListComponentSele
 instead of a `ListComponentSelector`.
 
 # Examples
+
 Suppose you have a selector with manual groups and you want to group by `:each`:
 ```julia
 sel = make_selector(make_selector(ThermalStandard), make_selector(RenewableDispatch))
@@ -601,6 +636,14 @@ components of the given type, grouped by the `groupby` argument (see the base
     [`make_selector`](@ref) documentation)
   - `name::Union{String, Nothing} = nothing`: the name of the selector; if not provided, one
     will be constructed automatically
+
+# Examples
+
+```julia
+sel1 = make_selector(RenewableDispatch)
+sel2 = make_selector(RenewableDispatch; groupby = :all)
+sel3 = make_selector(RenewableDispatch; name = "my_selector")
+```
 """
 make_selector(
     component_type::Type{<:InfrastructureSystemsComponent};
@@ -678,6 +721,14 @@ documentation).
     [`make_selector`](@ref) documentation)
   - `name::Union{String, Nothing} = nothing`: the name of the selector; if not provided, one
     will be constructed automatically
+
+# Examples
+
+```julia
+sel1 = make_selector(RenewableDispatch, x -> get_prime_mover_type(x) == PrimeMovers.PVe)
+sel2 = make_selector(RenewableDispatch, x -> get_prime_mover_type(x) == PrimeMovers.PVe; groupby = :all)
+sel3 = make_selector(RenewableDispatch, x -> get_prime_mover_type(x) == PrimeMovers.PVe; name = "my_selector")
+```
 """
 make_selector(
     filter_func::Function,
