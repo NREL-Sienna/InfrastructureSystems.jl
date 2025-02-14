@@ -21,8 +21,8 @@ work for them.
 """
 The base type for all `ComponentSelector`s.
 
-Instances of `ComponentSelector` represent named, lazy, grouped collections of
-`InfrastructureSystemsComponent`s.
+Instances of `ComponentSelector` represent lazy, grouped, named, system-independent
+collections of `InfrastructureSystemsComponent`s.
 
 # Core Interface
 
@@ -231,13 +231,13 @@ get_available_component(selector::ComponentSelector, sys) =
     get_available_component(nothing, selector, sys)
 
 """
-Get the groups that make up the `ComponentSelector`, first filtering using the filter
-function `scope_limiter`.
-"""
-function get_groups end
+Given a system-like source of component, get the groups that make up the
+[`ComponentSelector`](@ref).
 
-"""
-Get the groups that make up the `ComponentSelector`.
+# Arguments
+
+  - `selector::ComponentSelector`: the `ComponentSelector` whose groups should be retrieved
+  - `sys`: the system-like source of components to draw from
 """
 get_groups(selector::ComponentSelector, sys) = get_groups(nothing, selector, sys)
 
@@ -269,8 +269,16 @@ function _make_group(all_components, partition_results, group_result, group_name
 end
 
 """
-Use the `groupby` property to get the groups that make up the
-`DynamicallyGroupedComponentSelector`
+Given a system-like source of component, use the `groupby` property (see
+[`make_selector`](@ref)) to get the groups that make up the
+`DynamicallyGroupedComponentSelector`.
+
+# Arguments
+
+  - `scope_limiter::Union{Function, Nothing}`: see [`ComponentSelector`](@ref)
+  - `selector::DynamicallyGroupedComponentSelector`: the
+    `DynamicallyGroupedComponentSelector` whose groups should be retrieved
+  - `sys`: the system-like source of components to draw from
 """
 function get_groups(
     scope_limiter::Union{Function, Nothing},
@@ -297,8 +305,22 @@ function get_groups(
     ]
 end
 
-"Get the single group that corresponds to the `SingularComponentSelector`, i.e., itself"
-get_groups(::Union{Function, Nothing}, selector::SingularComponentSelector, sys) =
+"""
+Get the single group that corresponds to the `SingularComponentSelector`, i.e., itself.
+
+# Arguments
+
+  - `scope_limiter::Union{Function, Nothing}`: see [`ComponentSelector`](@ref) (unused in
+    this case)
+  - `selector::SingularComponentSelector`: the `SingularComponentSelector` whose group
+    should be retrieved
+  - `sys`: the system-like source of components to draw from (unused in this case)
+"""
+get_groups(
+    scope_limiter::Union{Function, Nothing},
+    selector::SingularComponentSelector,
+    sys,
+) =
     [selector]
 
 # Fallback `rebuild_selector` that only handles `name`
@@ -404,6 +426,16 @@ make_selector(
     make_selector(typeof(component), get_name(component)::AbstractString; name = name)
 
 # Contents
+"""
+Get the component to which the `NameComponentSelector` points, or `nothing` if such a
+component does not exist in `sys`.
+
+# Arguments
+
+  - `scope_limiter::Union{Function, Nothing}`: see [`ComponentSelector`](@ref)
+  - `selector::NameComponentSelector`: the `NameComponentSelector` whose component to get
+  - `sys`: the system-like source of components to draw from
+"""
 function get_component(
     scope_limiter::Union{Function, Nothing},
     selector::NameComponentSelector,
@@ -415,6 +447,15 @@ function get_component(
     return com
 end
 
+"""
+Get the components to which the `NameComponentSelector` points.
+
+# Arguments
+
+  - `scope_limiter::Union{Function, Nothing}`: see [`ComponentSelector`](@ref)
+  - `selector::NameComponentSelector`: the `NameComponentSelector` whose components to get
+  - `sys`: the system-like source of components to draw from
+"""
 function get_components(
     scope_limiter::Union{Function, Nothing},
     selector::NameComponentSelector,
@@ -456,11 +497,29 @@ of the selectors they were constructed with.
 make_selector(content::ComponentSelector...; name::Union{String, Nothing} = nothing) =
     ListComponentSelector(content, name)
 
+"""
+Get the groups to which the `ListComponentSelector` points.
+
+# Arguments
+
+  - `scope_limiter::Union{Function, Nothing}`: see [`ComponentSelector`](@ref)
+  - `selector::ListComponentSelector`: the `ListComponentSelector` whose groups to get
+  - `sys`: the system-like source of components to draw from
+"""
 # Contents
 function get_groups(::Union{Function, Nothing}, selector::ListComponentSelector, sys)
     return selector.content
 end
 
+"""
+Get the components to which the `ListComponentSelector` points.
+
+# Arguments
+
+  - `scope_limiter::Union{Function, Nothing}`: see [`ComponentSelector`](@ref)
+  - `selector::ListComponentSelector`: the `ListComponentSelector` whose components to get
+  - `sys`: the system-like source of components to draw from
+"""
 function get_components(
     scope_limiter::Union{Function, Nothing},
     selector::ListComponentSelector,
@@ -548,6 +607,15 @@ make_selector(
 ) = TypeComponentSelector(component_type, groupby, name)
 
 # Contents
+"""
+Get the components to which the `TypeComponentSelector` points.
+
+# Arguments
+
+  - `scope_limiter::Union{Function, Nothing}`: see [`ComponentSelector`](@ref)
+  - `selector::TypeComponentSelector`: the `TypeComponentSelector` whose components to get
+  - `sys`: the system-like source of components to draw from
+"""
 function get_components(
     scope_limiter::Union{Function, Nothing},
     selector::TypeComponentSelector,
@@ -592,12 +660,6 @@ FilterComponentSelector(
     )
 
 """
-Make a ComponentSelector from a filter function and a type of component. The filter function
-must accept instances of `component_type` as a sole argument and return a `Bool`. Optionally
-provide a name and/or grouping behavior for the `ComponentSelector`.
-"""
-
-"""
 Make a [`ComponentSelector`](@ref) from a filter function and a type of component. The
 filter function must accept instances of `component_type` as a sole argument and return a
 `Bool`. Optionally provide a grouping behavior and/or name for the selector. Selectors
@@ -623,6 +685,15 @@ make_selector(
 ) = FilterComponentSelector(component_type, filter_func, groupby, name)
 
 # Contents
+"""
+Get the components to which the `FilterComponentSelector` points.
+
+# Arguments
+
+  - `scope_limiter::Union{Function, Nothing}`: see [`ComponentSelector`](@ref)
+  - `selector::FilterComponentSelector`: the `FilterComponentSelector` whose components to get
+  - `sys`: the system-like source of components to draw from
+"""
 function get_components(
     scope_limiter::Union{Function, Nothing},
     selector::FilterComponentSelector,
@@ -655,6 +726,15 @@ end
 get_name(selector::RegroupedComponentSelector) = get_name(selector.wrapped_selector)
 
 # Contents
+"""
+Get the components to which the `RegroupedComponentSelector` points.
+
+# Arguments
+
+  - `scope_limiter::Union{Function, Nothing}`: see [`ComponentSelector`](@ref)
+  - `selector::RegroupedComponentSelector`: the `RegroupedComponentSelector` whose components to get
+  - `sys`: the system-like source of components to draw from
+"""
 get_components(
     scope_limiter::Union{Function, Nothing},
     selector::RegroupedComponentSelector,
