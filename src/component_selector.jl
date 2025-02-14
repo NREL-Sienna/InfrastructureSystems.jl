@@ -21,8 +21,10 @@ work for them.
 """
 The base type for all `ComponentSelector`s.
 
-Instances of `ComponentSelector` represent lazy, grouped collections of
-`InfrastructureSystemsComponent`s. The core interface is:
+Instances of `ComponentSelector` represent named, lazy, grouped collections of
+`InfrastructureSystemsComponent`s.
+
+# Core Interface
 
   - [`make_selector`](@ref): factory function to handle `ComponentSelector` creation; end
     users should use this rather than calling the constructors directly.
@@ -37,8 +39,21 @@ Instances of `ComponentSelector` represent lazy, grouped collections of
   - [`rebuild_selector`](@ref): create a new `ComponentSelector` from an existing one with
     some details (e.g., the name or the grouping behavior) tweaked.
 
-[`SingularComponentSelector`](@ref)s are `ComponentSelector`s designed to only refer to one
-component (or zero). [`PluralComponentSelector`](@ref)s may refer to more components.
+# Availability Filtering
+
+Besides the core interface, also provided are [`get_component`](@ref) for
+`ComponentSelector` subtypes that can only refer to at most one component; and
+[`get_available_component`](@ref), [`get_available_components`](@ref), and
+[`get_available_groups`](@ref), which work the same as the corresponding functions without
+`available` except they only consider components for which [`get_available`](@ref) is true.
+
+# `scope_limiter` Filtering
+
+The `ComponentSelector` methods of `get_component`, `get_components`, and `get_groups`, and
+the corresponding `_available_` variants, take an optional first argument
+`scope_limiter::Union{Function, Nothing}`. If a function is passed in here, it will be used
+as a filter function to limit the components under consideration before the
+`ComponentSelector`'s criteria are evaluated.
 """
 abstract type ComponentSelector end
 
@@ -148,24 +163,39 @@ function make_selector end
 
 # Override this if you define a ComponentSelector subtype with no name field
 """
-Get the name of the `ComponentSelector`. This is either the default name or a custom name
-passed in at creation.
+Get the name of the [`ComponentSelector`](@ref). This is either a user-specified name passed
+in at creation or a name automatically generated from the selector's specification.
 """
 get_name(selector::ComponentSelector) = selector.name
 
 """
-Get the components that make up the `ComponentSelector`.
+Given a system-like source of component, get those components that make up the
+[`ComponentSelector`](@ref).
+
+# Arguments
+
+  - `selector::ComponentSelector`: the `ComponentSelector` that specifies which components
+    to get
+  - `sys`: the system-like source of components to draw from
 """
 get_components(selector::ComponentSelector, sys) = get_components(nothing, selector, sys)
 
 """
-Get the component that matches the `SingleComponentSelector`, or `nothing` if there is no match.
+Get the single component that matches the `SingularComponentSelector`, or `nothing` if there
+is no match.
+
+# Arguments
+
+  - `selector::SingularComponentSelector`: the `ComponentSelector` that specifies which
+    component to get
+  - `sys`: the system-like source of components to draw from
 """
 get_component(selector::SingularComponentSelector, sys) =
     get_component(nothing, selector, sys)
 
 """
-Get the available components of the collection that make up the `ComponentSelector`.
+Like [`get_components`](@ref) but only operates on components for which
+[`get_available`](@ref) is `true`.
 """
 function get_available_components(
     scope_limiter::Union{Function, Nothing},
@@ -177,14 +207,15 @@ function get_available_components(
 end
 
 """
-Get the available components of the collection that make up the `ComponentSelector`.
+Like [`get_components`](@ref) but only operates on components for which
+[`get_available`](@ref) is `true`.
 """
 get_available_components(selector::ComponentSelector, sys) =
     get_available_components(nothing, selector, sys)
 
 """
-Get the available component of the collection that makes up the `SingularComponentSelector`;
-`nothing` if there is none.
+Like [`get_component`](@ref) but only operates on components for which
+[`get_available`](@ref) is `true`.
 """
 get_available_component(
     scope_limiter::Union{Function, Nothing},
@@ -193,8 +224,8 @@ get_available_component(
 ) = get_component(available_and_fn(scope_limiter, sys), selector, sys)
 
 """
-Get the available component of the collection that makes up the `SingularComponentSelector`;
-`nothing` if there is none.
+Like [`get_component`](@ref) but only operates on components for which
+[`get_available`](@ref) is `true`.
 """
 get_available_component(selector::ComponentSelector, sys) =
     get_available_component(nothing, selector, sys)
@@ -211,7 +242,8 @@ Get the groups that make up the `ComponentSelector`.
 get_groups(selector::ComponentSelector, sys) = get_groups(nothing, selector, sys)
 
 """
-Get the available groups of the collection that make up the `ComponentSelector`.
+Like [`get_groups`](@ref) but only operates on components for which [`get_available`](@ref)
+is `true`.
 """
 get_available_groups(
     scope_limiter::Union{Function, Nothing},
@@ -220,7 +252,8 @@ get_available_groups(
 ) = get_groups(available_and_fn(scope_limiter, sys), selector, sys)
 
 """
-Get the available groups of the collection that make up the `ComponentSelector`.
+Like [`get_groups`](@ref) but only operates on components for which [`get_available`](@ref)
+is `true`.
 """
 get_available_groups(selector::ComponentSelector, sys) =
     get_available_groups(nothing, selector, sys)
