@@ -18,6 +18,8 @@ New system-like types MUST ensure that `get_available_components` and `get_avail
 work for them.
 =#
 
+# NOTE we cannot do all the @ref links we want to here because `IS.get_components !== PSY.get_components`, etc.
+# See https://github.com/NREL-Sienna/InfrastructureSystems.jl/issues/388#issuecomment-2660019861
 """
 The base type for all `ComponentSelector`s.
 
@@ -26,26 +28,26 @@ collections of `InfrastructureSystemsComponent`s.
 
 # Core Interface
 
-  - [`make_selector`](@ref): factory function to handle `ComponentSelector` creation; end
+  - `make_selector`: factory function to handle `ComponentSelector` creation; end
     users should use this rather than calling the constructors directly.
-  - [`get_groups`](@ref): get the groups that make up a `ComponentSelector`, which will
+  - `get_groups`: get the groups that make up a `ComponentSelector`, which will
     themselves be represented as `ComponentSelector`s.
-  - [`get_components`](@ref): get all the components that make up a `ComponentSelector`,
+  - `get_components`: get all the components that make up a `ComponentSelector`,
     ignoring how they are grouped. A component should appear in the `get_components` of a
     given selector if and only if it appears in the `get_components` of at least one of that
     selector's groups.
-  - [`get_name`](@ref): get the name of the `ComponentSelector`. All `ComponentSelector`s
+  - `get_name`: get the name of the `ComponentSelector`. All `ComponentSelector`s
     have a name, whether it is specified by the user or created automatically.
-  - [`rebuild_selector`](@ref): create a new `ComponentSelector` from an existing one with
+  - `rebuild_selector`: create a new `ComponentSelector` from an existing one with
     some details (e.g., the name or the grouping behavior) tweaked.
 
 # Availability Filtering
 
-Besides the core interface, also provided are [`get_component`](@ref) for
+Besides the core interface, also provided are `get_component` for
 `ComponentSelector` subtypes that can only refer to at most one component; and
-[`get_available_component`](@ref), [`get_available_components`](@ref), and
-[`get_available_groups`](@ref), which work the same as the corresponding functions without
-`available` except they only consider components for which [`get_available`](@ref) is true.
+`get_available_component`, `get_available_components`, and
+`get_available_groups`, which work the same as the corresponding functions without
+`available` except they only consider components for which `get_available` is true.
 
 # `scope_limiter` Filtering
 
@@ -67,7 +69,7 @@ The interface is the same as for `ComponentSelector` except:
 =#
 """
 [`ComponentSelector`](@ref) subtype that can only refer to zero or one components.
-[`get_components`](@ref) will always return zero or one components; [`get_component`](@ref)
+`get_components` will always return zero or one components; `get_component`
 will return the component directly if there is one and return `nothing` if there is not.
 """
 abstract type SingularComponentSelector <: ComponentSelector end
@@ -144,14 +146,14 @@ arguments. Users should call this rather than manually constructing `ComponentSe
 # Arguments
 
 Several methods of this function have a parameter `groupby::Union{Symbol, Function}`, which
-specifies how the selector is grouped for the purposes of [`get_groups`](@ref). The
+specifies how the selector is grouped for the purposes of `get_groups`. The
 `groupby` argument has the following semantics:
 
   - `groupby = :each` (default): each component that makes up the selector forms its own
-    group. The number of groups from [`get_groups`](@ref) will be equal to the number of
-    components from [`get_components`](@ref).
+    group. The number of groups from `get_groups` will be equal to the number of
+    components from `get_components`.
   - `groupby = :all`: all components that make up the selector are put into the same group.
-    [`get_groups`](@ref) will yield one group.
+    `get_groups` will yield one group.
   - `groupby = partition_function`: if the argument is a user-supplied function, the
     function will be applied to each component; all components with the same result under
     the function will be grouped together, with the name of the group specified by the
@@ -194,7 +196,7 @@ get_component(selector::SingularComponentSelector, sys) =
     get_component(nothing, selector, sys)
 
 """
-Like [`get_components`](@ref) but only operates on components for which
+Like `get_components` but only operates on components for which
 [`get_available`](@ref) is `true`.
 """
 function get_available_components(
@@ -207,14 +209,14 @@ function get_available_components(
 end
 
 """
-Like [`get_components`](@ref) but only operates on components for which
+Like `get_components` but only operates on components for which
 [`get_available`](@ref) is `true`.
 """
 get_available_components(selector::ComponentSelector, sys) =
     get_available_components(nothing, selector, sys)
 
 """
-Like [`get_component`](@ref) but only operates on components for which
+Like `get_component` but only operates on components for which
 [`get_available`](@ref) is `true`.
 """
 get_available_component(
@@ -224,7 +226,7 @@ get_available_component(
 ) = get_component(available_and_fn(scope_limiter, sys), selector, sys)
 
 """
-Like [`get_component`](@ref) but only operates on components for which
+Like `get_component` but only operates on components for which
 [`get_available`](@ref) is `true`.
 """
 get_available_component(selector::ComponentSelector, sys) =

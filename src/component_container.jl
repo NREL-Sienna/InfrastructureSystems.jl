@@ -20,10 +20,10 @@ function get_component end
 "Get whether the given component of the given system is available for use (defaults to true)."
 get_available(::ComponentContainer, ::InfrastructureSystemsComponent) = true
 
-"Like [`get_components`](@ref) but only on components that are available."
+"Like `get_components` but only on components that are available."
 function get_available_components end
 
-"Like [`get_component`](@ref) but only on components that are available."
+"Like `get_component` but only on components that are available."
 function get_available_component end
 
 get_available_components(sys::ComponentContainer, args...; kwargs...) =
