@@ -37,11 +37,11 @@ Construct SystemData to store components and time series data.
 
   - `validation_descriptor_file = nothing`: Optionally, a file defining component validation
     descriptors.
-  - `time_series_in_memory = false`: Controls whether time series data is stored in memory or
-    in a file.
-  - `time_series_directory = nothing`: Controls what directory time series data is stored in.
-    Default is the environment variable SIENNA_TIME_SERIES_DIRECTORY or tempdir() if that
-    isn't set.
+  - `time_series_in_memory = false`: Controls whether time series data is stored in memory
+    or in a file.
+  - `time_series_directory = nothing`: Controls what directory time series data is stored
+    in. Default is the environment variable `SIENNA_TIME_SERIES_DIRECTORY` or `tempdir()` if
+    that isn't set.
   - `compression = CompressionSettings()`: Controls compression of time series data.
 """
 function SystemData(;

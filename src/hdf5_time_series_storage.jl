@@ -35,9 +35,9 @@ Constructs Hdf5TimeSeriesStorage.
   - `create_file::Bool`: create new file
   - `filename=nothing`: if nothing, create a temp file, else use this name.
   - `directory=nothing`: if set and filename is nothing, create a temp file in this
-    directory. If it is not set, use the environment variable SIENNA_TIME_SERIES_DIRECTORY.
-    If that is not set, use tempdir(). This should be set if the time series data is larger
-    than the tmp filesystem can hold.
+    directory. If it is not set, use the environment variable
+    `SIENNA_TIME_SERIES_DIRECTORY`. If that is not set, use tempdir(). This should be set if
+    the time series data is larger than the tmp filesystem can hold.
 """
 function Hdf5TimeSeriesStorage(
     create_file::Bool;

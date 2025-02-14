@@ -358,7 +358,8 @@ deserialize(::Type{FunctionData}, val::Dict) =
 # PowerSimulations.
 
 """
-Get from a subtype or instance of FunctionData the type of data its get_raw_data method returns
+Get from a subtype or instance of FunctionData the type of data its `get_raw_data` method
+returns
 """
 function get_raw_data_type end
 get_raw_data_type(::Union{LinearFunctionData, Type{LinearFunctionData}}) =
