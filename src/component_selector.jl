@@ -424,6 +424,8 @@ it doesn't.
 sel1 = make_selector(ThermalStandard, "322_CT_6")
 sel2 = make_selector(ThermalStandard, "322_CT_6"; name = "my_selector")
 ```
+
+See also: [`make_selector`](@ref) unified function documentation
 """
 make_selector(
     component_type::Type{<:InfrastructureSystemsComponent},
@@ -449,6 +451,8 @@ component exists and zero if it doesn't.
 sel1 = make_selector(my_component)
 sel2 = make_selector(my_component; name = "my_selector")
 ```
+
+See also: [`make_selector`](@ref) unified function documentation
 """
 make_selector(
     component::InfrastructureSystemsComponent;
@@ -531,6 +535,8 @@ of the selectors they were constructed with.
 sel1 = make_selector(make_selector(ThermalStandard), make_selector(RenewableDispatch))
 sel2 = make_selector(make_selector(ThermalStandard), make_selector(RenewableDispatch); name = "my_selector")
 ```
+
+See also: [`make_selector`](@ref) unified function documentation
 """
 make_selector(content::ComponentSelector...; name::Union{String, Nothing} = nothing) =
     ListComponentSelector(content, name)
@@ -645,6 +651,8 @@ sel1 = make_selector(RenewableDispatch)
 sel2 = make_selector(RenewableDispatch; groupby = :all)
 sel3 = make_selector(RenewableDispatch; name = "my_selector")
 ```
+
+See also: [`make_selector`](@ref) unified function documentation
 """
 make_selector(
     component_type::Type{<:InfrastructureSystemsComponent};
@@ -730,6 +738,8 @@ sel1 = make_selector(RenewableDispatch, x -> get_prime_mover_type(x) == PrimeMov
 sel2 = make_selector(RenewableDispatch, x -> get_prime_mover_type(x) == PrimeMovers.PVe; groupby = :all)
 sel3 = make_selector(RenewableDispatch, x -> get_prime_mover_type(x) == PrimeMovers.PVe; name = "my_selector")
 ```
+
+See also: [`make_selector`](@ref) unified function documentation
 """
 make_selector(
     filter_func::Function,
