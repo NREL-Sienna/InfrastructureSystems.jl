@@ -194,13 +194,13 @@ Given a system-like source of component, get those components that make up the
 get_components(selector::ComponentSelector, sys) = get_components(nothing, selector, sys)
 
 """
-Get the single component that matches the `SingularComponentSelector`, or `nothing` if there
-is no match.
+Get the single component that matches the [`SingularComponentSelector`](@ref), or `nothing`
+if there is no match.
 
 # Arguments
 
-  - `selector::SingularComponentSelector`: the `ComponentSelector` that specifies which
-    component to get
+  - `selector::SingularComponentSelector`: the `SingularComponentSelector` that specifies
+    which component to get
   - `sys`: the system-like source of components to draw from
 """
 get_component(selector::SingularComponentSelector, sys) =
@@ -272,8 +272,8 @@ get_available_groups(selector::ComponentSelector, sys) =
     get_available_groups(nothing, selector, sys)
 
 """
-Make a `ComponentSelector` containing the components in `all_components` whose corresponding
-entry of `partition_results` matches `group_result`
+Make a [`ComponentSelector`](@ref) containing the components in `all_components` whose
+corresponding entry of `partition_results` matches `group_result`
 """
 function _make_group(all_components, partition_results, group_result, group_name)
     to_include = [isequal(p_res, group_result) for p_res in partition_results]
@@ -290,7 +290,7 @@ Given a system-like source of component, use the `groupby` property (see
 
   - `scope_limiter::Union{Function, Nothing}`: see [`ComponentSelector`](@ref)
   - `selector::DynamicallyGroupedComponentSelector`: the
-    `DynamicallyGroupedComponentSelector` whose groups should be retrieved
+    [`DynamicallyGroupedComponentSelector`](@ref) whose groups should be retrieved
   - `sys`: the system-like source of components to draw from
 """
 function get_groups(
@@ -319,7 +319,8 @@ function get_groups(
 end
 
 """
-Get the single group that corresponds to the `SingularComponentSelector`, i.e., itself.
+Get the single group that corresponds to the [`SingularComponentSelector`](@ref), i.e.,
+itself.
 
 # Arguments
 
@@ -338,12 +339,13 @@ get_groups(
 
 # Fallback `rebuild_selector` that only handles `name`
 """
-Returns a `ComponentSelector` functionally identical to the input `selector` except with the
-changes to its fields specified in the keyword arguments.
+Returns a [`ComponentSelector`](@ref) functionally identical to the input `selector` except
+with the changes to its fields specified in the keyword arguments.
 
 # Examples
 
-Suppose you have a selector with `name = "my_name`. If you instead wanted `name = "your_name`:
+Suppose you have a selector with `name = "my_name`. If you instead wanted `name =
+"your_name`:
 ```julia
 sel = make_selector(ThermalStandard, "322_CT_6"; name = "my_name")
 sel_yours = rebuild_selector(sel; name = "your_name")
@@ -357,8 +359,8 @@ function rebuild_selector(selector::T; name = nothing) where {T <: ComponentSele
 end
 
 """
-Returns a `ComponentSelector` functionally identical to the input `selector` except with the
-changes to its fields specified in the keyword arguments.
+Returns a [`ComponentSelector`](@ref) functionally identical to the input `selector` except
+with the changes to its fields specified in the keyword arguments.
 
 # Examples
 
@@ -456,8 +458,8 @@ make_selector(
 
 # Contents
 """
-Get the component to which the `NameComponentSelector` points, or `nothing` if such a
-component does not exist in `sys`.
+Get the component to which the [`NameComponentSelector`](@ref) points, or `nothing` if such
+a component does not exist in `sys`.
 
 # Arguments
 
@@ -477,7 +479,7 @@ function get_component(
 end
 
 """
-Get the components to which the `NameComponentSelector` points.
+Get the components to which the [`NameComponentSelector`](@ref) points.
 
 # Arguments
 
@@ -534,7 +536,7 @@ make_selector(content::ComponentSelector...; name::Union{String, Nothing} = noth
     ListComponentSelector(content, name)
 
 """
-Get the groups to which the `ListComponentSelector` points.
+Get the groups to which the [`ListComponentSelector`](@ref) points.
 
 # Arguments
 
@@ -548,7 +550,7 @@ function get_groups(::Union{Function, Nothing}, selector::ListComponentSelector,
 end
 
 """
-Get the components to which the `ListComponentSelector` points.
+Get the components to which the [`ListComponentSelector`](@ref) points.
 
 # Arguments
 
@@ -572,10 +574,9 @@ end
 
 # Rebuilding
 """
-Returns a `ComponentSelector` functionally identical to the input `selector` except with the
-changes to its fields specified in the keyword arguments. For `ListComponentSelector`, if a
-`groupby` option is specified, the return type will be a `RegroupedComponentSelector`
-instead of a `ListComponentSelector`.
+Returns a [`ComponentSelector`](@ref) functionally identical to the input `selector` except
+with the changes to its fields specified in the keyword arguments. It is not guaranteed that
+the result will have the same concrete type.
 
 # Examples
 
@@ -653,7 +654,7 @@ make_selector(
 
 # Contents
 """
-Get the components to which the `TypeComponentSelector` points.
+Get the components to which the [`TypeComponentSelector`](@ref) points.
 
 # Arguments
 
@@ -739,7 +740,7 @@ make_selector(
 
 # Contents
 """
-Get the components to which the `FilterComponentSelector` points.
+Get the components to which the [`FilterComponentSelector`](@ref) points.
 
 # Arguments
 
@@ -761,7 +762,7 @@ end
 
 # RegroupedComponentSelector
 """
-[`ComponentSelector`] that wraps another `ComponentSelector` and applies dynamic grouping.
+[`ComponentSelector`](@ref) that wraps another `ComponentSelector` and applies dynamic grouping.
 Components are the same as those of the wrapped selector, grouping is by the `groupby` field
 (see [`make_selector`](@ref))
 """
@@ -780,7 +781,7 @@ get_name(selector::RegroupedComponentSelector) = get_name(selector.wrapped_selec
 
 # Contents
 """
-Get the components to which the `RegroupedComponentSelector` points.
+Get the components to which the [`RegroupedComponentSelector`](@ref) points.
 
 # Arguments
 
