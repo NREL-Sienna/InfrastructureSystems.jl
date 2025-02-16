@@ -21,10 +21,11 @@ work for them.
 # NOTE we cannot do all the @ref links we want to here because `IS.get_components !== PSY.get_components`, etc.
 # See https://github.com/NREL-Sienna/InfrastructureSystems.jl/issues/388#issuecomment-2660019861
 """
-The base type for all `ComponentSelector`s.
-
-Instances of `ComponentSelector` represent lazy, grouped, named, system-independent
-collections of `InfrastructureSystemsComponent`s.
+Given some source of components to draw from, like a system, a `ComponentSelector` picks out
+a certain subset of them based on some user-defined selection criteria. A
+`ComponentSelector` can also be used to name that subset of components or to split it up
+into groups. The same `ComponentSelector` can be used to apply the same set of selection
+criteria to multiple sources of components.
 
 # Core Interface
 
