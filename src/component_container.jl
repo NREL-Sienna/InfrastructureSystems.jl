@@ -1,4 +1,15 @@
-"A data structure that acts like a container of components"
+"""
+A data structure that acts like a container of components. The `ComponentContainer`
+interface consists of:
+  - `get_components`
+  - `get_component`
+  - `get_available(::ComponentContainer, ::InfrastructureSystemsComponent)`
+  - `get_available_components`
+  - `get_available_component`
+
+Notable subtypes include [`Components`](@ref), [`SystemData`](@ref), and
+[`PowerSystems.System`](@extref).
+"""
 abstract type ComponentContainer <: InfrastructureSystemsContainer end
 
 # For each of these functions, `ComponentContainer` concrete subtypes MUST either implement

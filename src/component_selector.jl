@@ -14,41 +14,47 @@ Concrete subtypes SHOULD implement:
  - The factory method `make_selector` (make sure your signature does not conflict with an
    existing one)
 
-New system-like types MUST ensure that `get_available_components` and `get_available_groups`
-work for them.
+New `ComponentContainer`-like types MUST ensure that `get_available_components` and
+`get_available_groups` work for them.
 =#
 
 # NOTE we cannot do all the @ref links we want to here because `IS.get_components !== PSY.get_components`, etc.
 # See https://github.com/NREL-Sienna/InfrastructureSystems.jl/issues/388#issuecomment-2660019861
 """
-Given some source of components to draw from, like a system, a `ComponentSelector` picks out
-a certain subset of them based on some user-defined selection criteria. A
-`ComponentSelector` can also be used to name that subset of components or to split it up
-into groups. The same `ComponentSelector` can be used to apply the same set of selection
-criteria to multiple sources of components.
+Given some [`ComponentContainer`](@ref)-like source of components to draw from, such as a
+[`PowerSystems.System`](@extref), a `ComponentSelector` picks out a certain subset of them
+based on some user-defined selection criteria. A `ComponentSelector` can also be used to
+name that subset of components or to split it up into groups. The same `ComponentSelector`
+can be used to apply the same set of selection criteria to multiple sources of components.
+The primary use case for `ComponentSelector` is to support repeatable multi-scenario
+post-processing analytics (see e.g.
+[`PowerAnalytics.jl`](https://nrel-sienna.github.io/PowerAnalytics.jl/stable/)).
+
+Formally, instances of `ComponentSelector` represent lazy, partitioned, named,
+source-independent collections of `InfrastructureSystemsComponent`s.
 
 # Core Interface
 
-  - `make_selector`: factory function to handle `ComponentSelector` creation; end
+  - [`make_selector`](@ref): factory function to handle `ComponentSelector` creation; end
     users should use this rather than calling the constructors directly.
-  - `get_groups`: get the groups that make up a `ComponentSelector`, which will
-    themselves be represented as `ComponentSelector`s.
-  - `get_components`: get all the components that make up a `ComponentSelector`,
-    ignoring how they are grouped. A component should appear in the `get_components` of a
-    given selector if and only if it appears in the `get_components` of at least one of that
+  - `get_groups`: get the groups that make up a `ComponentSelector`, which will themselves
+    be represented as `ComponentSelector`s.
+  - `get_components`: get all the components that make up a `ComponentSelector`, ignoring
+    how they are grouped. A component should appear in the `get_components` of a given
+    selector if and only if it appears in the `get_components` of at least one of that
     selector's groups.
-  - `get_name`: get the name of the `ComponentSelector`. All `ComponentSelector`s
+  - [`get_name`](@ref): get the name of the `ComponentSelector`. All `ComponentSelector`s
     have a name, whether it is specified by the user or created automatically.
-  - `rebuild_selector`: create a new `ComponentSelector` from an existing one with
+  - [`rebuild_selector`](@ref): create a new `ComponentSelector` from an existing one with
     some details (e.g., the name or the grouping behavior) tweaked.
 
 # Availability Filtering
 
-Besides the core interface, also provided are `get_component` for
-`ComponentSelector` subtypes that can only refer to at most one component; and
-`get_available_component`, `get_available_components`, and
-`get_available_groups`, which work the same as the corresponding functions without
-`available` except they only consider components for which `get_available` is true.
+Besides the core interface, also provided are `get_component` for `ComponentSelector`
+subtypes that can only refer to at most one component; and `get_available_component`,
+`get_available_components`, and `get_available_groups`, which work the same as the
+corresponding functions without `available` except they only consider components for which
+`get_available` is true.
 
 # `scope_limiter` Filtering
 
@@ -135,7 +141,10 @@ optional_and_fns(::Nothing, fn2::Function) = fn2
 optional_and_fns(fn1::Function, ::Nothing) = fn1
 optional_and_fns(::Nothing, ::Nothing) = Returns(true)
 
-"Use `optional_and_fns` to return a function that computes the conjunction of get_available and the given function"
+"""
+Use `optional_and_fns` to return a function that computes the conjunction of `get_available`
+and the given function
+"""
 available_and_fn(fn::Union{Function, Nothing}, sys) =
     optional_and_fns(Base.Fix1(get_available, sys), fn)
 
@@ -183,14 +192,14 @@ get_name(sel)  # "RenewableDispatch"
 get_name(selector::ComponentSelector) = selector.name
 
 """
-Given a system-like source of component, get those components that make up the
-[`ComponentSelector`](@ref).
+Given a [`ComponentContainer`](@ref)-like source of components, get those components that make up
+the [`ComponentSelector`](@ref).
 
 # Arguments
 
   - `selector::ComponentSelector`: the `ComponentSelector` that specifies which components
     to get
-  - `sys`: the system-like source of components to draw from
+  - `sys`: the [`ComponentContainer`](@ref)-like source of components to draw from
 """
 get_components(selector::ComponentSelector, sys) = get_components(nothing, selector, sys)
 
@@ -202,7 +211,7 @@ if there is no match.
 
   - `selector::SingularComponentSelector`: the `SingularComponentSelector` that specifies
     which component to get
-  - `sys`: the system-like source of components to draw from
+  - `sys`: the [`ComponentContainer`](@ref)-like source of components to draw from
 """
 get_component(selector::SingularComponentSelector, sys) =
     get_component(nothing, selector, sys)
@@ -245,13 +254,13 @@ get_available_component(selector::ComponentSelector, sys) =
     get_available_component(nothing, selector, sys)
 
 """
-Given a system-like source of component, get the groups that make up the
+Given a [`ComponentContainer`](@ref)-like source of components, get the groups that make up the
 [`ComponentSelector`](@ref).
 
 # Arguments
 
   - `selector::ComponentSelector`: the `ComponentSelector` whose groups should be retrieved
-  - `sys`: the system-like source of components to draw from
+  - `sys`: the [`ComponentContainer`](@ref)-like source of components to draw from
 """
 get_groups(selector::ComponentSelector, sys) = get_groups(nothing, selector, sys)
 
@@ -283,8 +292,8 @@ function _make_group(all_components, partition_results, group_result, group_name
 end
 
 """
-Given a system-like source of component, use the `groupby` property (see
-[`make_selector`](@ref)) to get the groups that make up the
+Given a [`ComponentContainer`](@ref)-like source of components, use the `groupby` property
+(see [`make_selector`](@ref)) to get the groups that make up the
 `DynamicallyGroupedComponentSelector`.
 
 # Arguments
@@ -292,7 +301,7 @@ Given a system-like source of component, use the `groupby` property (see
   - `scope_limiter::Union{Function, Nothing}`: see [`ComponentSelector`](@ref)
   - `selector::DynamicallyGroupedComponentSelector`: the
     [`DynamicallyGroupedComponentSelector`](@ref) whose groups should be retrieved
-  - `sys`: the system-like source of components to draw from
+  - `sys`: the [`ComponentContainer`](@ref)-like source of components to draw from
 """
 function get_groups(
     scope_limiter::Union{Function, Nothing},
@@ -329,7 +338,8 @@ itself.
     this case)
   - `selector::SingularComponentSelector`: the `SingularComponentSelector` whose group
     should be retrieved
-  - `sys`: the system-like source of components to draw from (unused in this case)
+  - `sys`: the [`ComponentContainer`](@ref)-like source of components to draw from (unused in
+    this case)
 """
 get_groups(
     scope_limiter::Union{Function, Nothing},
@@ -470,7 +480,7 @@ a component does not exist in `sys`.
 
   - `scope_limiter::Union{Function, Nothing}`: see [`ComponentSelector`](@ref)
   - `selector::NameComponentSelector`: the `NameComponentSelector` whose component to get
-  - `sys`: the system-like source of components to draw from
+  - `sys`: the [`ComponentContainer`](@ref)-like source of components to draw from
 """
 function get_component(
     scope_limiter::Union{Function, Nothing},
@@ -490,7 +500,7 @@ Get the components to which the [`NameComponentSelector`](@ref) points.
 
   - `scope_limiter::Union{Function, Nothing}`: see [`ComponentSelector`](@ref)
   - `selector::NameComponentSelector`: the `NameComponentSelector` whose components to get
-  - `sys`: the system-like source of components to draw from
+  - `sys`: the [`ComponentContainer`](@ref)-like source of components to draw from
 """
 function get_components(
     scope_limiter::Union{Function, Nothing},
@@ -549,7 +559,7 @@ Get the groups to which the [`ListComponentSelector`](@ref) points.
 
   - `scope_limiter::Union{Function, Nothing}`: see [`ComponentSelector`](@ref)
   - `selector::ListComponentSelector`: the `ListComponentSelector` whose groups to get
-  - `sys`: the system-like source of components to draw from
+  - `sys`: the [`ComponentContainer`](@ref)-like source of components to draw from
 """
 # Contents
 function get_groups(::Union{Function, Nothing}, selector::ListComponentSelector, sys)
@@ -563,7 +573,7 @@ Get the components to which the [`ListComponentSelector`](@ref) points.
 
   - `scope_limiter::Union{Function, Nothing}`: see [`ComponentSelector`](@ref)
   - `selector::ListComponentSelector`: the `ListComponentSelector` whose components to get
-  - `sys`: the system-like source of components to draw from
+  - `sys`: the [`ComponentContainer`](@ref)-like source of components to draw from
 """
 function get_components(
     scope_limiter::Union{Function, Nothing},
@@ -669,7 +679,7 @@ Get the components to which the [`TypeComponentSelector`](@ref) points.
 
   - `scope_limiter::Union{Function, Nothing}`: see [`ComponentSelector`](@ref)
   - `selector::TypeComponentSelector`: the `TypeComponentSelector` whose components to get
-  - `sys`: the system-like source of components to draw from
+  - `sys`: the [`ComponentContainer`](@ref)-like source of components to draw from
 """
 function get_components(
     scope_limiter::Union{Function, Nothing},
@@ -756,8 +766,9 @@ Get the components to which the [`FilterComponentSelector`](@ref) points.
 # Arguments
 
   - `scope_limiter::Union{Function, Nothing}`: see [`ComponentSelector`](@ref)
-  - `selector::FilterComponentSelector`: the `FilterComponentSelector` whose components to get
-  - `sys`: the system-like source of components to draw from
+  - `selector::FilterComponentSelector`: the `FilterComponentSelector` whose components to
+    get
+  - `sys`: the [`ComponentContainer`](@ref)-like source of components to draw from
 """
 function get_components(
     scope_limiter::Union{Function, Nothing},
@@ -773,9 +784,9 @@ end
 
 # RegroupedComponentSelector
 """
-[`ComponentSelector`](@ref) that wraps another `ComponentSelector` and applies dynamic grouping.
-Components are the same as those of the wrapped selector, grouping is by the `groupby` field
-(see [`make_selector`](@ref))
+[`ComponentSelector`](@ref) that wraps another `ComponentSelector` and applies dynamic
+grouping. Components are the same as those of the wrapped selector, grouping is by the
+`groupby` field (see [`make_selector`](@ref))
 """
 @kwdef struct RegroupedComponentSelector <: DynamicallyGroupedComponentSelector
     wrapped_selector::ComponentSelector
@@ -797,8 +808,9 @@ Get the components to which the [`RegroupedComponentSelector`](@ref) points.
 # Arguments
 
   - `scope_limiter::Union{Function, Nothing}`: see [`ComponentSelector`](@ref)
-  - `selector::RegroupedComponentSelector`: the `RegroupedComponentSelector` whose components to get
-  - `sys`: the system-like source of components to draw from
+  - `selector::RegroupedComponentSelector`: the `RegroupedComponentSelector` whose
+    components to get
+  - `sys`: the [`ComponentContainer`](@ref)-like source of components to draw from
 """
 get_components(
     scope_limiter::Union{Function, Nothing},
