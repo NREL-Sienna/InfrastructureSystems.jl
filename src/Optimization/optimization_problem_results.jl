@@ -75,7 +75,6 @@ get_aux_variable_values(res::OptimizationProblemResults) = res.aux_variable_valu
 get_total_cost(res::OptimizationProblemResults) = get_objective_value(res)
 get_optimizer_stats(res::OptimizationProblemResults) = res.optimizer_stats
 get_parameter_values(res::OptimizationProblemResults) = res.parameter_values
-get_resolution(res::OptimizationProblemResults) = res.timestamps.step
 get_source_data(res::OptimizationProblemResults) = res.source_data
 get_forecast_horizon(res::OptimizationProblemResults) = length(get_timestamps(res))
 get_output_dir(res::OptimizationProblemResults) = res.output_dir
@@ -90,6 +89,16 @@ get_result_values(x::OptimizationProblemResults, ::VariableKey) = x.variable_val
 
 function get_objective_value(res::OptimizationProblemResults, execution = 1)
     return res.optimizer_stats[execution, :objective_value]
+end
+
+function get_resolution(res::OptimizationProblemResults)
+    # Method return the first resolution between timestamps
+    # If single timestamp is used, it return nothing
+    diff_res = diff(get_timestamps(res))
+    if !isempty(diff_res)
+        return first(diff_res)
+    end
+    return nothing
 end
 
 function export_result(
