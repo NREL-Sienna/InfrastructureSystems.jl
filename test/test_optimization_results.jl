@@ -68,6 +68,24 @@ const IS = InfrastructureSystems
         mktempdir(),
         mktempdir(),
     )
+    timestamp_vec2 = deepcopy(timestamp_vec)
+    pop!(timestamp_vec2)
+    opt_res3 = OptimizationProblemResults(
+        base_power,
+        timestamp_vec2,
+        data,
+        uuid,
+        aux_variable_values,
+        variable_values,
+        dual_values,
+        parameter_values,
+        expression_values,
+        optimizer_stats,
+        metadata,
+        "test_model",
+        mktempdir(),
+        mktempdir(),
+    )
     # Check that variable has time series
     var_res = read_variable(opt_res1, var_key)
     @test size(var_res) == (2, 2)
@@ -85,4 +103,8 @@ const IS = InfrastructureSystems
     IS.Optimization.convert_result_to_natural_units(::Type{<:MockExpression}) = true
     exp_res = read_expression(opt_res2, exp_key)
     @test exp_res[!, 1] == [10.0]
+    # Test resolutions
+    @test IS.Optimization.get_resolution(opt_res1) == Millisecond(3600000)
+    @test IS.Optimization.get_resolution(opt_res2) == Millisecond(3600000)
+    @test isnothing(IS.Optimization.get_resolution(opt_res3))
 end
