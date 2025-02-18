@@ -31,7 +31,7 @@ post-processing analytics (see e.g.
 [`PowerAnalytics.jl`](https://nrel-sienna.github.io/PowerAnalytics.jl/stable/)).
 
 Formally, instances of `ComponentSelector` represent lazy, partitioned, named,
-source-independent collections of `InfrastructureSystemsComponent`s.
+source-independent collections of [`InfrastructureSystemsComponent`](@ref)s.
 
 # Core Interface
 

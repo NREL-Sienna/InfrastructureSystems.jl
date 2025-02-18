@@ -1,5 +1,6 @@
 const ComponentsByType = Dict{DataType, Dict{String, <:InfrastructureSystemsComponent}}
 
+"A simple container for components and time series data."
 struct Components <: ComponentContainer
     data::ComponentsByType
     time_series_manager::TimeSeriesManager
