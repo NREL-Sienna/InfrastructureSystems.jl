@@ -41,7 +41,7 @@ const CONSTANT = Float64
 const LIM_TOL = 1e-6
 const XY_COORDS = @NamedTuple{x::Float64, y::Float64}
 
-"Delimiter to use when constructing qualified names like component_type__component_name."
+"Delimiter to use when constructing qualified names like `component_type__component_name`."
 const COMPONENT_NAME_DELIMITER = "__"
 
 # See https://github.com/JuliaLang/julia/issues/18485
