@@ -92,11 +92,18 @@ function get_objective_value(res::OptimizationProblemResults, execution = 1)
 end
 
 function get_resolution(res::OptimizationProblemResults)
-    # Method return the first resolution between timestamps
-    # If single timestamp is used, it return nothing
+    # Method return the resolution between timestamps.
+    # If multiple resolutions are present it returns the first observed.
+    # If single timestamp is used, it return nothing.
     diff_res = diff(get_timestamps(res))
     if !isempty(diff_res)
-        return first(diff_res)
+        unique!(diff_res)
+        if length(diff_res) == 1
+            return only(diff_res)
+        else
+            @warn "Multiple resolutions detected, returning the first resolution."
+            return first(diff_res)
+        end
     end
     return nothing
 end
