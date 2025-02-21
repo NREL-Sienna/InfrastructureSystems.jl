@@ -33,6 +33,8 @@ Does not apply a scaling factor multiplier.
   - `::Type{T}`: Concrete subtype of `TimeSeriesData` to return
   - `owner::TimeSeriesOwners`: Component or attribute containing the time series
   - `name::AbstractString`: name of time series
+  - `resolution::Union{Nothing, Dates.Period} = nothing`: Required if resolution is needed
+     to uniquely identify the time series.
   - `start_time::Union{Nothing, Dates.DateTime} = nothing`: If nothing, use the
     `initial_timestamp` of the time series. If T is a subtype of Forecast then `start_time`
     must be the first timestamp of a window.
@@ -59,10 +61,12 @@ function get_time_series(
     start_time::Union{Nothing, Dates.DateTime} = nothing,
     len::Union{Nothing, Int} = nothing,
     count::Union{Nothing, Int} = nothing,
+    resolution::Union{Nothing, Dates.Period} = nothing,
     features...,
 ) where {T <: TimeSeriesData}
     TimerOutputs.@timeit_debug SYSTEM_TIMERS "get_time_series" begin
-        ts_metadata = get_time_series_metadata(T, owner, name; features...)
+        ts_metadata =
+            get_time_series_metadata(T, owner, name; resolution = resolution, features...)
         start_time = _check_start_time(start_time, ts_metadata)
         rows = _get_rows(start_time, len, ts_metadata)
         columns = _get_columns(start_time, count, ts_metadata)
@@ -116,6 +120,7 @@ function get_time_series(
         get_time_series_type(key),
         owner,
         get_name(key);
+        resolution = get_resolution(key),
         start_time = start_time,
         len = len,
         count = count,
@@ -135,8 +140,9 @@ Call `collect` on the result to get an array.
 
   - `owner::TimeSeriesOwners`: component or attribute from which to get time_series
   - `filter_func = nothing`: Only return time_series for which this returns true.
-  - `type = nothing`: Only return time_series with this type.
-  - `name = nothing`: Only return time_series matching this value.
+  - `type::Union{Nothing, ::Type{<:TimeSeriesData}} = nothing`: Only return time_series with this type.
+  - `name::Union{Nothing, AbstractString} = nothing`: Only return time_series matching this value.
+  - `resolution::Union{Nothing, Dates.Period} = nothing`: Only return time_series matching this value.
 
 See also: [`get_time_series_multiple` from a `System`](@ref get_time_series_multiple(
     data::SystemData,
@@ -148,8 +154,9 @@ See also: [`get_time_series_multiple` from a `System`](@ref get_time_series_mult
 function get_time_series_multiple(
     owner::TimeSeriesOwners,
     filter_func = nothing;
-    type = nothing,
-    name = nothing,
+    type::Union{Nothing, Type{<:TimeSeriesData}} = nothing,
+    name::Union{Nothing, AbstractString} = nothing,
+    resolution::Union{Nothing, Dates.Period} = nothing,
 )
     throw_if_does_not_support_time_series(owner)
     mgr = get_time_series_manager(owner)
@@ -158,7 +165,13 @@ function get_time_series_multiple(
     storage = get_time_series_storage(owner)
 
     Channel() do channel
-        for metadata in list_metadata(mgr, owner; time_series_type = type, name = name)
+        for metadata in list_metadata(
+            mgr,
+            owner;
+            time_series_type = type,
+            name = name,
+            resolution = resolution,
+        )
             ts = deserialize_time_series(
                 isnothing(type) ? time_series_metadata_to_data(metadata) : type,
                 storage,
@@ -187,10 +200,11 @@ function get_time_series_metadata(
     ::Type{T},
     owner::TimeSeriesOwners,
     name::AbstractString;
+    resolution::Union{Nothing, Dates.Period} = nothing,
     features...,
 ) where {T <: TimeSeriesData}
     mgr = get_time_series_manager(owner)
-    return get_metadata(mgr, owner, T, name; features...)
+    return get_metadata(mgr, owner, T, name; resolution = resolution, features...)
 end
 
 """
@@ -208,6 +222,8 @@ Specify `start_time` and `len` if you only need a subset of data.
   - `::Type{T}`: the type of time series (a concrete subtype of `TimeSeriesData`)
   - `owner::TimeSeriesOwners`: Component or attribute containing the time series
   - `name::AbstractString`: name of time series
+  - `resolution::Union{Nothing, Dates.Period} = nothing`: Required if resolution is needed
+     to uniquely identify the time series.
   - `start_time::Union{Nothing, Dates.DateTime} = nothing`: If nothing, use the
     `initial_timestamp` of the time series. If T is a subtype of [`Forecast`](@ref) then
     `start_time` must be the first timestamp of a window.
@@ -253,6 +269,7 @@ function get_time_series_array(
     ::Type{T},
     owner::TimeSeriesOwners,
     name::AbstractString;
+    resolution::Union{Nothing, Dates.Period} = nothing,
     start_time::Union{Nothing, Dates.DateTime} = nothing,
     len::Union{Nothing, Int} = nothing,
     ignore_scaling_factors = false,
@@ -262,6 +279,7 @@ function get_time_series_array(
         T,
         owner,
         name;
+        resolution = resolution,
         start_time = start_time,
         len = len,
         count = 1,
@@ -397,6 +415,8 @@ Return a vector of timestamps from storage for the given time series parameters.
   - `::Type{T}`: the type of time series (a concrete subtype of `TimeSeriesData`)
   - `owner::TimeSeriesOwners`: Component or attribute containing the time series
   - `name::AbstractString`: name of time series
+  - `resolution::Union{Nothing, Dates.Period} = nothing`: Required if resolution is needed
+     to uniquely identify the time series.
   - `start_time::Union{Nothing, Dates.DateTime} = nothing`: If nothing, use the
     `initial_timestamp` of the time series. If T is a subtype of [`Forecast`](@ref) then
     `start_time` must be the first timestamp of a window.
@@ -439,6 +459,7 @@ function get_time_series_timestamps(
     ::Type{T},
     owner::TimeSeriesOwners,
     name::AbstractString;
+    resolution::Union{Nothing, Dates.Period} = nothing,
     start_time::Union{Nothing, Dates.DateTime} = nothing,
     len::Union{Nothing, Int} = nothing,
     features...,
@@ -448,6 +469,7 @@ function get_time_series_timestamps(
             T,
             owner,
             name;
+            resolution = resolution,
             start_time = start_time,
             len = len,
             features...,
@@ -560,6 +582,8 @@ that accepts a cached `TimeSeriesData` instance.
   - `::Type{T}`: type of the time series (a concrete subtype of `TimeSeriesData`)
   - `owner::TimeSeriesOwners`: Component or attribute containing the time series
   - `name::AbstractString`: name of time series
+  - `resolution::Union{Nothing, Dates.Period} = nothing`: Required if resolution is needed
+     to uniquely identify the time series.
   - `start_time::Union{Nothing, Dates.DateTime} = nothing`: If nothing, use the
     `initial_timestamp` of the time series. If T is a subtype of [`Forecast`](@ref) then
     `start_time` must be the first timestamp of a window.
@@ -607,6 +631,7 @@ function get_time_series_values(
     ::Type{T},
     owner::TimeSeriesOwners,
     name::AbstractString;
+    resolution::Union{Nothing, Dates.Period} = nothing,
     start_time::Union{Nothing, Dates.DateTime} = nothing,
     len::Union{Nothing, Int} = nothing,
     ignore_scaling_factors = false,
@@ -617,6 +642,7 @@ function get_time_series_values(
             T,
             owner,
             name;
+            resolution = resolution,
             start_time = start_time,
             len = len,
             ignore_scaling_factors = ignore_scaling_factors,
@@ -781,6 +807,7 @@ function has_time_series(
     val::TimeSeriesOwners,
     ::Type{T},
     name::AbstractString;
+    resolution::Union{Nothing, Dates.Period} = nothing,
     features...,
 ) where {T <: TimeSeriesData}
     mgr = get_time_series_manager(val)
@@ -790,6 +817,7 @@ function has_time_series(
         val;
         time_series_type = T,
         name = name,
+        resolution = resolution,
         features...,
     )
 end
@@ -803,8 +831,9 @@ has_time_series(
     T::Type{<:TimeSeriesData},
     owner::TimeSeriesOwners,
     name::AbstractString;
+    resolution::Union{Nothing, Dates.Period} = nothing,
     features...,
-) = has_time_series(owner, T, name; features...)
+) = has_time_series(owner, T, name; resolution = resolution, features...)
 
 """
 Efficiently add all time_series in one component to another by copying the underlying
@@ -903,6 +932,7 @@ function get_time_series_metadata(
     owner::TimeSeriesOwners;
     time_series_type::Union{Type{<:TimeSeriesData}, Nothing} = nothing,
     name::Union{String, Nothing} = nothing,
+    resolution::Union{Nothing, Dates.Period} = nothing,
     features...,
 )
     mgr = get_time_series_manager(owner)
@@ -912,6 +942,7 @@ function get_time_series_metadata(
         owner;
         time_series_type = time_series_type,
         name = name,
+        resolution = resolution,
         features...,
     )
 end

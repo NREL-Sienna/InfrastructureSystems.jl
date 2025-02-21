@@ -269,9 +269,17 @@ function remove_time_series!(
     ::Type{T},
     component::InfrastructureSystemsComponent,
     name::String;
+    resolution::Union{Nothing, Dates.Period} = nothing,
     features...,
 ) where {T <: TimeSeriesData}
-    return remove_time_series!(data.time_series_manager, T, component, name; features...)
+    return remove_time_series!(
+        data.time_series_manager,
+        T,
+        component,
+        name;
+        resolution = resolution,
+        features...,
+    )
 end
 
 function remove_time_series!(
@@ -289,11 +297,25 @@ Removes all time series of a particular type from a System.
 
   - `data::SystemData`: system
   - `type::Type{<:TimeSeriesData}`: Type of time series objects to remove.
+  - `resolution::Union{Nothing, Dates.Period} = nothing`: Only remove time series with this
+    resolution.
 """
-function remove_time_series!(data::SystemData, ::Type{T}) where {T <: TimeSeriesData}
+function remove_time_series!(
+    data::SystemData,
+    ::Type{T};
+    resolution::Union{Nothing, Dates.Period} = nothing,
+) where {T <: TimeSeriesData}
     _throw_if_read_only(data.time_series_manager)
-    for component in iterate_components_with_time_series(data; time_series_type = T)
-        for ts_metadata in get_time_series_metadata(component; time_series_type = T)
+    for component in iterate_components_with_time_series(
+        data;
+        time_series_type = T,
+        resolution = resolution,
+    )
+        for ts_metadata in get_time_series_metadata(
+            component;
+            time_series_type = T,
+            resolution = resolution,
+        )
             remove_time_series!(data, component, ts_metadata)
         end
     end
@@ -428,6 +450,7 @@ clear_time_series!(data::SystemData) = clear_time_series!(data.time_series_manag
 function iterate_components_with_time_series(
     data::SystemData;
     time_series_type::Union{Nothing, Type{<:TimeSeriesData}} = nothing,
+    resolution::Union{Nothing, Dates.Period} = nothing,
 )
     return (
         get_component(data, x) for
@@ -435,6 +458,7 @@ function iterate_components_with_time_series(
             data.time_series_manager.metadata_store,
             InfrastructureSystemsComponent;
             time_series_type = time_series_type,
+            resolution = resolution,
         )
     )
 end
@@ -505,14 +529,16 @@ function transform_single_time_series!(
     data::SystemData,
     ::Type{<:DeterministicSingleTimeSeries},
     horizon::Dates.Period,
-    interval::Dates.Period,
+    interval::Dates.Period;
+    resolution::Union{Nothing, Dates.Period} = nothing,
 )
     TimerOutputs.@timeit_debug SYSTEM_TIMERS "transform_single_time_series" begin
         _transform_single_time_series!(
             data,
             DeterministicSingleTimeSeries,
             horizon,
-            interval,
+            interval;
+            resolution = resolution,
         )
     end
 end
@@ -521,14 +547,16 @@ function _transform_single_time_series!(
     data::SystemData,
     ::Type{<:DeterministicSingleTimeSeries},
     horizon::Dates.Period,
-    interval::Dates.Period,
+    interval::Dates.Period;
+    resolution::Union{Nothing, Dates.Period} = nothing,
 )
-    remove_time_series!(data, DeterministicSingleTimeSeries)
+    remove_time_series!(data, DeterministicSingleTimeSeries; resolution = resolution)
     items = _check_transform_single_time_series(
         data,
         DeterministicSingleTimeSeries,
         horizon,
         interval,
+        resolution,
     )
 
     if isempty(items)
@@ -584,7 +612,7 @@ function _transform_single_time_series!(
     catch
         # This shouldn't be needed, but just in case there is a bug, remove all
         # DeterministicSingleTimeSeries to keep our guarantee.
-        remove_time_series!(data, DeterministicSingleTimeSeries)
+        remove_time_series!(data, DeterministicSingleTimeSeries; resolution = resolution)
         rethrow()
     end
     return
@@ -604,11 +632,13 @@ function _check_transform_single_time_series(
     ::Type{DeterministicSingleTimeSeries},
     horizon::Dates.Period,
     interval::Dates.Period,
+    resolution::Union{Nothing, Dates.Period},
 )
     items = list_metadata_with_owner_uuid(
         data.time_series_manager.metadata_store,
         InfrastructureSystemsComponent;
         time_series_type = SingleTimeSeries,
+        resolution = resolution,
     )
     system_params = get_forecast_parameters(data.time_series_manager.metadata_store)
     components_with_params_and_metadata = Vector(undef, length(items))
