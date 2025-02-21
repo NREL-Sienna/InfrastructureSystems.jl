@@ -1143,8 +1143,10 @@ get_time_series_counts(data::SystemData) =
     get_time_series_counts(data.time_series_manager.metadata_store)
 get_time_series_counts_by_type(data::SystemData) =
     get_time_series_counts_by_type(data.time_series_manager.metadata_store)
-get_time_series_summary_table(data::SystemData) =
-    get_time_series_summary_table(data.time_series_manager.metadata_store)
+get_static_time_series_summary_table(data::SystemData) =
+    get_static_time_series_summary_table(data.time_series_manager.metadata_store)
+get_forecast_summary_table(data::SystemData) =
+    get_forecast_summary_table(data.time_series_manager.metadata_store)
 
 _get_system_basename(system_file) = splitext(basename(system_file))[1]
 _get_secondary_basename(system_basename, name) = system_basename * "_" * name

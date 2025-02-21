@@ -682,21 +682,21 @@ function get_time_series_counts_by_type(store::TimeSeriesMetadataStore)
 end
 
 """
-Return a DataFrame with the number of time series by type for components and supplemental
+Return a DataFrame with the number of static time series for components and supplemental
 attributes.
 """
-function get_time_series_summary_table(store::TimeSeriesMetadataStore)
+function get_static_time_series_summary_table(store::TimeSeriesMetadataStore)
     query = """
         SELECT
             owner_type
             ,owner_category
             ,time_series_type
-            ,time_series_category
             ,initial_timestamp
             ,resolution_ms
             ,count(*) AS count
-            ,length
+            ,length AS time_step_count
         FROM $ASSOCIATIONS_TABLE_NAME
+        WHERE time_series_category = "$(_get_time_series_category(StaticTimeSeries))"
         GROUP BY
             owner_type
             ,owner_category
@@ -711,6 +711,46 @@ function get_time_series_summary_table(store::TimeSeriesMetadataStore)
             ,initial_timestamp
             ,resolution_ms
             ,length
+    """
+    return DataFrame(_execute(store, query))
+end
+
+"""
+Return a DataFrame with the number of forecasts for components and supplemental
+attributes.
+"""
+function get_forecast_summary_table(store::TimeSeriesMetadataStore)
+    query = """
+        SELECT
+            owner_type
+            ,owner_category
+            ,time_series_type
+            ,initial_timestamp
+            ,resolution_ms
+            ,count(*) AS count
+            ,horizon_ms
+            ,interval_ms
+            ,window_count
+        FROM $ASSOCIATIONS_TABLE_NAME
+        WHERE time_series_category = "$(_get_time_series_category(Forecast))"
+        GROUP BY
+            owner_type
+            ,owner_category
+            ,time_series_type
+            ,initial_timestamp
+            ,resolution_ms
+            ,horizon_ms
+            ,interval_ms
+            ,window_count
+        ORDER BY
+            owner_category
+            ,owner_type
+            ,time_series_type
+            ,initial_timestamp
+            ,resolution_ms
+            ,horizon_ms
+            ,interval_ms
+            ,window_count
     """
     return DataFrame(_execute(store, query))
 end
