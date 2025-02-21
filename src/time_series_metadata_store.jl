@@ -695,6 +695,7 @@ function get_time_series_summary_table(store::TimeSeriesMetadataStore)
             ,initial_timestamp
             ,resolution_ms
             ,count(*) AS count
+            ,length
         FROM $ASSOCIATIONS_TABLE_NAME
         GROUP BY
             owner_type
@@ -702,12 +703,14 @@ function get_time_series_summary_table(store::TimeSeriesMetadataStore)
             ,time_series_type
             ,initial_timestamp
             ,resolution_ms
+            ,length
         ORDER BY
             owner_category
             ,owner_type
             ,time_series_type
             ,initial_timestamp
             ,resolution_ms
+            ,length
     """
     return DataFrame(_execute(store, query))
 end
