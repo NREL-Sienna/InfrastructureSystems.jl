@@ -3038,53 +3038,6 @@ end
     @test IS.get_data(res) == IS.get_data(bystander)
 end
 
-@testset "Test list_existing_metadata" begin
-    sys = IS.SystemData()
-    initial_time = Dates.DateTime("2020-09-01")
-    resolution = Dates.Hour(1)
-    components = IS.TimeSeriesOwners[]
-    ts_metadata = IS.TimeSeriesMetadata[]
-    ts_uuids = Base.UUID[]
-    for i in 1:10
-        name = "Component_$i"
-        component = IS.TestComponent(name, i)
-        IS.add_component!(sys, component)
-        push!(components, component)
-
-        data = TimeSeries.TimeArray(
-            range(initial_time; length = 10, step = resolution),
-            rand(10),
-        )
-        ts_name = "test_$i"
-        ts = IS.SingleTimeSeries(; data = data, name = ts_name)
-        IS.add_time_series!(sys, component, ts; scenario = "high")
-        metadata = IS.SingleTimeSeriesMetadata(ts; scenario = "high")
-        push!(ts_metadata, metadata)
-        push!(ts_uuids, IS.get_uuid(ts))
-    end
-    push!(components, IS.TestComponent("extra", 1))
-    push!(ts_metadata, ts_metadata[end])
-    push!(ts_uuids, UUIDs.uuid4())
-
-    existing_metadata = IS.list_existing_metadata(
-        sys.time_series_manager.metadata_store,
-        components[1:5],
-        ts_metadata[1:5],
-    )
-    @test length(existing_metadata) == 5
-    for i in 1:5
-        @test existing_metadata[i] == ts_metadata[i]
-    end
-
-    existing_uuids = IS.list_existing_time_series_uuids(
-        sys.time_series_manager.metadata_store,
-        ts_uuids[1:5],
-    )
-    @test length(existing_uuids) == 5
-    @test sort(ts_uuids[1:5]; by = x -> string(x)) ==
-          sort(existing_uuids[1:5]; by = x -> string(x))
-end
-
 @testset "Test migration of legacy time series schema" begin
     sys = IS.SystemData()
     name = "Component1"
@@ -3174,4 +3127,414 @@ end
     @test ismissing(table.horizon_ms[1])
     @test table2.horizon_ms[2] == horizon.value
     @test table2.horizon_ms[3] == horizon.value
+end
+
+"""
+Create a system with two SingleTimeSeries and two Deterministic time series,
+two resolutions each. One component bystander.
+"""
+function setup_for_multi_resolution_tests()
+    sys = IS.SystemData()
+    name = "Component1"
+    sts_name = "test_sts"
+    f_name = "test_det"
+    component = IS.TestComponent(name, 1)
+    IS.add_component!(sys, component)
+    IS.add_component!(sys, IS.TestComponent("bystander", 2))
+
+    initial_time = Dates.DateTime("2020-09-01")
+    resolution1 = Dates.Minute(5)
+    length1 = 25
+    data1 = TimeSeries.TimeArray(
+        range(initial_time; length = length1, step = resolution1),
+        rand(length1),
+    )
+    sts1 = IS.SingleTimeSeries(; data = data1, name = sts_name)
+
+    resolution2 = Dates.Minute(10)
+    length2 = 13
+    data2 = TimeSeries.TimeArray(
+        range(initial_time; length = length2, step = resolution2),
+        rand(length2),
+    )
+    sts2 = IS.SingleTimeSeries(; data = data2, name = sts_name)
+
+    IS.add_time_series!(sys, component, sts1)
+    IS.add_time_series!(sys, component, sts2)
+
+    other_time1 = initial_time + resolution1
+    horizon_count1 = 24
+    data1 =
+        SortedDict(
+            initial_time => rand(horizon_count1),
+            other_time1 => rand(horizon_count1),
+        )
+    forecast1 = IS.Deterministic(; data = data1, name = f_name, resolution = resolution1)
+
+    other_time2 = initial_time + resolution2
+    horizon_count2 = 12
+    data2 =
+        SortedDict(
+            initial_time => rand(horizon_count2),
+            other_time2 => rand(horizon_count2),
+        )
+    forecast2 = IS.Deterministic(; data = data2, name = f_name, resolution = resolution2)
+
+    IS.add_time_series!(sys, component, forecast1)
+    IS.add_time_series!(sys, component, forecast2)
+
+    return (
+        system = sys,
+        component = component,
+        initial_time = initial_time,
+        sts_name = sts_name,
+        f_name = f_name,
+        resolution1 = resolution1,
+        resolution2 = resolution2,
+        sts1 = sts1,
+        sts2 = sts2,
+        forecast1 = forecast1,
+        forecast2 = forecast2,
+    )
+end
+
+@testset "Test SingleTimeSeries with multiple resolutions" begin
+    params = setup_for_multi_resolution_tests()
+    data1 = IS.get_data(params.sts1)
+    data2 = IS.get_data(params.sts2)
+    component = params.component
+    ts_name = params.sts_name
+    resolution1 = params.resolution1
+    resolution2 = params.resolution2
+    ts1 = params.sts1
+    ts2 = params.sts2
+    @test IS.get_data(
+        IS.get_time_series(
+            IS.SingleTimeSeries,
+            component,
+            ts_name;
+            resolution = resolution1,
+        ),
+    ) ==
+          IS.get_data(ts1)
+    @test IS.get_data(
+        IS.get_time_series(
+            IS.SingleTimeSeries,
+            component,
+            ts_name;
+            resolution = resolution2,
+        ),
+    ) ==
+          IS.get_data(ts2)
+    @test_throws ArgumentError IS.get_time_series(IS.SingleTimeSeries, component, ts_name)
+    @test_throws ArgumentError IS.get_time_series(
+        IS.SingleTimeSeries,
+        component,
+        ts_name;
+        resolution = Dates.Minute(1),
+    )
+
+    @test IS.has_time_series(component, resolution = resolution1)
+    @test IS.has_time_series(component, resolution = resolution2)
+    @test IS.has_time_series(
+        component,
+        time_series_type = IS.SingleTimeSeries,
+        name = ts_name,
+        resolution = resolution1,
+    )
+    @test IS.has_time_series(
+        component,
+        time_series_type = IS.SingleTimeSeries,
+        name = ts_name,
+        resolution = resolution2,
+    )
+    @test !IS.has_time_series(
+        component;
+        time_series_type = IS.SingleTimeSeries,
+        name = ts_name,
+        resolution = Dates.Minute(1),
+    )
+
+    @test IS.get_time_series_array(
+        IS.SingleTimeSeries,
+        component,
+        ts_name;
+        resolution = resolution1,
+    ) == data1
+    @test IS.get_time_series_values(
+        IS.SingleTimeSeries,
+        component,
+        ts_name;
+        resolution = resolution1,
+    ) == TimeSeries.values(data1)
+    @test IS.get_time_series_timestamps(
+        IS.SingleTimeSeries,
+        component,
+        ts_name;
+        resolution = resolution1,
+    ) == TimeSeries.timestamp(data1)
+
+    ts_multiple = collect(
+        IS.get_time_series_multiple(
+            component;
+            type = IS.SingleTimeSeries,
+            name = ts_name,
+            resolution = resolution1,
+        ),
+    )
+    @test length(ts_multiple) == 1
+    @test IS.get_data(ts_multiple[1]) == IS.get_data(params.sts1)
+    @test isempty(
+        collect(
+            IS.get_time_series_multiple(
+                component;
+                type = IS.SingleTimeSeries,
+                name = ts_name,
+                resolution = Dates.Minute(1),
+            ),
+        ),
+    )
+    @test length(
+        IS.get_time_series_metadata(component; time_series_type = IS.SingleTimeSeries),
+    ) == 2
+    @test length(
+        IS.get_time_series_metadata(
+            component;
+            time_series_type = IS.SingleTimeSeries,
+            resolution = resolution1,
+        ),
+    ) == 1
+    @test length(
+        IS.get_time_series_metadata(
+            component;
+            time_series_type = IS.SingleTimeSeries,
+            name = ts_name,
+            resolution = resolution2,
+        ),
+    ) == 1
+end
+
+@testset "Test Deterministic with multiple resolutions" begin
+    params = setup_for_multi_resolution_tests()
+    data1 = IS.get_data(params.forecast1)
+    data2 = IS.get_data(params.forecast2)
+    component = params.component
+    f_name = params.f_name
+    initial_time = params.initial_time
+    resolution1 = params.resolution1
+    resolution2 = params.resolution2
+    f1 = params.forecast1
+    f2 = params.forecast2
+    @test IS.get_data(
+        IS.get_time_series(
+            IS.Deterministic,
+            component,
+            f_name;
+            resolution = resolution1,
+        ),
+    ) ==
+          IS.get_data(f1)
+    @test IS.get_data(
+        IS.get_time_series(
+            IS.Deterministic,
+            component,
+            f_name;
+            resolution = resolution2,
+        ),
+    ) ==
+          IS.get_data(f2)
+    @test_throws ArgumentError IS.get_time_series(IS.Deterministic, component, f_name)
+    @test_throws ArgumentError IS.get_time_series(
+        IS.Deterministic,
+        component,
+        f_name;
+        resolution = Dates.Minute(1),
+    )
+
+    @test IS.has_time_series(component, resolution = resolution1)
+    @test IS.has_time_series(component, resolution = resolution2)
+    @test IS.has_time_series(
+        component,
+        time_series_type = IS.Deterministic,
+        name = f_name,
+        resolution = resolution1,
+    )
+    @test IS.has_time_series(
+        component,
+        time_series_type = IS.Deterministic,
+        name = f_name,
+        resolution = resolution2,
+    )
+    @test !IS.has_time_series(
+        component;
+        time_series_type = IS.Deterministic,
+        name = f_name,
+        resolution = Dates.Minute(1),
+    )
+
+    fdata = IS.get_time_series_array(
+        IS.Deterministic,
+        component,
+        f_name;
+        resolution = resolution1,
+    )
+    @test IS.get_time_series_array(
+        IS.Deterministic,
+        component,
+        f_name;
+        resolution = resolution1,
+    ) == IS.get_time_series_array(component, f1, initial_time)
+    @test IS.get_time_series_values(
+        IS.Deterministic,
+        component,
+        f_name;
+        resolution = resolution1,
+    ) == TimeSeries.values(IS.get_time_series_array(component, f1, initial_time))
+    @test IS.get_time_series_timestamps(
+        IS.Deterministic,
+        component,
+        f_name;
+        resolution = resolution1,
+    ) == TimeSeries.timestamp(IS.get_time_series_array(component, f1, initial_time))
+
+    ts_multiple = collect(
+        IS.get_time_series_multiple(
+            component;
+            type = IS.Deterministic,
+            name = f_name,
+            resolution = resolution1,
+        ),
+    )
+    @test length(ts_multiple) == 1
+    @test IS.get_data(ts_multiple[1]) == IS.get_data(f1)
+    @test isempty(
+        collect(
+            IS.get_time_series_multiple(
+                component;
+                type = IS.Deterministic,
+                name = f_name,
+                resolution = Dates.Minute(1),
+            ),
+        ),
+    )
+    @test length(
+        IS.get_time_series_metadata(component; time_series_type = IS.Deterministic),
+    ) == 2
+    @test length(
+        IS.get_time_series_metadata(
+            component;
+            time_series_type = IS.Deterministic,
+            resolution = resolution1,
+        ),
+    ) == 1
+    @test length(
+        IS.get_time_series_metadata(
+            component;
+            time_series_type = IS.Deterministic,
+            name = f_name,
+            resolution = resolution2,
+        ),
+    ) == 1
+end
+
+@testset "Test DeterministicSingleTimeSeries with multiple resolutions" begin
+    params = setup_for_multi_resolution_tests()
+    for _ in 1:2
+        IS.transform_single_time_series!(
+            params.system,
+            IS.DeterministicSingleTimeSeries,
+            Dates.Hour(2),
+            params.resolution1;
+            resolution = params.resolution1,
+        )
+
+        counts = IS.get_time_series_counts(params.system)
+        @test counts.components_with_time_series == 1
+        @test counts.supplemental_attributes_with_time_series == 0
+        @test counts.static_time_series_count == 2
+        @test counts.forecast_count == 3
+
+        @test IS.has_time_series(
+            params.component,
+            IS.DeterministicSingleTimeSeries,
+            params.sts_name,
+            resolution = params.resolution1,
+        )
+        @test IS.get_time_series(
+            IS.DeterministicSingleTimeSeries,
+            params.component,
+            params.sts_name;
+            resolution = params.resolution1,
+        ) isa IS.DeterministicSingleTimeSeries
+
+        # The original should still be readable.
+        @test IS.has_time_series(
+            params.component,
+            IS.SingleTimeSeries,
+            params.sts_name,
+            resolution = params.resolution1,
+        )
+        @test IS.get_data(
+            IS.get_time_series(
+                IS.SingleTimeSeries,
+                params.component,
+                params.sts_name;
+                resolution = params.resolution1,
+            ),
+        ) ==
+              IS.get_data(params.sts1)
+        @test IS.get_data(
+            IS.get_time_series(
+                IS.Deterministic,
+                params.component,
+                params.f_name;
+                resolution = params.resolution1,
+            ),
+        ) == IS.get_data(params.forecast1)
+    end
+end
+
+@testset "Test removals of time series with multiple resolutions" begin
+    params = setup_for_multi_resolution_tests()
+    for (ts_type, ts_name) in
+        zip((IS.SingleTimeSeries, IS.Deterministic), (params.sts_name, params.f_name))
+        @test IS.has_time_series(
+            params.component,
+            ts_type,
+            ts_name,
+            resolution = params.resolution1,
+        )
+        @test IS.has_time_series(
+            params.component,
+            ts_type,
+            ts_name,
+            resolution = params.resolution2,
+        )
+        IS.remove_time_series!(
+            params.system,
+            ts_type,
+            params.component,
+            ts_name;
+            resolution = params.resolution1,
+        )
+        @test !IS.has_time_series(
+            params.component,
+            ts_type,
+            ts_name;
+            resolution = params.resolution1,
+        )
+        @test IS.has_time_series(
+            params.component,
+            ts_type,
+            ts_name,
+            resolution = params.resolution2,
+        )
+        IS.remove_time_series!(
+            params.system,
+            ts_type;
+            resolution = params.resolution2,
+        )
+        @test !IS.has_time_series(params.component, ts_type)
+    end
+    @test !IS.has_time_series(params.component)
 end

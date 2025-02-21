@@ -180,12 +180,14 @@ get_metadata(
     component::TimeSeriesOwners,
     time_series_type::Type{<:TimeSeriesData},
     name::String;
+    resolution::Union{Nothing, Dates.Period} = nothing,
     features...,
 ) = get_metadata(
     mgr.metadata_store,
     component,
     time_series_type,
     name;
+    resolution = resolution,
     features...,
 )
 
@@ -194,12 +196,14 @@ list_metadata(
     component::TimeSeriesOwners;
     time_series_type::Union{Type{<:TimeSeriesData}, Nothing} = nothing,
     name::Union{String, Nothing} = nothing,
+    resolution::Union{Nothing, Dates.Period} = nothing,
     features...,
 ) = list_metadata(
     mgr.metadata_store,
     component;
     time_series_type = time_series_type,
     name = name,
+    resolution = resolution,
     features...,
 )
 
@@ -211,6 +215,7 @@ function remove_time_series!(
     time_series_type::Type{<:TimeSeriesData},
     owner::TimeSeriesOwners,
     name::String;
+    resolution::Union{Nothing, Dates.Period} = nothing,
     features...,
 )
     _throw_if_read_only(mgr)
@@ -218,6 +223,7 @@ function remove_time_series!(
         mgr.metadata_store;
         time_series_type = time_series_type,
         name = name,
+        resolution = resolution,
         features...,
     )
     remove_metadata!(
@@ -225,6 +231,7 @@ function remove_time_series!(
         owner;
         time_series_type = time_series_type,
         name = name,
+        resolution = resolution,
         features...,
     )
 

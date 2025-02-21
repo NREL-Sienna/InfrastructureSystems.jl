@@ -287,15 +287,23 @@ function _create_indexes!(store::TimeSeriesMetadataStore)
     # Index strategy:
     # 1. Optimize for these user queries with indexes:
     #    1a. all time series attached to one component/attribute
-    #    1b. time series for one component/attribute + name + type
+    #    1b. time series for one component/attribute + name + type + resolution
     #    1c. time series for one component/attribute with all features
     # 2. Optimize for checks at system.add_time_series. Use all fields and features.
     # 3. Optimize for returning all metadata for a time series UUID.
+    # resolution_ms was added in v2.4.4.
+    if "by_c_n_tst_features" in
+       SQLite.indices(store.db).name && !(
+        "resolution_ms" in
+        sql(store, "PRAGMA index_info('by_c_n_tst_features')")[!, "name"]
+    )
+        SQLite.dropindex!(store.db, "by_c_n_tst_features"; ifexists = true)
+    end
     SQLite.createindex!(
         store.db,
         ASSOCIATIONS_TABLE_NAME,
         "by_c_n_tst_features",
-        ["owner_uuid", "time_series_type", "name", "features"];
+        ["owner_uuid", "time_series_type", "name", "resolution_ms", "features"];
         unique = true,
         ifnotexists = true,
     )
@@ -579,6 +587,7 @@ function get_metadata(
     owner::TimeSeriesOwners,
     time_series_type::Type{<:TimeSeriesData},
     name::String;
+    resolution::Union{Nothing, Dates.Period} = nothing,
     features...,
 )
     metadata = _try_get_time_series_metadata_by_full_params(
@@ -586,6 +595,7 @@ function get_metadata(
         owner,
         time_series_type,
         name;
+        resolution = resolution,
         features...,
     )
     !isnothing(metadata) && return metadata
@@ -595,6 +605,7 @@ function get_metadata(
         owner;
         time_series_type = time_series_type,
         name = name,
+        resolution = resolution,
         features...,
     )
     len = length(metadata_items)
@@ -893,52 +904,6 @@ function get_time_series_resolutions(
 end
 
 """
-Return the metadata specified in the passed metadata vector that are already stored.
-"""
-function list_existing_metadata(
-    store::TimeSeriesMetadataStore,
-    owners::Vector{TimeSeriesOwners},
-    metadata::Vector{TimeSeriesMetadata},
-)
-    # If resolution ever becomes a distinguishing attribute for time series,
-    # it has to be added here.
-    @assert_op length(owners) == length(metadata)
-    where_clauses = Vector{String}(undef, length(owners))
-    lookup = OrderedDict()
-    params = String[]
-    columns = ["time_series_type", "name", "owner_uuid", "features"]
-    clause = "(" * join(("$x = ?" for x in columns), " AND ") * ")"
-    sizehint!(params, length(owners) * length(columns))
-    for (i, (owner, metadata)) in enumerate(zip(owners, metadata))
-        time_series_type = string(nameof(time_series_metadata_to_data(metadata)))
-        name = get_name(metadata)
-        owner_uuid = string(get_uuid(owner))
-        features = make_features_string(metadata.features)
-        push!(params, time_series_type)
-        push!(params, name)
-        push!(params, owner_uuid)
-        push!(params, features)
-        where_clauses[i] = clause
-        lookup[(string(time_series_type), name, owner_uuid, features)] = metadata
-    end
-    where_clause = join(where_clauses, " OR ")
-    query = """
-        SELECT
-            time_series_type
-            ,name
-            ,owner_uuid
-            ,features
-        FROM $ASSOCIATIONS_TABLE_NAME
-        WHERE $where_clause
-    """
-    table = Tables.rowtable(_execute(store, query, params))
-    return [
-        lookup[(x.time_series_type, x.name, x.owner_uuid, x.features)]
-        for x in table
-    ]
-end
-
-"""
 Return the time series UUIDs specified in the passed uuids that are already stored.
 """
 function list_existing_time_series_uuids(store::TimeSeriesMetadataStore, uuids)
@@ -968,11 +933,13 @@ function list_matching_time_series_uuids(
     store::TimeSeriesMetadataStore;
     time_series_type::Union{Type{<:TimeSeriesData}, Nothing} = nothing,
     name::Union{String, Nothing} = nothing,
+    resolution::Union{Dates.Period, Nothing} = nothing,
     features...,
 )
     where_clause, params = _make_where_clause(;
         time_series_type = time_series_type,
         name = name,
+        resolution = resolution,
         features...,
     )
     query = "SELECT DISTINCT time_series_uuid FROM $ASSOCIATIONS_TABLE_NAME $where_clause"
@@ -985,12 +952,14 @@ function list_metadata(
     owner::TimeSeriesOwners;
     time_series_type::Union{Type{<:TimeSeriesData}, Nothing} = nothing,
     name::Union{String, Nothing} = nothing,
+    resolution::Union{Dates.Period, Nothing} = nothing,
     features...,
 )
     where_clause, params = _make_where_clause(
         owner;
         time_series_type = time_series_type,
         name = name,
+        resolution = resolution,
         features...,
     )
     query = """
@@ -1010,12 +979,14 @@ function list_metadata_with_owner_uuid(
     owner_type::Type{<:TimeSeriesOwners};
     time_series_type::Union{Type{<:TimeSeriesData}, Nothing} = nothing,
     name::Union{String, Nothing} = nothing,
+    resolution::Union{Dates.Period, Nothing} = nothing,
     features...,
 )
     where_clause, params = _make_where_clause(
         owner_type;
         time_series_type = time_series_type,
         name = name,
+        resolution = resolution,
         features...,
     )
     query = """
@@ -1036,13 +1007,18 @@ function list_owner_uuids_with_time_series(
     store::TimeSeriesMetadataStore,
     owner_type::Type{<:TimeSeriesOwners};
     time_series_type::Union{Nothing, Type{<:TimeSeriesData}} = nothing,
+    resolution::Union{Nothing, Dates.Period} = nothing,
 )
     category = _get_owner_category(owner_type)
     vals = ["owner_category = ?"]
-    params = [category]
+    params = Vector{Any}([category])
     if !isnothing(time_series_type)
         push!(vals, "time_series_type = ?")
         push!(params, string(nameof(time_series_type)))
+    end
+    if !isnothing(resolution)
+        push!(vals, "resolution_ms = ?")
+        push!(params, Dates.Millisecond(resolution).value)
     end
 
     where_clause = join(vals, " AND ")
@@ -1085,12 +1061,14 @@ function remove_metadata!(
     owner::TimeSeriesOwners;
     time_series_type::Union{Type{<:TimeSeriesData}, Nothing} = nothing,
     name::Union{String, Nothing} = nothing,
+    resolution::Union{Dates.Period, Nothing} = nothing,
     features...,
 )
     where_clause, params = _make_where_clause(
         owner;
         time_series_type = time_series_type,
         name = name,
+        resolution = resolution,
         # TODO/PERF: This can be made faster by attempting search by a full match
         # and then fallback to partial. We likely don't care about this for removing.
         require_full_feature_match = false,
@@ -1248,12 +1226,14 @@ function _try_get_time_series_metadata_by_full_params(
     owner::TimeSeriesOwners,
     time_series_type::Type{<:TimeSeriesData},
     name::String;
+    resolution::Union{Nothing, Dates.Period} = nothing,
     features...,
 )
     where_clause, params = _make_where_clause(
         owner;
         time_series_type = time_series_type,
         name = name,
+        resolution = resolution,
         require_full_feature_match = true,
         features...,
     )
@@ -1342,14 +1322,16 @@ function _make_where_clause(
     owner_type::Type{<:TimeSeriesOwners};
     time_series_type::Union{Type{<:TimeSeriesData}, Nothing} = nothing,
     name::Union{String, Nothing} = nothing,
+    resolution::Union{Nothing, Dates.Period} = nothing,
     require_full_feature_match = false,
     features...,
 )
-    params = [_get_owner_category(owner_type)]
+    params = Vector{Any}([_get_owner_category(owner_type)])
     return _make_where_clause(;
         owner_clause = "owner_category = ?",
         time_series_type = time_series_type,
         name = name,
+        resolution = resolution,
         require_full_feature_match = require_full_feature_match,
         params = params,
         features...,
@@ -1360,6 +1342,7 @@ function _make_where_clause(
     owner::TimeSeriesOwners;
     time_series_type::Union{Type{<:TimeSeriesData}, Nothing} = nothing,
     name::Union{String, Nothing} = nothing,
+    resolution::Union{Nothing, Dates.Period} = nothing,
     require_full_feature_match = false,
     params = nothing,
     features...,
@@ -1372,6 +1355,7 @@ function _make_where_clause(
         owner_clause = "owner_uuid = ?",
         time_series_type = time_series_type,
         name = name,
+        resolution = resolution,
         require_full_feature_match = require_full_feature_match,
         params = params,
         features...,
@@ -1382,6 +1366,7 @@ function _make_where_clause(;
     owner_clause::Union{String, Nothing} = nothing,
     time_series_type::Union{Type{<:TimeSeriesData}, Nothing} = nothing,
     name::Union{String, Nothing} = nothing,
+    resolution::Union{Nothing, Dates.Period} = nothing,
     require_full_feature_match = false,
     params = nothing,
     features...,
@@ -1396,6 +1381,10 @@ function _make_where_clause(;
     if !isnothing(name)
         push!(vals, "name = ?")
         push!(params, name)
+    end
+    if !isnothing(resolution)
+        push!(vals, "resolution_ms = ?")
+        push!(params, Dates.Millisecond(resolution).value)
     end
     num_possible_types = _get_num_possible_types(time_series_type)
     if num_possible_types == 1
@@ -1427,6 +1416,7 @@ function _make_where_clause(owner::TimeSeriesOwners, metadata::TimeSeriesMetadat
         owner;
         time_series_type = time_series_metadata_to_data(metadata),
         name = get_name(metadata),
+        resolution = get_resolution(metadata),
         features...,
     )
 end
