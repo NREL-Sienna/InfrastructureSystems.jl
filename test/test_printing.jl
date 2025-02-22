@@ -10,7 +10,7 @@
         text = String(take!(io))
         @test occursin("TestComponent", text)
         @test occursin("time_series_type", text)
-        @test occursin("Time Series Summary", text)
+        @test occursin("StaticTimeSeries Summary", text)
         @test occursin("Supplemental Attribute Summary", text)
     end
 end
