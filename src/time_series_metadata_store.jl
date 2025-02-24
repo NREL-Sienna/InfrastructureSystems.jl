@@ -693,34 +693,85 @@ function get_time_series_counts_by_type(store::TimeSeriesMetadataStore)
 end
 
 """
-Return a DataFrame with the number of time series by type for components and supplemental
+Return a DataFrame with the number of static time series for components and supplemental
 attributes.
 """
-function get_time_series_summary_table(store::TimeSeriesMetadataStore)
+function get_static_time_series_summary_table(store::TimeSeriesMetadataStore)
     query = """
         SELECT
             owner_type
             ,owner_category
             ,time_series_type
-            ,time_series_category
             ,initial_timestamp
-            ,resolution_ms
+            ,resolution_ms AS resolution
             ,count(*) AS count
+            ,length AS time_step_count
         FROM $ASSOCIATIONS_TABLE_NAME
+        WHERE time_series_category = "$(_get_time_series_category(StaticTimeSeries))"
         GROUP BY
             owner_type
             ,owner_category
             ,time_series_type
             ,initial_timestamp
             ,resolution_ms
+            ,length
         ORDER BY
             owner_category
             ,owner_type
             ,time_series_type
             ,initial_timestamp
             ,resolution_ms
+            ,length
     """
-    return DataFrame(_execute(store, query))
+    query_result = DataFrame(_execute(store, query))
+    query_result[!, "resolution"] =
+        Dates.canonicalize.(Dates.Millisecond.(query_result[!, "resolution"]))
+    return query_result
+end
+
+"""
+Return a DataFrame with the number of forecasts for components and supplemental
+attributes.
+"""
+function get_forecast_summary_table(store::TimeSeriesMetadataStore)
+    query = """
+        SELECT
+            owner_type
+            ,owner_category
+            ,time_series_type
+            ,initial_timestamp
+            ,resolution_ms AS resolution
+            ,count(*) AS count
+            ,horizon_ms AS horizon
+            ,interval_ms AS interval
+            ,window_count
+        FROM $ASSOCIATIONS_TABLE_NAME
+        WHERE time_series_category = "$(_get_time_series_category(Forecast))"
+        GROUP BY
+            owner_type
+            ,owner_category
+            ,time_series_type
+            ,initial_timestamp
+            ,resolution_ms
+            ,horizon_ms
+            ,interval_ms
+            ,window_count
+        ORDER BY
+            owner_category
+            ,owner_type
+            ,time_series_type
+            ,initial_timestamp
+            ,resolution_ms
+            ,horizon_ms
+            ,interval_ms
+            ,window_count
+    """
+    query_result = DataFrame(_execute(store, query))
+    for col_name in ["resolution", "horizon", "interval"]
+        query_result[!, col_name] =
+            Dates.canonicalize.(Dates.Millisecond.(query_result[!, col_name]))
+    end
+    return query_result
 end
 
 function has_metadata(

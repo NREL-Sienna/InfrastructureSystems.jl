@@ -78,12 +78,22 @@ function Base.show(io::IO, ::MIME"text/html", data::SystemData)
 end
 
 function show_time_series_data(io::IO, data::SystemData; kwargs...)
-    table = get_time_series_summary_table(data)
+    table = get_static_time_series_summary_table(data)
     if !isempty(table)
         PrettyTables.pretty_table(
             io,
             table;
-            title = "Time Series Summary",
+            title = "StaticTimeSeries Summary",
+            alignment = :l,
+            kwargs...,
+        )
+    end
+    table = get_forecast_summary_table(data)
+    if !isempty(table)
+        PrettyTables.pretty_table(
+            io,
+            table;
+            title = "Forecast Summary",
             alignment = :l,
             kwargs...,
         )
