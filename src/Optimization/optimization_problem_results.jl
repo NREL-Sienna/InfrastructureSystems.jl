@@ -1,7 +1,7 @@
 # This needs renaming to avoid collision with the DecisionModelResults/EmulationModelResults
 mutable struct OptimizationProblemResults <: Results
     base_power::Float64
-    timestamps::StepRange{Dates.DateTime, Dates.Millisecond}
+    timestamps::Vector{Dates.DateTime}
     source_data::Union{Nothing, InfrastructureSystemsType}
     source_data_uuid::Base.UUID
     aux_variable_values::Dict{AuxVarKey, DataFrames.DataFrame}
@@ -14,6 +14,40 @@ mutable struct OptimizationProblemResults <: Results
     model_type::String
     results_dir::String
     output_dir::String
+end
+
+function OptimizationProblemResults(
+    base_power,
+    timestamps::StepRange{Dates.DateTime, Dates.Millisecond},
+    source_data,
+    source_data_uuid,
+    aux_variable_values,
+    variable_values,
+    dual_values,
+    parameter_values,
+    expression_values,
+    optimizer_stats,
+    optimization_container_metadata,
+    model_type,
+    results_dir,
+    output_dir,
+)
+    return OptimizationProblemResults(
+        base_power,
+        collect(timestamps),
+        source_data,
+        source_data_uuid,
+        aux_variable_values,
+        variable_values,
+        dual_values,
+        parameter_values,
+        expression_values,
+        optimizer_stats,
+        optimization_container_metadata,
+        model_type,
+        results_dir,
+        output_dir,
+    )
 end
 
 list_aux_variable_keys(res::OptimizationProblemResults) =
@@ -41,7 +75,6 @@ get_aux_variable_values(res::OptimizationProblemResults) = res.aux_variable_valu
 get_total_cost(res::OptimizationProblemResults) = get_objective_value(res)
 get_optimizer_stats(res::OptimizationProblemResults) = res.optimizer_stats
 get_parameter_values(res::OptimizationProblemResults) = res.parameter_values
-get_resolution(res::OptimizationProblemResults) = res.timestamps.step
 get_source_data(res::OptimizationProblemResults) = res.source_data
 get_forecast_horizon(res::OptimizationProblemResults) = length(get_timestamps(res))
 get_output_dir(res::OptimizationProblemResults) = res.output_dir
@@ -56,6 +89,23 @@ get_result_values(x::OptimizationProblemResults, ::VariableKey) = x.variable_val
 
 function get_objective_value(res::OptimizationProblemResults, execution = 1)
     return res.optimizer_stats[execution, :objective_value]
+end
+
+function get_resolution(res::OptimizationProblemResults)
+    # Method return the resolution between timestamps.
+    # If multiple resolutions are present it returns the first observed.
+    # If single timestamp is used, it return nothing.
+    diff_res = diff(get_timestamps(res))
+    if !isempty(diff_res)
+        unique!(diff_res)
+        if length(diff_res) == 1
+            return only(diff_res)
+        else
+            @warn "Multiple resolutions detected, returning the first resolution."
+            return first(diff_res)
+        end
+    end
+    return nothing
 end
 
 function export_result(
@@ -276,13 +326,27 @@ function _read_results(
                         v
                     end
             else
-                results[k] =
-                    if convert_result_to_natural_units(k)
-                        v[time_ids, :] .* base_power
-                    else
-                        v[time_ids, :]
-                    end
-                DataFrames.insertcols!(results[k], 1, :DateTime => timestamps)
+                total_rows = size(v)[1]
+                if total_rows == length(time_ids)
+                    results[k] =
+                        if convert_result_to_natural_units(k)
+                            v[time_ids, :] .* base_power
+                        else
+                            v[time_ids, :]
+                        end
+                    DataFrames.insertcols!(results[k], 1, :DateTime => timestamps)
+                else
+                    @warn(
+                        "Length of variables is different than timestamps. Ignoring timestamps."
+                    )
+                    results[k] =
+                        if convert_result_to_natural_units(k)
+                            v[1:total_rows, :] .* base_power
+                        else
+                            v[1:total_rows, :]
+                        end
+                    DataFrames.insertcols!(results[k], 1)
+                end
             end
         end
     end
