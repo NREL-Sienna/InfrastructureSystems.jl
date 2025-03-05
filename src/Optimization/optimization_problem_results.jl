@@ -310,6 +310,7 @@ function _read_results(
     timestamps::Vector{Dates.DateTime},
     time_ids,
     base_power::Float64,
+    base_timestamps::Vector{Dates.DateTime},
 )
     existing_keys = keys(result_values)
     container_keys = container_keys === nothing ? existing_keys : container_keys
@@ -327,7 +328,7 @@ function _read_results(
                     end
             else
                 total_rows = size(v)[1]
-                if total_rows == length(time_ids)
+                if length(base_timestamps) == total_rows
                     results[k] =
                         if convert_result_to_natural_units(k)
                             v[time_ids, :] .* base_power
@@ -753,12 +754,14 @@ function read_results_with_keys(
 )
     isempty(result_keys) && return Dict{OptimizationContainerKey, DataFrames.DataFrame}()
     (timestamp_ids, timestamps) = _process_timestamps(res, start_time, len)
+    base_timestamps = get_timestamps(res)
     return _read_results(
         get_result_values(res, first(result_keys)),
         result_keys,
         timestamps,
         timestamp_ids,
         get_model_base_power(res),
+        base_timestamps,
     )
 end
 
