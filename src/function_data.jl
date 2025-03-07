@@ -356,6 +356,10 @@ is_convex(pwl::PiecewiseLinearData) =
 is_convex(pwl::PiecewiseStepData) =
     _slope_convexity_check(get_y_coords(pwl))
 
+"""
+Returns True/False depending on the concavity of the underlying data.
+For piecewise linear data, it checks if the sequence of slopes is non-increasing.
+"""
 is_concave(pwl::PiecewiseLinearData) =
     _slope_concavity_check(get_slopes(pwl))
 
