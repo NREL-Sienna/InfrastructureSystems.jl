@@ -106,6 +106,16 @@ end
         IS.PiecewiseStepData(; x_coords = [0.0, 1.0, 2.0], y_coords = [1.0, 0.9]),
     )
 
+    @test IS.is_concave(IS.PiecewiseLinearData([(0, 3), (1, 2), (1.1, 1), (1.2, 0)]))
+    @test !IS.is_concave(IS.PiecewiseLinearData([(0, 3), (1, 2), (1.1, 1), (1.2, 5)]))
+
+    @test IS.is_concave(
+        IS.PiecewiseStepData(; x_coords = [0.0, 1.0, 2.0], y_coords = [2.0, 1.0]),
+    )
+    @test !IS.is_concave(
+        IS.PiecewiseStepData(; x_coords = [0.0, 1.0, 2.0], y_coords = [0.9, 1.0]),
+    )
+
     @test IS.QuadraticFunctionData(IS.LinearFunctionData(1, 2)) ==
           convert(IS.QuadraticFunctionData, IS.LinearFunctionData(1, 2)) ==
           IS.QuadraticFunctionData(0, 1, 2)
