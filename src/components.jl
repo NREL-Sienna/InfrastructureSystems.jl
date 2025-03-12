@@ -180,6 +180,10 @@ function _remove_component!(
         pop!(components.data, T)
     end
 
+    if has_supplemental_attributes(component)
+        clear_supplemental_attributes!(component)
+    end
+
     if remove_time_series
         prepare_for_removal!(component)
     end

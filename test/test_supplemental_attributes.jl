@@ -114,6 +114,27 @@ end
     @test IS.get_num_supplemental_attributes(data) == 0
 end
 
+@testset "Test remove supplemental_attribute association on remove_component" begin
+    data = IS.SystemData(; time_series_in_memory = true)
+    mgr = data.supplemental_attribute_manager
+    attribute = IS.GeographicInfo()
+    component1 = IS.TestComponent("component1", 5)
+    component2 = IS.TestComponent("component2", 6)
+    IS.add_component!(data, component1)
+    IS.add_component!(data, component2)
+    IS.add_supplemental_attribute!(data, component1, attribute)
+    IS.add_supplemental_attribute!(data, component2, attribute)
+    components = IS.get_components(IS.TestComponent, data)
+    @test length(components) == 2
+    @test IS.get_num_supplemental_attributes(data) == 1
+
+    IS.remove_component!(data, component1)
+    components = IS.get_components(IS.TestComponent, data)
+    @test length(components) == 1
+    @test IS.get_num_supplemental_attributes(data) == 1
+    @test length(IS.list_associated_component_uuids(mgr.associations, attribute)) == 1
+end
+
 @testset "Test remove_supplemental_attribute" begin
     mgr = IS.SupplementalAttributeManager()
     geo_supplemental_attribute = IS.GeographicInfo()
