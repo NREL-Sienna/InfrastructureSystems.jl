@@ -434,8 +434,14 @@ function mask_component!(
     data::SystemData,
     component::InfrastructureSystemsComponent;
     remove_time_series = false,
+    remove_supplemental_attributes = false,
 )
-    remove_component!(data.components, component; remove_time_series = remove_time_series)
+    remove_component!(
+        data.components,
+        component;
+        remove_time_series = remove_time_series,
+        remove_supplemental_attributes = remove_supplemental_attributes,
+    )
     _handle_component_removal!(data, component)
     return add_masked_component!(
         data,

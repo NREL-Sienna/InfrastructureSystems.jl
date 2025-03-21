@@ -86,12 +86,14 @@ end
         ones(24),
     )
     ts = IS.SingleTimeSeries(; data = ta, name = "test")
+    attr = IS.GeographicInfo()
 
     for i in 1:3
         name = "component_$(i)"
         component = IS.TestComponent(name, i)
         IS.add_component!(data, component)
         IS.add_time_series!(data, component, ts)
+        IS.add_supplemental_attribute!(data, component, attr)
     end
 
     component = IS.get_component(IS.TestComponent, data, "component_2")
@@ -110,6 +112,7 @@ end
     ) == [component]
     @test IS.get_time_series(IS.SingleTimeSeries, component, "test") isa
           IS.SingleTimeSeries
+    @test IS.get_supplemental_attributes(IS.GeographicInfo, component) == [attr]
     @test IS.is_attached(component, data.masked_components)
 
     # This needs to return time series for masked components.
