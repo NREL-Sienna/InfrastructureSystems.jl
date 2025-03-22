@@ -688,3 +688,41 @@ end
     IS.add_component!(sys1, component)
     @test_throws ErrorException IS.add_component!(sys2, component)
 end
+
+@testset "Test retrieval of components by supplemental attribute type" begin
+    data = IS.SystemData()
+    component1 = IS.TestComponent("component1", 1)
+    component2 = IS.TestComponent("component2", 2)
+    component3 = IS.TestComponent("component3", 3)
+    IS.add_component!(data, component1)
+    IS.add_component!(data, component2)
+    IS.add_component!(data, component3)
+    for attr in (
+        IS.GeographicInfo(),
+        IS.GeographicInfo(),
+        IS.TestSupplemental(; value = 3.0),
+        IS.TestSupplemental(; value = 4.0),
+    )
+        IS.add_supplemental_attribute!(data, component1, attr)
+        IS.add_supplemental_attribute!(data, component2, attr)
+    end
+    IS.add_supplemental_attribute!(data, component3, IS.TestSupplemental(; value = 5.0))
+
+    components = IS.get_components(data, IS.SupplementalAttribute)
+    @test Set([IS.get_name(x) for x in components]) ==
+          Set([IS.get_name(component1), IS.get_name(component2), IS.get_name(component3)])
+
+    components = IS.get_components(data, IS.GeographicInfo)
+    @test Set([IS.get_name(x) for x in components]) ==
+          Set([IS.get_name(component1), IS.get_name(component2)])
+
+    IS.remove_supplemental_attributes!(data, IS.TestSupplemental)
+    @test isempty(IS.get_components(data, IS.TestSupplemental))
+
+    components = IS.get_components(data, IS.GeographicInfo)
+    @test Set([IS.get_name(x) for x in components]) ==
+          Set([IS.get_name(component1), IS.get_name(component2)])
+
+    abstract type PointlessAbstractType <: IS.SupplementalAttribute end
+    @test isempty(IS.get_components(data, PointlessAbstractType))
+end
