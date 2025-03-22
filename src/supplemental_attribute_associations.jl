@@ -300,6 +300,52 @@ function list_associated_component_uuids(
 end
 
 """
+Return the component UUIDs associated with the attribute.
+"""
+function list_associated_component_uuids(
+    associations::SupplementalAttributeAssociations,
+    attribute_type::Type{<:SupplementalAttribute},
+)
+    if isconcretetype(attribute_type)
+        return _list_associated_component_uuids(associations, (attribute_type,))
+    end
+
+    subtypes = get_all_concrete_subtypes(attribute_type)
+    return _list_associated_component_uuids(associations, subtypes)
+end
+
+const _LIST_ASSOCIATED_COMP_UUIDS_BY_ONE_TYPE = """
+    SELECT DISTINCT component_uuid
+    FROM $SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME
+    WHERE attribute_type = ?
+"""
+
+function _list_associated_component_uuids(
+    associations::SupplementalAttributeAssociations,
+    attribute_types,
+)
+    len = length(attribute_types)
+    if len == 0
+        # This would require an abstract type with no subtypes. Just here for completeness.
+        return Base.UUID[]
+    elseif len == 1
+        query = _LIST_ASSOCIATED_COMP_UUIDS_BY_ONE_TYPE
+        params = (string(nameof(first(attribute_types))),)
+    else
+        placeholder = chop(repeat("?,", length(attribute_types)))
+        params = Tuple(string(nameof(type)) for type in attribute_types)
+        query = """
+            SELECT DISTINCT component_uuid
+            FROM $SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME
+            WHERE attribute_type IN ($placeholder)
+        """
+    end
+
+    table = Tables.columntable(_execute_cached(associations, query, params))
+    return Base.UUID.(table.component_uuid)
+end
+
+"""
 Return the supplemental attribute UUIDs associated with the component and attribute type.
 """
 function list_associated_supplemental_attribute_uuids(

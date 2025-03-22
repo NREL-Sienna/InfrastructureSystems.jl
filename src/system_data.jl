@@ -1069,6 +1069,13 @@ end
 get_components(filter_func::Function, data::SystemData, attribute::SupplementalAttribute) =
     filter(filter_func, get_components(data, attribute))
 
+function get_components(data::SystemData, attribute_type::Type{<:SupplementalAttribute})
+    return [
+        get_component(data, x) for x in
+        list_associated_component_uuids(data.supplemental_attribute_manager, attribute_type)
+    ]
+end
+
 function get_masked_components(
     ::Type{T},
     data::SystemData,
