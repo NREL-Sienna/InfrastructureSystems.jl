@@ -1032,10 +1032,11 @@ end
 _get_columns(start_time, count, ts_metadata::StaticTimeSeriesMetadata) = UnitRange(1, 1)
 
 function _get_rows(start_time, len, ts_metadata::StaticTimeSeriesMetadata)
-    index =
-        Int(
-            (start_time - get_initial_timestamp(ts_metadata)) / get_resolution(ts_metadata),
-        ) + 1
+    index = compute_time_array_index(
+        get_initial_timestamp(ts_metadata),
+        start_time,
+        get_resolution(ts_metadata),
+    )
     if len === nothing
         len = length(ts_metadata) - index + 1
     end
@@ -1066,6 +1067,7 @@ function _check_start_time(start_time, metadata::ForecastMetadata)
     actual_start_time = _check_start_time_common(start_time, metadata)
     window_count = get_count(metadata)
     interval = get_interval(metadata)
+    # TODO DT
     time_diff = actual_start_time - get_initial_timestamp(metadata)
     if window_count > 1 &&
        Dates.Millisecond(time_diff) % Dates.Millisecond(interval) != Dates.Second(0)
@@ -1128,6 +1130,7 @@ function get_forecast_window_count(
         last_initial_time = last_timestamp - resolution * (horizon_count - 1)
 
         # Reduce last_initial_time to the nearest interval if necessary.
+        # TODO DT
         diff =
             Dates.Millisecond(last_initial_time - initial_timestamp) %
             Dates.Millisecond(interval)

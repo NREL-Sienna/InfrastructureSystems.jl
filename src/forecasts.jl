@@ -23,6 +23,7 @@ abstract type AbstractDeterministic <: Forecast end
 
 function check_time_series_data(forecast::Forecast)
     _check_forecast_data(forecast)
+    _check_forecast_interval(forecast)
     _check_forecast_windows(forecast)
 end
 
@@ -36,6 +37,11 @@ function _check_forecast_data(forecast::Forecast)
     length(lengths) != 1 &&
         throw(DimensionMismatch("All forecast arrays must have the same length"))
     return
+end
+
+function _check_forecast_interval(forecast::Forecast)
+    # TODO DT: test a failure case. We haven't been checking consistency of intervals.
+    check_resolution(collect(keys(get_data(forecast))), get_interval(forecast))
 end
 
 function _check_forecast_windows(forecast::Forecast)
@@ -52,6 +58,7 @@ function _check_forecast_windows(forecast::Forecast)
             )
         end
     end
+    return
 end
 
 # This method requires that the forecast type implement a `get_data` method like

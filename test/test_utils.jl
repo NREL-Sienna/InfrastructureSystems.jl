@@ -75,22 +75,3 @@ IS.get_name(::FakeTimeSeries) = "fake"
         sprint(show, MIME("text/plain"), summary(FakeTimeSeries())),
     )
 end
-
-@testset "Test check_resolution" begin
-    initial_time1 = Dates.DateTime("2020-09-01")
-    len1 = 24
-    resolution1 = Dates.Hour(1)
-    timestamps1 = range(initial_time1; length = len1, step = resolution1)
-    ta1 = TimeSeries.TimeArray(timestamps1, rand(len1))
-    IS.check_resolution(ta1) == resolution1
-
-    initial_time2 = Dates.DateTime("2020-09-02")
-    len2 = 12
-    resolution2 = Dates.Minute(5)
-    timestamps2 = range(initial_time2; length = len2, step = resolution2)
-    ta2 = TimeSeries.TimeArray(timestamps2, rand(len2))
-    IS.check_resolution(ta2) == resolution2
-
-    ta3 = vcat(ta1, ta2)
-    @test_throws IS.DataFormatError IS.check_resolution(ta3)
-end

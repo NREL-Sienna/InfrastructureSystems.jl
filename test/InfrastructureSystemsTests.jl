@@ -2,7 +2,7 @@ module InfrastructureSystemsTests
 
 using ReTest
 using Logging
-import Dates
+using Dates
 import TerminalLoggers: TerminalLogger
 import TimeSeries
 import UUIDs
