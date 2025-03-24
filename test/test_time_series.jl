@@ -427,6 +427,33 @@ end
     IS.add_time_series!(sys, component, data)
 end
 
+@testset "Test add SingleTimeSeries with irregular resolution." begin
+    sys = IS.SystemData()
+    name = "Component1"
+    component = IS.TestComponent(name, 5)
+    IS.add_component!(sys, component)
+
+    initial_time = Dates.DateTime("2020-01-01")
+    resolution = Dates.Month(1)
+
+    data = TimeSeries.TimeArray(range(initial_time; length = 12, step = resolution), 1:12)
+    ts_name = "ts"
+    ts1 = IS.SingleTimeSeries(; data = data, name = ts_name, resolution = resolution)
+    IS.add_time_series!(sys, component, ts1)
+
+    ts2_full = IS.get_time_series(IS.SingleTimeSeries, component, ts_name)
+    @test IS.get_data(ts2_full) == IS.get_data(ts1)
+
+    ts2_partial = IS.get_time_series(
+        IS.SingleTimeSeries,
+        component,
+        ts_name;
+        start_time = initial_time + resolution * 6,
+        len = 6,
+    )
+    @test IS.get_data(ts2_partial) == IS.get_data(ts1)[7:end]
+end
+
 @testset "Test add SingleTimeSeries with features" begin
     sys = IS.SystemData()
     name = "Component1"

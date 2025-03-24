@@ -65,6 +65,9 @@ Construct Deterministic from a Dict of TimeArrays.
 
   - `name::AbstractString`: user-defined name
   - `input_data::AbstractDict{Dates.DateTime, TimeSeries.TimeArray}`: time series data.
+  - `resolution::Union{Nothing, Dates.Period} = nothing`: If nothing, infer resolution from the
+    data. Otherwise, this must be the difference between each consecutive timestamps. This is
+    required if the resolution is not constant, such as Dates.Month or Dates.Year.
   - `normalization_factor::NormalizationFactor = 1.0`: optional normalization factor to apply
     to each data entry
   - `scaling_factor_multiplier::Union{Nothing, Function} = nothing`: If the data are scaling
@@ -76,18 +79,20 @@ Construct Deterministic from a Dict of TimeArrays.
 function Deterministic(
     name::AbstractString,
     input_data::AbstractDict{Dates.DateTime, <:TimeSeries.TimeArray};
+    resolution::Union{Nothing, Dates.Period} = nothing,
     normalization_factor::NormalizationFactor = 1.0,
     scaling_factor_multiplier::Union{Nothing, Function} = nothing,
 )
     data_type = eltype(TimeSeries.values(first(values(input_data))))
+    if isnothing(resolution)
+        resolution = get_resolution(first(values(input_data)))
+    end
     data = SortedDict{Dates.DateTime, Vector{data_type}}()
-    resolution =
-        TimeSeries.timestamp(first(values(input_data)))[2] -
-        TimeSeries.timestamp(first(values(input_data)))[1]
     for (k, v) in input_data
         if length(size(v)) > 1
             throw(ArgumentError("TimeArray with timestamp $k has more than one column)"))
         end
+        check_resolution(TimeSeries.timestamp(v), resolution)
         data[k] = TimeSeries.values(v)
     end
 

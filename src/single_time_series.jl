@@ -36,15 +36,20 @@ end
 function SingleTimeSeries(;
     name,
     data,
+    resolution::Union{Nothing, Dates.Period} = nothing,
     scaling_factor_multiplier = nothing,
     normalization_factor = 1.0,
     internal = InfrastructureSystemsInternal(),
 )
+    # TODO DT: if the data has irregular resolution but resolution is nothing, we should throw. 
+    if isnothing(resolution)
+        resolution = get_resolution(data)
+    end
     data = handle_normalization_factor(data, normalization_factor)
     return SingleTimeSeries(
         name,
         data,
-        get_resolution(data),
+        resolution,
         scaling_factor_multiplier,
         internal,
     )
@@ -84,15 +89,19 @@ Construct SingleTimeSeries from a TimeArray or DataFrame.
   - `scaling_factor_multiplier::Union{Nothing, Function} = nothing`: If the data are scaling
     factors then this function will be called on the component and applied to the data when
     [`get_time_series_array`](@ref) is called.
-  - `timestamp = :timestamp`: If a DataFrame is passed then this must be the column name that
+  - `timestamp::Symbol = :timestamp`: If a DataFrame is passed then this must be the column name that
     contains timestamps.
+  - `resolution::Union{Nothing, Dates.Period} = nothing`: If nothing, infer resolution from the
+    data. Otherwise, this must be the difference between each consecutive timestamps. This is
+    required if the resolution is not constant, such as Dates.Month or Dates.Year.
 """
 function SingleTimeSeries(
     name::AbstractString,
     data::Union{TimeSeries.TimeArray, DataFrames.DataFrame};
     normalization_factor::NormalizationFactor = 1.0,
     scaling_factor_multiplier::Union{Nothing, Function} = nothing,
-    timestamp = :timestamp,
+    timestamp::Symbol = :timestamp,
+    resolution::Union{Nothing, Dates.Period} = nothing,
 )
     if data isa DataFrames.DataFrame
         ta = TimeSeries.TimeArray(data; timestamp = timestamp)
@@ -105,6 +114,7 @@ function SingleTimeSeries(
     return SingleTimeSeries(;
         name = name,
         data = ta,
+        resolution = resolution,
         scaling_factor_multiplier = scaling_factor_multiplier,
         normalization_factor = normalization_factor,
         internal = InfrastructureSystemsInternal(),
@@ -214,13 +224,8 @@ end
 function check_time_series_data(ts::SingleTimeSeries)
     len = length(ts.data)
     len < 2 && throw(ArgumentError("data array length must be at least 2: $len"))
-    timestamps = TimeSeries.timestamp(ts.data)
-    for i in 2:len
-        res = timestamps[i] - timestamps[i - 1]
-        if res != ts.resolution
-            throw(ConflictingInputsError("resolution mismatch: $res $ts.resolution"))
-        end
-    end
+    check_resolution(TimeSeries.timestamp(ts.data), ts.resolution)
+    return
 end
 
 """
