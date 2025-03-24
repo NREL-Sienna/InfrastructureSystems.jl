@@ -116,6 +116,7 @@ function get_window(
     initial_time::Dates.DateTime;
     len::Union{Nothing, Int} = nothing,
 )
+    # TODO DT: can interval be irregular?
     tdiff = Dates.Millisecond(initial_time - forecast.initial_timestamp)
     interval_ms = Dates.Millisecond(forecast.interval)
     if interval_ms != Dates.Millisecond(0) && tdiff % interval_ms != Dates.Millisecond(0)
@@ -214,6 +215,7 @@ function _translate_deterministic_offsets(
     columns,
     last_index,
 )
+    # TODO DT
     interval = Dates.Millisecond(interval)
     interval_offset = Int(interval / resolution)
     s_index = (columns.start - 1) * interval_offset + 1

@@ -105,6 +105,9 @@ Construct Probabilistic from a Dict of TimeArrays.
   - `name::AbstractString`: user-defined name
   - `input_data::AbstractDict{Dates.DateTime, TimeSeries.TimeArray}`: time series data.
   - `percentiles`: Percentiles represented in the probabilistic forecast
+  - `resolution::Union{Nothing, Dates.Period} = nothing`: If nothing, infer resolution from the
+    data. Otherwise, this must be the difference between each consecutive timestamps. This is
+    required if the resolution is not constant, such as Dates.Month or Dates.Year.
   - `normalization_factor::NormalizationFactor = 1.0`: optional normalization factor to apply
     to each data entry
   - `scaling_factor_multiplier::Union{Nothing, Function} = nothing`: If the data are scaling
@@ -117,13 +120,14 @@ function Probabilistic(
     name::AbstractString,
     input_data::AbstractDict{Dates.DateTime, <:TimeSeries.TimeArray},
     percentiles::Vector{Float64};
+    resolution::Union{Nothing, Dates.Period} = nothing,
     normalization_factor::NormalizationFactor = 1.0,
     scaling_factor_multiplier::Union{Nothing, Function} = nothing,
 )
     data = SortedDict{Dates.DateTime, Matrix{Float64}}()
-    resolution =
-        TimeSeries.timestamp(first(values(input_data)))[2] -
-        TimeSeries.timestamp(first(values(input_data)))[1]
+    if isnothing(resolution)
+        resolution = get_resolution(first(values(input_data)))
+    end
     for (k, v) in input_data
         data[k] = TimeSeries.values(v)
     end
