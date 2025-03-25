@@ -238,7 +238,11 @@ function has_association(
     c_uuid = get_uuid(component)
     params = (string(a_uuid), string(c_uuid))
     return !isempty(
-        _execute_cached(associations, _QUERY_HAS_ASSOCIATION_BY_COMPONENT_ATTRIBUTE, params),
+        _execute_cached(
+            associations,
+            _QUERY_HAS_ASSOCIATION_BY_COMPONENT_ATTRIBUTE,
+            params,
+        ),
     )
 end
 
