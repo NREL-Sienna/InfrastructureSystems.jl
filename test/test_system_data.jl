@@ -507,7 +507,7 @@ end
     IS.add_component!(data, component2)
     IS.add_supplemental_attribute!(data, component1, geo_supplemental_attribute)
     IS.add_supplemental_attribute!(data, component2, geo_supplemental_attribute)
-    components = IS.get_components(data, geo_supplemental_attribute)
+    components = IS.get_associated_components(data, geo_supplemental_attribute)
     @test length(components) == 2
     sort!(components; by = x -> x.name)
     @test components[1] === component1
@@ -708,21 +708,21 @@ end
     end
     IS.add_supplemental_attribute!(data, component3, IS.TestSupplemental(; value = 5.0))
 
-    components = IS.get_components(data, IS.SupplementalAttribute)
+    components = IS.get_associated_components(data, IS.SupplementalAttribute)
     @test Set([IS.get_name(x) for x in components]) ==
           Set([IS.get_name(component1), IS.get_name(component2), IS.get_name(component3)])
 
-    components = IS.get_components(data, IS.GeographicInfo)
+    components = IS.get_associated_components(data, IS.GeographicInfo)
     @test Set([IS.get_name(x) for x in components]) ==
           Set([IS.get_name(component1), IS.get_name(component2)])
 
     IS.remove_supplemental_attributes!(data, IS.TestSupplemental)
-    @test isempty(IS.get_components(data, IS.TestSupplemental))
+    @test isempty(IS.get_associated_components(data, IS.TestSupplemental))
 
-    components = IS.get_components(data, IS.GeographicInfo)
+    components = IS.get_associated_components(data, IS.GeographicInfo)
     @test Set([IS.get_name(x) for x in components]) ==
           Set([IS.get_name(component1), IS.get_name(component2)])
 
     abstract type PointlessAbstractType <: IS.SupplementalAttribute end
-    @test isempty(IS.get_components(data, PointlessAbstractType))
+    @test isempty(IS.get_associated_components(data, PointlessAbstractType))
 end

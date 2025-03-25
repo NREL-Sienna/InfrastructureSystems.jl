@@ -1057,7 +1057,7 @@ end
 get_components_by_name(::Type{T}, data::SystemData, args...) where {T} =
     get_components_by_name(T, data.components, args...)
 
-function get_components(data::SystemData, attribute::SupplementalAttribute)
+function get_associated_components(data::SystemData, attribute::SupplementalAttribute)
     [
         get_component(data, x) for x in list_associated_component_uuids(
             data.supplemental_attribute_manager.associations,
@@ -1066,10 +1066,32 @@ function get_components(data::SystemData, attribute::SupplementalAttribute)
     ]
 end
 
-get_components(filter_func::Function, data::SystemData, attribute::SupplementalAttribute) =
-    filter(filter_func, get_components(data, attribute))
+@deprecate get_components(data::SystemData, attribute::SupplementalAttribute) get_associated_components(
+    data,
+    attribute,
+)
 
-function get_components(data::SystemData, attribute_type::Type{<:SupplementalAttribute})
+get_associated_components(
+    filter_func::Function,
+    data::SystemData,
+    attribute::SupplementalAttribute,
+) =
+    filter(filter_func, get_associated_components(data, attribute))
+
+@deprecate get_components(
+    filter_func::Function,
+    data::SystemData,
+    attribute::SupplementalAttribute,
+) get_associated_components(
+    filter_func,
+    data,
+    attribute,
+)
+
+function get_associated_components(
+    data::SystemData,
+    attribute_type::Type{<:SupplementalAttribute},
+)
     return [
         get_component(data, x) for x in
         list_associated_component_uuids(data.supplemental_attribute_manager, attribute_type)
