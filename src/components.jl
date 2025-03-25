@@ -138,12 +138,14 @@ function remove_component!(
     components::Components,
     component::T;
     remove_time_series = true,
+    remove_supplemental_attributes = true,
 ) where {T <: InfrastructureSystemsComponent}
     return _remove_component!(
         T,
         components,
         get_name(component);
         remove_time_series = remove_time_series,
+        remove_supplemental_attributes = remove_supplemental_attributes,
     )
 end
 
@@ -157,8 +159,15 @@ function remove_component!(
     components::Components,
     name::AbstractString;
     remove_time_series = true,
+    remove_supplemental_attributes = true,
 ) where {T <: InfrastructureSystemsComponent}
-    return _remove_component!(T, components, name; remove_time_series = remove_time_series)
+    return _remove_component!(
+        T,
+        components,
+        name;
+        remove_time_series = remove_time_series,
+        remove_supplemental_attributes = remove_supplemental_attributes,
+    )
 end
 
 function _remove_component!(
@@ -166,6 +175,7 @@ function _remove_component!(
     components::Components,
     name::AbstractString;
     remove_time_series = true,
+    remove_supplemental_attributes = true,
 ) where {T <: InfrastructureSystemsComponent}
     if !haskey(components.data, T)
         throw(ArgumentError("component $T is not stored"))
@@ -180,7 +190,7 @@ function _remove_component!(
         pop!(components.data, T)
     end
 
-    if has_supplemental_attributes(component)
+    if remove_supplemental_attributes && has_supplemental_attributes(component)
         clear_supplemental_attributes!(component)
     end
 
