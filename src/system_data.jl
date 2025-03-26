@@ -1066,10 +1066,11 @@ function get_associated_components(data::SystemData, attribute::SupplementalAttr
     ]
 end
 
-@deprecate get_components(data::SystemData, attribute::SupplementalAttribute) get_associated_components(
-    data,
-    attribute,
-)
+get_components(data::SystemData, attribute::SupplementalAttribute) =
+    get_associated_components(
+        data,
+        attribute,
+    )
 
 get_associated_components(
     filter_func::Function,
@@ -1078,11 +1079,11 @@ get_associated_components(
 ) =
     filter(filter_func, get_associated_components(data, attribute))
 
-@deprecate get_components(
+get_components(
     filter_func::Function,
     data::SystemData,
     attribute::SupplementalAttribute,
-) get_associated_components(
+) = get_associated_components(
     filter_func,
     data,
     attribute,
