@@ -200,7 +200,7 @@ function get_num_components_with_attributes(associations::SupplementalAttributeA
     return _execute_count(associations, query)
 end
 
-const _HAS_ASSOCIATION_BY_ATTRIBUTE = """
+const _QUERY_HAS_ASSOCIATION_BY_ATTRIBUTE = """
     SELECT attribute_uuid
     FROM $SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME
     WHERE attribute_uuid = ?
@@ -218,12 +218,12 @@ function has_association(
     params = (string(get_uuid(attribute)),)
     return !isempty(
         Tables.rowtable(
-            _execute_cached(associations, _HAS_ASSOCIATION_BY_ATTRIBUTE, params),
+            _execute_cached(associations, _QUERY_HAS_ASSOCIATION_BY_ATTRIBUTE, params),
         ),
     )
 end
 
-const _HAS_ASSOCIATION_BY_COMPONENT_ATTRIBUTE = """
+const _QUERY_HAS_ASSOCIATION_BY_COMPONENT_ATTRIBUTE = """
     SELECT attribute_uuid
     FROM $SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME
     WHERE attribute_uuid = ? AND component_uuid = ?
@@ -238,11 +238,15 @@ function has_association(
     c_uuid = get_uuid(component)
     params = (string(a_uuid), string(c_uuid))
     return !isempty(
-        _execute_cached(associations, _HAS_ASSOCIATION_BY_COMPONENT_ATTRIBUTE, params),
+        _execute_cached(
+            associations,
+            _QUERY_HAS_ASSOCIATION_BY_COMPONENT_ATTRIBUTE,
+            params,
+        ),
     )
 end
 
-const _HAS_ASSOCIATION_BY_COMPONENT = """
+const _QUERY_HAS_ASSOCIATION_BY_COMPONENT = """
     SELECT attribute_uuid
     FROM $SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME
     WHERE component_uuid = ?
@@ -255,12 +259,12 @@ function has_association(
     params = (string(get_uuid(component)),)
     return !isempty(
         Tables.rowtable(
-            _execute_cached(associations, _HAS_ASSOCIATION_BY_COMPONENT, params),
+            _execute_cached(associations, _QUERY_HAS_ASSOCIATION_BY_COMPONENT, params),
         ),
     )
 end
 
-const _HAS_ASSOCIATION_BY_COMP_ATTR_TYPE = """
+const _QUERY_HAS_ASSOCIATION_BY_COMP_ATTR_TYPE = """
     SELECT attribute_uuid
     FROM $SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME
     WHERE component_uuid = ? AND attribute_type = ?
@@ -274,12 +278,12 @@ function has_association(
     params = (string(get_uuid(component)), string(nameof(attribute_type)))
     return !isempty(
         Tables.rowtable(
-            _execute_cached(associations, _HAS_ASSOCIATION_BY_COMP_ATTR_TYPE, params),
+            _execute_cached(associations, _QUERY_HAS_ASSOCIATION_BY_COMP_ATTR_TYPE, params),
         ),
     )
 end
 
-const _LIST_ASSOCIATED_COMP_UUIDS = """
+const _QUERY_LIST_ASSOCIATED_COMP_UUIDS = """
     SELECT component_uuid
     FROM $SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME
     WHERE attribute_uuid = ?
@@ -294,8 +298,54 @@ function list_associated_component_uuids(
 )
     params = (string(get_uuid(attribute)),)
     table = Tables.columntable(
-        _execute_cached(associations, _LIST_ASSOCIATED_COMP_UUIDS, params),
+        _execute_cached(associations, _QUERY_LIST_ASSOCIATED_COMP_UUIDS, params),
     )
+    return Base.UUID.(table.component_uuid)
+end
+
+"""
+Return the component UUIDs associated with the attribute.
+"""
+function list_associated_component_uuids(
+    associations::SupplementalAttributeAssociations,
+    attribute_type::Type{<:SupplementalAttribute},
+)
+    if isconcretetype(attribute_type)
+        return _list_associated_component_uuids(associations, (attribute_type,))
+    end
+
+    subtypes = get_all_concrete_subtypes(attribute_type)
+    return _list_associated_component_uuids(associations, subtypes)
+end
+
+const _QUERY_LIST_ASSOCIATED_COMP_UUIDS_BY_ONE_TYPE = """
+    SELECT DISTINCT component_uuid
+    FROM $SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME
+    WHERE attribute_type = ?
+"""
+
+function _list_associated_component_uuids(
+    associations::SupplementalAttributeAssociations,
+    attribute_types,
+)
+    len = length(attribute_types)
+    if len == 0
+        # This would require an abstract type with no subtypes. Just here for completeness.
+        return Base.UUID[]
+    elseif len == 1
+        query = _QUERY_LIST_ASSOCIATED_COMP_UUIDS_BY_ONE_TYPE
+        params = (string(nameof(first(attribute_types))),)
+    else
+        placeholder = chop(repeat("?,", length(attribute_types)))
+        params = Tuple(string(nameof(type)) for type in attribute_types)
+        query = """
+            SELECT DISTINCT component_uuid
+            FROM $SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME
+            WHERE attribute_type IN ($placeholder)
+        """
+    end
+
+    table = Tables.columntable(_execute_cached(associations, query, params))
     return Base.UUID.(table.component_uuid)
 end
 
@@ -355,7 +405,7 @@ function remove_associations!(
     return
 end
 
-const _REPLACE_COMP_UUID_SA = """
+const _QUERY_REPLACE_COMP_UUID_SA = """
     UPDATE $SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME
     SET component_uuid = ?
     WHERE component_uuid = ?
@@ -370,7 +420,7 @@ function replace_component_uuid!(
     new_uuid::Base.UUID,
 )
     params = (string(new_uuid), string(old_uuid))
-    _execute_cached(associations, _REPLACE_COMP_UUID_SA, params)
+    _execute_cached(associations, _QUERY_REPLACE_COMP_UUID_SA, params)
     return
 end
 

@@ -498,7 +498,7 @@ function get_forecast_initial_times(store::TimeSeriesMetadataStore)
     return get_initial_times(params.initial_timestamp, params.count, params.interval)
 end
 
-const _GET_FORECAST_PARAMS = """
+const _QUERY_GET_FORECAST_PARAMS = """
     SELECT
         horizon_ms
         ,initial_timestamp
@@ -510,7 +510,7 @@ const _GET_FORECAST_PARAMS = """
     LIMIT 1
 """
 function get_forecast_parameters(store::TimeSeriesMetadataStore)
-    table = Tables.rowtable(_execute_cached(store, _GET_FORECAST_PARAMS))
+    table = Tables.rowtable(_execute_cached(store, _QUERY_GET_FORECAST_PARAMS))
     isempty(table) && return nothing
     row = table[1]
     return ForecastParameters(;
@@ -827,17 +827,18 @@ function has_metadata(
     return _has_metadata(stmt, params2)
 end
 
-const _HAS_METADATA_BY_TS_UUID = "SELECT id FROM $ASSOCIATIONS_TABLE_NAME WHERE time_series_uuid = ?"
+const _QUERY_HAS_METADATA_BY_TS_UUID = "SELECT id FROM $ASSOCIATIONS_TABLE_NAME WHERE time_series_uuid = ?"
 
 """
 Return True if there is time series matching the UUID.
 """
 function has_metadata(store::TimeSeriesMetadataStore, time_series_uuid::Base.UUID)
     params = (string(time_series_uuid),)
-    return _has_metadata(store, _HAS_METADATA_BY_TS_UUID, params)
+    return _has_metadata(store, _QUERY_HAS_METADATA_BY_TS_UUID, params)
 end
 
-const _BASE_HAS_METADATA = "SELECT id FROM $ASSOCIATIONS_TABLE_NAME WHERE owner_uuid = ?"
+const _QUERY_BASE_HAS_METADATA = "SELECT id FROM $ASSOCIATIONS_TABLE_NAME WHERE owner_uuid = ?"
+
 function _make_has_metadata_statement!(
     store::TimeSeriesMetadataStore,
     key::HasMetadataQueryKey;
@@ -869,10 +870,10 @@ function _make_has_metadata_statement!(
     end
 
     if isempty(where_clauses)
-        final = "$_BASE_HAS_METADATA LIMIT 1"
+        final = "$_QUERY_BASE_HAS_METADATA LIMIT 1"
     else
         where_clause = join(where_clauses, " AND ")
-        final = "$_BASE_HAS_METADATA AND $where_clause LIMIT 1"
+        final = "$_QUERY_BASE_HAS_METADATA AND $where_clause LIMIT 1"
     end
 
     stmt = SQLite.Stmt(store.db, final)
@@ -970,10 +971,10 @@ function list_existing_time_series_uuids(store::TimeSeriesMetadataStore, uuids)
     return Base.UUID.(table.time_series_uuid)
 end
 
-const _LIST_EXISTING_TS_UUIDS = "SELECT DISTINCT time_series_uuid FROM $ASSOCIATIONS_TABLE_NAME"
+const _QUERY_LIST_EXISTING_TS_UUIDS = "SELECT DISTINCT time_series_uuid FROM $ASSOCIATIONS_TABLE_NAME"
 
 function list_existing_time_series_uuids(store::TimeSeriesMetadataStore)
-    table = Tables.columntable(_execute_cached(store, _LIST_EXISTING_TS_UUIDS))
+    table = Tables.columntable(_execute_cached(store, _QUERY_LIST_EXISTING_TS_UUIDS))
     return Base.UUID.(table.time_series_uuid)
 end
 
@@ -1154,7 +1155,7 @@ function _handle_removed_metadata(store::TimeSeriesMetadataStore, metadata_uuid:
     end
 end
 
-const _REPLACE_COMP_UUID_TS = """
+const _QUERY_REPLACE_COMP_UUID_TS = """
     UPDATE $ASSOCIATIONS_TABLE_NAME
     SET owner_uuid = ?
     WHERE owner_uuid = ?
@@ -1165,7 +1166,7 @@ function replace_component_uuid!(
     new_uuid::Base.UUID,
 )
     params = (string(new_uuid), string(old_uuid))
-    _execute(store, _REPLACE_COMP_UUID_TS, params)
+    _execute(store, _QUERY_REPLACE_COMP_UUID_TS, params)
     return
 end
 
