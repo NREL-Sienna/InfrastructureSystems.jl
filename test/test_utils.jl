@@ -20,7 +20,7 @@ end
 
 IS.@scoped_enum Fruit APPLE = 1 ORANGE = 2
 
-@testset "Test scoped_enum" begin
+@testset "Test scoped_enum correctness" begin
     @test Fruit.APPLE isa Fruit
     @test Fruit.ORANGE isa Fruit
     @test sort([Fruit.ORANGE, Fruit.APPLE]) == [Fruit.APPLE, Fruit.ORANGE]
@@ -35,6 +35,12 @@ IS.@scoped_enum Fruit APPLE = 1 ORANGE = 2
 
     @test IS.deserialize_struct(Foo, IS.serialize_struct(Foo(Fruit.APPLE))) ==
           Foo(Fruit.APPLE)
+end
+
+@testset "Test scoped_enum performance" begin
+    # TODO figure out why this fails if evaluated inside a testset that defines a struct
+    @test iszero(@allocated Fruit.APPLE)
+    @test iszero(@allocated instances(Fruit))
 end
 
 @testset "Test undef component prints" begin
