@@ -256,14 +256,15 @@ julia> @scoped_enum(Fruit,
 ```
 """
 macro scoped_enum(T, args...)
-    hn_methods = []
-    n2v_methods = []
-    v2n_methods = []
-    for p in args
-        value = Int64(last(p.args))
-        push!(hn_methods, :(_hasname(::$(Val{first(p.args)})) = true))
-        push!(n2v_methods, :(_name2value(::$(Val{first(p.args)})) = $value))
-        push!(v2n_methods, :(_value2name(::Val{$value}) = $(String(first(p.args)))))
+    hn_methods = Array{Expr}(undef, length(args))
+    n2v_methods = Array{Expr}(undef, length(args))
+    v2n_methods = Array{Expr}(undef, length(args))
+    for (i, p) in enumerate(args)
+        _ValKey = Val{first(p.args)}
+        _value = Int64(last(p.args))
+        hn_methods[i] = :(_hasname(::$_ValKey) = true)
+        n2v_methods[i] = :(_name2value(::$_ValKey) = $_value)
+        v2n_methods[i] = :(_value2name(::Val{$_value}) = $(String(first(p.args))))
     end
     blk = esc(
         :(
