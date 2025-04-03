@@ -256,6 +256,16 @@ julia> @scoped_enum(Fruit,
 ```
 """
 macro scoped_enum(T, args...)
+    hn_methods = Array{Expr}(undef, length(args))
+    n2v_methods = Array{Expr}(undef, length(args))
+    v2n_methods = Array{Expr}(undef, length(args))
+    for (i, p) in enumerate(args)
+        _ValKey = Val{first(p.args)}
+        _value = Int64(last(p.args))
+        hn_methods[i] = :(_hasname(::$_ValKey) = true)
+        n2v_methods[i] = :(_name2value(::$_ValKey) = $_value)
+        v2n_methods[i] = :(_value2name(::Val{$_value}) = $(String(first(p.args))))
+    end
     blk = esc(
         :(
             module $(Symbol("$(T)Module"))
@@ -265,17 +275,29 @@ macro scoped_enum(T, args...)
             struct $T
                 value::Int64
             end
-            const NAME2VALUE =
-                $(Dict(String(x.args[1]) => Int64(x.args[2]) for x in args))
-            $T(str::String) = $T(NAME2VALUE[str])
-            const VALUE2NAME =
-                $(Dict(Int64(x.args[2]) => String(x.args[1]) for x in args))
-            Base.string(e::$T) = VALUE2NAME[e.value]
+
+            # A set, implemented by multiple dispatch
+            $(hn_methods...)
+            _hasname(::Val) = false
+
+            # Some dictionaries, implemented by multiple dispath
+            $(n2v_methods...)
+            _name2value(name::Symbol) = _name2value(Val(name))
+            _name2value(name::String) = _name2value(Symbol(name))
+
+            $(v2n_methods...)
+            _value2name(value::Int64) = _value2name(Val{value}())
+
+            const _ALL_NAMES = Tuple(first(x.args) for x in $args)
+            const _ALL_INSTANCES = Tuple($T(last(x.args)) for x in $args)
+
+            $T(name::Union{Symbol, String}) = $T(_name2value(name))
+            Base.string(e::$T) = _value2name(e.value)
             Base.getproperty(::Type{$T}, sym::Symbol) =
-                haskey(NAME2VALUE, String(sym)) ? $T(String(sym)) : getfield($T, sym)
+                _hasname(Val(sym)) ? $T(sym) : getfield($T, sym)
             Base.show(io::IO, e::$T) =
                 print(io, string($T, ".", string(e), " = ", e.value))
-            Base.propertynames(::Type{$T}) = $([x.args[1] for x in args])
+            Base.propertynames(::Type{$T}) = _ALL_NAMES
             JSON3.StructType(::Type{$T}) = JSON3.StructTypes.StringType()
 
             InfrastructureSystems.serialize(val::$T) = Base.string(val)
@@ -284,7 +306,7 @@ macro scoped_enum(T, args...)
 
             Base.convert(::Type{$T}, val::Integer) = $T(val)
             Base.isless(val::$T, other::$T) = isless(val.value, other.value)
-            Base.instances(::Type{$T}) = tuple($T.($(x.args[2] for x in args))...)
+            Base.instances(::Type{$T}) = _ALL_INSTANCES
             end
         ),
     )
