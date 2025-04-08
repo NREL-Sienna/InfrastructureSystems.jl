@@ -18,36 +18,6 @@ is_time_series_sub_type(::Type{DeterministicMetadata}, ::Type{Forecast}) = true
 is_time_series_sub_type(::Type{ProbabilisticMetadata}, ::Type{Forecast}) = true
 is_time_series_sub_type(::Type{ScenariosMetadata}, ::Type{Forecast}) = true
 
-function check_resolution(ts::TimeSeries.TimeArray)
-    error("TODO DT: we don't want this method")
-    tstamps = TimeSeries.timestamp(ts)
-    timediffs = unique([tstamps[ix] - tstamps[ix - 1] for ix in 2:length(tstamps)])
-    res = []
-    for timediff in timediffs
-        if mod(timediff, Dates.Millisecond(Dates.Day(1))) == Dates.Millisecond(0)
-            push!(res, Dates.Day(timediff / Dates.Millisecond(Dates.Day(1))))
-        elseif mod(timediff, Dates.Millisecond(Dates.Hour(1))) == Dates.Millisecond(0)
-            push!(res, Dates.Hour(timediff / Dates.Millisecond(Dates.Hour(1))))
-        elseif mod(timediff, Dates.Millisecond(Dates.Minute(1))) == Dates.Millisecond(0)
-            push!(res, Dates.Minute(timediff / Dates.Millisecond(Dates.Minute(1))))
-        elseif mod(timediff, Dates.Millisecond(Dates.Second(1))) == Dates.Millisecond(0)
-            push!(res, Dates.Second(timediff / Dates.Millisecond(Dates.Second(1))))
-        else
-            throw(DataFormatError("cannot understand the resolution of the time series"))
-        end
-    end
-
-    if length(res) > 1
-        throw(
-            DataFormatError(
-                "time series has non-uniform resolution: this is currently not supported",
-            ),
-        )
-    end
-
-    return res[1]
-end
-
 """
 Check if the timestamps have a constant resolution.
 Handles constant periods like Second and Minute as well as irregular periods like Month and Year.
@@ -59,6 +29,9 @@ https://docs.julialang.org/en/v1/stdlib/Dates/#TimeType-Period-Arithmetic
 - `resolution`: a Dates.Period value
 """
 function check_resolution(timestamps, resolution::Dates.Period)
+    if length(timestamps) < 2
+        throw(ArgumentError("At least two timestamps are required"))
+    end
     # Note this behavior in Julia:
     # julia> DateTime("2020-02-01T00:00:00") + Month(1)
     # 2020-03-01T00:00:00
@@ -66,7 +39,8 @@ function check_resolution(timestamps, resolution::Dates.Period)
         if timestamps[i] != timestamps[i - 1] + resolution
             throw(
                 ConflictingInputsError(
-                    "resolution mismatch: $timestamps[i - 1] $timestamps[i] $resolution",
+                    "resolution mismatch: t$(i - 1) = $(timestamps[i - 1]) t$(i) = $(timestamps[i]) " *
+                    "resolution = $(Dates.canonicalize(resolution))",
                 ),
             )
         end
@@ -220,7 +194,7 @@ function _compute_periods_between_common(
 end
 
 """
-Return the resolution from a TimeArray.
+Return the resolution from a TimeArray by subtracting the first two timestamps.
 """
 function get_resolution(ts::TimeSeries.TimeArray)
     if length(ts) < 2
@@ -228,8 +202,12 @@ function get_resolution(ts::TimeSeries.TimeArray)
     end
 
     timestamps = TimeSeries.timestamp(ts)
-    return timestamps[2] - timestamps[1]
+    resolution = timestamps[2] - timestamps[1]
+    return resolution
 end
+
+get_sorted_keys(x::AbstractDict) = sort(collect(keys(x)))
+get_sorted_keys(x::SortedDict) = collect(keys(x))
 
 function get_total_period(
     initial_timestamp::Dates.DateTime,
@@ -248,20 +226,67 @@ end
 # We are not using string(period) because the Dates package behaves differently for
 # singular vs plural and uses lower case. This is simpler.
 
-to_string(period::Dates.Period) = "$(period.value) $(nameof(typeof(period)))"
-
-function from_string(period::String)
-    parts = split(period, " ")
-    if length(parts) != 2
-        throw(ArgumentError("Invalid period string: $period"))
-    end
-
-    value = parse(Int, parts[1])
-    period_type = Symbol(parts[2])
-    return getproperty(Dates, period_type)(value)
+function to_iso_8601(period::Dates.Millisecond)
+    return @sprintf("P0DT%.3fS", Float64(period.value) / 1000.0)
 end
 
-is_constant_period(period::Dates.Period) = true
-is_constant_period(period::Dates.Month) = false
-is_constant_period(period::Dates.Year) = false
-is_constant_period(period::Dates.Quarter) = false
+to_iso_8601(period::Dates.Second) = @sprintf("P0DT%dS", period.value)
+to_iso_8601(period::Dates.Minute) = @sprintf("P0DT%dM", period.value)
+to_iso_8601(period::Dates.Hour) = @sprintf("P0DT%dH", period.value)
+to_iso_8601(period::Dates.Day) = @sprintf("P%dD", period.value)
+to_iso_8601(period::Dates.Week) = @sprintf("P%dW", period.value)
+to_iso_8601(period::Dates.Month) = @sprintf("P%dM", period.value)
+to_iso_8601(period::Dates.Quarter) = error("Dates.Quarter is not supported")
+# We don't have a way to deserialize this into Dates.Quarter.
+# to_iso_8601(period::Dates.Quarter) = @sprintf("P%dM", period.value * 3)
+to_iso_8601(period::Dates.Year) = @sprintf("P%dY", period.value)
+
+const REGEX_PERIODS = OrderedDict(
+    "milliseconds" => r"^P0DT(\d+\.\d+)S$",
+    "seconds" => r"^P0DT(\d+)S$",
+    "minutes" => r"^P0DT(\d+)M$",
+    "hours" => r"^P0DT(\d+)H$",
+    "days" => r"^P(\d+)D$",
+    "weeks" => r"^P(\d+)W$",
+    "months" => r"^P(\d+)M$",
+    "years" => r"^P(\d+)Y$",
+)
+
+const PERIOD_NAME_TO_TYPE = Dict(
+    "milliseconds" => Dates.Millisecond,
+    "seconds" => Dates.Second,
+    "minutes" => Dates.Minute,
+    "hours" => Dates.Hour,
+    "days" => Dates.Day,
+    "weeks" => Dates.Week,
+    "months" => Dates.Month,
+    "years" => Dates.Year,
+)
+
+@assert keys(REGEX_PERIODS) == keys(PERIOD_NAME_TO_TYPE)
+
+function from_iso_8601(period::String)
+    for (name, regex) in REGEX_PERIODS
+        m = match(regex, period)
+        if !isnothing(m)
+            if name == "milliseconds"
+                value = parse(Float64, m.captures[1]) * 1000
+                if value % 1 != 0.0
+                    throw(
+                        ArgumentError("Fractional milliseconds are not supported: $value"),
+                    )
+                end
+            else
+                value = parse(Int, m.captures[1])
+            end
+            return PERIOD_NAME_TO_TYPE[name](value)
+        end
+    end
+
+    throw(ArgumentError("Unsupported period string: $period"))
+end
+
+is_irregular_period(period::Dates.Period) = false
+is_irregular_period(period::Dates.Month) = true
+is_irregular_period(period::Dates.Year) = true
+is_irregular_period(period::Dates.Quarter) = true

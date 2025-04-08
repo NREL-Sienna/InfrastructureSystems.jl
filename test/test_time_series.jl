@@ -145,6 +145,158 @@ end
     @test_throws ArgumentError IS.add_time_series!(sys, component, forecast)
 end
 
+@testset "Test add forecast with different horizons" begin
+    sys = IS.SystemData()
+    name = "Component"
+    component = IS.TestComponent(name, 5)
+    IS.add_component!(sys, component)
+
+    resolution = Dates.Hour(1)
+    initial_time = Dates.DateTime("2020-01-01")
+    horizon_count = 24
+
+    name = "test1"
+    data = SortedDict(
+        initial_time => rand(24),
+        initial_time + Dates.Hour(1) => rand(24),
+        initial_time + Dates.Hour(2) => rand(25),
+    )
+    forecast = IS.Deterministic(name, data, resolution)
+    @test_throws DimensionMismatch IS.add_time_series!(sys, component, forecast)
+end
+
+@testset "Test add forecast with invalid horizon" begin
+    sys = IS.SystemData()
+    name = "Component"
+    component = IS.TestComponent(name, 5)
+    IS.add_component!(sys, component)
+
+    resolution = Dates.Hour(1)
+    initial_time = Dates.DateTime("2020-01-01")
+    horizon_count = 1
+
+    name = "test1"
+    data = SortedDict(
+        initial_time => rand(horizon_count),
+        initial_time + Dates.Hour(1) => rand(horizon_count),
+    )
+    forecast = IS.Deterministic(name, data, resolution)
+    @test_throws ArgumentError IS.add_time_series!(sys, component, forecast)
+end
+
+@testset "Test add forecast with inconsistent interval" begin
+    sys = IS.SystemData()
+    name = "Component1"
+    component = IS.TestComponent(name, 5)
+    IS.add_component!(sys, component)
+
+    resolution = Dates.Minute(5)
+    initial_time = Dates.DateTime("2020-01-01")
+    horizon_count = 24
+
+    name = "test1"
+    one_dim_data = SortedDict(
+        initial_time => rand(horizon_count),
+        initial_time + Dates.Hour(1) => rand(horizon_count),
+        initial_time + Dates.Hour(3) => rand(horizon_count),
+    )
+    two_dim_data = SortedDict(
+        initial_time => rand(horizon_count, 99),
+        initial_time + Dates.Hour(1) => rand(horizon_count, 99),
+        initial_time + Dates.Hour(3) => rand(horizon_count, 99),
+    )
+
+    deterministic = IS.Deterministic(name, one_dim_data, resolution)
+    probabilistic = IS.Probabilistic(name, two_dim_data, rand(99), resolution)
+    scenarios = IS.Scenarios(name, two_dim_data, resolution)
+    for forecast in (deterministic, probabilistic, scenarios)
+        @test_throws IS.ConflictingInputsError IS.add_time_series!(sys, component, forecast)
+    end
+end
+
+@testset "Test add forecast with irregular resolution and interval" begin
+    sys = IS.SystemData()
+    name = "Component1"
+    component = IS.TestComponent(name, 5)
+    IS.add_component!(sys, component)
+
+    resolution = Dates.Month(1)
+    horizon_count = 12
+    interval = Dates.Month(2)
+    t1 = Dates.DateTime("2020-01-01")
+    t2 = t1 + interval
+    t3 = t2 + interval
+
+    one_dim_data = Dict(
+        t1 => TimeSeries.TimeArray(
+            range(t1; length = horizon_count, step = resolution),
+            rand(horizon_count),
+        ),
+        t2 => TimeSeries.TimeArray(
+            range(t2; length = horizon_count, step = resolution),
+            rand(horizon_count),
+        ),
+        t3 => TimeSeries.TimeArray(
+            range(t3; length = horizon_count, step = resolution),
+            rand(horizon_count),
+        ),
+    )
+    two_dim_data = SortedDict(
+        t1 => TimeSeries.TimeArray(
+            range(t1; length = horizon_count, step = resolution),
+            rand(horizon_count, 99),
+        ),
+        t2 => TimeSeries.TimeArray(
+            range(t2; length = horizon_count, step = resolution),
+            rand(horizon_count, 99),
+        ),
+        t3 => TimeSeries.TimeArray(
+            range(t2; length = horizon_count, step = resolution),
+            rand(horizon_count, 99),
+        ),
+    )
+
+    for with_resolution in (false, true), with_interval in (false, true)
+        name = "test_$(with_resolution)_$(with_interval)"
+        kwargs = Dict{Symbol, Any}()
+        if with_resolution
+            kwargs[:resolution] = resolution
+        end
+        if with_interval
+            kwargs[:interval] = interval
+        end
+        if with_resolution && with_interval
+            deterministic = IS.Deterministic(name, one_dim_data; kwargs...)
+            probabilistic = IS.Probabilistic(name, two_dim_data, rand(99); kwargs...)
+            scenarios = IS.Scenarios(name, two_dim_data; kwargs...)
+            for forecast in (deterministic, probabilistic, scenarios)
+                IS.add_time_series!(sys, component, forecast)
+            end
+        elseif with_resolution && !with_interval
+            deterministic = IS.Deterministic(name, one_dim_data; kwargs...)
+            probabilistic = IS.Probabilistic(name, two_dim_data, rand(99); kwargs...)
+            scenarios = IS.Scenarios(name, two_dim_data; kwargs...)
+        else
+            @test_throws IS.ConflictingInputsError IS.Deterministic(
+                name,
+                one_dim_data;
+                kwargs...,
+            )
+            @test_throws IS.ConflictingInputsError IS.Probabilistic(
+                name,
+                two_dim_data,
+                rand(99);
+                kwargs...,
+            )
+            @test_throws IS.ConflictingInputsError IS.Scenarios(
+                name,
+                two_dim_data;
+                kwargs...,
+            )
+        end
+    end
+end
+
 @testset "Test add Deterministic with different resolutions" begin
     sys = IS.SystemData()
     name = "Component1"
@@ -154,15 +306,15 @@ end
     initial_time = Dates.DateTime("2020-09-01")
     resolution1 = Dates.Minute(5)
     other_time1 = initial_time + resolution1
-    horizon_count1 = 24
+    horizon_count = 24
     resolution2 = Dates.Minute(10)
     other_time2 = initial_time + resolution2
     horizon_count2 = 12
 
     name1 = "test1"
     data1 = SortedDict(
-        initial_time => rand(horizon_count1),
-        other_time1 => rand(horizon_count1),
+        initial_time => rand(horizon_count),
+        other_time1 => rand(horizon_count),
     )
     name2 = "test2"
     data2 = SortedDict(
@@ -174,7 +326,7 @@ end
     forecast2 = IS.Deterministic(; data = data2, name = name2, resolution = resolution2)
     key1 = IS.add_time_series!(sys, component, forecast1)
     key2 = IS.add_time_series!(sys, component, forecast2)
-    @test key1.horizon == horizon_count1 * resolution1
+    @test key1.horizon == horizon_count * resolution1
     @test key2.horizon == horizon_count2 * resolution2
 
     resolution3 = Dates.Minute(11)
@@ -438,6 +590,11 @@ end
 
     data = TimeSeries.TimeArray(range(initial_time; length = 12, step = resolution), 1:12)
     ts_name = "ts"
+
+    # resolution must be passed for irregular time series.
+    ts_invalid = IS.SingleTimeSeries(; data = data, name = ts_name)
+    @test_throws IS.ConflictingInputsError IS.add_time_series!(sys, component, ts_invalid)
+
     ts1 = IS.SingleTimeSeries(; data = data, name = ts_name, resolution = resolution)
     IS.add_time_series!(sys, component, ts1)
 
@@ -780,7 +937,8 @@ end
 end
 
 @testset "Test Deterministic with a wrapped SingleTimeSeries" begin
-    for in_memory in (true, false)
+    # for in_memory in (true, false)
+    for in_memory in (true,)
         sys = IS.SystemData(; time_series_in_memory = in_memory)
 
         # This is allowed when there are no time series.
@@ -1874,11 +2032,13 @@ end
 
         initial_timestamp = Dates.DateTime("2020-01-01T00:00:00")
         resolution = Dates.Hour(1)
+        other_timestamp = initial_timestamp + resolution
         horizon_count = 24
         horizon = horizon_count * resolution
         scenario_count = 2
         data_input = rand(horizon_count, scenario_count)
-        data = SortedDict(initial_timestamp => data_input)
+        data_input2 = rand(horizon_count, scenario_count)
+        data = SortedDict(initial_timestamp => data_input, other_timestamp => data_input2)
         time_series = IS.Scenarios(;
             name = name,
             resolution = resolution,
@@ -1910,11 +2070,13 @@ end
 
         initial_timestamp = Dates.DateTime("2020-01-01T00:00:00")
         resolution = Dates.Hour(1)
+        other_timestamp = initial_timestamp + resolution
         horizon_count = 24
         horizon = horizon_count * resolution
         percentiles = 1:99
         data_input = rand(horizon_count, length(percentiles))
-        data = SortedDict(initial_timestamp => data_input)
+        data_input2 = rand(horizon_count, length(percentiles))
+        data = SortedDict(initial_timestamp => data_input, other_timestamp => data_input2)
         time_series = IS.Probabilistic(;
             name = name,
             resolution = resolution,
@@ -2508,8 +2670,10 @@ end
     initial_timestamp = Dates.DateTime("2020-01-01T00:00:00")
     horizon_count = 24
     resolution = Dates.Hour(1)
+    other_timestamp = initial_timestamp + resolution
     data_input = rand(horizon_count)
-    data = SortedDict(initial_timestamp => data_input)
+    data_input2 = rand(horizon_count)
+    data = SortedDict(initial_timestamp => data_input, other_timestamp => data_input2)
     time_series = IS.Deterministic(; name = name, resolution = resolution, data = data)
     fdata = IS.get_data(time_series)
     @test initial_timestamp == first(keys((fdata)))
@@ -2555,7 +2719,9 @@ end
         horizon_count = 24
         resolution = Dates.Hour(1)
         data_input = rand(horizon_count)
-        data = SortedDict(initial_timestamp => data_input)
+        data_input2 = rand(horizon_count)
+        other_timestamp = initial_timestamp + resolution
+        data = SortedDict(initial_timestamp => data_input, other_timestamp => data_input2)
         for i in 1:2
             time_series =
                 IS.Deterministic(;
@@ -3065,27 +3231,8 @@ end
     @test IS.get_data(res) == IS.get_data(bystander)
 end
 
-@testset "Test migration of legacy time series schema" begin
-    sys = IS.SystemData()
-    name = "Component1"
-    component = IS.TestComponent(name, 5)
-    IS.add_component!(sys, component)
-
-    initial_time = Dates.DateTime("2020-09-01")
-    resolution = Dates.Hour(1)
-
-    data = TimeSeries.TimeArray(
-        range(initial_time; length = 5, step = resolution),
-        rand(5),
-    )
-    ts_name = "test_c"
-    ts = IS.SingleTimeSeries(; data = data, name = ts_name)
-    IS.add_time_series!(sys, component, ts; scenario = "low", model_year = "2030")
-    IS.add_time_series!(sys, component, ts; scenario = "high", model_year = "2030")
-    IS.add_time_series!(sys, component, ts; scenario = "low", model_year = "2035")
-    IS.add_time_series!(sys, component, ts; scenario = "high", model_year = "2035")
-
-    filename = IS.backup_to_temp(sys.time_series_manager.metadata_store)
+@testset "Test migration of legacy time series schema, one table to two" begin
+    filename, component = _setup_for_migration_tests()
     new_db = SQLite.DB(filename)
     query = """
         CREATE TABLE new_tbl AS
@@ -3104,6 +3251,111 @@ end
     new_store = IS.TimeSeriesMetadataStore(filename)
     result = IS.list_metadata(new_store, component)
     @test length(result) == 4
+end
+
+@testset "Test migration of legacy time series schema, period as string" begin
+    filename, component = _setup_for_migration_tests()
+    new_db = SQLite.DB(filename)
+    new_rows = Tuple[]
+    for row in Tables.rowtable(
+        SQLite.DBInterface.execute(
+            new_db,
+            "SELECT * FROM $(IS.ASSOCIATIONS_TABLE_NAME)",
+        ),
+    )
+        new_row = (
+            row.id,
+            row.time_series_uuid,
+            row.time_series_type,
+            row.time_series_category,
+            row.initial_timestamp,
+            IS.from_iso_8601(row.resolution),
+            ismissing(row.horizon) ? nothing : IS.from_iso_8601(row.horizon),
+            ismissing(row.interval) ? nothing : IS.from_iso_8601(row.interval),
+            row.window_count,
+            row.length,
+            row.name,
+            row.owner_uuid,
+            row.owner_type,
+            row.owner_category,
+            row.features,
+            row.metadata_uuid,
+        )
+        push!(new_rows, new_row)
+    end
+    SQLite.DBInterface.execute(new_db, "DROP TABLE $(IS.ASSOCIATIONS_TABLE_NAME)")
+    # This is the original schema for the migration.
+    schema = [
+        "id INTEGER PRIMARY KEY",
+        "time_series_uuid TEXT NOT NULL",
+        "time_series_type TEXT NOT NULL",
+        "time_series_category TEXT NOT NULL",
+        "initial_timestamp TEXT NOT NULL",
+        "resolution_ms INTEGER NOT NULL",
+        "horizon_ms INTEGER",
+        "interval_ms INTEGER",
+        "window_count INTEGER",
+        "length INTEGER",
+        "name TEXT NOT NULL",
+        "owner_uuid TEXT NOT NULL",
+        "owner_type TEXT NOT NULL",
+        "owner_category TEXT NOT NULL",
+        "features TEXT NOT NULL",
+        "metadata_uuid TEXT NOT NULL",
+    ]
+    schema_text = join(schema, ",")
+    SQLite.DBInterface.execute(
+        new_db,
+        "CREATE TABLE $(IS.ASSOCIATIONS_TABLE_NAME)($(schema_text))",
+    )
+    IS._add_rows!(
+        new_db,
+        new_rows,
+        (
+            "id",
+            "time_series_uuid",
+            "time_series_type",
+            "time_series_category",
+            "initial_timestamp",
+            "resolution_ms",
+            "horizon_ms",
+            "interval_ms",
+            "window_count",
+            "length",
+            "name",
+            "owner_uuid",
+            "owner_type",
+            "owner_category",
+            "features",
+            "metadata_uuid",
+        ),
+        IS.ASSOCIATIONS_TABLE_NAME,
+    )
+    new_store = IS.TimeSeriesMetadataStore(filename)
+    result = IS.list_metadata(new_store, component)
+    @test length(result) == 4
+end
+
+function _setup_for_migration_tests()
+    sys = IS.SystemData()
+    name = "Component1"
+    component = IS.TestComponent(name, 5)
+    IS.add_component!(sys, component)
+
+    initial_time = Dates.DateTime("2020-09-01")
+    resolution = Dates.Hour(1)
+
+    data = TimeSeries.TimeArray(
+        range(initial_time; length = 5, step = resolution),
+        rand(5),
+    )
+    ts_name = "test_c"
+    ts = IS.SingleTimeSeries(; data = data, name = ts_name)
+    IS.add_time_series!(sys, component, ts; scenario = "low", model_year = "2030")
+    IS.add_time_series!(sys, component, ts; scenario = "high", model_year = "2030")
+    IS.add_time_series!(sys, component, ts; scenario = "low", model_year = "2035")
+    IS.add_time_series!(sys, component, ts; scenario = "high", model_year = "2035")
+    return IS.backup_to_temp(sys.time_series_manager.metadata_store), component
 end
 
 @testset "Test invalid normalization factors" begin

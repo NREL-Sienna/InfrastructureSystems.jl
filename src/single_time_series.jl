@@ -41,7 +41,6 @@ function SingleTimeSeries(;
     normalization_factor = 1.0,
     internal = InfrastructureSystemsInternal(),
 )
-    # TODO DT: if the data has irregular resolution but resolution is nothing, we should throw. 
     if isnothing(resolution)
         resolution = get_resolution(data)
     end
@@ -91,9 +90,10 @@ Construct SingleTimeSeries from a TimeArray or DataFrame.
     [`get_time_series_array`](@ref) is called.
   - `timestamp::Symbol = :timestamp`: If a DataFrame is passed then this must be the column name that
     contains timestamps.
-  - `resolution::Union{Nothing, Dates.Period} = nothing`: If nothing, infer resolution from the
-    data. Otherwise, this must be the difference between each consecutive timestamps. This is
-    required if the resolution is not constant, such as Dates.Month or Dates.Year.
+  - `resolution::Union{Nothing, Dates.Period} = nothing`: If nothing, infer resolution from
+    the data. Otherwise, it must be the difference between each consecutive timestamps.
+    Resolution is required if the resolution is irregular, such as with Dates.Month or
+    Dates.Year.
 """
 function SingleTimeSeries(
     name::AbstractString,
@@ -224,7 +224,20 @@ end
 function check_time_series_data(ts::SingleTimeSeries)
     len = length(ts.data)
     len < 2 && throw(ArgumentError("data array length must be at least 2: $len"))
-    check_resolution(TimeSeries.timestamp(ts.data), ts.resolution)
+    try
+        check_resolution(TimeSeries.timestamp(ts.data), ts.resolution)
+    catch e
+        if e isa ConflictingInputsError
+            throw(
+                ConflictingInputsError(
+                    "The resolution in the time series is inconsistent. If the intended " *
+                    "resolution is irregular, such as with Dates.Month and Dates.Year, pass " *
+                    "the resolution as a keyword argument to the SingleTimeSeries constructor.",
+                ),
+            )
+        end
+        rethrow()
+    end
     return
 end
 

@@ -24,7 +24,6 @@ abstract type AbstractDeterministic <: Forecast end
 function check_time_series_data(forecast::Forecast)
     _check_forecast_data(forecast)
     _check_forecast_interval(forecast)
-    _check_forecast_windows(forecast)
 end
 
 function _check_forecast_data(forecast::Forecast)
@@ -40,25 +39,24 @@ function _check_forecast_data(forecast::Forecast)
 end
 
 function _check_forecast_interval(forecast::Forecast)
-    # TODO DT: test a failure case. We haven't been checking consistency of intervals.
-    check_resolution(collect(keys(get_data(forecast))), get_interval(forecast))
-end
+    initial_times = collect(get_initial_times(forecast))
+    # Perhaps this should be an error...unfortunately, a lot of tests depend on it.
+    length(initial_times) == 1 && return
 
-function _check_forecast_windows(forecast::Forecast)
-    horizon_count = get_horizon_count(forecast)
-    if horizon_count < 2
-        throw(ArgumentError("horizon must be at least 2: $horizon_count"))
-    end
-    for window in iterate_windows(forecast)
-        if size(window)[1] != horizon_count
+    try
+        check_resolution(initial_times, get_interval(forecast))
+    catch e
+        if e isa ConflictingInputsError
             throw(
                 ConflictingInputsError(
-                    "length mismatch: $(size(window)[1]) $horizon_count",
+                    "The interval in the forecast is inconsistent. If the intended interval is " *
+                    "irregular, such as with Dates.Month and Dates.Year, " *
+                    "pass the interval as a keyword argument to the forecast constructor.",
                 ),
             )
         end
+        rethrow()
     end
-    return
 end
 
 # This method requires that the forecast type implement a `get_data` method like
@@ -76,6 +74,12 @@ end
 function get_horizon(forecast::Forecast)
     return get_horizon_count(forecast) * get_resolution(forecast)
 end
+
+function get_horizon_count(data::AbstractDict)
+    return size(first(values(data)))[1]
+end
+
+get_horizon_count(forecast::Forecast) = get_horizon_count(get_data(forecast))
 
 """
 Return the initial times in the forecast.
@@ -156,15 +160,15 @@ function get_initial_timestamp_common(forecast)
     return first(keys(get_data(forecast)))
 end
 
-# This method requires that the forecast type implement a `get_data` method like
-# Deterministic. Allows for optimized execution.
-function get_interval_common(forecast)
-    its = get_initial_times(forecast)
-    if length(its) == 1
+"""
+Return the interval by subtracting the first two initial times.
+"""
+function get_interval_from_initial_times(initial_times)
+    if length(initial_times) == 1
         return Dates.Second(0)
     end
-    first_it, state = iterate(its)
-    second_it, state = iterate(its, state)
+    first_it, state = iterate(initial_times)
+    second_it, state = iterate(initial_times, state)
     return second_it - first_it
 end
 
@@ -191,4 +195,26 @@ function get_window_common(
     end
 
     return TimeSeries.TimeArray(make_timestamps(forecast, initial_time, len), data)
+end
+
+"""
+Convert a Dict of TimeSeries.TimeArray to a SortedDict of Arrays.
+Before converting, check that the resolution is consistent in all time arrays.
+Return the SortedDict and the resolution.
+"""
+function convert_forecast_input_time_arrays(
+    data::AbstractDict{Dates.DateTime, <:TimeSeries.TimeArray};
+    resolution::Union{Dates.Period, Nothing} = nothing,
+)
+    data_type = typeof(TimeSeries.values(first(values(data))))
+    if isnothing(resolution)
+        resolution = get_resolution(first(values(data)))
+    end
+    sorted_data = SortedDict{Dates.DateTime, data_type}()
+    for (timestamp, ta) in data
+        check_resolution(TimeSeries.timestamp(ta), resolution)
+        sorted_data[timestamp] = TimeSeries.values(ta)
+    end
+
+    return sorted_data, resolution
 end
