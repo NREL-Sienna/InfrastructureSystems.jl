@@ -538,7 +538,6 @@ function transform_single_time_series!(
     interval::Dates.Period;
     resolution::Union{Nothing, Dates.Period} = nothing,
 )
-    # TODO DT: Is this restriction acceptable?
     if is_irregular_period(horizon) || is_irregular_period(interval) ||
        (!isnothing(resolution) && is_irregular_period(resolution))
         throw(
