@@ -1,6 +1,18 @@
 const ASSOCIATIONS_TABLE_NAME = "time_series_associations"
 const METADATA_TABLE_NAME = "time_series_metadata"
+const KEY_VALUE_TABLE_NAME = "key_value_store"
 const DB_FILENAME = "time_series_metadata.db"
+const TS_METADATA_FORMAT_VERSION = "1.0.0"
+const TS_DB_INDEXES = Dict(
+    "by_c_n_tst_features" => [
+        "owner_uuid",
+        "time_series_type",
+        "name",
+        "resolution",
+        "features",
+    ],
+    "by_ts_uuid" => ["time_series_uuid"],
+)
 
 @kwdef struct HasMetadataQueryKey
     has_name::Bool
@@ -37,6 +49,7 @@ function TimeSeriesMetadataStore()
         Dict{Base.UUID, TimeSeriesMetadata}(),
     )
     _create_associations_table!(store)
+    _create_key_value_table!(store)
     _create_indexes!(store)
     @debug "Initialized new time series metadata table" _group = LOG_GROUP_TIME_SERIES
     return store
@@ -68,8 +81,8 @@ function _process_migrations_if_needed(store::TimeSeriesMetadataStore)
     end
 
     _apply_horizon_type_fix_if_needed(store.db)
-    if _needs_migration_period_as_string(store.db)
-        _migrate_schema_period_to_string(store)
+    if _needs_migration_to_1_0_0(store.db)
+        _migrate_schema_period_to_1_0_0(store)
     end
 end
 
@@ -103,8 +116,11 @@ function _needs_migration_one_table(db::SQLite.DB)
     return "time_series_uuid" in _list_columns(db, METADATA_TABLE_NAME)
 end
 
-function _needs_migration_period_as_string(db::SQLite.DB)
-    return "interval_ms" in _list_columns(db, METADATA_TABLE_NAME)
+function _needs_migration_to_1_0_0(db::SQLite.DB)
+    tables = Tables.columntable(
+        SQLite.DBInterface.execute(db, "SELECT name FROM sqlite_master WHERE type='table'"),
+    )
+    return !in(KEY_VALUE_TABLE_NAME, tables.name)
 end
 
 function _apply_horizon_type_fix_if_needed(db::SQLite.DB)
@@ -236,10 +252,10 @@ function _migrate_two_table_schema_to_one(store::TimeSeriesMetadataStore)
     @info "Migrated time series metadata to updated schema."
 end
 
-function _migrate_schema_period_to_string(store::TimeSeriesMetadataStore)
+function _migrate_schema_period_to_1_0_0(store::TimeSeriesMetadataStore)
     # The original schema had all Dates.Period columns stored as integers in units of ms
     # The current schema stores them as strings.
-    @info "Start migration of schema to Dates.Period as strings."
+    @debug "Start migration of schema to time series metadata format v1.0.0."
     for index in ("by_c_n_tst_features", "by_ts_uuid")
         SQLite.DBInterface.execute(store.db, "DROP INDEX IF EXISTS $index")
     end
@@ -257,12 +273,12 @@ function _migrate_schema_period_to_string(store::TimeSeriesMetadataStore)
             row.time_series_category,
             row.initial_timestamp,
             _serialize_period(Dates.Millisecond(row.resolution_ms)),
-            if isnothing(row.horizon_ms)
+            if ismissing(row.horizon_ms)
                 nothing
             else
                 _serialize_period(Dates.Millisecond(row.horizon_ms))
             end,
-            if isnothing(row.interval_ms)
+            if ismissing(row.interval_ms)
                 nothing
             else
                 _serialize_period(Dates.Millisecond(row.interval_ms))
@@ -303,7 +319,8 @@ function _migrate_schema_period_to_string(store::TimeSeriesMetadataStore)
         ),
         ASSOCIATIONS_TABLE_NAME,
     )
-    @info "Migrated time series assocations table to store Dates.Period as strings."
+    _create_key_value_table!(store)
+    @debug "Migrated time series assocations table to v1.0.0."
 end
 
 """
@@ -366,6 +383,25 @@ function _create_metadata_table!(db::SQLite.DB)
     return
 end
 
+function _create_key_value_table!(store::TimeSeriesMetadataStore)
+    schema = [
+        "key TEXT PRIMARY KEY",
+        "value JSON NOT NULL",
+    ]
+    schema_text = join(schema, ",")
+    SQLite.DBInterface.execute(
+        store.db,
+        "CREATE TABLE $(KEY_VALUE_TABLE_NAME)($(schema_text))",
+    )
+    @debug "Created key-value table" schema _group = LOG_GROUP_TIME_SERIES
+    SQLite.DBInterface.execute(
+        store.db,
+        "INSERT INTO $(KEY_VALUE_TABLE_NAME) VALUES(?,?)",
+        ("version", TS_METADATA_FORMAT_VERSION),
+    )
+    return
+end
+
 function _create_indexes!(store::TimeSeriesMetadataStore)
     # Index strategy:
     # 1. Optimize for these user queries with indexes:
@@ -375,19 +411,12 @@ function _create_indexes!(store::TimeSeriesMetadataStore)
     # 2. Optimize for checks at system.add_time_series. Use all fields and features.
     # 3. Optimize for returning all metadata for a time series UUID.
 
-    index_columns = ["owner_uuid", "time_series_type", "name", "resolution", "features"]
-    if "by_c_n_tst_features" in SQLite.indices(store.db).name
-        cur_columns = sql(store, "PRAGMA index_info('by_c_n_tst_features')")[!, "name"]
-        if cur_columns != index_columns
-            # There were older formats for this index.
-            SQLite.dropindex!(store.db, "by_c_n_tst_features"; ifexists = true)
-        end
-    end
+    _drop_all_indexes!(store.db)
     SQLite.createindex!(
         store.db,
         ASSOCIATIONS_TABLE_NAME,
         "by_c_n_tst_features",
-        index_columns;
+        TS_DB_INDEXES["by_c_n_tst_features"];
         unique = true,
         ifnotexists = true,
     )
@@ -395,11 +424,17 @@ function _create_indexes!(store::TimeSeriesMetadataStore)
         store.db,
         ASSOCIATIONS_TABLE_NAME,
         "by_ts_uuid",
-        "time_series_uuid";
+        TS_DB_INDEXES["by_ts_uuid"];
         unique = false,
         ifnotexists = true,
     )
     return
+end
+
+function _drop_all_indexes!(db::SQLite.DB)
+    for index_name in keys(TS_DB_INDEXES)
+        SQLite.dropindex!(db, index_name; ifexists = true)
+    end
 end
 
 function Base.deepcopy_internal(store::TimeSeriesMetadataStore, dict::IdDict)
@@ -487,17 +522,23 @@ function backup_to_temp(store::TimeSeriesMetadataStore)
     filename, io = mktemp()
     close(io)
     dst = SQLite.DB(filename)
-    backup(dst, store.db)
-    _create_metadata_table!(dst)
-    query = "INSERT INTO $METADATA_TABLE_NAME VALUES(?,?,jsonb(?))"
-    SQLite.transaction(dst) do
-        stmt = SQLite.Stmt(dst, query)
-        for metadata in values(store.metadata_uuids)
-            params = (missing, string(get_uuid(metadata)), JSON3.write(serialize(metadata)))
-            SQLite.DBInterface.execute(stmt, params)
+    try
+        backup(dst, store.db)
+        dst = SQLite.DB(filename)
+        _drop_all_indexes!(dst)
+        _create_metadata_table!(dst)
+        query = "INSERT INTO $METADATA_TABLE_NAME VALUES(?,?,jsonb(?))"
+        SQLite.transaction(dst) do
+            stmt = SQLite.Stmt(dst, query)
+            for metadata in values(store.metadata_uuids)
+                params =
+                    (missing, string(get_uuid(metadata)), JSON3.write(serialize(metadata)))
+                SQLite.DBInterface.execute(stmt, params)
+            end
         end
+    finally
+        close(dst)
     end
-    close(dst)
     return filename
 end
 
