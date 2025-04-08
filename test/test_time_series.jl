@@ -3253,7 +3253,7 @@ end
     @test length(result) == 4
 end
 
-@testset "Test migration of legacy time series schema, period as string" begin
+@testset "Test migration of legacy time series schema, to v1.0.0" begin
     filename, component = _setup_for_migration_tests()
     new_db = SQLite.DB(filename)
     new_rows = Tuple[]
@@ -3284,6 +3284,7 @@ end
         push!(new_rows, new_row)
     end
     SQLite.DBInterface.execute(new_db, "DROP TABLE $(IS.ASSOCIATIONS_TABLE_NAME)")
+    SQLite.DBInterface.execute(new_db, "DROP TABLE $(IS.KEY_VALUE_TABLE_NAME)")
     # This is the original schema for the migration.
     schema = [
         "id INTEGER PRIMARY KEY",
@@ -3331,7 +3332,9 @@ end
         ),
         IS.ASSOCIATIONS_TABLE_NAME,
     )
+    @test IS._needs_migration_to_1_0_0(new_db)
     new_store = IS.TimeSeriesMetadataStore(filename)
+    @test !IS._needs_migration_to_1_0_0(new_store.db)
     result = IS.list_metadata(new_store, component)
     @test length(result) == 4
 end
