@@ -1064,20 +1064,12 @@ function _check_start_time(start_time, metadata::StaticTimeSeriesMetadata)
 end
 
 function _check_start_time(start_time, metadata::ForecastMetadata)
+    initial_time = get_initial_timestamp(metadata)
     actual_start_time = _check_start_time_common(start_time, metadata)
-    window_count = get_count(metadata)
-    interval = get_interval(metadata)
-    # TODO DT
-    time_diff = actual_start_time - get_initial_timestamp(metadata)
-    if window_count > 1 &&
-       Dates.Millisecond(time_diff) % Dates.Millisecond(interval) != Dates.Second(0)
-        throw(
-            ArgumentError(
-                "start_time=$start_time is not on a multiple of interval=$interval",
-            ),
-        )
+    if actual_start_time != initial_time
+        # This will throw ArgumentError if start_time is not on a multiple of interval.
+        compute_periods_between(initial_time, actual_start_time, get_interval(metadata))
     end
-
     return actual_start_time
 end
 
@@ -1130,7 +1122,6 @@ function get_forecast_window_count(
         last_initial_time = last_timestamp - resolution * (horizon_count - 1)
 
         # Reduce last_initial_time to the nearest interval if necessary.
-        # TODO DT
         diff =
             Dates.Millisecond(last_initial_time - initial_timestamp) %
             Dates.Millisecond(interval)

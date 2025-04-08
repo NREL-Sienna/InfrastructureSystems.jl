@@ -34,6 +34,10 @@
     ]
     resolution = Month(1)
     @test_throws IS.ConflictingInputsError IS.check_resolution(timestamps, resolution)
+    @test_throws ArgumentError IS.check_resolution(
+        [DateTime("2023-01-01T00:00:00")],
+        resolution,
+    )
 end
 
 @testset "Test get_resolution" begin
@@ -62,15 +66,21 @@ end
     @test_throws IS.ConflictingInputsError IS.get_resolution(ts)
 end
 
-@testset "Test period to_string" begin
-    @test IS.from_string(IS.to_string(Hour(1))) == Hour(1)
-    @test IS.from_string(IS.to_string(Minute(5))) == Minute(5)
-    @test IS.from_string(IS.to_string(Month(1))) == Month(1)
+@testset "Test period to_iso_8601" begin
+    @test IS.from_iso_8601(IS.to_iso_8601(Millisecond(Minute(5)))) == Millisecond(Minute(5))
+    @test IS.from_iso_8601(IS.to_iso_8601(Second(300))) == Second(300)
+    @test IS.from_iso_8601(IS.to_iso_8601(Minute(5))) == Minute(5)
+    @test IS.from_iso_8601(IS.to_iso_8601(Hour(2))) == Hour(2)
+    @test IS.from_iso_8601(IS.to_iso_8601(Day(3))) == Day(3)
+    @test IS.from_iso_8601(IS.to_iso_8601(Week(1))) == Week(1)
+    @test IS.from_iso_8601(IS.to_iso_8601(Month(1))) == Month(1)
+    @test IS.from_iso_8601(IS.to_iso_8601(Year(3))) == Year(3)
+    @test_throws ArgumentError IS.from_iso_8601("P0DT1H1M0S")
 end
 
-@testset "Test is_constant_period" begin
+@testset "Test is_irregular_period" begin
     all_periods = Set(IS.get_all_concrete_subtypes(Period))
-    constant_periods = (
+    regular_periods = (
         Day,
         Week,
         Hour,
@@ -80,20 +90,20 @@ end
         Nanosecond,
         Second,
     )
-    non_constant_periods = (
+    irregular_periods = (
         Month,
         Quarter,
         Year,
     )
 
     # Ensure that we find out about new Period types.
-    @test isempty(setdiff(all_periods, union(constant_periods, non_constant_periods)))
+    @test isempty(setdiff(all_periods, union(regular_periods, irregular_periods)))
 
-    for period_type in constant_periods
-        @test IS.is_constant_period(period_type(5))
+    for period_type in regular_periods
+        @test !IS.is_irregular_period(period_type(5))
     end
-    for period_type in non_constant_periods
-        @test !IS.is_constant_period(period_type(5))
+    for period_type in irregular_periods
+        @test IS.is_irregular_period(period_type(5))
     end
 end
 
@@ -134,4 +144,21 @@ end
         DateTime(2024, 1, 1, 5, 30),
         Hour(1),
     ) == 6
+
+    @test_throws ArgumentError IS.compute_time_array_index(
+        DateTime(2024, 1, 1, 1),
+        DateTime(2024, 1, 1, 0),
+        Hour(1),
+    )
+end
+
+@testset "Test get_initial_timestamp" begin
+    timestamps = [
+        DateTime("2023-01-01T00:00:00"),
+        DateTime("2023-01-01T00:01:00"),
+        DateTime("2023-01-01T00:02:00"),
+        DateTime("2023-01-01T00:03:00"),
+    ]
+    ta = TimeSeries.TimeArray(timestamps, rand(length(timestamps)))
+    @test IS.get_initial_timestamp(ta) == DateTime("2023-01-01T00:00:00")
 end
