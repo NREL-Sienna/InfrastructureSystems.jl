@@ -55,15 +55,22 @@ function TimeSeriesMetadataStore(filename::AbstractString)
         Dict{Tuple{Bool, Bool, Int64, String}, SQLite.Stmt}(),
         Dict{Base.UUID, TimeSeriesMetadata}(),
     )
-    if _needs_migration(store.db)
-        _migrate_legacy_schema(store)
-    end
-
-    # _apply_horizon_type_fix_if_needed(store.db)
+    _process_migrations_if_needed(store)
     _load_metadata_into_memory!(store)
     _create_indexes!(store)
     @debug "Loaded time series metadata from file" _group = LOG_GROUP_TIME_SERIES filename
     return store
+end
+
+function _process_migrations_if_needed(store::TimeSeriesMetadataStore)
+    if _needs_migration_one_table(store.db)
+        _migrate_two_table_schema_to_one(store)
+    end
+
+    _apply_horizon_type_fix_if_needed(store.db)
+    if _needs_migration_period_as_string(store.db)
+        _migrate_schema_period_to_string(store)
+    end
 end
 
 function _load_metadata_into_memory!(store::TimeSeriesMetadataStore)
@@ -92,11 +99,17 @@ function _list_columns(db::SQLite.DB, table_name::String)
     )[1]
 end
 
-function _needs_migration(db::SQLite.DB)
+function _needs_migration_one_table(db::SQLite.DB)
     return "time_series_uuid" in _list_columns(db, METADATA_TABLE_NAME)
 end
 
+function _needs_migration_period_as_string(db::SQLite.DB)
+    return "interval_ms" in _list_columns(db, METADATA_TABLE_NAME)
+end
+
 function _apply_horizon_type_fix_if_needed(db::SQLite.DB)
+    !in("horizon_ms", _list_columns(db, ASSOCIATIONS_TABLE_NAME)) && return
+
     # Version <= 2.4.1 had a bug where horizon_ms was mistakenly written to the db
     # as a Serialization.serialize(Dates.Millisecond) instead of an integer.
     # This function can be removed in in 4.0 when we no longer support deserializing
@@ -127,7 +140,7 @@ function _apply_horizon_type_fix_if_needed(db::SQLite.DB)
     end
 end
 
-function _migrate_legacy_schema(store::TimeSeriesMetadataStore)
+function _migrate_two_table_schema_to_one(store::TimeSeriesMetadataStore)
     # The original schema had one table where the metadata column was a JSON string.
     # The new schema has two tables where the metadata is split out into a separate table.
     # There was a previously-inconsequential bug where DeterministicSingleTimeSeries
@@ -186,7 +199,7 @@ function _migrate_legacy_schema(store::TimeSeriesMetadataStore)
     end
     _create_associations_table!(store)
     _add_rows!(
-        store,
+        store.db,
         new_associations,
         (
             "id",
@@ -211,7 +224,7 @@ function _migrate_legacy_schema(store::TimeSeriesMetadataStore)
     SQLite.DBInterface.execute(store.db, "DROP TABLE $METADATA_TABLE_NAME")
     _create_metadata_table!(store.db)
     _add_rows!(
-        store,
+        store.db,
         metadata_rows,
         (
             "id",
@@ -221,6 +234,76 @@ function _migrate_legacy_schema(store::TimeSeriesMetadataStore)
         METADATA_TABLE_NAME,
     )
     @info "Migrated time series metadata to updated schema."
+end
+
+function _migrate_schema_period_to_string(store::TimeSeriesMetadataStore)
+    # The original schema had all Dates.Period columns stored as integers in units of ms
+    # The current schema stores them as strings.
+    @info "Start migration of schema to Dates.Period as strings."
+    for index in ("by_c_n_tst_features", "by_ts_uuid")
+        SQLite.DBInterface.execute(store.db, "DROP INDEX IF EXISTS $index")
+    end
+    new_rows = Tuple[]
+    for row in Tables.rowtable(
+        SQLite.DBInterface.execute(
+            store.db,
+            "SELECT * FROM $ASSOCIATIONS_TABLE_NAME",
+        ),
+    )
+        new_row = (
+            row.id,
+            row.time_series_uuid,
+            row.time_series_type,
+            row.time_series_category,
+            row.initial_timestamp,
+            _serialize_period(Dates.Millisecond(row.resolution_ms)),
+            if isnothing(row.horizon_ms)
+                nothing
+            else
+                _serialize_period(Dates.Millisecond(row.horizon_ms))
+            end,
+            if isnothing(row.interval_ms)
+                nothing
+            else
+                _serialize_period(Dates.Millisecond(row.interval_ms))
+            end,
+            row.window_count,
+            row.length,
+            row.name,
+            row.owner_uuid,
+            row.owner_type,
+            row.owner_category,
+            row.features,
+            row.metadata_uuid,
+        )
+        push!(new_rows, new_row)
+    end
+    SQLite.DBInterface.execute(store.db, "DROP TABLE $ASSOCIATIONS_TABLE_NAME")
+    _create_associations_table!(store)
+    _add_rows!(
+        store.db,
+        new_rows,
+        (
+            "id",
+            "time_series_uuid",
+            "time_series_type",
+            "time_series_category",
+            "initial_timestamp",
+            "resolution",
+            "horizon",
+            "interval",
+            "window_count",
+            "length",
+            "name",
+            "owner_uuid",
+            "owner_type",
+            "owner_category",
+            "features",
+            "metadata_uuid",
+        ),
+        ASSOCIATIONS_TABLE_NAME,
+    )
+    @info "Migrated time series assocations table to store Dates.Period as strings."
 end
 
 """
@@ -291,20 +374,20 @@ function _create_indexes!(store::TimeSeriesMetadataStore)
     #    1c. time series for one component/attribute with all features
     # 2. Optimize for checks at system.add_time_series. Use all fields and features.
     # 3. Optimize for returning all metadata for a time series UUID.
-    # resolution_ms was added in v2.4.4.
-    # and dropped in XXX
-    if "by_c_n_tst_features" in
-       SQLite.indices(store.db).name && !(
-        "resolution" in
-        sql(store, "PRAGMA index_info('by_c_n_tst_features')")[!, "name"]
-    )
-        SQLite.dropindex!(store.db, "by_c_n_tst_features"; ifexists = true)
+
+    index_columns = ["owner_uuid", "time_series_type", "name", "resolution", "features"]
+    if "by_c_n_tst_features" in SQLite.indices(store.db).name
+        cur_columns = sql(store, "PRAGMA index_info('by_c_n_tst_features')")[!, "name"]
+        if cur_columns != index_columns
+            # There were older formats for this index.
+            SQLite.dropindex!(store.db, "by_c_n_tst_features"; ifexists = true)
+        end
     end
     SQLite.createindex!(
         store.db,
         ASSOCIATIONS_TABLE_NAME,
         "by_c_n_tst_features",
-        ["owner_uuid", "time_series_type", "name", "resolution", "features"];
+        index_columns;
         unique = true,
         ifnotexists = true,
     )
@@ -372,7 +455,7 @@ function add_metadata!(
 end
 
 function _add_rows!(
-    store::TimeSeriesMetadataStore,
+    db::SQLite.DB,
     rows::Vector,
     columns,
     table_name::String,
@@ -388,7 +471,7 @@ function _add_rows!(
 
     placeholder = chop(repeat("?,", num_columns))
     SQLite.DBInterface.executemany(
-        store.db,
+        db,
         "INSERT INTO $table_name VALUES($placeholder)",
         NamedTuple(Symbol(k) => v for (k, v) in data),
     )
@@ -515,11 +598,11 @@ function get_forecast_parameters(store::TimeSeriesMetadataStore)
     isempty(table) && return nothing
     row = table[1]
     return ForecastParameters(;
-        horizon = from_string(row.horizon),
+        horizon = from_iso_8601(row.horizon),
         initial_timestamp = Dates.DateTime(row.initial_timestamp),
-        interval = from_string(row.interval),
+        interval = from_iso_8601(row.interval),
         count = row.window_count,
-        resolution = from_string(row.resolution),
+        resolution = from_iso_8601(row.resolution),
     )
 end
 
@@ -544,7 +627,7 @@ function get_forecast_horizon(store::TimeSeriesMetadataStore)
         LIMIT 1
         """
     table = Tables.rowtable(_execute_cached(store, query))
-    return isempty(table) ? nothing : from_string(table[1].horizon)
+    return isempty(table) ? nothing : from_iso_8601(table[1].horizon)
 end
 
 function get_forecast_initial_timestamp(store::TimeSeriesMetadataStore)
@@ -575,7 +658,7 @@ function get_forecast_interval(store::TimeSeriesMetadataStore)
     return if isempty(table)
         nothing
     else
-        from_string(table[1].interval)
+        from_iso_8601(table[1].interval)
     end
 end
 
@@ -726,7 +809,7 @@ function get_static_time_series_summary_table(store::TimeSeriesMetadataStore)
     """
     query_result = DataFrame(_execute(store, query))
     query_result[!, "resolution"] =
-        Dates.canonicalize.(from_string.(query_result[!, "resolution"]))
+        Dates.canonicalize.(from_iso_8601.(query_result[!, "resolution"]))
     return query_result
 end
 
@@ -770,7 +853,7 @@ function get_forecast_summary_table(store::TimeSeriesMetadataStore)
     query_result = DataFrame(_execute(store, query))
     for col_name in ["resolution", "horizon", "interval"]
         query_result[!, col_name] =
-            Dates.canonicalize.(from_string.(query_result[!, col_name]))
+            Dates.canonicalize.(from_iso_8601.(query_result[!, col_name]))
     end
     return query_result
 end
@@ -902,7 +985,7 @@ _get_name_params(::Nothing) = ()
 _get_name_params(name::String) = (name,)
 _get_resolution_param(::Nothing) = ()
 _get_resolution_param(x::Dates.Period) =
-    (to_string(is_constant_period(x) ? Dates.Millisecond(x) : x),)
+    (to_iso_8601(is_irregular_period(x) ? x : Dates.Millisecond(x)),)
 _get_ts_type_params(::Nothing) = ()
 _get_ts_type_params(ts_type::Type{<:TimeSeriesData}) =
     (_convert_ts_type_to_string(ts_type),)
@@ -952,7 +1035,7 @@ function get_time_series_resolutions(
         FROM $ASSOCIATIONS_TABLE_NAME $where_clause
         ORDER BY resolution
     """
-    return from_string.(
+    return from_iso_8601.(
         Tables.columntable(_execute(store, query, params)).resolution
     )
 end
@@ -1232,7 +1315,7 @@ function _create_row(
     features,
 )
     resolution = get_resolution(metadata)
-    if is_constant_period(resolution)
+    if !is_irregular_period(resolution)
         resolution = Dates.Millisecond(resolution)
     end
     return (
@@ -1256,10 +1339,10 @@ function _create_row(
 end
 
 function _serialize_period(period::Dates.Period)
-    if is_constant_period(period)
+    if !is_irregular_period(period)
         period = Dates.Millisecond(period)
     end
-    return to_string(period)
+    return to_iso_8601(period)
 end
 
 function make_stmt(store::TimeSeriesMetadataStore, query::String)

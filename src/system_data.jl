@@ -538,6 +538,16 @@ function transform_single_time_series!(
     interval::Dates.Period;
     resolution::Union{Nothing, Dates.Period} = nothing,
 )
+    # TODO DT: Is this restriction acceptable?
+    if is_irregular_period(horizon) || is_irregular_period(interval) ||
+       (!isnothing(resolution) && is_irregular_period(resolution))
+        throw(
+            ArgumentError(
+                "transform_single_time_series! does not support irregular periods for " *
+                "horizon, interval, and resolution",
+            ),
+        )
+    end
     TimerOutputs.@timeit_debug SYSTEM_TIMERS "transform_single_time_series" begin
         _transform_single_time_series!(
             data,

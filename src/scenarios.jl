@@ -2,7 +2,8 @@
     mutable struct Scenarios <: Forecast
         name::String
         resolution::Dates.Period
-        scenario_count::Int64
+        interval::Dates.Period
+        scenario_count::Int
         data::SortedDict
         scaling_factor_multiplier::Union{Nothing, Function}
         internal::InfrastructureSystemsInternal
@@ -14,7 +15,8 @@ A Discrete Scenario Based time series for a particular data field in a Component
 
   - `name::String`: user-defined name
   - `resolution::Dates.Period`: forecast resolution
-  - `scenario_count::Int64`: Number of scenarios
+  - `interval::Dates.Period`: forecast interval
+  - `scenario_count::Int`: Number of scenarios
   - `data::SortedDict`: timestamp - scalingfactor
   - `scaling_factor_multiplier::Union{Nothing, Function}`: Applicable when the time series
     data are scaling factors. Called on the associated component to convert the values.
@@ -26,29 +28,38 @@ mutable struct Scenarios <: Forecast
     "timestamp - scalingfactor"
     data::SortedDict  # TODO see note in Deterministic
     "Number of scenarios"
-    scenario_count::Int64
+    scenario_count::Int
     "forecast resolution"
     resolution::Dates.Period
+    "forecast interval"
+    interval::Dates.Period
     "Applicable when the time series data are scaling factors. Called on the associated component to convert the values."
     scaling_factor_multiplier::Union{Nothing, Function}
     internal::InfrastructureSystemsInternal
 end
 
 function Scenarios(;
-    name,
-    data,
-    scenario_count,
-    resolution,
+    name::AbstractString,
+    data::SortedDict{Dates.DateTime, Matrix{Float64}},
+    scenario_count::Int,
+    resolution::Dates.Period,
+    interval::Union{Nothing, Dates.Period} = nothing,
     scaling_factor_multiplier = nothing,
     normalization_factor = 1.0,
     internal = InfrastructureSystemsInternal(),
 )
     data = handle_normalization_factor(data, normalization_factor)
+
+    if isnothing(interval)
+        interval = get_interval_from_initial_times(get_sorted_keys(data))
+    end
+
     return Scenarios(
         name,
         data,
         scenario_count,
         resolution,
+        interval,
         scaling_factor_multiplier,
         internal,
     )
@@ -60,8 +71,11 @@ Construct Scenarios from a SortedDict of Arrays.
 # Arguments
 
   - `name::AbstractString`: user-defined name
-  - `input_data::AbstractDict{Dates.DateTime, Matrix{Float64}}`: time series data.
-  - `resolution::Dates.Period`: The resolution of the forecast in Dates.Period`
+  - `input_data::SortedDict{Dates.DateTime, Matrix{Float64}}`: time series data.
+  - `resolution::Dates.Period`: The resolution of the forecast in `Dates.Period`
+  - `interval::Union{Nothing, Dates.Period}`: If nothing, infer interval from the
+    data. Otherwise, this must be the difference in time between the start of each window.
+    Interval is required if the type is irregular, such as with Dates.Month or Dates.Year.
   - `normalization_factor::NormalizationFactor = 1.0`: optional normalization factor to apply
     to each data entry
   - `scaling_factor_multiplier::Union{Nothing, Function} = nothing`: If the data are scaling
@@ -70,21 +84,39 @@ Construct Scenarios from a SortedDict of Arrays.
 """
 function Scenarios(
     name::AbstractString,
-    input_data::AbstractDict,
+    data::SortedDict{Dates.DateTime, Matrix{Float64}},
     resolution::Dates.Period;
+    interval::Union{Nothing, Dates.Period} = nothing,
     normalization_factor::NormalizationFactor = 1.0,
     scaling_factor_multiplier::Union{Nothing, Function} = nothing,
 )
-    scenario_count = size(first(values(input_data)))[2]
-
     return Scenarios(;
         name = name,
-        data = input_data,
-        scenario_count = scenario_count,
+        data = data,
+        scenario_count = size(first(values(data)))[2],
         resolution = resolution,
+        interval = interval,
         scaling_factor_multiplier = scaling_factor_multiplier,
         normalization_factor = normalization_factor,
         internal = InfrastructureSystemsInternal(),
+    )
+end
+
+function Scenarios(
+    name::AbstractString,
+    data::AbstractDict{Dates.DateTime, Matrix{Float64}},
+    resolution::Dates.Period;
+    interval::Union{Nothing, Dates.Period} = nothing,
+    normalization_factor::NormalizationFactor = 1.0,
+    scaling_factor_multiplier::Union{Nothing, Function} = nothing,
+)
+    return Scenarios(
+        name,
+        SortedDict(data...),
+        resolution;
+        interval = interval,
+        normalization_factor = normalization_factor,
+        scaling_factor_multiplier = scaling_factor_multiplier,
     )
 end
 
@@ -95,9 +127,12 @@ Construct Scenarios from a Dict of TimeArrays.
 
   - `name::AbstractString`: user-defined name
   - `input_data::AbstractDict{Dates.DateTime, TimeSeries.TimeArray}`: time series data.
-  - `resolution::Union{Nothing, Dates.Period} = nothing`: If nothing, infer resolution from the
-    data. Otherwise, this must be the difference between each consecutive timestamps. This is
-    required if the resolution is not constant, such as Dates.Month or Dates.Year.
+  - `resolution::Union{Nothing, Dates.Period} = nothing`: If nothing, infer resolution from
+    the data. Otherwise, it must be the difference between each consecutive timestamps.
+    Resolution is required if the type is irregular, such as with Dates.Month or Dates.Year.
+  - `interval::Union{Nothing, Dates.Period} = nothing`: If nothing, infer interval from the
+    data. Otherwise, it must be the difference in time between the start of each window.
+    Interval is required if the type is irregular, such as with Dates.Month or Dates.Year.
   - `normalization_factor::NormalizationFactor = 1.0`: optional normalization factor to apply
     to each data entry
   - `scaling_factor_multiplier::Union{Nothing, Function} = nothing`: If the data are scaling
@@ -110,21 +145,17 @@ function Scenarios(
     name::AbstractString,
     input_data::AbstractDict{Dates.DateTime, <:TimeSeries.TimeArray};
     resolution::Union{Nothing, Dates.Period} = nothing,
+    interval::Union{Nothing, Dates.Period} = nothing,
     normalization_factor::NormalizationFactor = 1.0,
     scaling_factor_multiplier::Union{Nothing, Function} = nothing,
 )
-    data = SortedDict{Dates.DateTime, Matrix{Float64}}()
-    if isnothing(resolution)
-        resolution = get_resolution(first(values(input_data)))
-    end
-    for (k, v) in input_data
-        data[k] = TimeSeries.values(v)
-    end
-
-    return Scenarios(
-        name,
-        data,
-        resolution;
+    data, res = convert_forecast_input_time_arrays(input_data; resolution = resolution)
+    return Scenarios(;
+        name = name,
+        data = data,
+        resolution = res,
+        interval = interval,
+        scenario_count = size(first(values(input_data)))[2],
         normalization_factor = normalization_factor,
         scaling_factor_multiplier = scaling_factor_multiplier,
     )
@@ -148,6 +179,7 @@ function Scenarios(
         src.data,
         src.scenario_count,
         src.resolution,
+        src.interval,
         scaling_factor_multiplier,
         internal,
     )
@@ -158,11 +190,14 @@ function Scenarios(ts_metadata::ScenariosMetadata, data::SortedDict)
         name = get_name(ts_metadata),
         scenario_count = get_scenario_count(ts_metadata),
         resolution = get_resolution(ts_metadata),
+        interval = get_interval(ts_metadata),
         data = data,
         scaling_factor_multiplier = get_scaling_factor_multiplier(ts_metadata),
         internal = InfrastructureSystemsInternal(get_time_series_uuid(ts_metadata)),
     )
 end
+
+# Note: interval is not support in this workflow.
 
 function Scenarios(info::TimeSeriesParsedInfo)
     return Scenarios(
@@ -202,10 +237,6 @@ function get_array_for_hdf(forecast::Scenarios)
     return data_for_hdf
 end
 
-function get_horizon_count(forecast::Scenarios)
-    return size(first(values(get_data(forecast))))[1]
-end
-
 """
 Get [`Scenarios`](@ref) `name`.
 """
@@ -214,6 +245,10 @@ get_name(value::Scenarios) = value.name
 Get [`Scenarios`](@ref) `resolution`.
 """
 get_resolution(value::Scenarios) = value.resolution
+"""
+Get [`Scenarios`](@ref) `interval`.
+"""
+get_interval(value::Scenarios) = value.interval
 """
 Get [`Scenarios`](@ref) `scenario_count`.
 """
@@ -230,7 +265,6 @@ get_scaling_factor_multiplier(value::Scenarios) = value.scaling_factor_multiplie
 Get [`Scenarios`](@ref) `internal`.
 """
 get_internal(value::Scenarios) = value.internal
-
 """
 Set [`Scenarios`](@ref) `name`.
 """
@@ -261,7 +295,6 @@ set_internal!(value::Scenarios, val) = value.internal = val
 eltype_data(forecast::Scenarios) = eltype_data_common(forecast)
 get_initial_times(forecast::Scenarios) = get_initial_times_common(forecast)
 get_initial_timestamp(forecast::Scenarios) = get_initial_timestamp_common(forecast)
-get_interval(forecast::Scenarios) = get_interval_common(forecast)
 get_window(f::Scenarios, initial_time::Dates.DateTime; len = nothing) =
     get_window_common(f, initial_time; len = len)
 
