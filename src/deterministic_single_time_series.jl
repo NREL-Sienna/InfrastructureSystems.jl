@@ -116,11 +116,11 @@ function get_window(
     initial_time::Dates.DateTime;
     len::Union{Nothing, Int} = nothing,
 )
-    tdiff = Dates.Millisecond(initial_time - forecast.initial_timestamp)
-    interval_ms = Dates.Millisecond(forecast.interval)
-    if interval_ms != Dates.Millisecond(0) && tdiff % interval_ms != Dates.Millisecond(0)
-        throw(ArgumentError("initial_time=$initial_time is not on a window boundary"))
-    end
+    compute_time_array_index(
+        get_initial_timestamp(forecast),
+        initial_time,
+        get_interval(forecast),
+    )
 
     if isnothing(len)
         len = get_horizon_count(forecast)
@@ -214,6 +214,11 @@ function _translate_deterministic_offsets(
     columns,
     last_index,
 )
+    if is_irregular_period(resolution) || is_irregular_period(interval)
+        error(
+            "DeterministicSingleTimeSeries does not support irregular periods",
+        )
+    end
     interval = Dates.Millisecond(interval)
     interval_offset = Int(interval / resolution)
     s_index = (columns.start - 1) * interval_offset + 1
