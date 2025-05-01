@@ -2,6 +2,7 @@ const ASSOCIATIONS_TABLE_NAME = "time_series_associations"
 const METADATA_TABLE_NAME = "time_series_metadata"
 const KEY_VALUE_TABLE_NAME = "key_value_store"
 const DB_FILENAME = "time_series_metadata.db"
+# This version is also used in the Python package infrasys.
 const TS_METADATA_FORMAT_VERSION = "1.0.0"
 const TS_DB_INDEXES = Dict(
     "by_c_n_tst_features" => [
@@ -87,20 +88,88 @@ function _process_migrations_if_needed(store::TimeSeriesMetadataStore)
 end
 
 function _load_metadata_into_memory!(store::TimeSeriesMetadataStore)
+    stmt = SQLite.Stmt(
+        store.db,
+        "SELECT * FROM $ASSOCIATIONS_TABLE_NAME",
+    )
+    exclude_keys = Set((:metadata_uuid, :owner_uuid, :time_series_type))
+    for row in Tables.rowtable(SQLite.DBInterface.execute(stmt))
+        time_series_type = TIME_SERIES_STRING_TO_TYPE[row.time_series_type]
+        metadata_type = time_series_data_to_metadata(time_series_type)
+        fields = Set(fieldnames(metadata_type))
+        data = Dict{Symbol, Any}(
+            :internal =>
+                InfrastructureSystemsInternal(; uuid = Base.UUID(row.metadata_uuid)),
+        )
+        if time_series_type <: Forecast
+            # Special case because the table column does not match the field name.
+            data[:count] = row.window_count
+        end
+        if time_series_type <: AbstractDeterministic
+            data[:time_series_type] = time_series_type
+        end
+        for field in keys(row)
+            if !in(field, fields) || field in exclude_keys
+                continue
+            end
+            val = getproperty(row, field)
+            if field == :initial_timestamp
+                data[field] = Dates.DateTime(val)
+            elseif field == :resolution
+                data[field] = from_iso_8601(val)
+            elseif field == :horizon || field == :interval
+                if !ismissing(val)
+                    data[field] = from_iso_8601(val)
+                end
+            elseif field == :time_series_uuid
+                data[field] = Base.UUID(val)
+            elseif field == :features
+                features_array = JSON3.read(val, Array)
+                features_dict = Dict{String, Union{Bool, Int, String}}()
+                for obj in features_array
+                    length(obj) != 1 && error("Invalid features: $obj")
+                    key = first(keys(obj))
+                    key in keys(features_dict) && error("Duplicate features: $key")
+                    features_dict[key] = obj[key]
+                end
+                data[field] = features_dict
+            elseif field == :scaling_factor_multiplier
+                if !ismissing(val)
+                    val2 = JSON3.read(val, Dict{String, Any})
+                    data[field] = deserialize(Function, val2)
+                end
+            else
+                data[field] = val
+            end
+        end
+        metadata = metadata_type(; data...)
+        store.metadata_uuids[get_uuid(metadata)] = metadata
+    end
+end
+
+# This function can be deleted when we no long support deserialization from 4.x.
+function _load_metadata_into_memory_legacy!(store::TimeSeriesMetadataStore)
+    metadata_uuids = Dict{Base.UUID, TimeSeriesMetadata}()
     stmt =
         SQLite.Stmt(store.db, "SELECT json(metadata) AS metadata FROM $METADATA_TABLE_NAME")
     for metadata_as_str in Tables.columntable(SQLite.DBInterface.execute(stmt)).metadata
         metadata = _deserialize_metadata(metadata_as_str)
+        internal = get_internal(metadata)
+        if !isnothing(internal.ext) && !isempty(internal.ext)
+            @warn "ext is no longer supported on a time series metadata instance and will be dropped: $(internal.ext)"
+        end
+        if !isnothing(internal.units_info)
+            @warn "units_inof is no longer supported on a time series metadata instance and will be dropped: $(internal.units_info)"
+        end
         uuid = get_uuid(metadata)
         if haskey(store.metadata_uuids, uuid)
             error("Bug: duplicate metadata UUID $(uuid)")
         end
-        store.metadata_uuids[uuid] = metadata
+        metadata_uuids[uuid] = metadata
     end
 
-    # There is no need to keep this table around.
-    # We will create it again if the system is serialized.
     SQLite.DBInterface.execute(store.db, "DROP TABLE $METADATA_TABLE_NAME")
+    return metadata_uuids
 end
 
 function _list_columns(db::SQLite.DB, table_name::String)
@@ -253,6 +322,8 @@ function _migrate_two_table_schema_to_one(store::TimeSeriesMetadataStore)
 end
 
 function _migrate_schema_period_to_1_0_0(store::TimeSeriesMetadataStore)
+    metadata_uuids = _load_metadata_into_memory_legacy!(store)
+
     # The original schema had all Dates.Period columns stored as integers in units of ms
     # The current schema stores them as strings.
     @debug "Start migration of schema to time series metadata format v1.0.0."
@@ -266,6 +337,8 @@ function _migrate_schema_period_to_1_0_0(store::TimeSeriesMetadataStore)
             "SELECT * FROM $ASSOCIATIONS_TABLE_NAME",
         ),
     )
+        metadata = metadata_uuids[Base.UUID(row.metadata_uuid)]
+        sfm = get_scaling_factor_multiplier(metadata)
         new_row = (
             row.id,
             row.time_series_uuid,
@@ -274,12 +347,12 @@ function _migrate_schema_period_to_1_0_0(store::TimeSeriesMetadataStore)
             row.initial_timestamp,
             _serialize_period(Dates.Millisecond(row.resolution_ms)),
             if ismissing(row.horizon_ms)
-                nothing
+                missing
             else
                 _serialize_period(Dates.Millisecond(row.horizon_ms))
             end,
             if ismissing(row.interval_ms)
-                nothing
+                missing
             else
                 _serialize_period(Dates.Millisecond(row.interval_ms))
             end,
@@ -290,7 +363,9 @@ function _migrate_schema_period_to_1_0_0(store::TimeSeriesMetadataStore)
             row.owner_type,
             row.owner_category,
             row.features,
+            isnothing(sfm) ? missing : JSON3.write(serialize(sfm)),
             row.metadata_uuid,
+            missing,
         )
         push!(new_rows, new_row)
     end
@@ -315,7 +390,9 @@ function _migrate_schema_period_to_1_0_0(store::TimeSeriesMetadataStore)
             "owner_type",
             "owner_category",
             "features",
+            "scaling_factor_multiplier",
             "metadata_uuid",
+            "units",
         ),
         ASSOCIATIONS_TABLE_NAME,
     )
@@ -357,7 +434,9 @@ function _create_associations_table!(store::TimeSeriesMetadataStore)
         "owner_type TEXT NOT NULL",
         "owner_category TEXT NOT NULL",
         "features TEXT NOT NULL",
+        "scaling_factor_multiplier JSON NULL",
         "metadata_uuid TEXT NOT NULL",
+        "units TEXT NULL",
     ]
     schema_text = join(schema, ",")
     SQLite.DBInterface.execute(
@@ -365,21 +444,6 @@ function _create_associations_table!(store::TimeSeriesMetadataStore)
         "CREATE TABLE $(ASSOCIATIONS_TABLE_NAME)($(schema_text))",
     )
     @debug "Created time series associations table" schema _group = LOG_GROUP_TIME_SERIES
-    return
-end
-
-function _create_metadata_table!(db::SQLite.DB)
-    schema = [
-        "id INTEGER PRIMARY KEY",
-        "metadata_uuid TEXT NOT NULL",
-        "metadata JSON NOT NULL",
-    ]
-    schema_text = join(schema, ",")
-    SQLite.DBInterface.execute(
-        db,
-        "CREATE TABLE $(METADATA_TABLE_NAME)($(schema_text))",
-    )
-    @debug "Created time series metadata table" schema _group = LOG_GROUP_TIME_SERIES
     return
 end
 
@@ -466,6 +530,16 @@ function add_metadata!(
     time_series_type = time_series_metadata_to_data(metadata)
     ts_category = _get_time_series_category(time_series_type)
     features = make_features_string(metadata.features)
+    sfm = get_scaling_factor_multiplier(metadata)
+    internal = get_internal(metadata)
+    if !isnothing(internal.ext) && !isempty(internal.ext)
+        error("ext cannot be set on a time series metadata instance: $(internal.ext)")
+    end
+    if !isnothing(internal.units_info)
+        error(
+            "units_info cannot be set on a time series metadata instance: $(internal.units_info)",
+        )
+    end
     vals = _create_row(
         metadata,
         owner,
@@ -473,6 +547,7 @@ function add_metadata!(
         _convert_ts_type_to_string(time_series_type),
         ts_category,
         features,
+        isnothing(sfm) ? missing : JSON3.write(serialize(sfm)),
     )
     params = chop(repeat("?,", length(vals)))
     _execute_cached(
@@ -499,6 +574,13 @@ function _add_rows!(
     num_columns = length(columns)
     data = OrderedDict(x => Vector{Any}(undef, num_rows) for x in columns)
     for (i, row) in enumerate(rows)
+        if length(row) != num_columns
+            throw(
+                ArgumentError(
+                    "Row $i has $(length(row)) columns, but expected $num_columns: $columns",
+                ),
+            )
+        end
         for (j, column) in enumerate(columns)
             data[column][i] = row[j]
         end
@@ -526,16 +608,6 @@ function backup_to_temp(store::TimeSeriesMetadataStore)
         backup(dst, store.db)
         dst = SQLite.DB(filename)
         _drop_all_indexes!(dst)
-        _create_metadata_table!(dst)
-        query = "INSERT INTO $METADATA_TABLE_NAME VALUES(?,?,jsonb(?))"
-        SQLite.transaction(dst) do
-            stmt = SQLite.Stmt(dst, query)
-            for metadata in values(store.metadata_uuids)
-                params =
-                    (missing, string(get_uuid(metadata)), JSON3.write(serialize(metadata)))
-                SQLite.DBInterface.execute(stmt, params)
-            end
-        end
     finally
         close(dst)
     end
@@ -1326,6 +1398,7 @@ function _create_row(
     ts_type,
     ts_category,
     features,
+    scaling_factor_multiplier,
 )
     return (
         missing,  # auto-assigned by sqlite
@@ -1343,7 +1416,9 @@ function _create_row(
         string(nameof(typeof(owner))),
         owner_category,
         features,
+        scaling_factor_multiplier,
         string(get_uuid(metadata)),
+        missing,
     )
 end
 
@@ -1354,6 +1429,7 @@ function _create_row(
     ts_type,
     ts_category,
     features,
+    scaling_factor_multiplier,
 )
     resolution = get_resolution(metadata)
     if !is_irregular_period(resolution)
@@ -1375,7 +1451,9 @@ function _create_row(
         string(nameof(typeof(owner))),
         owner_category,
         features,
+        scaling_factor_multiplier,
         string(get_uuid(metadata)),
+        missing,
     )
 end
 

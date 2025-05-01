@@ -3,6 +3,14 @@ time_series_data_to_metadata(::Type{Probabilistic}) = ProbabilisticMetadata
 time_series_data_to_metadata(::Type{Scenarios}) = ScenariosMetadata
 time_series_data_to_metadata(::Type{SingleTimeSeries}) = SingleTimeSeriesMetadata
 
+const TIME_SERIES_STRING_TO_TYPE = Dict(
+    "Deterministic" => Deterministic,
+    "DeterministicSingleTimeSeries" => DeterministicSingleTimeSeries,
+    "Probabilistic" => Probabilistic,
+    "Scenarios" => Scenarios,
+    "SingleTimeSeries" => SingleTimeSeries,
+)
+
 time_series_metadata_to_data(::ProbabilisticMetadata) = Probabilistic
 time_series_metadata_to_data(::ScenariosMetadata) = Scenarios
 time_series_metadata_to_data(::SingleTimeSeriesMetadata) = SingleTimeSeries
