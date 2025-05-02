@@ -7,7 +7,6 @@ function get_random_seed()
             @error("SIENNA_RANDOM_SEED: $val can't be read as an integer value")
             rethrow()
         end
-        return SIENNA_RANDOM_SEED
     else
         return rand(Int)
     end
