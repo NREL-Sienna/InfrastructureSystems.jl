@@ -1,5 +1,3 @@
-const SIENNA_RANDOM_SEED = 07012017
-
 function get_random_seed()
     if haskey(ENV, "SIENNA_RANDOM_SEED")
         try
@@ -9,6 +7,7 @@ function get_random_seed()
             @error("SIENNA_RANDOM_SEED $val can't be read as an integer value")
             rethrow(e)
         end
+        return SIENNA_RANDOM_SEED
     end
-    return SIENNA_RANDOM_SEED
+    return rand(Int)
 end
