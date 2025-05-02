@@ -93,6 +93,7 @@ set_name!(value::InfrastructureSystemsComponent, name) = set_name_internal!(valu
 get_internal(value::InfrastructureSystemsComponent) = value.internal
 
 include("common.jl")
+include("random_seed.jl")
 include("utils/timers.jl")
 include("utils/assert_op.jl")
 include("utils/recorder_events.jl")
