@@ -67,9 +67,9 @@ Base.zero(::Union{CostCurve, Type{CostCurve}}) = CostCurve(zero(ValueCurve))
 $(TYPEDEF)
 $(TYPEDFIELDS)
 
-    FuelCurve(value_curve, power_units, fuel_cost, vom_cost)
+    FuelCurve(value_curve, power_units, fuel_cost, startup_fuel_offtake, vom_cost)
     FuelCurve(value_curve, fuel_cost)
-    FuelCurve(value_curve, fuel_cost, vom_cost)
+    FuelCurve(value_curve, fuel_cost, startup_fuel_offtake, vom_cost)
     FuelCurve(value_curve, power_units, fuel_cost)
     FuelCurve(; value_curve, power_units, fuel_cost, startup_fuel_offtake, vom_cost)
 
@@ -93,9 +93,18 @@ The default units for the x-axis are MW and can be specified with `power_units`.
     vom_cost::LinearCurve = LinearCurve(0.0)
 end
 
+FuelCurve(
+    value_curve::ValueCurve,
+    power_units::UnitSystem,
+    fuel_cost::Real,
+    startup_fuel_offtake::LinearCurve,
+    vom_cost::LinearCurve,
+) =
+    FuelCurve(value_curve, power_units, Float64(fuel_cost), startup_fuel_offtake, vom_cost)
+
 FuelCurve(value_curve, fuel_cost) = FuelCurve(; value_curve, fuel_cost)
 FuelCurve(value_curve, fuel_cost::Union{Float64, TimeSeriesKey}, startup_fuel_offtake::LinearCurve, vom_cost::LinearCurve) =
-    FuelCurve(; value_curve, fuel_cost, startup_fuel_offtake, vom_cost)
+    FuelCurve(; value_curve, fuel_cost, startup_fuel_offtake=startup_fuel_offtake, vom_cost=vom_cost)
 FuelCurve(value_curve, power_units::UnitSystem, fuel_cost::Union{Float64, TimeSeriesKey}) =
     FuelCurve(; value_curve, power_units = power_units, fuel_cost = fuel_cost)
 
