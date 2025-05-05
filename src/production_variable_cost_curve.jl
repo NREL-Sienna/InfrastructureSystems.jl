@@ -87,26 +87,53 @@ The default units for the x-axis are MW and can be specified with `power_units`.
     fuel_cost::Union{Float64, TimeSeriesKey}
     "(default of 0) Fuel consumption at the unit startup proceedure. Additional cost to the startup costs and related only to the initial fuel required to start the unit.
     represented as a [`LinearCurve`](@ref)"
-    startup_fuel_offtake::Float64 = LinearCurve(0.0)
+    startup_fuel_offtake::LinearCurve = LinearCurve(0.0)
     "(default of 0) Additional proportional Variable Operation and Maintenance Cost in \$/(power_unit h)
     represented as a [`LinearCurve`](@ref)"
     vom_cost::LinearCurve = LinearCurve(0.0)
 end
 
-FuelCurve(
+function FuelCurve(
     value_curve::ValueCurve,
     power_units::UnitSystem,
     fuel_cost::Real,
     startup_fuel_offtake::LinearCurve,
     vom_cost::LinearCurve,
-) =
-    FuelCurve(value_curve, power_units, Float64(fuel_cost), startup_fuel_offtake, vom_cost)
+)
+    return FuelCurve(
+        value_curve,
+        power_units,
+        Float64(fuel_cost),
+        startup_fuel_offtake,
+        vom_cost,
+    )
+end
 
-FuelCurve(value_curve, fuel_cost) = FuelCurve(; value_curve, fuel_cost)
-FuelCurve(value_curve, fuel_cost::Union{Float64, TimeSeriesKey}, startup_fuel_offtake::LinearCurve, vom_cost::LinearCurve) =
-    FuelCurve(; value_curve, fuel_cost, startup_fuel_offtake=startup_fuel_offtake, vom_cost=vom_cost)
-FuelCurve(value_curve, power_units::UnitSystem, fuel_cost::Union{Float64, TimeSeriesKey}) =
+function FuelCurve(value_curve, fuel_cost)
+    FuelCurve(; value_curve, fuel_cost)
+end
+
+function FuelCurve(
+    value_curve,
+    fuel_cost::Union{Float64, TimeSeriesKey},
+    startup_fuel_offtake::LinearCurve,
+    vom_cost::LinearCurve,
+)
+    return FuelCurve(;
+        value_curve,
+        fuel_cost,
+        startup_fuel_offtake = startup_fuel_offtake,
+        vom_cost = vom_cost,
+    )
+end
+
+function FuelCurve(
+    value_curve,
+    power_units::UnitSystem,
+    fuel_cost::Union{Float64, TimeSeriesKey},
+)
     FuelCurve(; value_curve, power_units = power_units, fuel_cost = fuel_cost)
+end
 
 Base.:(==)(a::FuelCurve, b::FuelCurve) =
     (get_value_curve(a) == get_value_curve(b)) &&
@@ -130,7 +157,7 @@ Base.show(io::IO, m::MIME"text/plain", curve::ProductionVariableCostCurve) =
 function _show_compact(io::IO, ::MIME"text/plain", curve::CostCurve)
     print(
         io,
-        "$(nameof(typeof(curve))) with power_units $(curve.power_units), startup_fuel_offtake $(curve.startup_fuel_offtake), vom_cost $(curve.vom_cost), and value_curve:\n  ",
+        "$(nameof(typeof(curve))) with power_units $(curve.power_units), vom_cost $(curve.vom_cost), and value_curve:\n  ",
     )
     vc_printout = sprint(show, "text/plain", curve.value_curve; context = io)  # Capture the value_curve `show` so we can indent it
     print(io, replace(vc_printout, "\n" => "\n  "))
