@@ -85,30 +85,19 @@ The default units for the x-axis are MW and can be specified with `power_units`.
     power_units::UnitSystem = UnitSystem.NATURAL_UNITS
     "Either a fixed value for fuel cost or the [`TimeSeriesKey`](@ref) to a fuel cost time series"
     fuel_cost::Union{Float64, TimeSeriesKey}
-    "(default of 0) Fuel consumption at the unit startup proceedure. Additional cost to the startup costs and related only to the initial fuel required to start the unit."
+    "(default of 0) Fuel consumption at the unit startup proceedure. Additional cost to the startup costs and related only to the initial fuel required to start the unit.
+    represented as a [`LinearCurve`](@ref)"
     startup_fuel_offtake::Float64 = LinearCurve(0.0)
     "(default of 0) Additional proportional Variable Operation and Maintenance Cost in \$/(power_unit h)
     represented as a [`LinearCurve`](@ref)"
     vom_cost::LinearCurve = LinearCurve(0.0)
 end
 
-FuelCurve(
-    value_curve::ValueCurve,
-    power_units::UnitSystem,
-    fuel_cost::Real,
-    startup_fuel_offtake::LinearCurve,
-    vom_cost::LinearCurve,
-) =
-    FuelCurve(value_curve, power_units, Float64(fuel_cost), startup_fuel_offtake, vom_cost)
-
 FuelCurve(value_curve, fuel_cost) = FuelCurve(; value_curve, fuel_cost)
-FuelCurve(value_curve, fuel_cost::Union{Float64, TimeSeriesKey}, vom_cost::LinearCurve) =
-    FuelCurve(; value_curve, fuel_cost, vom_cost = vom_cost)
+FuelCurve(value_curve, fuel_cost::Union{Float64, TimeSeriesKey}, startup_fuel_offtake::LinearCurve, vom_cost::LinearCurve) =
+    FuelCurve(; value_curve, fuel_cost, startup_fuel_offtake, vom_cost)
 FuelCurve(value_curve, power_units::UnitSystem, fuel_cost::Union{Float64, TimeSeriesKey}) =
     FuelCurve(; value_curve, power_units = power_units, fuel_cost = fuel_cost)
-FuelCurve(value_curve, power_units::UnitSystem, startup_fuel_offtake::LinearCurve, fuel_cost::Union{Float64, TimeSeriesKey}) =
-    FuelCurve(; value_curve, power_units = power_units, startup_fuel_offtake = startup_fuel_offtake, fuel_cost = fuel_cost)
-
 
 Base.:(==)(a::FuelCurve, b::FuelCurve) =
     (get_value_curve(a) == get_value_curve(b)) &&
@@ -122,6 +111,8 @@ Base.zero(::Union{FuelCurve, Type{FuelCurve}}) = FuelCurve(zero(ValueCurve), 0.0
 
 "Get the fuel cost or the name of the fuel cost time series"
 get_fuel_cost(cost::FuelCurve) = cost.fuel_cost
+"Get the function for the fuel consumption at startup"
+get_startup_fuel_offtake(cost::FuelCurve) = cost.startup_fuel_offtake
 
 Base.show(io::IO, m::MIME"text/plain", curve::ProductionVariableCostCurve) =
     (get(io, :compact, false)::Bool ? _show_compact : _show_expanded)(io, m, curve)
