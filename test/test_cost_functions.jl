@@ -289,17 +289,17 @@ end
     @test repr(cc) == sprint(show, cc) ==
           "InfrastructureSystems.CostCurve{QuadraticCurve}(QuadraticCurve(1.0, 2.0, 3.0), InfrastructureSystems.UnitSystemModule.UnitSystem.NATURAL_UNITS = 2, LinearCurve(0.0, 0.0))"
     @test repr(fc) == sprint(show, fc) ==
-          "InfrastructureSystems.FuelCurve{QuadraticCurve}(QuadraticCurve(1.0, 2.0, 3.0), InfrastructureSystems.UnitSystemModule.UnitSystem.NATURAL_UNITS = 2, 4.0, LinearCurve(0.0, 0.0))"
+          "InfrastructureSystems.FuelCurve{QuadraticCurve}(QuadraticCurve(1.0, 2.0, 3.0), InfrastructureSystems.UnitSystemModule.UnitSystem.NATURAL_UNITS = 2, 4.0, LinearCurve(0.0, 0.0), LinearCurve(0.0, 0.0))"
     @test sprint(show, "text/plain", cc) ==
           sprint(show, "text/plain", cc; context = :compact => false) ==
           "CostCurve:\n  value_curve: QuadraticCurve (a type of InfrastructureSystems.InputOutputCurve) where function is: f(x) = 1.0 x^2 + 2.0 x + 3.0\n  power_units: InfrastructureSystems.UnitSystemModule.UnitSystem.NATURAL_UNITS = 2\n  vom_cost: LinearCurve (a type of InfrastructureSystems.InputOutputCurve) where function is: f(x) = 0.0 x + 0.0"
     @test sprint(show, "text/plain", fc) ==
           sprint(show, "text/plain", fc; context = :compact => false) ==
-          "FuelCurve:\n  value_curve: QuadraticCurve (a type of InfrastructureSystems.InputOutputCurve) where function is: f(x) = 1.0 x^2 + 2.0 x + 3.0\n  power_units: InfrastructureSystems.UnitSystemModule.UnitSystem.NATURAL_UNITS = 2\n  fuel_cost: 4.0\n  vom_cost: LinearCurve (a type of InfrastructureSystems.InputOutputCurve) where function is: f(x) = 0.0 x + 0.0"
+          "FuelCurve:\n  value_curve: QuadraticCurve (a type of InfrastructureSystems.InputOutputCurve) where function is: f(x) = 1.0 x^2 + 2.0 x + 3.0\n  power_units: InfrastructureSystems.UnitSystemModule.UnitSystem.NATURAL_UNITS = 2\n  fuel_cost: 4.0\n  startup_fuel_offtake: LinearCurve (a type of InfrastructureSystems.InputOutputCurve) where function is: f(x) = 0.0 x + 0.0\n  vom_cost: LinearCurve (a type of InfrastructureSystems.InputOutputCurve) where function is: f(x) = 0.0 x + 0.0"
     @test sprint(show, "text/plain", cc; context = :compact => true) ==
           "CostCurve with power_units InfrastructureSystems.UnitSystemModule.UnitSystem.NATURAL_UNITS = 2, vom_cost LinearCurve(0.0, 0.0), and value_curve:\n  QuadraticCurve (a type of InfrastructureSystems.InputOutputCurve) where function is: f(x) = 1.0 x^2 + 2.0 x + 3.0"
     @test sprint(show, "text/plain", fc; context = :compact => true) ==
-          "FuelCurve with power_units InfrastructureSystems.UnitSystemModule.UnitSystem.NATURAL_UNITS = 2, fuel_cost 4.0, vom_cost LinearCurve(0.0, 0.0), and value_curve:\n  QuadraticCurve (a type of InfrastructureSystems.InputOutputCurve) where function is: f(x) = 1.0 x^2 + 2.0 x + 3.0"
+          "FuelCurve with power_units InfrastructureSystems.UnitSystemModule.UnitSystem.NATURAL_UNITS = 2, fuel_cost 4.0, startup_fuel_offtake LinearCurve(0.0, 0.0), vom_cost LinearCurve(0.0, 0.0), and value_curve:\n  QuadraticCurve (a type of InfrastructureSystems.InputOutputCurve) where function is: f(x) = 1.0 x^2 + 2.0 x + 3.0"
 
     @test IS.get_power_units(cc) == IS.UnitSystem.NATURAL_UNITS
     @test IS.get_power_units(fc) == IS.UnitSystem.NATURAL_UNITS
@@ -319,7 +319,21 @@ end
     ) ==
           IS.LinearCurve(1.0, 2.0)
     @test IS.get_vom_cost(
-        IS.FuelCurve(zero(IS.InputOutputCurve), 1.0, IS.LinearCurve(3.0, 4.0)),
+        IS.FuelCurve(
+            zero(IS.InputOutputCurve),
+            1.0,
+            IS.LinearCurve(10.0, 7.0),
+            IS.LinearCurve(3.0, 4.0),
+        ),
     ) ==
           IS.LinearCurve(3.0, 4.0)
+    @test IS.get_startup_fuel_offtake(
+        IS.FuelCurve(
+            zero(IS.InputOutputCurve),
+            1.0,
+            IS.LinearCurve(10.0, 7.0),
+            IS.LinearCurve(3.0, 4.0),
+        ),
+    ) ==
+          IS.LinearCurve(10.0, 7.0)
 end
