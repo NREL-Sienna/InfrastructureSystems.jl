@@ -1072,28 +1072,12 @@ function get_associated_components(data::SystemData, attribute::SupplementalAttr
     ]
 end
 
-get_components(data::SystemData, attribute::SupplementalAttribute) =
-    get_associated_components(
-        data,
-        attribute,
-    )
-
 get_associated_components(
     filter_func::Function,
     data::SystemData,
     attribute::SupplementalAttribute,
 ) =
     filter(filter_func, get_associated_components(data, attribute))
-
-get_components(
-    filter_func::Function,
-    data::SystemData,
-    attribute::SupplementalAttribute,
-) = get_associated_components(
-    filter_func,
-    data,
-    attribute,
-)
 
 function get_associated_components(
     data::SystemData,
