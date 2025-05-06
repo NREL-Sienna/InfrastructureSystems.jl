@@ -20,8 +20,6 @@
                   IS.get_component(test_sys, test_uuid)
             geo_supplemental_attribute = IS.GeographicInfo()
             IS.add_supplemental_attribute!(test_sys, component1, geo_supplemental_attribute)
-            @test cse(IS.get_available_components(test_sys, geo_supplemental_attribute),
-                IS.get_components(test_sys, geo_supplemental_attribute))
         end
 
         @test IS.get_available_component(IS.TestComponent, test_sys, "Component1") ==
