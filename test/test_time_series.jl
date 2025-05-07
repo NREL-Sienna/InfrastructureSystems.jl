@@ -3245,7 +3245,7 @@ end
             row.id,
             row.time_series_uuid,
             row.time_series_type,
-            row.time_series_category,
+            "unused_time_series_category",
             row.initial_timestamp,
             IS.from_iso_8601(row.resolution),
             ismissing(row.horizon) ? nothing : IS.from_iso_8601(row.horizon),

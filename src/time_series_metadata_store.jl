@@ -246,7 +246,6 @@ function _migrate_two_table_schema_to_one(store::TimeSeriesMetadataStore)
                     id
                     ,time_series_uuid
                     ,time_series_type
-                    ,time_series_category
                     ,initial_timestamp
                     ,resolution
                     ,horizon
@@ -290,7 +289,6 @@ function _migrate_two_table_schema_to_one(store::TimeSeriesMetadataStore)
             "id",
             "time_series_uuid",
             "time_series_type",
-            "time_series_category",
             "initial_timestamp",
             "resolution",
             "horizon",
@@ -343,7 +341,6 @@ function _migrate_schema_period_to_1_0_0(store::TimeSeriesMetadataStore)
             row.id,
             row.time_series_uuid,
             row.time_series_type,
-            row.time_series_category,
             row.initial_timestamp,
             _serialize_period(Dates.Millisecond(row.resolution_ms)),
             if ismissing(row.horizon_ms)
@@ -378,7 +375,6 @@ function _migrate_schema_period_to_1_0_0(store::TimeSeriesMetadataStore)
             "id",
             "time_series_uuid",
             "time_series_type",
-            "time_series_category",
             "initial_timestamp",
             "resolution",
             "horizon",
@@ -422,7 +418,6 @@ function _create_associations_table!(store::TimeSeriesMetadataStore)
         "id INTEGER PRIMARY KEY",
         "time_series_uuid TEXT NOT NULL",
         "time_series_type TEXT NOT NULL",
-        "time_series_category TEXT NOT NULL",
         "initial_timestamp TEXT NOT NULL",
         "resolution TEXT NOT NULL",
         "horizon TEXT",
@@ -528,7 +523,6 @@ function add_metadata!(
 )
     owner_category = _get_owner_category(owner)
     time_series_type = time_series_metadata_to_data(metadata)
-    ts_category = _get_time_series_category(time_series_type)
     features = make_features_string(metadata.features)
     sfm = get_scaling_factor_multiplier(metadata)
     internal = get_internal(metadata)
@@ -545,7 +539,6 @@ function add_metadata!(
         owner,
         owner_category,
         _convert_ts_type_to_string(time_series_type),
-        ts_category,
         features,
         isnothing(sfm) ? missing : JSON3.write(serialize(sfm)),
     )
@@ -894,6 +887,7 @@ Return a DataFrame with the number of static time series for components and supp
 attributes.
 """
 function get_static_time_series_summary_table(store::TimeSeriesMetadataStore)
+    category_clause, params = _make_category_clause(StaticTimeSeries)
     query = """
         SELECT
             owner_type
@@ -904,7 +898,7 @@ function get_static_time_series_summary_table(store::TimeSeriesMetadataStore)
             ,count(*) AS count
             ,length AS time_step_count
         FROM $ASSOCIATIONS_TABLE_NAME
-        WHERE time_series_category = "$(_get_time_series_category(StaticTimeSeries))"
+        WHERE $category_clause
         GROUP BY
             owner_type
             ,owner_category
@@ -920,7 +914,7 @@ function get_static_time_series_summary_table(store::TimeSeriesMetadataStore)
             ,resolution
             ,length
     """
-    query_result = DataFrame(_execute(store, query))
+    query_result = DataFrame(_execute(store, query, params))
     query_result[!, "resolution"] =
         Dates.canonicalize.(from_iso_8601.(query_result[!, "resolution"]))
     return query_result
@@ -931,6 +925,7 @@ Return a DataFrame with the number of forecasts for components and supplemental
 attributes.
 """
 function get_forecast_summary_table(store::TimeSeriesMetadataStore)
+    category_clause, params = _make_category_clause(Forecast)
     query = """
         SELECT
             owner_type
@@ -943,7 +938,7 @@ function get_forecast_summary_table(store::TimeSeriesMetadataStore)
             ,interval AS interval
             ,window_count
         FROM $ASSOCIATIONS_TABLE_NAME
-        WHERE time_series_category = "$(_get_time_series_category(Forecast))"
+        WHERE $category_clause
         GROUP BY
             owner_type
             ,owner_category
@@ -963,7 +958,7 @@ function get_forecast_summary_table(store::TimeSeriesMetadataStore)
             ,interval
             ,window_count
     """
-    query_result = DataFrame(_execute(store, query))
+    query_result = DataFrame(_execute(store, query, params))
     for col_name in ["resolution", "horizon", "interval"]
         query_result[!, col_name] =
             Dates.canonicalize.(from_iso_8601.(query_result[!, col_name]))
@@ -1396,7 +1391,6 @@ function _create_row(
     owner,
     owner_category,
     ts_type,
-    ts_category,
     features,
     scaling_factor_multiplier,
 )
@@ -1404,7 +1398,6 @@ function _create_row(
         missing,  # auto-assigned by sqlite
         string(get_time_series_uuid(metadata)),
         ts_type,
-        ts_category,
         string(get_initial_timestamp(metadata)),
         _serialize_period(get_resolution(metadata)),
         _serialize_period(get_horizon(metadata)),
@@ -1427,7 +1420,6 @@ function _create_row(
     owner,
     owner_category,
     ts_type,
-    ts_category,
     features,
     scaling_factor_multiplier,
 )
@@ -1439,7 +1431,6 @@ function _create_row(
         missing,  # auto-assigned by sqlite
         string(get_time_series_uuid(metadata)),
         ts_type,
-        ts_category,
         string(get_initial_timestamp(metadata)),
         _serialize_period(get_resolution(metadata)),
         missing,
@@ -1560,8 +1551,18 @@ _get_owner_category(
 ) = "Component"
 _get_owner_category(::Union{SupplementalAttribute, Type{<:SupplementalAttribute}}) =
     "SupplementalAttribute"
-_get_time_series_category(::Type{<:Forecast}) = "Forecast"
-_get_time_series_category(::Type{<:StaticTimeSeries}) = "StaticTimeSeries"
+
+function _make_category_clause(ts_type::Type{<:TimeSeriesData})
+    subtypes = [string(nameof(x)) for x in get_all_concrete_subtypes(ts_type)]
+    clause = if length(subtypes) == 1
+        "time_series_type = ?"
+    else
+        placeholder = chop(repeat("?,", length(subtypes)))
+        "time_series_type IN ($placeholder)"
+    end
+
+    return clause, subtypes
+end
 
 function _make_feature_filter!(params; features...)
     data = _make_sorted_feature_array(; features...)
