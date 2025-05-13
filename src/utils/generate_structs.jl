@@ -64,12 +64,12 @@ end
 {{/has_null_values}}
 {{#accessors}}
 {{#create_docstring}}\"\"\"Get [`{{struct_name}}`](@ref) `{{name}}`.\"\"\"{{/create_docstring}}
-{{accessor}}(value::{{struct_name}}) = {{#needs_conversion}}get_value(value, value.{{name}}, Val{:{{unit_conversion}}}){{/needs_conversion}}{{^needs_conversion}}value.{{name}}{{/needs_conversion}}
+{{accessor}}(value::{{struct_name}}) = {{#needs_conversion}}get_value(value, value.{{name}}, Val{:{{conversion_unit}}}){{/needs_conversion}}{{^needs_conversion}}value.{{name}}{{/needs_conversion}}
 {{/accessors}}
 
 {{#setters}}
 {{#create_docstring}}\"\"\"Set [`{{struct_name}}`](@ref) `{{name}}`.\"\"\"{{/create_docstring}}
-{{setter}}(value::{{struct_name}}, val) = value.{{name}} = {{#needs_conversion}}set_value(value, val, Val{:{{unit_conversion}}}){{/needs_conversion}}{{^needs_conversion}}val{{/needs_conversion}}
+{{setter}}(value::{{struct_name}}, val) = value.{{name}} = {{#needs_conversion}}set_value(value, val, Val{:{{conversion_unit}}}){{/needs_conversion}}{{^needs_conversion}}val{{/needs_conversion}}
 {{/setters}}
 
 {{#custom_code}}
@@ -147,7 +147,7 @@ function generate_structs(directory, data::Vector; print_results = true)
                     "accessor" => accessor_name,
                     "create_docstring" => create_docstring,
                     "needs_conversion" => get(param, "needs_conversion", false),
-                    "unit_conversion" => get(param, "unit_conversion", :mva),
+                    "conversion_unit" => get(param, "conversion_unit", :mva),
                 ),
             )
             include_setter = !get(param, "exclude_setter", false)
@@ -160,7 +160,7 @@ function generate_structs(directory, data::Vector; print_results = true)
                         "data_type" => param["data_type"],
                         "create_docstring" => create_docstring,
                         "needs_conversion" => get(param, "needs_conversion", false),
-                        "unit_conversion" => get(param, "unit_conversion", :mva),
+                        "conversion_unit" => get(param, "conversion_unit", :mva),
                     ),
                 )
             end
