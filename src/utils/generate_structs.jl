@@ -147,7 +147,7 @@ function generate_structs(directory, data::Vector; print_results = true)
                     "accessor" => accessor_name,
                     "create_docstring" => create_docstring,
                     "needs_conversion" => get(param, "needs_conversion", false),
-                    "unit_conversion" => get(param, "unit_conversion", :mva)
+                    "unit_conversion" => get(param, "unit_conversion", :mva),
                 ),
             )
             include_setter = !get(param, "exclude_setter", false)
@@ -160,7 +160,7 @@ function generate_structs(directory, data::Vector; print_results = true)
                         "data_type" => param["data_type"],
                         "create_docstring" => create_docstring,
                         "needs_conversion" => get(param, "needs_conversion", false),
-                        "unit_conversion" => get(param, "unit_conversion", :mva)
+                        "unit_conversion" => get(param, "unit_conversion", :mva),
                     ),
                 )
             end
