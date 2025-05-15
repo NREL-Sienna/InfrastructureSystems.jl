@@ -256,7 +256,7 @@ deserialize(::Type{Dates.DateTime}, val::AbstractString) = Dates.DateTime(val)
 deserialize(::Type{Union{Float64, TimeSeriesKey}}, val::Integer) = Float64(val)
 
 # PiecewisePointCurve is covered by deserialize_to_dict above
-deserialize(::Type{Union{Float64, PiecewisePointCurve}}, val::Integer) = Float64(val)
+deserialize(::Type{Union{Float64, <:InputOutputCurve}}, val::Integer) = Float64(val)
 
 # The next methods fix serialization of UUIDs. The underlying type of a UUID is a UInt128.
 # JSON tries to encode this as a number in JSON. Encoding integers greater than can
