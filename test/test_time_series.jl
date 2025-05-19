@@ -1446,6 +1446,29 @@ end
     @test length(IS.get_components(IS.TestComponent, sys)) == 0
 end
 
+@testset "Test transform_single_time_series with irregular resolution" begin
+    sys = IS.SystemData()
+    component = IS.TestComponent("Component1", 1)
+    IS.add_component!(sys, component)
+
+    resolution = Dates.Month(1)
+    dates = create_dates("2020-01-01T00:00:00", resolution, "2021-01-01T00:00:00")
+    data = collect(1:length(dates))
+    ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
+    name = "val"
+    ts = IS.SingleTimeSeries(name, ta; resolution = resolution)
+    IS.add_time_series!(sys, component, ts)
+    horizon_count = 12
+    horizon = horizon_count * resolution
+    interval = Dates.Month(1)
+    @test_throws "transform_single_time_series! does not support irregular" IS.transform_single_time_series!(
+        sys,
+        IS.DeterministicSingleTimeSeries,
+        horizon,
+        interval,
+    )
+end
+
 function _test_add_single_time_series_type(test_value, type_name)
     sys = IS.SystemData()
     name = "Component1"
@@ -1515,7 +1538,7 @@ end
     @test !isempty(res) && first(res) isa IS.StaticTimeSeriesKey
     @test IS.has_time_series(component)
 
-    all_time_series = get_all_time_series(data)
+    all_time_series = collect(IS.get_time_series_multiple(data; type = IS.SingleTimeSeries))
     @test length(all_time_series) == 1
     time_series = all_time_series[1]
     @test time_series isa IS.SingleTimeSeries
@@ -1532,8 +1555,8 @@ end
 
     it = IS.get_initial_timestamp(time_series)
 
-    all_time_series = get_all_time_series(data)
-    @test length(collect(all_time_series)) == 1
+    all_time_series = collect(IS.get_time_series_multiple(data; type = IS.SingleTimeSeries))
+    @test length(all_time_series) == 1
 
     data = IS.SystemData()
     name = "Component1"
@@ -1671,19 +1694,16 @@ end
     @test length(
         collect(IS.get_time_series_multiple(sys; type = IS.SingleTimeSeries)),
     ) == 2
-    @test length(collect(IS.get_time_series_multiple(sys; type = IS.Probabilistic))) ==
-          0
+    @test isempty(IS.get_time_series_multiple(sys; type = IS.Probabilistic))
 
     time_series = collect(IS.get_time_series_multiple(sys))
     @test length(time_series) == 2
 
     @test length(collect(IS.get_time_series_multiple(sys; name = "val"))) == 1
-    @test length(collect(IS.get_time_series_multiple(sys; name = "bad_name"))) == 0
+    @test isempty(IS.get_time_series_multiple(sys; name = "bad_name"))
 
     filter_func = x -> TimeSeries.values(IS.get_data(x))[12] == 12
-    @test length(
-        collect(IS.get_time_series_multiple(sys, filter_func; name = "val2")),
-    ) == 0
+    @test isempty(IS.get_time_series_multiple(sys, filter_func; name = "val2"))
 end
 
 @testset "Test add_time_series from TimeArray" begin
@@ -1708,8 +1728,8 @@ end
     components = collect(IS.iterate_components(data))
     @test length(components) == 1
     component = components[1]
-    time_series = get_all_time_series(data)
-    @test length(get_all_time_series(data)) == 1
+    time_series = collect(IS.get_time_series_multiple(data; type = IS.SingleTimeSeries))
+    @test length(time_series) == 1
 
     time_series = time_series[1]
     IS.remove_time_series!(
@@ -1719,14 +1739,13 @@ end
         IS.get_name(time_series),
     )
 
-    @test length(get_all_time_series(data)) == 0
-    @test IS.get_num_time_series(data) == 0
+    @test isempty(IS.get_time_series_multiple(data; type = IS.SingleTimeSeries))
 end
 
 @testset "Test clear_time_series" begin
     data = create_system_data(; with_time_series = true)
     IS.clear_time_series!(data)
-    @test length(get_all_time_series(data)) == 0
+    @test isempty(IS.get_time_series_multiple(data))
 end
 
 @testset "Test that remove_component removes time_series" begin
@@ -1736,17 +1755,13 @@ end
     @test length(components) == 1
     component = components[1]
 
-    all_time_series = collect(IS.get_time_series_multiple(data))
+    all_time_series = collect(IS.get_time_series_multiple(data; type = IS.SingleTimeSeries))
     @test length(all_time_series) == 1
     time_series = all_time_series[1]
-    @test IS.get_num_time_series(data) == 1
 
     IS.remove_component!(data, component)
-    @test length(collect(IS.get_time_series_multiple(component))) == 0
-    @test length(collect(IS.get_components(IS.InfrastructureSystemsComponent, data))) ==
-          0
-    @test length(get_all_time_series(data)) == 0
-    @test IS.get_num_time_series(data) == 0
+    @test isempty(IS.get_components(IS.InfrastructureSystemsComponent, data))
+    @test isempty(IS.get_time_series_multiple(data; type = IS.SingleTimeSeries))
 end
 
 @testset "Test get_time_series_array" begin
@@ -1958,7 +1973,7 @@ end
 
 @testset "Test time_series forwarding methods" begin
     data = create_system_data(; with_time_series = true)
-    time_series = get_all_time_series(data)[1]
+    time_series = first(IS.get_time_series_multiple(data; type = IS.SingleTimeSeries))
 
     # Iteration
     size = 24
@@ -1979,7 +1994,7 @@ end
 
 @testset "Test time_series head" begin
     data = create_system_data(; with_time_series = true)
-    time_series = get_all_time_series(data)[1]
+    time_series = first(IS.get_time_series_multiple(data; type = IS.SingleTimeSeries))
     fcast = IS.head(time_series)
     # head returns a length of 6 by default, but don't hard-code that.
     @test length(fcast) < length(time_series)
@@ -1990,7 +2005,7 @@ end
 
 @testset "Test time_series tail" begin
     data = create_system_data(; with_time_series = true)
-    time_series = get_all_time_series(data)[1]
+    time_series = first(IS.get_time_series_multiple(data; type = IS.SingleTimeSeries))
     fcast = IS.tail(time_series)
     # tail returns a length of 6 by default, but don't hard-code that.
     @test length(fcast) < length(time_series)
@@ -2001,7 +2016,7 @@ end
 
 @testset "Test time_series from" begin
     data = create_system_data(; with_time_series = true)
-    time_series = get_all_time_series(data)[1]
+    time_series = first(IS.get_time_series_multiple(data; type = IS.SingleTimeSeries))
     start_time = Dates.DateTime(Dates.today()) + Dates.Hour(3)
     fcast = IS.from(time_series, start_time)
     @test length(fcast) == 21
@@ -2010,7 +2025,7 @@ end
 
 @testset "Test time_series to" begin
     data = create_system_data(; with_time_series = true)
-    time_series = get_all_time_series(data)[1]
+    time_series = first(IS.get_time_series_multiple(data; type = IS.SingleTimeSeries))
     for end_time in (
         Dates.DateTime(Dates.today()) + Dates.Hour(15),
         Dates.DateTime(Dates.today()) + Dates.Hour(15) + Dates.Minute(5),

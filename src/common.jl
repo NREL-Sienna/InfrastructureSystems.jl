@@ -44,14 +44,6 @@ const XY_COORDS = @NamedTuple{x::Float64, y::Float64}
 "Delimiter to use when constructing qualified names like `component_type__component_name`."
 const COMPONENT_NAME_DELIMITER = "__"
 
-# Serialization constants
-const METADATA_KEY = "__metadata__"
-const TYPE_KEY = "type"
-const MODULE_KEY = "module"
-const PARAMETERS_KEY = "parameters"
-const CONSTRUCT_WITH_PARAMETERS_KEY = "construct_with_parameters"
-const FUNCTION_KEY = "function"
-
 # See https://github.com/JuliaLang/julia/issues/18485
 "An equality predicate that is `true` for `NaN, NaN` (unlike `==`) and for `-0.0, 0.0` (unlike `isequal`)"
 isequivalent(x, y) = isequal(x, y) || (x == y)

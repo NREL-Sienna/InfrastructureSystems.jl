@@ -1,4 +1,10 @@
 # These will get encoded into each dictionary when a struct is serialized.
+const METADATA_KEY = "__metadata__"
+const TYPE_KEY = "type"
+const MODULE_KEY = "module"
+const PARAMETERS_KEY = "parameters"
+const CONSTRUCT_WITH_PARAMETERS_KEY = "construct_with_parameters"
+const FUNCTION_KEY = "function"
 
 """
 Serializes a InfrastructureSystemsType to a JSON file.
