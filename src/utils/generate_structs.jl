@@ -64,12 +64,12 @@ end
 {{/has_null_values}}
 {{#accessors}}
 {{#create_docstring}}\"\"\"Get [`{{struct_name}}`](@ref) `{{name}}`.\"\"\"{{/create_docstring}}
-{{accessor}}(value::{{struct_name}}) = {{#needs_conversion}}get_value(value, value.{{name}}, Val({{conversion_unit}})){{/needs_conversion}}{{^needs_conversion}}value.{{name}}{{/needs_conversion}}
+{{accessor}}(value::{{struct_name}}) = {{#needs_conversion}}get_value(value, Val(:{{name}}), Val({{conversion_unit}})){{/needs_conversion}}{{^needs_conversion}}value.{{name}}{{/needs_conversion}}
 {{/accessors}}
 
 {{#setters}}
 {{#create_docstring}}\"\"\"Set [`{{struct_name}}`](@ref) `{{name}}`.\"\"\"{{/create_docstring}}
-{{setter}}(value::{{struct_name}}, val) = value.{{name}} = {{#needs_conversion}}set_value(value, val, Val({{conversion_unit}})){{/needs_conversion}}{{^needs_conversion}}val{{/needs_conversion}}
+{{setter}}(value::{{struct_name}}, val) = value.{{name}} = {{#needs_conversion}}set_value(value, Val(:{{name}}), Val({{conversion_unit}})){{/needs_conversion}}{{^needs_conversion}}val{{/needs_conversion}}
 {{/setters}}
 
 {{#custom_code}}
