@@ -159,7 +159,7 @@ function _load_metadata_into_memory_legacy!(store::TimeSeriesMetadataStore)
             @warn "ext is no longer supported on a time series metadata instance and will be dropped: $(internal.ext)"
         end
         if !isnothing(internal.units_info)
-            @warn "units_inof is no longer supported on a time series metadata instance and will be dropped: $(internal.units_info)"
+            @warn "units_info is no longer supported on a time series metadata instance and will be dropped: $(internal.units_info)"
         end
         uuid = get_uuid(metadata)
         if haskey(store.metadata_uuids, uuid)
@@ -238,6 +238,7 @@ function _migrate_two_table_schema_to_one(store::TimeSeriesMetadataStore)
     new_associations = Tuple[]
     metadata_rows = Tuple[]
     unique_metadata = Dict{String, String}()
+    error("stop")
     for row in Tables.rowtable(
         SQLite.DBInterface.execute(
             store.db,
@@ -567,13 +568,6 @@ function _add_rows!(
     num_columns = length(columns)
     data = OrderedDict(x => Vector{Any}(undef, num_rows) for x in columns)
     for (i, row) in enumerate(rows)
-        if length(row) != num_columns
-            throw(
-                ArgumentError(
-                    "Row $i has $(length(row)) columns, but expected $num_columns: $columns",
-                ),
-            )
-        end
         for (j, column) in enumerate(columns)
             data[column][i] = row[j]
         end
