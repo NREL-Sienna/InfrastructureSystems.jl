@@ -69,7 +69,7 @@ end
 
 {{#setters}}
 {{#create_docstring}}\"\"\"Set [`{{struct_name}}`](@ref) `{{name}}`.\"\"\"{{/create_docstring}}
-{{setter}}(value::{{struct_name}}, val) = value.{{name}} = {{#needs_conversion}}set_value(value, Val(:{{name}}), Val({{conversion_unit}})){{/needs_conversion}}{{^needs_conversion}}val{{/needs_conversion}}
+{{setter}}(value::{{struct_name}}, val) = value.{{name}} = {{#needs_conversion}}set_value(value, Val(:{{name}}), val, Val({{conversion_unit}})){{/needs_conversion}}{{^needs_conversion}}val{{/needs_conversion}}
 {{/setters}}
 
 {{#custom_code}}
