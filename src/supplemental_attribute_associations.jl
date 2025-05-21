@@ -318,6 +318,38 @@ function list_associated_component_uuids(
     return _list_associated_component_uuids(associations, subtypes)
 end
 
+"""
+Return the component UUIDs associated with the attribute and component type.
+"""
+function list_associated_component_uuids(
+    associations::SupplementalAttributeAssociations,
+    attribute::SupplementalAttribute,
+    component_type::Type{<:InfrastructureSystemsType},
+)
+    params = [string(get_uuid(attribute))]
+    if isabstracttype(component_type)
+        subtypes = [string(nameof(x)) for x in get_all_concrete_subtypes(component_type)]
+        clause = if length(subtypes) == 1
+            "component_type = ?"
+        else
+            placeholder = chop(repeat("?,", length(subtypes)))
+            "component_type IN ($placeholder)"
+        end
+        for subtype in subtypes
+            push!(params, subtype)
+        end
+    else
+        clause = "component_type = ?"
+        push!(params, string(nameof(component_type)))
+    end
+
+    query = _QUERY_LIST_ASSOCIATED_COMP_UUIDS * " AND $clause"
+    table = Tables.columntable(
+        _execute_cached(associations, query, params),
+    )
+    return Base.UUID.(table.component_uuid)
+end
+
 const _QUERY_LIST_ASSOCIATED_COMP_UUIDS_BY_ONE_TYPE = """
     SELECT DISTINCT component_uuid
     FROM $SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME

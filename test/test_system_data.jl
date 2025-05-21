@@ -729,3 +729,63 @@ end
     abstract type PointlessAbstractType <: IS.SupplementalAttribute end
     @test isempty(IS.get_associated_components(data, PointlessAbstractType))
 end
+
+@testset "Test get_associated_components with component_type" begin
+    data = IS.SystemData()
+    geo_supplemental_attribute = IS.GeographicInfo()
+    bus1 = Bus("bus1", true)
+    bus2 = Bus("bus2", true)
+    gen1 = ThermalGenerator("gen1", bus1, true)
+    gen2 = PVGenerator("gen2", bus2, false)
+    for component in (bus1, bus2, gen1, gen2)
+        IS.add_component!(data, component)
+        IS.add_supplemental_attribute!(data, component, geo_supplemental_attribute)
+    end
+    components = IS.get_associated_components(
+        AbstractGenerator,
+        data,
+        geo_supplemental_attribute,
+    )
+    @test length(components) == 2
+    @test get_sorted_component_names(components) == ["gen1", "gen2"]
+
+    components = IS.get_associated_components(
+        AbstractPowerSystemComponent,
+        data,
+        geo_supplemental_attribute;
+        only_available = true,
+    )
+    @test length(components) == 3
+    @test get_sorted_component_names(components) == ["bus1", "bus2", "gen1"]
+
+    components = IS.get_associated_components(
+        AbstractRenewableGenerator,
+        data,
+        geo_supplemental_attribute,
+    )
+    @test length(components) == 1
+    @test components[1] === gen2
+
+    for only_available in (true, false)
+        components = IS.get_associated_components(
+            Bus,
+            data,
+            geo_supplemental_attribute;
+            only_available = only_available,
+        )
+        @test length(components) == 2
+        @test get_sorted_component_names(components) == ["bus1", "bus2"]
+
+        components = IS.get_associated_components(
+            PVGenerator,
+            data,
+            geo_supplemental_attribute;
+            only_available = only_available,
+        )
+        @test length(components) == (only_available ? 0 : 1)
+    end
+end
+
+function get_sorted_component_names(components)
+    return sort!([IS.get_name(x) for x in components])
+end

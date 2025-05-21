@@ -17,16 +17,20 @@ end
 mutable struct AdditionalTestComponent <: InfrastructureSystemsComponent
     name::String
     val::Int
+    available::Bool
     internal::InfrastructureSystemsInternal
 end
 
-function AdditionalTestComponent(name, val)
+function AdditionalTestComponent(name, val, available = true)
     return AdditionalTestComponent(
         name,
         val,
+        available,
         InfrastructureSystemsInternal(),
     )
 end
+
+get_available(x::AdditionalTestComponent) = x.available
 
 mutable struct SimpleTestComponent <: InfrastructureSystemsComponent
     name::String
