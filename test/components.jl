@@ -3,6 +3,7 @@
 # Serialization/de-serialization will not work in all cases because of how the type names
 # show up in different environments.
 # InfrastructureSystemsTests.Generator vs Main.InfrastructureSystemsTests.Generator
+# Test components defined in src/utils/test.jl support serialization/de-serialization.
 
 abstract type AbstractPowerSystemComponent <: IS.InfrastructureSystemsComponent end
 abstract type AbstractGenerator <: AbstractPowerSystemComponent end
