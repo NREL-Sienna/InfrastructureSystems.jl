@@ -749,11 +749,10 @@ end
     @test length(components) == 2
     @test get_sorted_component_names(components) == ["gen1", "gen2"]
 
-    components = IS.get_associated_components(
+    components = IS.get_available_associated_components(
         AbstractPowerSystemComponent,
         data,
-        geo_supplemental_attribute;
-        only_available = true,
+        geo_supplemental_attribute,
     )
     @test length(components) == 3
     @test get_sorted_component_names(components) == ["bus1", "bus2", "gen1"]
@@ -767,20 +766,23 @@ end
     @test components[1] === gen2
 
     for only_available in (true, false)
-        components = IS.get_associated_components(
+        func = if only_available
+            IS.get_available_associated_components
+        else
+            IS.get_associated_components
+        end
+        components = func(
             Bus,
             data,
             geo_supplemental_attribute;
-            only_available = only_available,
         )
         @test length(components) == 2
         @test get_sorted_component_names(components) == ["bus1", "bus2"]
 
-        components = IS.get_associated_components(
+        components = func(
             PVGenerator,
             data,
             geo_supplemental_attribute;
-            only_available = only_available,
         )
         @test length(components) == (only_available ? 0 : 1)
     end

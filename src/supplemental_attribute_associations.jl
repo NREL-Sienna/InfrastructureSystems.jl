@@ -324,12 +324,12 @@ Return the component UUIDs associated with the attribute and component type.
 function list_associated_component_uuids(
     associations::SupplementalAttributeAssociations,
     attribute::SupplementalAttribute,
-    component_type::Type{<:InfrastructureSystemsType},
+    component_type::Type{<:InfrastructureSystemsComponent},
 )
     params = [string(get_uuid(attribute))]
     if isabstracttype(component_type)
         subtypes = [string(nameof(x)) for x in get_all_concrete_subtypes(component_type)]
-        clause = if length(subtypes) == 1
+        component_type_clause = if length(subtypes) == 1
             "component_type = ?"
         else
             placeholder = chop(repeat("?,", length(subtypes)))
@@ -339,11 +339,11 @@ function list_associated_component_uuids(
             push!(params, subtype)
         end
     else
-        clause = "component_type = ?"
+        component_type_clause = "component_type = ?"
         push!(params, string(nameof(component_type)))
     end
 
-    query = _QUERY_LIST_ASSOCIATED_COMP_UUIDS * " AND $clause"
+    query = _QUERY_LIST_ASSOCIATED_COMP_UUIDS * " AND $component_type_clause"
     table = Tables.columntable(
         _execute_cached(associations, query, params),
     )
