@@ -32,6 +32,8 @@ const FORECASTS_DIR = joinpath(DATA_DIR, "time_series")
 const LOG_FILE = "infrastructure-systems.log"
 
 include("common.jl")
+include("components.jl")
+include("events.jl")
 
 for filename in readdir(joinpath(BASE_DIR, "test"))
     if startswith(filename, "test_") && endswith(filename, ".jl")

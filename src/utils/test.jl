@@ -64,26 +64,6 @@ function deserialize(::Type{TestComponent}, data::Dict)
     )
 end
 
-struct TestEvent <: AbstractRecorderEvent
-    common::RecorderEventCommon
-    val1::String
-    val2::Int
-    val3::Float64
-end
-
-function TestEvent(val1::String, val2::Int, val3::Float64)
-    return TestEvent(RecorderEventCommon("TestEvent"), val1, val2, val3)
-end
-
-struct TestEvent2 <: AbstractRecorderEvent
-    common::RecorderEventCommon
-    val::Int
-end
-
-function TestEvent2(val::Int)
-    return TestEvent2(RecorderEventCommon("TestEvent2"), val)
-end
-
 struct TestSupplemental <: SupplementalAttribute
     value::Float64
     internal::InfrastructureSystemsInternal

@@ -2,11 +2,11 @@
     filename = "test.log"
     try
         # Post event while disabled.
-        IS.@record :test InfrastructureSystems.TestEvent("a", 1, 2.0)
+        IS.@record :test TestEvent("a", 1, 2.0)
         @test !isfile(filename)
 
         IS.register_recorder!(:test)
-        IS.@record :test InfrastructureSystems.TestEvent("a", 1, 2.0)
+        IS.@record :test TestEvent("a", 1, 2.0)
         IS.unregister_recorder!(:test)
 
         @test isfile(filename)
@@ -19,7 +19,7 @@
         @test data["val3"] == 2.0
 
         rm(filename)
-        IS.@record :test InfrastructureSystems.TestEvent("a", 1, 2.0)
+        IS.@record :test TestEvent("a", 1, 2.0)
         @test !isfile(filename)
     finally
         IS.unregister_recorder!(:test)
@@ -32,17 +32,17 @@ end
     try
         IS.register_recorder!(:test)
         for _ in 1:5
-            IS.@record :test InfrastructureSystems.TestEvent("a", 1, 2.0)
-            IS.@record :test InfrastructureSystems.TestEvent2(5)
+            IS.@record :test TestEvent("a", 1, 2.0)
+            IS.@record :test TestEvent2(5)
         end
         IS.unregister_recorder!(:test)
         @test isfile(filename)
 
-        events = IS.list_recorder_events(InfrastructureSystems.TestEvent, filename)
+        events = IS.list_recorder_events(TestEvent, filename)
         @test length(events) == 5
-        @test events[1] isa InfrastructureSystems.TestEvent
+        @test events[1] isa TestEvent
 
-        IS.show_recorder_events(devnull, InfrastructureSystems.TestEvent, filename)
+        IS.show_recorder_events(devnull, TestEvent, filename)
     finally
         IS.unregister_recorder!(:test)
         isfile(filename) && rm(filename)
@@ -54,14 +54,14 @@ end
     try
         IS.register_recorder!(:test)
         for i in 1:5
-            IS.@record :test InfrastructureSystems.TestEvent("a", i, 2.0)
-            IS.@record :test InfrastructureSystems.TestEvent2(3)
+            IS.@record :test TestEvent("a", i, 2.0)
+            IS.@record :test TestEvent2(3)
         end
         IS.unregister_recorder!(:test)
         @test isfile(filename)
 
         events = IS.list_recorder_events(
-            InfrastructureSystems.TestEvent,
+            TestEvent,
             filename,
             x -> x.val2 == 3,
         )
@@ -69,7 +69,7 @@ end
 
         IS.show_recorder_events(
             devnull,
-            InfrastructureSystems.TestEvent,
+            TestEvent,
             filename,
             x -> x.val2 > 0,
         )
@@ -84,21 +84,21 @@ end
     try
         IS.register_recorder!(:test)
         for i in 1:5
-            IS.@record :test InfrastructureSystems.TestEvent("a", i, 2.0)
-            IS.@record :test InfrastructureSystems.TestEvent2(3)
+            IS.@record :test TestEvent("a", i, 2.0)
+            IS.@record :test TestEvent2(3)
         end
         IS.unregister_recorder!(:test)
         @test isfile(filename)
 
         buf1 = IOBuffer()
-        IS.show_recorder_events(buf1, InfrastructureSystems.TestEvent, filename)
+        IS.show_recorder_events(buf1, TestEvent, filename)
         text = String(take!(buf1))
         @test occursin("timestamp", text)
 
         buf2 = IOBuffer()
         IS.show_recorder_events(
             buf2,
-            InfrastructureSystems.TestEvent,
+            TestEvent,
             filename;
             exclude_columns = Set("timestamp"),
         )

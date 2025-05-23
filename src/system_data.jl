@@ -1089,6 +1089,59 @@ function get_associated_components(
     ]
 end
 
+"""
+Return all components associated with the attribute that match `component_type`.
+
+# Arguments
+- `component_type::{Type::<:InfrastructureSystemsComponent}`: Required type of the
+components to return. Can be concrete or abstract.
+- `data::SystemData`: the `SystemData` to search
+- `attribute::SupplementalAttribute`: Only return components associated with this attribute.
+"""
+function get_associated_components(
+    component_type::Type{<:InfrastructureSystemsComponent},
+    data::SystemData,
+    attribute::SupplementalAttribute,
+)
+    return [
+        get_component(data, x) for x in
+        list_associated_component_uuids(
+            data.supplemental_attribute_manager.associations,
+            attribute,
+            component_type,
+        )
+    ]
+end
+
+"""
+Return all available components associated with the attribute that match `component_type`.
+
+# Arguments
+- `component_type::{Type::<:InfrastructureSystemsComponent}`: Required type of the
+components to return. Can be concrete or abstract.
+- `data::SystemData`: the `SystemData` to search
+- `attribute::SupplementalAttribute`: Only return components associated with this attribute.
+"""
+function get_available_associated_components(
+    component_type::Type{<:InfrastructureSystemsComponent},
+    data::SystemData,
+    attribute::SupplementalAttribute;
+)
+    components = component_type[]
+    for uuid in list_associated_component_uuids(
+        data.supplemental_attribute_manager.associations,
+        attribute,
+        component_type,
+    )
+        component = get_component(data, uuid)
+        if get_available(component)
+            push!(components, component)
+        end
+    end
+
+    return components
+end
+
 function get_masked_components(
     ::Type{T},
     data::SystemData,
