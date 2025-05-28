@@ -267,7 +267,7 @@ Remove the time series data for a component.
 function remove_time_series!(
     data::SystemData,
     ::Type{T},
-    component::InfrastructureSystemsComponent,
+    owner::TimeSeriesOwners,
     name::String;
     resolution::Union{Nothing, Dates.Period} = nothing,
     features...,
@@ -275,7 +275,7 @@ function remove_time_series!(
     return remove_time_series!(
         data.time_series_manager,
         T,
-        component,
+        owner,
         name;
         resolution = resolution,
         features...,
@@ -284,10 +284,10 @@ end
 
 function remove_time_series!(
     data::SystemData,
-    component::InfrastructureSystemsComponent,
+    owner::TimeSeriesOwners,
     ts_metadata::TimeSeriesMetadata,
 )
-    return remove_time_series!(data.time_series_manager, component, ts_metadata)
+    return remove_time_series!(data.time_series_manager, owner, ts_metadata)
 end
 
 """
