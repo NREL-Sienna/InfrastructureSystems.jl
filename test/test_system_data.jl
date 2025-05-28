@@ -852,7 +852,7 @@ end
 
     ca_pairs = IS.get_component_supplemental_attribute_pairs(
         ThermalGenerator,
-        IS.SupplementalAttribute,
+        IS.GeographicInfo,
         data;
         only_available_components = false,
     )
