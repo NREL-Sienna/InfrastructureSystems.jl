@@ -327,27 +327,58 @@ function list_associated_component_uuids(
     component_type::Type{<:InfrastructureSystemsComponent},
 )
     params = [string(get_uuid(attribute))]
-    if isabstracttype(component_type)
-        subtypes = [string(nameof(x)) for x in get_all_concrete_subtypes(component_type)]
-        component_type_clause = if length(subtypes) == 1
-            "component_type = ?"
-        else
-            placeholder = chop(repeat("?,", length(subtypes)))
-            "component_type IN ($placeholder)"
-        end
-        for subtype in subtypes
-            push!(params, subtype)
-        end
-    else
-        component_type_clause = "component_type = ?"
-        push!(params, string(nameof(component_type)))
-    end
-
+    component_type_clause = _get_type_clause!(params, component_type, "component_type")
     query = _QUERY_LIST_ASSOCIATED_COMP_UUIDS * " AND $component_type_clause"
     table = Tables.columntable(
         _execute_cached(associations, query, params),
     )
     return Base.UUID.(table.component_uuid)
+end
+
+"""
+Return the component and attribute UUIDs that are associated with the given types.
+"""
+function list_associated_pair_uuids(
+    associations::SupplementalAttributeAssociations,
+    component_type::Type{<:InfrastructureSystemsComponent},
+    attribute_type::Type{<:SupplementalAttribute},
+)
+    params = String[]
+    component_type_clause = _get_type_clause!(params, component_type, "component_type")
+    attribute_type_clause = _get_type_clause!(params, attribute_type, "attribute_type")
+    query = """
+        SELECT component_uuid, attribute_uuid
+        FROM $SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME
+        WHERE $component_type_clause AND $attribute_type_clause
+    """
+    table = Tables.rowtable(
+        _execute_cached(associations, query, params),
+    )
+    return [(Base.UUID(row.component_uuid), Base.UUID(row.attribute_uuid)) for row in table]
+end
+
+function _get_type_clause!(
+    params::Vector{String},
+    type::Type{<:InfrastructureSystemsType},
+    column::String,
+)
+    if isabstracttype(type)
+        subtypes = [string(nameof(x)) for x in get_all_concrete_subtypes(type)]
+        type_clause = if length(subtypes) == 1
+            "$column = ?"
+        else
+            placeholder = chop(repeat("?,", length(subtypes)))
+            "$column IN ($placeholder)"
+        end
+        for subtype in subtypes
+            push!(params, subtype)
+        end
+    else
+        type_clause = "$column = ?"
+        push!(params, string(nameof(type)))
+    end
+
+    return type_clause
 end
 
 const _QUERY_LIST_ASSOCIATED_COMP_UUIDS_BY_ONE_TYPE = """
