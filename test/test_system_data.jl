@@ -810,6 +810,56 @@ end
     @test IS.get_num_components(data) == count * 2 - 2
 end
 
+@testset "Test get_component_supplemental_attribute_pairs" begin
+    data = IS.SystemData()
+    geo_supplemental_attribute = IS.GeographicInfo()
+    bus1 = Bus("bus1", true)
+    bus2 = Bus("bus2", true)
+    gen1 = ThermalGenerator("gen1", bus1, true)
+    gen2 = PVGenerator("gen2", bus2, false)
+    for component in (bus1, bus2, gen1, gen2)
+        IS.add_component!(data, component)
+        IS.add_supplemental_attribute!(data, component, geo_supplemental_attribute)
+    end
+    ca_pairs = IS.get_component_supplemental_attribute_pairs(
+        AbstractGenerator,
+        IS.SupplementalAttribute,
+        data,
+    )
+    @test length(ca_pairs) == 2
+    sort!(ca_pairs; by = x -> IS.get_name(x.component))
+    component_names = [IS.get_name(x.component) for x in ca_pairs]
+    @test component_names == ["gen1", "gen2"]
+
+    ca_pairs = IS.get_component_supplemental_attribute_pairs(
+        AbstractPowerSystemComponent,
+        IS.SupplementalAttribute,
+        data;
+        only_available_components = true,
+    )
+    @test length(ca_pairs) == 3
+    sort!(ca_pairs; by = x -> IS.get_name(x.component))
+    component_names = [IS.get_name(x.component) for x in ca_pairs]
+    @test component_names == ["bus1", "bus2", "gen1"]
+
+    ca_pairs = IS.get_component_supplemental_attribute_pairs(
+        PVGenerator,
+        IS.SupplementalAttribute,
+        data;
+        only_available_components = true,
+    )
+    @test length(ca_pairs) == 0
+
+    ca_pairs = IS.get_component_supplemental_attribute_pairs(
+        ThermalGenerator,
+        IS.SupplementalAttribute,
+        data;
+        only_available_components = false,
+    )
+    @test length(ca_pairs) == 1
+    @test ca_pairs[1].component === gen1
+end
+
 function get_sorted_component_names(components)
     return sort!([IS.get_name(x) for x in components])
 end
