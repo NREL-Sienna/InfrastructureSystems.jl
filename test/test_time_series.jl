@@ -3538,3 +3538,46 @@ end
     end
     @test !IS.has_time_series(params.component)
 end
+
+@testset "Remove time series on supplemental attribute" begin
+    for by_metadata in (false, true)
+        sys = IS.SystemData()
+        name = "Component1"
+        component = IS.TestComponent(name, 5)
+        IS.add_component!(sys, component)
+        attr = IS.TestSupplemental(; value = 3.0)
+        IS.add_supplemental_attribute!(sys, component, attr)
+
+        initial_time = Dates.DateTime("2020-09-01")
+        resolution = Dates.Hour(1)
+        data = TimeSeries.TimeArray(
+            range(initial_time; length = 12, step = resolution),
+            ones(12),
+        )
+        ts_name = "test"
+        data = IS.SingleTimeSeries(; data = data, name = ts_name)
+        IS.add_time_series!(sys, attr, data)
+        all_metadata = IS.get_time_series_metadata(
+            attr;
+            time_series_type = IS.SingleTimeSeries,
+        )
+        @test isempty(
+            IS.get_time_series_metadata(
+                component;
+                time_series_type = IS.SingleTimeSeries,
+            ),
+        )
+        @test length(all_metadata) == 1
+        if by_metadata
+            IS.remove_time_series!(sys, attr, all_metadata[1])
+        else
+            IS.remove_time_series!(sys, IS.SingleTimeSeries, attr, ts_name)
+        end
+        @test isempty(
+            IS.get_time_series_metadata(
+                attr;
+                time_series_type = IS.SingleTimeSeries,
+            ),
+        )
+    end
+end
