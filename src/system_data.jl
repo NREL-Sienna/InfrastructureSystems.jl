@@ -1145,6 +1145,9 @@ end
 """
 Return a vector of NamedTuples with pairs of components and supplemental attributes that
 are associated with each other.
+
+The return type is `NamedTuple{(:component, :supplemental_attribute), Tuple{T, U}}[]`
+where `T` is the component type and `U` is the supplemental attribute type.
 """
 function get_component_supplemental_attribute_pairs(
     ::Type{T},
