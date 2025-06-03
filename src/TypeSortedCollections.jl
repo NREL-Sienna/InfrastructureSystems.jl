@@ -313,6 +313,7 @@ end
     end
 end
 
+#=
 @generated function Base.iterate(tsc::TSCOrAbstractVector{N}) where {N}
     expr = Expr(:block)
     for i in 1:N
@@ -341,4 +342,6 @@ end
 end
 
 @generated function Base.iterate(tsc::TypeSortedCollection, state::Int)
+    return
 end
+=#
