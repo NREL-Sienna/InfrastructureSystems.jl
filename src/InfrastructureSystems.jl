@@ -16,6 +16,7 @@ import Logging
 import Random
 import Pkg
 import PrettyTables
+import Printf: @sprintf
 import SHA
 import StructTypes
 import TerminalLoggers: TerminalLogger, ProgressLevel
