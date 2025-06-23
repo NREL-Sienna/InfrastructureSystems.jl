@@ -80,3 +80,7 @@ iterate_container(sys::ComponentContainer) =
 
 get_num_members(sys::ComponentContainer) =
     length(get_components(InfrastructureSystemsComponent, sys))
+
+# This alias is helpful because ComponentContainers like PSY.System contain other types
+# like supplemental attributes and time series.
+get_num_components(sys::ComponentContainer) = get_num_members(sys)

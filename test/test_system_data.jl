@@ -788,6 +788,28 @@ end
     end
 end
 
+@testset "Test gen_num_components" begin
+    data = IS.SystemData()
+    count = 3
+    for i in 1:count
+        name = "component_$i"
+        component = IS.TestComponent(name, i)
+        IS.add_component!(data, component)
+        if i == count
+            IS.mask_component!(data, component)
+        end
+    end
+    for i in 1:count
+        name = "component_$i"
+        component = IS.AdditionalTestComponent(name, i)
+        IS.add_component!(data, component)
+        if i == count
+            IS.mask_component!(data, component)
+        end
+    end
+    @test IS.get_num_components(data) == count * 2 - 2
+end
+
 function get_sorted_component_names(components)
     return sort!([IS.get_name(x) for x in components])
 end
