@@ -77,13 +77,10 @@ function TimeSeriesMetadataStore(filename::AbstractString)
 end
 
 function _process_migrations_if_needed(store::TimeSeriesMetadataStore)
-    if _needs_migration_one_table(store.db)
-        _migrate_two_table_schema_to_one(store)
-    end
-
-    _apply_horizon_type_fix_if_needed(store.db)
-    if _needs_migration_to_1_0_0(store.db)
-        _migrate_schema_period_to_1_0_0(store)
+    if _needs_migration_from_v2_3(store.db)
+        _migrate_from_v2_3(store)
+    elseif _needs_migration_from_v2_4(store.db)
+        _migrate_from_v2_4(store)
     end
 end
 
@@ -181,11 +178,11 @@ function _list_columns(db::SQLite.DB, table_name::String)
     )[1]
 end
 
-function _needs_migration_one_table(db::SQLite.DB)
+function _needs_migration_from_v2_3(db::SQLite.DB)
     return "time_series_uuid" in _list_columns(db, METADATA_TABLE_NAME)
 end
 
-function _needs_migration_to_1_0_0(db::SQLite.DB)
+function _needs_migration_from_v2_4(db::SQLite.DB)
     tables = Tables.columntable(
         SQLite.DBInterface.execute(db, "SELECT name FROM sqlite_master WHERE type='table'"),
     )
@@ -225,35 +222,29 @@ function _apply_horizon_type_fix_if_needed(db::SQLite.DB)
     end
 end
 
-function _migrate_two_table_schema_to_one(store::TimeSeriesMetadataStore)
-    # The original schema had one table where the metadata column was a JSON string.
+function _migrate_from_v2_3(store::TimeSeriesMetadataStore)
+    # This schema was present in IS v2.3, which was supported by PSY 4.4.
+    # The function can be deleted once upgrades from this version is not supported
+    # (once we are at PSY 5).
+    # 
+    # The schema had one table where the metadata column was a JSON string.
     # The new schema has two tables where the metadata is split out into a separate table.
     # There was a previously-inconsequential bug where DeterministicSingleTimeSeries
     # metadata had the same UUID as its shared SingleTimeSeries metadata. 
     # Those need new UUIDs to make the new schema work.
-    @info "Start migration of time series metadata to new schema."
+    @info "Start migration of one-table time series metadata to v1.0.0."
     for index in ("by_c_n_tst_features", "by_ts_uuid")
         SQLite.DBInterface.execute(store.db, "DROP INDEX IF EXISTS $index")
     end
-    new_associations = Tuple[]
-    metadata_rows = Tuple[]
+    new_rows = Tuple[]
     unique_metadata = Dict{String, String}()
-    error("stop")
     for row in Tables.rowtable(
         SQLite.DBInterface.execute(
             store.db,
             """
                 SELECT
                     id
-                    ,time_series_uuid
                     ,time_series_type
-                    ,initial_timestamp
-                    ,resolution
-                    ,horizon
-                    ,interval
-                    ,window_count
-                    ,length
-                    ,name
                     ,owner_uuid
                     ,owner_type
                     ,owner_category
@@ -276,51 +267,15 @@ function _migrate_two_table_schema_to_one(store::TimeSeriesMetadataStore)
             end
         else
             unique_metadata[metadata_uuid] = row.metadata
-            push!(metadata_rows, (missing, metadata_uuid, row.metadata))
         end
-        vals = values(row)
-        new_row = (vals[1:(end - 1)]..., metadata_uuid)
-        push!(new_associations, new_row)
+        new_row = _create_migrated_row(metadata, row)
+        push!(new_rows, new_row)
     end
-    _create_associations_table!(store)
-    _add_rows!(
-        store.db,
-        new_associations,
-        (
-            "id",
-            "time_series_uuid",
-            "time_series_type",
-            "initial_timestamp",
-            "resolution",
-            "horizon",
-            "interval",
-            "window_count",
-            "length",
-            "name",
-            "owner_uuid",
-            "owner_type",
-            "owner_category",
-            "features",
-            "metadata_uuid",
-        ),
-        ASSOCIATIONS_TABLE_NAME,
-    )
-    SQLite.DBInterface.execute(store.db, "DROP TABLE $METADATA_TABLE_NAME")
-    _create_metadata_table!(store.db)
-    _add_rows!(
-        store.db,
-        metadata_rows,
-        (
-            "id",
-            "metadata_uuid",
-            "metadata",
-        ),
-        METADATA_TABLE_NAME,
-    )
-    @info "Migrated time series metadata to updated schema."
+    _execute(store, "DROP TABLE $METADATA_TABLE_NAME")
+    _add_migrated_rows!(store, new_rows)
 end
 
-function _migrate_schema_period_to_1_0_0(store::TimeSeriesMetadataStore)
+function _migrate_from_v2_4(store::TimeSeriesMetadataStore)
     metadata_uuids = _load_metadata_into_memory_legacy!(store)
 
     # The original schema had all Dates.Period columns stored as integers in units of ms
@@ -333,45 +288,77 @@ function _migrate_schema_period_to_1_0_0(store::TimeSeriesMetadataStore)
     for row in Tables.rowtable(
         SQLite.DBInterface.execute(
             store.db,
-            "SELECT * FROM $ASSOCIATIONS_TABLE_NAME",
-        ),
+            """
+                SELECT
+                    id
+                    ,time_series_type
+                    ,owner_uuid
+                    ,owner_type
+                    ,owner_category
+                    ,features
+                    ,metadata_uuid
+                FROM $ASSOCIATIONS_TABLE_NAME
+            """),
     )
         metadata = metadata_uuids[Base.UUID(row.metadata_uuid)]
-        sfm = get_scaling_factor_multiplier(metadata)
-        new_row = (
-            row.id,
-            row.time_series_uuid,
-            row.time_series_type,
-            row.initial_timestamp,
-            _serialize_period(Dates.Millisecond(row.resolution_ms)),
-            if ismissing(row.horizon_ms)
-                missing
-            else
-                _serialize_period(Dates.Millisecond(row.horizon_ms))
-            end,
-            if ismissing(row.interval_ms)
-                missing
-            else
-                _serialize_period(Dates.Millisecond(row.interval_ms))
-            end,
-            row.window_count,
-            row.length,
-            row.name,
-            row.owner_uuid,
-            row.owner_type,
-            row.owner_category,
-            row.features,
-            isnothing(sfm) ? missing : JSON3.write(serialize(sfm)),
-            row.metadata_uuid,
-            missing,
-        )
+        new_row = _create_migrated_row(metadata, row)
         push!(new_rows, new_row)
     end
     SQLite.DBInterface.execute(store.db, "DROP TABLE $ASSOCIATIONS_TABLE_NAME")
+    _add_migrated_rows!(store, new_rows)
+end
+
+function _create_migrated_row(metadata::SingleTimeSeriesMetadata, row)
+    sfm = get_scaling_factor_multiplier(metadata)
+    return (
+        row.id,
+        string(get_time_series_uuid(metadata)),
+        row.time_series_type,
+        string(get_initial_timestamp(metadata)),
+        _serialize_period(get_resolution(metadata)),
+        missing,
+        missing,
+        missing,
+        get_length(metadata),
+        get_name(metadata),
+        row.owner_uuid,
+        row.owner_type,
+        row.owner_category,
+        row.features,
+        isnothing(sfm) ? missing : JSON3.write(serialize(sfm)),
+        get_uuid(metadata),
+        missing,
+    )
+end
+
+function _create_migrated_row(metadata::ForecastMetadata, row)
+    sfm = get_scaling_factor_multiplier(metadata)
+    new_row = (
+        row.id,
+        string(get_time_series_uuid(metadata)),
+        row.time_series_type,
+        string(get_initial_timestamp(metadata)),
+        _serialize_period(get_resolution(metadata)),
+        _serialize_period(get_horizon(metadata)),
+        _serialize_period(get_interval(metadata)),
+        get_count(metadata),
+        missing,
+        get_name(metadata),
+        row.owner_uuid,
+        row.owner_type,
+        row.owner_category,
+        row.features,
+        isnothing(sfm) ? missing : JSON3.write(serialize(sfm)),
+        get_uuid(metadata),
+        missing,
+    )
+end
+
+function _add_migrated_rows!(store::TimeSeriesMetadataStore, rows)
     _create_associations_table!(store)
     _add_rows!(
         store.db,
-        new_rows,
+        rows,
         (
             "id",
             "time_series_uuid",
@@ -459,6 +446,21 @@ function _create_key_value_table!(store::TimeSeriesMetadataStore)
         "INSERT INTO $(KEY_VALUE_TABLE_NAME) VALUES(?,?)",
         ("version", TS_METADATA_FORMAT_VERSION),
     )
+    return
+end
+
+function _create_legacy_metadata_table!(db::SQLite.DB)
+    schema = [
+        "id INTEGER PRIMARY KEY",
+        "metadata_uuid TEXT NOT NULL",
+        "metadata JSON NOT NULL",
+    ]
+    schema_text = join(schema, ",")
+    SQLite.DBInterface.execute(
+        db,
+        "CREATE TABLE $(METADATA_TABLE_NAME)($(schema_text))",
+    )
+    @debug "Created time series metadata table" schema _group = LOG_GROUP_TIME_SERIES
     return
 end
 
@@ -585,7 +587,6 @@ end
 
 """
 Backup the database to a file on the temporary filesystem and return that filename.
-Serialize the metadata in JSON format to a metadata table.
 """
 function backup_to_temp(store::TimeSeriesMetadataStore)
     filename, io = mktemp()

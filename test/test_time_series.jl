@@ -3246,8 +3246,18 @@ end
     @test IS.get_data(res) == IS.get_data(bystander)
 end
 
-@testset "Test migration of legacy time series schema, to v1.0.0" begin
-    filename, component = _setup_for_migration_tests()
+@testset "Test migration of IS 2.3 time series schema to metadata format v1.0.0" begin
+    filename, component = _setup_for_migration_tests_from_IS_v2_3()
+    new_db = SQLite.DB(filename)
+    @test IS._needs_migration_from_v2_3(new_db)
+    new_store = IS.TimeSeriesMetadataStore(filename)
+    @test !IS._needs_migration_from_v2_4(new_store.db)
+    result = IS.list_metadata(new_store, component)
+    @test length(result) == 4
+end
+
+@testset "Test migration of IS 2.4 time series schema to metadata format v1.0.0" begin
+    filename, component = _setup_for_migration_tests_from_IS_v2_4()
     new_db = SQLite.DB(filename)
     new_rows = Tuple[]
     for row in Tables.rowtable(
@@ -3277,7 +3287,6 @@ end
         push!(new_rows, new_row)
     end
     SQLite.DBInterface.execute(new_db, "DROP TABLE $(IS.ASSOCIATIONS_TABLE_NAME)")
-    SQLite.DBInterface.execute(new_db, "DROP TABLE $(IS.KEY_VALUE_TABLE_NAME)")
     # This is the original schema for the migration.
     schema = [
         "id INTEGER PRIMARY KEY",
@@ -3325,37 +3334,69 @@ end
         ),
         IS.ASSOCIATIONS_TABLE_NAME,
     )
-    @test IS._needs_migration_to_1_0_0(new_db)
+    @test IS._needs_migration_from_v2_4(new_db)
     new_store = IS.TimeSeriesMetadataStore(filename)
-    @test !IS._needs_migration_to_1_0_0(new_store.db)
+    @test !IS._needs_migration_from_v2_4(new_store.db)
     result = IS.list_metadata(new_store, component)
     @test length(result) == 4
 end
 
-function _setup_for_migration_tests()
-    sys = IS.SystemData()
-    name = "Component1"
-    component = IS.TestComponent(name, 5)
-    IS.add_component!(sys, component)
-
-    initial_time = Dates.DateTime("2020-09-01")
-    resolution = Dates.Hour(1)
-
-    data = TimeSeries.TimeArray(
-        range(initial_time; length = 5, step = resolution),
-        rand(5),
-    )
-    ts_name = "test_c"
-    ts = IS.SingleTimeSeries(; data = data, name = ts_name)
-    IS.add_time_series!(sys, component, ts; scenario = "low", model_year = "2030")
-    IS.add_time_series!(sys, component, ts; scenario = "high", model_year = "2030")
-    IS.add_time_series!(sys, component, ts; scenario = "low", model_year = "2035")
-    IS.add_time_series!(sys, component, ts; scenario = "high", model_year = "2035")
+"""
+Create a SQLite database in the format of IS v2.3. Return the db filename.
+"""
+function _setup_for_migration_tests_from_IS_v2_3()
+    sys, component = _create_system_for_migration_tests()
     filename = IS.backup_to_temp(sys.time_series_manager.metadata_store)
-
     new_db = SQLite.DB(filename)
+    SQLite.DBInterface.execute(new_db, "DROP TABLE time_series_associations")
+    SQLite.DBInterface.execute(new_db, "DROP TABLE $(IS.KEY_VALUE_TABLE_NAME)")
     try
-        _create_metadata_table!(new_db)
+        _create_metadata_table_v2_3!(new_db)
+        placeholder = repeat("?,", 15) * "jsonb(?)"
+        query = "INSERT INTO $(IS.METADATA_TABLE_NAME) VALUES($placeholder)"
+        SQLite.transaction(new_db) do
+            stmt = SQLite.Stmt(new_db, query)
+            for metadata in values(sys.time_series_manager.metadata_store.metadata_uuids)
+                owner_category = "Component"
+                ts_type = IS.time_series_metadata_to_data(metadata)
+                @assert ts_type === IS.SingleTimeSeries
+                ts_category = "StaticTimeSeries"
+                features = IS.make_features_string(metadata.features)
+                params =
+                    (
+                        missing,
+                        string(IS.get_time_series_uuid(metadata)),
+                        string(nameof(ts_type)),
+                        ts_category,
+                        string(IS.get_initial_timestamp(metadata)),
+                        Dates.Millisecond(IS.get_resolution(metadata)).value,
+                        missing,
+                        missing,
+                        missing,
+                        IS.get_length(metadata),
+                        IS.get_name(metadata),
+                        string(IS.get_uuid(component)),
+                        string(nameof(typeof(component))),
+                        owner_category,
+                        features,
+                        JSON3.write(IS.serialize(metadata)),
+                    )
+                SQLite.DBInterface.execute(stmt, params)
+            end
+        end
+    finally
+        close(new_db)
+    end
+    return filename, component
+end
+
+function _setup_for_migration_tests_from_IS_v2_4()
+    sys, component = _create_system_for_migration_tests()
+    filename = IS.backup_to_temp(sys.time_series_manager.metadata_store)
+    new_db = SQLite.DB(filename)
+    SQLite.DBInterface.execute(new_db, "DROP TABLE $(IS.KEY_VALUE_TABLE_NAME)")
+    try
+        _create_metadata_table_v2_4!(new_db)
         query = "INSERT INTO $(IS.METADATA_TABLE_NAME) VALUES(?,?,jsonb(?))"
         SQLite.transaction(new_db) do
             stmt = SQLite.Stmt(new_db, query)
@@ -3375,7 +3416,29 @@ function _setup_for_migration_tests()
     return filename, component
 end
 
-function _create_metadata_table!(db::SQLite.DB)
+function _create_system_for_migration_tests()
+    sys = IS.SystemData()
+    name = "Component1"
+    component = IS.TestComponent(name, 5)
+    IS.add_component!(sys, component)
+
+    initial_time = Dates.DateTime("2020-09-01")
+    resolution = Dates.Hour(1)
+
+    data = TimeSeries.TimeArray(
+        range(initial_time; length = 5, step = resolution),
+        rand(5),
+    )
+    ts_name = "test_c"
+    ts = IS.SingleTimeSeries(; data = data, name = ts_name)
+    IS.add_time_series!(sys, component, ts; scenario = "low", model_year = "2030")
+    IS.add_time_series!(sys, component, ts; scenario = "high", model_year = "2030")
+    IS.add_time_series!(sys, component, ts; scenario = "low", model_year = "2035")
+    IS.add_time_series!(sys, component, ts; scenario = "high", model_year = "2035")
+    return sys, component
+end
+
+function _create_metadata_table_v2_4!(db::SQLite.DB)
     schema = [
         "id INTEGER PRIMARY KEY",
         "metadata_uuid TEXT NOT NULL",
@@ -3385,6 +3448,33 @@ function _create_metadata_table!(db::SQLite.DB)
     SQLite.DBInterface.execute(
         db,
         "CREATE TABLE $(IS.METADATA_TABLE_NAME)($(schema_text))",
+    )
+    return
+end
+
+function _create_metadata_table_v2_3!(db::SQLite.DB)
+    schema = [
+        "id INTEGER PRIMARY KEY",
+        "time_series_uuid TEXT NOT NULL",
+        "time_series_type TEXT NOT NULL",
+        "time_series_category TEXT NOT NULL",
+        "initial_timestamp TEXT NOT NULL",
+        "resolution_ms INTEGER NOT NULL",
+        "horizon_ms INTEGER",
+        "interval_ms INTEGER",
+        "window_count INTEGER",
+        "length INTEGER",
+        "name TEXT NOT NULL",
+        "owner_uuid TEXT NOT NULL",
+        "owner_type TEXT NOT NULL",
+        "owner_category TEXT NOT NULL",
+        "features TEXT NOT NULL",
+        "metadata JSON NOT NULL",
+    ]
+    schema_text = join(schema, ",")
+    SQLite.DBInterface.execute(
+        db,
+        "CREATE TABLE time_series_metadata($(schema_text))",
     )
     return
 end
