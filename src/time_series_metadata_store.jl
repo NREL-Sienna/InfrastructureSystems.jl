@@ -144,7 +144,7 @@ function _load_metadata_into_memory!(store::TimeSeriesMetadataStore)
     end
 end
 
-# This function can be deleted when we no long support deserialization from 4.x.
+# This function can be deleted when we no long support deserialization from <= 2.6.
 function _load_metadata_into_memory_legacy!(store::TimeSeriesMetadataStore)
     metadata_uuids = Dict{Base.UUID, TimeSeriesMetadata}()
     stmt =
@@ -187,39 +187,6 @@ function _needs_migration_from_v2_4(db::SQLite.DB)
         SQLite.DBInterface.execute(db, "SELECT name FROM sqlite_master WHERE type='table'"),
     )
     return !in(KEY_VALUE_TABLE_NAME, tables.name)
-end
-
-function _apply_horizon_type_fix_if_needed(db::SQLite.DB)
-    !in("horizon_ms", _list_columns(db, ASSOCIATIONS_TABLE_NAME)) && return
-
-    # Version <= 2.4.1 had a bug where horizon_ms was mistakenly written to the db
-    # as a Serialization.serialize(Dates.Millisecond) instead of an integer.
-    # This function can be removed in in 4.0 when we no longer support deserializing
-    # systems from 2.x.
-    partial_query = """
-        SELECT horizon_ms
-        FROM time_series_associations
-        WHERE horizon_ms IS NOT NULL
-        LIMIT 1
-    """
-    vals = Tables.columntable(SQLite.DBInterface.execute(db, partial_query)).horizon_ms
-    if !isempty(vals) && vals[1] isa Dates.Period
-        query = """
-            SELECT id, horizon_ms
-            FROM $ASSOCIATIONS_TABLE_NAME
-            WHERE horizon_ms IS NOT NULL
-        """
-        update_query = "UPDATE $ASSOCIATIONS_TABLE_NAME SET horizon_ms = ? WHERE id = ?"
-        stmt = SQLite.Stmt(db, update_query)
-        SQLite.transaction(db) do
-            for row in Tables.rowtable(SQLite.DBInterface.execute(db, query))
-                if row.horizon_ms isa Dates.Period
-                    params = (row.horizon_ms.value, row.id)
-                    SQLite.DBInterface.execute(stmt, params)
-                end
-            end
-        end
-    end
 end
 
 function _migrate_from_v2_3(store::TimeSeriesMetadataStore)
@@ -446,21 +413,6 @@ function _create_key_value_table!(store::TimeSeriesMetadataStore)
         "INSERT INTO $(KEY_VALUE_TABLE_NAME) VALUES(?,?)",
         ("version", TS_METADATA_FORMAT_VERSION),
     )
-    return
-end
-
-function _create_legacy_metadata_table!(db::SQLite.DB)
-    schema = [
-        "id INTEGER PRIMARY KEY",
-        "metadata_uuid TEXT NOT NULL",
-        "metadata JSON NOT NULL",
-    ]
-    schema_text = join(schema, ",")
-    SQLite.DBInterface.execute(
-        db,
-        "CREATE TABLE $(METADATA_TABLE_NAME)($(schema_text))",
-    )
-    @debug "Created time series metadata table" schema _group = LOG_GROUP_TIME_SERIES
     return
 end
 
@@ -1363,6 +1315,13 @@ Run a query and return the results in a DataFrame.
 """
 function sql(store::TimeSeriesMetadataStore, query::String, params = nothing)
     return DataFrames.DataFrame(_execute(store, query, params))
+end
+
+"""
+Return the table as a DataFrame.
+"""
+function to_dataframe(store::TimeSeriesMetadataStore; table = ASSOCIATIONS_TABLE_NAME)
+    return sql(store, "SELECT * FROM $table")
 end
 
 function to_h5_file(store::TimeSeriesMetadataStore, dst::String)

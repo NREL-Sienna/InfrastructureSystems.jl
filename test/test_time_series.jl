@@ -3503,32 +3503,6 @@ end
     )
 end
 
-@testset "Test horizon_ms bug fix" begin
-    db = SQLite.DB()
-    tbl = IS.ASSOCIATIONS_TABLE_NAME
-    horizon = Dates.Millisecond(Dates.Hour(1))
-    SQLite.DBInterface.execute(
-        db,
-        "CREATE TABLE $tbl (id INTEGER PRIMARY KEY, horizon_ms INTEGER)",
-    )
-    SQLite.transaction(db) do
-        SQLite.DBInterface.execute(db, "INSERT INTO $tbl VALUES(?,?)", (missing, missing))
-        SQLite.DBInterface.execute(db, "INSERT INTO $tbl VALUES(?,?)", (missing, horizon))
-        SQLite.DBInterface.execute(db, "INSERT INTO $tbl VALUES(?,?)", (missing, horizon))
-    end
-    table =
-        Tables.columntable(SQLite.DBInterface.execute(db, "SELECT horizon_ms FROM $tbl"))
-    @test ismissing(table.horizon_ms[1])
-    @test table.horizon_ms[2] isa Dates.Millisecond
-    @test table.horizon_ms[3] isa Dates.Millisecond
-    IS._apply_horizon_type_fix_if_needed(db)
-    table2 =
-        Tables.columntable(SQLite.DBInterface.execute(db, "SELECT horizon_ms FROM $tbl"))
-    @test ismissing(table.horizon_ms[1])
-    @test table2.horizon_ms[2] == horizon.value
-    @test table2.horizon_ms[3] == horizon.value
-end
-
 """
 Create a system with two SingleTimeSeries and two Deterministic time series,
 two resolutions each. One component bystander.
@@ -3980,4 +3954,13 @@ end
             ),
         )
     end
+end
+
+@testset "Test to_dataframe" begin
+    sys = create_system_data(; with_time_series = true, time_series_in_memory = true)
+    @test IS.to_dataframe(sys.time_series_manager.metadata_store) isa DataFrame
+    @test IS.to_dataframe(
+        sys.time_series_manager.metadata_store;
+        table = IS.KEY_VALUE_TABLE_NAME,
+    ) isa DataFrame
 end
