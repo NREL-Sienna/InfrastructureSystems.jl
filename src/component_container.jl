@@ -16,11 +16,15 @@ abstract type ComponentContainer <: InfrastructureSystemsContainer end
 # appropriate methods or accept the default if it exists.
 #   - `get_components`: no default, must at least implement the `(type, system)` and `(filter_func, type, system)` signatures.
 #   - `get_component`: no default, must at least implement the `(type, system, name)` signature, may also want `(system, UUID)`, etc.
+#   - `get_base_component_type`: subtypes must reimplement this method if their base type is not `InfrastructureSystemsComponent`.
 #   - `get_available(::ComponentContainer, ::InfrastructureSystemsComponent)`: defaults to true
 #   - `get_available_components`: defaults to calling `get_components` with a filter function from `get_available`
 #   - `get_available_component`: defaults to calling `get_component` and checking `get_available`
 # The notion of availability used in `get_available` and `get_available_component(s)` is up
 # to the subtype, but it must be consistent across the three functions.
+
+"Return the base type stored in the container."
+get_base_component_type(::ComponentContainer) = InfrastructureSystemsComponent
 
 "Get an iterator of components of a certain specification from the `ComponentContainer`."
 function get_components end
@@ -76,10 +80,10 @@ get_available_component(sys::ComponentContainer, args...; kwargs...) =
 
 # Satisfy the InfrastructureSystemsContainer interface
 iterate_container(sys::ComponentContainer) =
-    get_components(InfrastructureSystemsComponent, sys)
+    get_components(get_base_component_type(sys), sys)
 
 get_num_members(sys::ComponentContainer) =
-    length(get_components(InfrastructureSystemsComponent, sys))
+    length(get_components(get_base_component_type(sys), sys))
 
 # This alias is helpful because ComponentContainers like PSY.System contain other types
 # like supplemental attributes and time series.
