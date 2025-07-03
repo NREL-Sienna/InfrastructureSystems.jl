@@ -39,7 +39,9 @@ function _add_component!(
     if !haskey(components.data, T)
         components.data[T] = Dict{String, T}()
     elseif haskey(components.data[T], component_name)
-        throw(ArgumentError("Component name $(component_name) is already stored for type $T"))
+        throw(
+            ArgumentError("Component name $(component_name) is already stored for type $T"),
+        )
     end
 
     !skip_validation && check_component(components, component)
