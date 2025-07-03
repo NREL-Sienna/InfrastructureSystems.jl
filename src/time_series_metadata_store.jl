@@ -1288,9 +1288,10 @@ function remove_metadata!(
 end
 
 function _handle_removed_metadata(store::TimeSeriesMetadataStore, metadata_uuid::String)
-    query = "SELECT count(*) FROM $ASSOCIATIONS_TABLE_NAME WHERE metadata_uuid = ?"
+    query = "SELECT count(*) AS count FROM $ASSOCIATIONS_TABLE_NAME WHERE metadata_uuid = ? LIMIT 1"
     params = (metadata_uuid,)
-    if isempty(_execute_cached(store, query, params))
+    count = _execute_count(store, query, params)
+    if count == 0
         pop!(store.metadata_uuids, Base.UUID(metadata_uuid))
     end
 end

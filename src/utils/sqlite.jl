@@ -87,7 +87,7 @@ Run a query to find a count. The query must produce a column called count with o
 function execute_count(
     db::SQLite.DB,
     query::AbstractString,
-    params::Union{Nothing, Vector},
+    params::Union{Nothing, Tuple, Vector},
     log_group::Symbol,
 )
     for row in Tables.rows(execute(db, query, params, log_group))

@@ -726,6 +726,7 @@ end
     end
     IS.remove_time_series!(sys, IS.SingleTimeSeries)
     @test isempty(IS.get_time_series_keys(component))
+    @test isempty(sys.time_series_manager.metadata_store.metadata_uuids)
 end
 
 @testset "Test add with features with mixed types" begin
