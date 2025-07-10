@@ -1144,7 +1144,7 @@ end
 
 """
 Return a vector of NamedTuples with pairs of components and supplemental attributes that
-are associated with each other.
+are associated with each other. Limit by `component_uuids` and `attribute_uuids` if provided.
 
 The return type is `NamedTuple{(:component, :supplemental_attribute), Tuple{T, U}}[]`
 where `T` is the component type and `U` is the supplemental attribute type.
@@ -1154,6 +1154,8 @@ function get_component_supplemental_attribute_pairs(
     ::Type{U},
     data::SystemData;
     only_available_components::Bool = false,
+    component_uuids::Union{Nothing, Set{Base.UUID}} = nothing,
+    attribute_uuids::Union{Nothing, Set{Base.UUID}} = nothing,
 ) where {T <: InfrastructureSystemsComponent, U <: SupplementalAttribute}
     ca_pairs = NamedTuple{(:component, :supplemental_attribute), Tuple{T, U}}[]
     for (component_uuid, attribute_uuid) in
@@ -1162,6 +1164,12 @@ function get_component_supplemental_attribute_pairs(
         T,
         U,
     )
+        if !isnothing(component_uuids) && !(component_uuid in component_uuids)
+            continue
+        end
+        if !isnothing(attribute_uuids) && !(attribute_uuid in attribute_uuids)
+            continue
+        end
         component = get_component(data, component_uuid)
         if only_available_components && !get_available(component)
             continue
