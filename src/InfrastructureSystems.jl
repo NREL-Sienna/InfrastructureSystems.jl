@@ -50,7 +50,19 @@ Required interface functions for subtypes:
   - get_name()
   - get_internal()
 
-Subtypes may contain time series.
+Optional interface functions:
+
+  The default function returns true because some get_components functions need to return
+  all "available" and all components that don't explicitly have that attribute should be
+  returned.
+  - get_available()
+  The default function is a no-op.
+  - set_available!()
+  
+Subtypes may contain time series and be associated with supplemental attributes.
+Those behaviors can be modified with these methods:
+  - supports_supplemental_attributes()
+  - supports_time_series()
 """
 abstract type InfrastructureSystemsComponent <: InfrastructureSystemsType end
 
@@ -79,6 +91,8 @@ components attached to each attribute.
 """
 abstract type SupplementalAttribute <: InfrastructureSystemsType end
 
+get_available(value::InfrastructureSystemsComponent) = true
+set_available!(value::InfrastructureSystemsComponent) = true
 get_name(value::InfrastructureSystemsComponent) = value.name
 supports_supplemental_attributes(::InfrastructureSystemsComponent) = true
 supports_time_series(::InfrastructureSystemsComponent) = false
