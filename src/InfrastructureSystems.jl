@@ -47,8 +47,19 @@ Base type for structs that are stored in a system.
 
 Required interface functions for subtypes:
 
+  Note: InfrastructureSystems provides default implementations for these methods that
+  depend on the struct field names `name` and `internal`.
+  If subtypes have different field names, they must implement these methods.
   - get_name()
+  - set_name_internal!()
   - get_internal()
+
+Warning: Subtypes should not implement the function
+  set_name!(::InfrastructureSystemsComponent, name).
+  InfrastructureSystems uses the component name in internal data structures, so it is not
+  safe to change the name of a component after it has been added to a system.
+  InfrastructureSystems provides set_name!(data::SystemData, component, name) for this
+  purpose.
 
 Optional interface functions:
 
@@ -91,19 +102,30 @@ components attached to each attribute.
 """
 abstract type SupplementalAttribute <: InfrastructureSystemsType end
 
+"Return true if the component is available."
 get_available(value::InfrastructureSystemsComponent) = true
+
+"Set the availability of the component."
 set_available!(value::InfrastructureSystemsComponent) = true
+
+"Return the name of the component."
 get_name(value::InfrastructureSystemsComponent) = value.name
+
+"Return true if the component supports supplemental attributes."
 supports_supplemental_attributes(::InfrastructureSystemsComponent) = true
+
+"Return true if the component supports time series."
 supports_time_series(::InfrastructureSystemsComponent) = false
+
+"Return true if the supplemental attribute supports time series."
 supports_time_series(::SupplementalAttribute) = false
 
+"Set the name of the component. Must only be called by InfrastructureSystems."
 function set_name_internal!(value::InfrastructureSystemsComponent, name)
     value.name = name
     return
 end
 
-set_name!(value::InfrastructureSystemsComponent, name) = set_name_internal!(value)
 get_internal(value::InfrastructureSystemsComponent) = value.internal
 
 include("common.jl")
