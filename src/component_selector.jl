@@ -146,7 +146,7 @@ Use `optional_and_fns` to return a function that computes the conjunction of `ge
 and the given function
 """
 available_and_fn(fn::Union{Function, Nothing}, sys) =
-    optional_and_fns(Base.Fix1(get_available, sys), fn)
+    optional_and_fns(get_available, fn)
 
 # Generic implementations/generic docstrings for simple functions with many methods
 """
@@ -225,7 +225,7 @@ function get_available_components(
     selector::ComponentSelector,
     sys,
 )
-    filter_func = optional_and_fns(Base.Fix1(get_available, sys), scope_limiter)
+    filter_func = optional_and_fns(get_available, scope_limiter)
     get_components(filter_func, selector, sys)
 end
 
