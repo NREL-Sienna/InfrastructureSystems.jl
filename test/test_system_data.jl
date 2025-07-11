@@ -859,12 +859,12 @@ end
     @test length(ca_pairs) == 1
     @test ca_pairs[1].component === gen1
 
-    uuids = Set(IS.get_uuid.([gen1, bus1]))
+    components = [gen1, bus1]
     ca_pairs = IS.get_component_supplemental_attribute_pairs(
         IS.InfrastructureSystemsComponent,
         IS.GeographicInfo,
         data;
-        component_uuids = uuids,
+        components = components,
     )
     @test length(ca_pairs) == 2
     sort!(ca_pairs; by = x -> IS.get_name(x.component))
@@ -875,14 +875,14 @@ end
     bus3 = Bus("bus3", true)
     IS.add_component!(data, bus3)
     IS.add_supplemental_attribute!(data, bus3, geo_supplemental_attribute2)
-    component_uuids = Set(IS.get_uuid.([bus3]))
-    attribute_uuids = Set(IS.get_uuid.([geo_supplemental_attribute2]))
+    components = [bus3]
+    attributes = [geo_supplemental_attribute2]
     ca_pairs = IS.get_component_supplemental_attribute_pairs(
         IS.InfrastructureSystemsComponent,
         IS.GeographicInfo,
         data;
-        component_uuids = component_uuids,
-        attribute_uuids = attribute_uuids,
+        components = components,
+        attributes = attributes,
     )
     @test length(ca_pairs) == 1
     @test ca_pairs[1].component === bus3
