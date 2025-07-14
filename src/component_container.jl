@@ -38,7 +38,7 @@ function get_available_components end
 function get_available_component end
 
 get_available_components(sys::ComponentContainer, args...; kwargs...) =
-    get_components(c -> get_available(c), sys, args...; kwargs...)
+    get_components(get_available, sys, args...; kwargs...)
 
 get_available_components(
     ::Type{T},
@@ -46,7 +46,7 @@ get_available_components(
     args...;
     kwargs...,
 ) where {T <: InfrastructureSystemsComponent} =
-    get_components(c -> get_available(c), T, sys, args...; kwargs...)
+    get_components(get_available, T, sys, args...; kwargs...)
 
 get_available_components(
     filter_func::Function,
