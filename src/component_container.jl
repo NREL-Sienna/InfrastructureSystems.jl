@@ -3,7 +3,6 @@ A data structure that acts like a container of components. The `ComponentContain
 interface consists of:
   - `get_components`
   - `get_component`
-  - `get_available(::ComponentContainer, ::InfrastructureSystemsComponent)`
   - `get_available_components`
   - `get_available_component`
 
@@ -32,9 +31,6 @@ function get_components end
 "Get the single component that matches the given specification from the `ComponentContainer`, or `nothing` if there is no match."
 function get_component end
 
-"Get whether the given component of the given system is available for use (defaults to true)."
-get_available(::ComponentContainer, ::InfrastructureSystemsComponent) = true
-
 "Like `get_components` but only on components that are available."
 function get_available_components end
 
@@ -42,7 +38,7 @@ function get_available_components end
 function get_available_component end
 
 get_available_components(sys::ComponentContainer, args...; kwargs...) =
-    get_components(c -> get_available(sys, c), sys, args...; kwargs...)
+    get_components(get_available, sys, args...; kwargs...)
 
 get_available_components(
     ::Type{T},
@@ -50,7 +46,7 @@ get_available_components(
     args...;
     kwargs...,
 ) where {T <: InfrastructureSystemsComponent} =
-    get_components(c -> get_available(sys, c), T, sys, args...; kwargs...)
+    get_components(get_available, T, sys, args...; kwargs...)
 
 get_available_components(
     filter_func::Function,
@@ -59,12 +55,12 @@ get_available_components(
     args...;
     kwargs...,
 ) where {T <: InfrastructureSystemsComponent} =
-    get_components(x -> get_available(sys, x) && filter_func(x), T, sys, args...; kwargs...)
+    get_components(x -> get_available(x) && filter_func(x), T, sys, args...; kwargs...)
 
 # Helper function to most generically implement get_available_component
 function _get_available_component(sys::ComponentContainer, args...; kwargs...)
     the_component = get_component(args...; kwargs...)
-    return get_available(sys, the_component) ? the_component : nothing
+    return get_available(the_component) ? the_component : nothing
 end
 
 get_available_component(

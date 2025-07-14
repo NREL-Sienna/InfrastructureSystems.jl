@@ -1142,6 +1142,47 @@ function get_available_associated_components(
     return components
 end
 
+"""
+Return a vector of NamedTuples with pairs of components and supplemental attributes that
+are associated with each other. Limit by `components` and `attributes` if provided.
+
+The return type is `NamedTuple{(:component, :supplemental_attribute), Tuple{T, U}}[]`
+where `T` is the component type and `U` is the supplemental attribute type.
+"""
+function get_component_supplemental_attribute_pairs(
+    ::Type{T},
+    ::Type{U},
+    data::SystemData;
+    only_available_components::Bool = false,
+    components = nothing,
+    attributes = nothing,
+) where {T <: InfrastructureSystemsComponent, U <: SupplementalAttribute}
+    ca_pairs = NamedTuple{(:component, :supplemental_attribute), Tuple{T, U}}[]
+    c_uuids = isnothing(components) ? Set{Base.UUID}() : Set(get_uuid.(components))
+    a_uuids = isnothing(attributes) ? Set{Base.UUID}() : Set(get_uuid.(attributes))
+    for (component_uuid, attribute_uuid) in
+        list_associated_pair_uuids(
+        data.supplemental_attribute_manager.associations,
+        T,
+        U,
+    )
+        if !isnothing(components) && !(component_uuid in c_uuids)
+            continue
+        end
+        if !isnothing(attributes) && !(attribute_uuid in a_uuids)
+            continue
+        end
+        component = get_component(data, component_uuid)
+        if only_available_components && !get_available(component)
+            continue
+        end
+        attribute = get_supplemental_attribute(data, attribute_uuid)
+        push!(ca_pairs, (component = component, supplemental_attribute = attribute))
+    end
+
+    return ca_pairs
+end
+
 function get_masked_components(
     ::Type{T},
     data::SystemData,
