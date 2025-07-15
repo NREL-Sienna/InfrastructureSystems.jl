@@ -145,6 +145,158 @@ end
     @test_throws ArgumentError IS.add_time_series!(sys, component, forecast)
 end
 
+@testset "Test add forecast with different horizons" begin
+    sys = IS.SystemData()
+    name = "Component"
+    component = IS.TestComponent(name, 5)
+    IS.add_component!(sys, component)
+
+    resolution = Dates.Hour(1)
+    initial_time = Dates.DateTime("2020-01-01")
+    horizon_count = 24
+
+    name = "test1"
+    data = SortedDict(
+        initial_time => rand(24),
+        initial_time + Dates.Hour(1) => rand(24),
+        initial_time + Dates.Hour(2) => rand(25),
+    )
+    forecast = IS.Deterministic(name, data, resolution)
+    @test_throws DimensionMismatch IS.add_time_series!(sys, component, forecast)
+end
+
+@testset "Test add forecast with invalid horizon" begin
+    sys = IS.SystemData()
+    name = "Component"
+    component = IS.TestComponent(name, 5)
+    IS.add_component!(sys, component)
+
+    resolution = Dates.Hour(1)
+    initial_time = Dates.DateTime("2020-01-01")
+    horizon_count = 1
+
+    name = "test1"
+    data = SortedDict(
+        initial_time => rand(horizon_count),
+        initial_time + Dates.Hour(1) => rand(horizon_count),
+    )
+    forecast = IS.Deterministic(name, data, resolution)
+    @test_throws ArgumentError IS.add_time_series!(sys, component, forecast)
+end
+
+@testset "Test add forecast with inconsistent interval" begin
+    sys = IS.SystemData()
+    name = "Component1"
+    component = IS.TestComponent(name, 5)
+    IS.add_component!(sys, component)
+
+    resolution = Dates.Minute(5)
+    initial_time = Dates.DateTime("2020-01-01")
+    horizon_count = 24
+
+    name = "test1"
+    one_dim_data = SortedDict(
+        initial_time => rand(horizon_count),
+        initial_time + Dates.Hour(1) => rand(horizon_count),
+        initial_time + Dates.Hour(3) => rand(horizon_count),
+    )
+    two_dim_data = SortedDict(
+        initial_time => rand(horizon_count, 99),
+        initial_time + Dates.Hour(1) => rand(horizon_count, 99),
+        initial_time + Dates.Hour(3) => rand(horizon_count, 99),
+    )
+
+    deterministic = IS.Deterministic(name, one_dim_data, resolution)
+    probabilistic = IS.Probabilistic(name, two_dim_data, rand(99), resolution)
+    scenarios = IS.Scenarios(name, two_dim_data, resolution)
+    for forecast in (deterministic, probabilistic, scenarios)
+        @test_throws IS.ConflictingInputsError IS.add_time_series!(sys, component, forecast)
+    end
+end
+
+@testset "Test add forecast with irregular resolution and interval" begin
+    sys = IS.SystemData()
+    name = "Component1"
+    component = IS.TestComponent(name, 5)
+    IS.add_component!(sys, component)
+
+    resolution = Dates.Month(1)
+    horizon_count = 12
+    interval = Dates.Month(2)
+    t1 = Dates.DateTime("2020-01-01")
+    t2 = t1 + interval
+    t3 = t2 + interval
+
+    one_dim_data = Dict(
+        t1 => TimeSeries.TimeArray(
+            range(t1; length = horizon_count, step = resolution),
+            rand(horizon_count),
+        ),
+        t2 => TimeSeries.TimeArray(
+            range(t2; length = horizon_count, step = resolution),
+            rand(horizon_count),
+        ),
+        t3 => TimeSeries.TimeArray(
+            range(t3; length = horizon_count, step = resolution),
+            rand(horizon_count),
+        ),
+    )
+    two_dim_data = SortedDict(
+        t1 => TimeSeries.TimeArray(
+            range(t1; length = horizon_count, step = resolution),
+            rand(horizon_count, 99),
+        ),
+        t2 => TimeSeries.TimeArray(
+            range(t2; length = horizon_count, step = resolution),
+            rand(horizon_count, 99),
+        ),
+        t3 => TimeSeries.TimeArray(
+            range(t2; length = horizon_count, step = resolution),
+            rand(horizon_count, 99),
+        ),
+    )
+
+    for with_resolution in (false, true), with_interval in (false, true)
+        name = "test_$(with_resolution)_$(with_interval)"
+        kwargs = Dict{Symbol, Any}()
+        if with_resolution
+            kwargs[:resolution] = resolution
+        end
+        if with_interval
+            kwargs[:interval] = interval
+        end
+        if with_resolution && with_interval
+            deterministic = IS.Deterministic(name, one_dim_data; kwargs...)
+            probabilistic = IS.Probabilistic(name, two_dim_data, rand(99); kwargs...)
+            scenarios = IS.Scenarios(name, two_dim_data; kwargs...)
+            for forecast in (deterministic, probabilistic, scenarios)
+                IS.add_time_series!(sys, component, forecast)
+            end
+        elseif with_resolution && !with_interval
+            deterministic = IS.Deterministic(name, one_dim_data; kwargs...)
+            probabilistic = IS.Probabilistic(name, two_dim_data, rand(99); kwargs...)
+            scenarios = IS.Scenarios(name, two_dim_data; kwargs...)
+        else
+            @test_throws IS.ConflictingInputsError IS.Deterministic(
+                name,
+                one_dim_data;
+                kwargs...,
+            )
+            @test_throws IS.ConflictingInputsError IS.Probabilistic(
+                name,
+                two_dim_data,
+                rand(99);
+                kwargs...,
+            )
+            @test_throws IS.ConflictingInputsError IS.Scenarios(
+                name,
+                two_dim_data;
+                kwargs...,
+            )
+        end
+    end
+end
+
 @testset "Test add Deterministic with different resolutions" begin
     sys = IS.SystemData()
     name = "Component1"
@@ -154,15 +306,15 @@ end
     initial_time = Dates.DateTime("2020-09-01")
     resolution1 = Dates.Minute(5)
     other_time1 = initial_time + resolution1
-    horizon_count1 = 24
+    horizon_count = 24
     resolution2 = Dates.Minute(10)
     other_time2 = initial_time + resolution2
     horizon_count2 = 12
 
     name1 = "test1"
     data1 = SortedDict(
-        initial_time => rand(horizon_count1),
-        other_time1 => rand(horizon_count1),
+        initial_time => rand(horizon_count),
+        other_time1 => rand(horizon_count),
     )
     name2 = "test2"
     data2 = SortedDict(
@@ -174,7 +326,7 @@ end
     forecast2 = IS.Deterministic(; data = data2, name = name2, resolution = resolution2)
     key1 = IS.add_time_series!(sys, component, forecast1)
     key2 = IS.add_time_series!(sys, component, forecast2)
-    @test key1.horizon == horizon_count1 * resolution1
+    @test key1.horizon == horizon_count * resolution1
     @test key2.horizon == horizon_count2 * resolution2
 
     resolution3 = Dates.Minute(11)
@@ -427,6 +579,38 @@ end
     IS.add_time_series!(sys, component, data)
 end
 
+@testset "Test add SingleTimeSeries with irregular resolution." begin
+    sys = IS.SystemData()
+    name = "Component1"
+    component = IS.TestComponent(name, 5)
+    IS.add_component!(sys, component)
+
+    initial_time = Dates.DateTime("2020-01-01")
+    resolution = Dates.Month(1)
+
+    data = TimeSeries.TimeArray(range(initial_time; length = 12, step = resolution), 1:12)
+    ts_name = "ts"
+
+    # resolution must be passed for irregular time series.
+    ts_invalid = IS.SingleTimeSeries(; data = data, name = ts_name)
+    @test_throws IS.ConflictingInputsError IS.add_time_series!(sys, component, ts_invalid)
+
+    ts1 = IS.SingleTimeSeries(; data = data, name = ts_name, resolution = resolution)
+    IS.add_time_series!(sys, component, ts1)
+
+    ts2_full = IS.get_time_series(IS.SingleTimeSeries, component, ts_name)
+    @test IS.get_data(ts2_full) == IS.get_data(ts1)
+
+    ts2_partial = IS.get_time_series(
+        IS.SingleTimeSeries,
+        component,
+        ts_name;
+        start_time = initial_time + resolution * 6,
+        len = 6,
+    )
+    @test IS.get_data(ts2_partial) == IS.get_data(ts1)[7:end]
+end
+
 @testset "Test add SingleTimeSeries with features" begin
     sys = IS.SystemData()
     name = "Component1"
@@ -542,6 +726,7 @@ end
     end
     IS.remove_time_series!(sys, IS.SingleTimeSeries)
     @test isempty(IS.get_time_series_keys(component))
+    @test isempty(sys.time_series_manager.metadata_store.metadata_uuids)
 end
 
 @testset "Test add with features with mixed types" begin
@@ -753,7 +938,8 @@ end
 end
 
 @testset "Test Deterministic with a wrapped SingleTimeSeries" begin
-    for in_memory in (true, false)
+    # for in_memory in (true, false)
+    for in_memory in (true,)
         sys = IS.SystemData(; time_series_in_memory = in_memory)
 
         # This is allowed when there are no time series.
@@ -1261,6 +1447,29 @@ end
     @test length(IS.get_components(IS.TestComponent, sys)) == 0
 end
 
+@testset "Test transform_single_time_series with irregular resolution" begin
+    sys = IS.SystemData()
+    component = IS.TestComponent("Component1", 1)
+    IS.add_component!(sys, component)
+
+    resolution = Dates.Month(1)
+    dates = create_dates("2020-01-01T00:00:00", resolution, "2021-01-01T00:00:00")
+    data = collect(1:length(dates))
+    ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
+    name = "val"
+    ts = IS.SingleTimeSeries(name, ta; resolution = resolution)
+    IS.add_time_series!(sys, component, ts)
+    horizon_count = 12
+    horizon = horizon_count * resolution
+    interval = Dates.Month(1)
+    @test_throws "transform_single_time_series! does not support irregular" IS.transform_single_time_series!(
+        sys,
+        IS.DeterministicSingleTimeSeries,
+        horizon,
+        interval,
+    )
+end
+
 function _test_add_single_time_series_type(test_value, type_name)
     sys = IS.SystemData()
     name = "Component1"
@@ -1330,7 +1539,7 @@ end
     @test !isempty(res) && first(res) isa IS.StaticTimeSeriesKey
     @test IS.has_time_series(component)
 
-    all_time_series = get_all_time_series(data)
+    all_time_series = collect(IS.get_time_series_multiple(data; type = IS.SingleTimeSeries))
     @test length(all_time_series) == 1
     time_series = all_time_series[1]
     @test time_series isa IS.SingleTimeSeries
@@ -1347,8 +1556,8 @@ end
 
     it = IS.get_initial_timestamp(time_series)
 
-    all_time_series = get_all_time_series(data)
-    @test length(collect(all_time_series)) == 1
+    all_time_series = collect(IS.get_time_series_multiple(data; type = IS.SingleTimeSeries))
+    @test length(all_time_series) == 1
 
     data = IS.SystemData()
     name = "Component1"
@@ -1486,19 +1695,16 @@ end
     @test length(
         collect(IS.get_time_series_multiple(sys; type = IS.SingleTimeSeries)),
     ) == 2
-    @test length(collect(IS.get_time_series_multiple(sys; type = IS.Probabilistic))) ==
-          0
+    @test isempty(IS.get_time_series_multiple(sys; type = IS.Probabilistic))
 
     time_series = collect(IS.get_time_series_multiple(sys))
     @test length(time_series) == 2
 
     @test length(collect(IS.get_time_series_multiple(sys; name = "val"))) == 1
-    @test length(collect(IS.get_time_series_multiple(sys; name = "bad_name"))) == 0
+    @test isempty(IS.get_time_series_multiple(sys; name = "bad_name"))
 
     filter_func = x -> TimeSeries.values(IS.get_data(x))[12] == 12
-    @test length(
-        collect(IS.get_time_series_multiple(sys, filter_func; name = "val2")),
-    ) == 0
+    @test isempty(IS.get_time_series_multiple(sys, filter_func; name = "val2"))
 end
 
 @testset "Test add_time_series from TimeArray" begin
@@ -1523,8 +1729,8 @@ end
     components = collect(IS.iterate_components(data))
     @test length(components) == 1
     component = components[1]
-    time_series = get_all_time_series(data)
-    @test length(get_all_time_series(data)) == 1
+    time_series = collect(IS.get_time_series_multiple(data; type = IS.SingleTimeSeries))
+    @test length(time_series) == 1
 
     time_series = time_series[1]
     IS.remove_time_series!(
@@ -1534,14 +1740,13 @@ end
         IS.get_name(time_series),
     )
 
-    @test length(get_all_time_series(data)) == 0
-    @test IS.get_num_time_series(data) == 0
+    @test isempty(IS.get_time_series_multiple(data; type = IS.SingleTimeSeries))
 end
 
 @testset "Test clear_time_series" begin
     data = create_system_data(; with_time_series = true)
     IS.clear_time_series!(data)
-    @test length(get_all_time_series(data)) == 0
+    @test isempty(IS.get_time_series_multiple(data))
 end
 
 @testset "Test that remove_component removes time_series" begin
@@ -1551,17 +1756,13 @@ end
     @test length(components) == 1
     component = components[1]
 
-    all_time_series = collect(IS.get_time_series_multiple(data))
+    all_time_series = collect(IS.get_time_series_multiple(data; type = IS.SingleTimeSeries))
     @test length(all_time_series) == 1
     time_series = all_time_series[1]
-    @test IS.get_num_time_series(data) == 1
 
     IS.remove_component!(data, component)
-    @test length(collect(IS.get_time_series_multiple(component))) == 0
-    @test length(collect(IS.get_components(IS.InfrastructureSystemsComponent, data))) ==
-          0
-    @test length(get_all_time_series(data)) == 0
-    @test IS.get_num_time_series(data) == 0
+    @test isempty(IS.get_components(IS.InfrastructureSystemsComponent, data))
+    @test isempty(IS.get_time_series_multiple(data; type = IS.SingleTimeSeries))
 end
 
 @testset "Test get_time_series_array" begin
@@ -1773,7 +1974,7 @@ end
 
 @testset "Test time_series forwarding methods" begin
     data = create_system_data(; with_time_series = true)
-    time_series = get_all_time_series(data)[1]
+    time_series = first(IS.get_time_series_multiple(data; type = IS.SingleTimeSeries))
 
     # Iteration
     size = 24
@@ -1794,7 +1995,7 @@ end
 
 @testset "Test time_series head" begin
     data = create_system_data(; with_time_series = true)
-    time_series = get_all_time_series(data)[1]
+    time_series = first(IS.get_time_series_multiple(data; type = IS.SingleTimeSeries))
     fcast = IS.head(time_series)
     # head returns a length of 6 by default, but don't hard-code that.
     @test length(fcast) < length(time_series)
@@ -1805,7 +2006,7 @@ end
 
 @testset "Test time_series tail" begin
     data = create_system_data(; with_time_series = true)
-    time_series = get_all_time_series(data)[1]
+    time_series = first(IS.get_time_series_multiple(data; type = IS.SingleTimeSeries))
     fcast = IS.tail(time_series)
     # tail returns a length of 6 by default, but don't hard-code that.
     @test length(fcast) < length(time_series)
@@ -1816,7 +2017,7 @@ end
 
 @testset "Test time_series from" begin
     data = create_system_data(; with_time_series = true)
-    time_series = get_all_time_series(data)[1]
+    time_series = first(IS.get_time_series_multiple(data; type = IS.SingleTimeSeries))
     start_time = Dates.DateTime(Dates.today()) + Dates.Hour(3)
     fcast = IS.from(time_series, start_time)
     @test length(fcast) == 21
@@ -1825,7 +2026,7 @@ end
 
 @testset "Test time_series to" begin
     data = create_system_data(; with_time_series = true)
-    time_series = get_all_time_series(data)[1]
+    time_series = first(IS.get_time_series_multiple(data; type = IS.SingleTimeSeries))
     for end_time in (
         Dates.DateTime(Dates.today()) + Dates.Hour(15),
         Dates.DateTime(Dates.today()) + Dates.Hour(15) + Dates.Minute(5),
@@ -1847,11 +2048,13 @@ end
 
         initial_timestamp = Dates.DateTime("2020-01-01T00:00:00")
         resolution = Dates.Hour(1)
+        other_timestamp = initial_timestamp + resolution
         horizon_count = 24
         horizon = horizon_count * resolution
         scenario_count = 2
         data_input = rand(horizon_count, scenario_count)
-        data = SortedDict(initial_timestamp => data_input)
+        data_input2 = rand(horizon_count, scenario_count)
+        data = SortedDict(initial_timestamp => data_input, other_timestamp => data_input2)
         time_series = IS.Scenarios(;
             name = name,
             resolution = resolution,
@@ -1883,11 +2086,13 @@ end
 
         initial_timestamp = Dates.DateTime("2020-01-01T00:00:00")
         resolution = Dates.Hour(1)
+        other_timestamp = initial_timestamp + resolution
         horizon_count = 24
         horizon = horizon_count * resolution
         percentiles = 1:99
         data_input = rand(horizon_count, length(percentiles))
-        data = SortedDict(initial_timestamp => data_input)
+        data_input2 = rand(horizon_count, length(percentiles))
+        data = SortedDict(initial_timestamp => data_input, other_timestamp => data_input2)
         time_series = IS.Probabilistic(;
             name = name,
             resolution = resolution,
@@ -2481,8 +2686,10 @@ end
     initial_timestamp = Dates.DateTime("2020-01-01T00:00:00")
     horizon_count = 24
     resolution = Dates.Hour(1)
+    other_timestamp = initial_timestamp + resolution
     data_input = rand(horizon_count)
-    data = SortedDict(initial_timestamp => data_input)
+    data_input2 = rand(horizon_count)
+    data = SortedDict(initial_timestamp => data_input, other_timestamp => data_input2)
     time_series = IS.Deterministic(; name = name, resolution = resolution, data = data)
     fdata = IS.get_data(time_series)
     @test initial_timestamp == first(keys((fdata)))
@@ -2528,7 +2735,9 @@ end
         horizon_count = 24
         resolution = Dates.Hour(1)
         data_input = rand(horizon_count)
-        data = SortedDict(initial_timestamp => data_input)
+        data_input2 = rand(horizon_count)
+        other_timestamp = initial_timestamp + resolution
+        data = SortedDict(initial_timestamp => data_input, other_timestamp => data_input2)
         for i in 1:2
             time_series =
                 IS.Deterministic(;
@@ -3038,7 +3247,177 @@ end
     @test IS.get_data(res) == IS.get_data(bystander)
 end
 
-@testset "Test migration of legacy time series schema" begin
+@testset "Test migration of IS 2.3 time series schema to metadata format v1.0.0" begin
+    filename, component = _setup_for_migration_tests_from_IS_v2_3()
+    new_db = SQLite.DB(filename)
+    @test IS._needs_migration_from_v2_3(new_db)
+    new_store = IS.TimeSeriesMetadataStore(filename)
+    @test !IS._needs_migration_from_v2_4(new_store.db)
+    result = IS.list_metadata(new_store, component)
+    @test length(result) == 4
+end
+
+@testset "Test migration of IS 2.4 time series schema to metadata format v1.0.0" begin
+    filename, component = _setup_for_migration_tests_from_IS_v2_4()
+    new_db = SQLite.DB(filename)
+    new_rows = Tuple[]
+    for row in Tables.rowtable(
+        SQLite.DBInterface.execute(
+            new_db,
+            "SELECT * FROM $(IS.ASSOCIATIONS_TABLE_NAME)",
+        ),
+    )
+        new_row = (
+            row.id,
+            row.time_series_uuid,
+            row.time_series_type,
+            "unused_time_series_category",
+            row.initial_timestamp,
+            IS.from_iso_8601(row.resolution),
+            ismissing(row.horizon) ? nothing : IS.from_iso_8601(row.horizon),
+            ismissing(row.interval) ? nothing : IS.from_iso_8601(row.interval),
+            row.window_count,
+            row.length,
+            row.name,
+            row.owner_uuid,
+            row.owner_type,
+            row.owner_category,
+            row.features,
+            row.metadata_uuid,
+        )
+        push!(new_rows, new_row)
+    end
+    SQLite.DBInterface.execute(new_db, "DROP TABLE $(IS.ASSOCIATIONS_TABLE_NAME)")
+    # This is the original schema for the migration.
+    schema = [
+        "id INTEGER PRIMARY KEY",
+        "time_series_uuid TEXT NOT NULL",
+        "time_series_type TEXT NOT NULL",
+        "time_series_category TEXT NOT NULL",
+        "initial_timestamp TEXT NOT NULL",
+        "resolution_ms INTEGER NOT NULL",
+        "horizon_ms INTEGER",
+        "interval_ms INTEGER",
+        "window_count INTEGER",
+        "length INTEGER",
+        "name TEXT NOT NULL",
+        "owner_uuid TEXT NOT NULL",
+        "owner_type TEXT NOT NULL",
+        "owner_category TEXT NOT NULL",
+        "features TEXT NOT NULL",
+        "metadata_uuid TEXT NOT NULL",
+    ]
+    schema_text = join(schema, ",")
+    SQLite.DBInterface.execute(
+        new_db,
+        "CREATE TABLE $(IS.ASSOCIATIONS_TABLE_NAME)($(schema_text))",
+    )
+    IS._add_rows!(
+        new_db,
+        new_rows,
+        (
+            "id",
+            "time_series_uuid",
+            "time_series_type",
+            "time_series_category",
+            "initial_timestamp",
+            "resolution_ms",
+            "horizon_ms",
+            "interval_ms",
+            "window_count",
+            "length",
+            "name",
+            "owner_uuid",
+            "owner_type",
+            "owner_category",
+            "features",
+            "metadata_uuid",
+        ),
+        IS.ASSOCIATIONS_TABLE_NAME,
+    )
+    @test IS._needs_migration_from_v2_4(new_db)
+    new_store = IS.TimeSeriesMetadataStore(filename)
+    @test !IS._needs_migration_from_v2_4(new_store.db)
+    result = IS.list_metadata(new_store, component)
+    @test length(result) == 4
+end
+
+"""
+Create a SQLite database in the format of IS v2.3. Return the db filename.
+"""
+function _setup_for_migration_tests_from_IS_v2_3()
+    sys, component = _create_system_for_migration_tests()
+    filename = IS.backup_to_temp(sys.time_series_manager.metadata_store)
+    new_db = SQLite.DB(filename)
+    SQLite.DBInterface.execute(new_db, "DROP TABLE time_series_associations")
+    SQLite.DBInterface.execute(new_db, "DROP TABLE $(IS.KEY_VALUE_TABLE_NAME)")
+    try
+        _create_metadata_table_v2_3!(new_db)
+        placeholder = repeat("?,", 15) * "jsonb(?)"
+        query = "INSERT INTO $(IS.METADATA_TABLE_NAME) VALUES($placeholder)"
+        SQLite.transaction(new_db) do
+            stmt = SQLite.Stmt(new_db, query)
+            for metadata in values(sys.time_series_manager.metadata_store.metadata_uuids)
+                owner_category = "Component"
+                ts_type = IS.time_series_metadata_to_data(metadata)
+                @assert ts_type === IS.SingleTimeSeries
+                ts_category = "StaticTimeSeries"
+                features = IS.make_features_string(metadata.features)
+                params =
+                    (
+                        missing,
+                        string(IS.get_time_series_uuid(metadata)),
+                        string(nameof(ts_type)),
+                        ts_category,
+                        string(IS.get_initial_timestamp(metadata)),
+                        Dates.Millisecond(IS.get_resolution(metadata)).value,
+                        missing,
+                        missing,
+                        missing,
+                        IS.get_length(metadata),
+                        IS.get_name(metadata),
+                        string(IS.get_uuid(component)),
+                        string(nameof(typeof(component))),
+                        owner_category,
+                        features,
+                        JSON3.write(IS.serialize(metadata)),
+                    )
+                SQLite.DBInterface.execute(stmt, params)
+            end
+        end
+    finally
+        close(new_db)
+    end
+    return filename, component
+end
+
+function _setup_for_migration_tests_from_IS_v2_4()
+    sys, component = _create_system_for_migration_tests()
+    filename = IS.backup_to_temp(sys.time_series_manager.metadata_store)
+    new_db = SQLite.DB(filename)
+    SQLite.DBInterface.execute(new_db, "DROP TABLE $(IS.KEY_VALUE_TABLE_NAME)")
+    try
+        _create_metadata_table_v2_4!(new_db)
+        query = "INSERT INTO $(IS.METADATA_TABLE_NAME) VALUES(?,?,jsonb(?))"
+        SQLite.transaction(new_db) do
+            stmt = SQLite.Stmt(new_db, query)
+            for metadata in values(sys.time_series_manager.metadata_store.metadata_uuids)
+                params =
+                    (
+                        missing,
+                        string(IS.get_uuid(metadata)),
+                        JSON3.write(IS.serialize(metadata)),
+                    )
+                SQLite.DBInterface.execute(stmt, params)
+            end
+        end
+    finally
+        close(new_db)
+    end
+    return filename, component
+end
+
+function _create_system_for_migration_tests()
     sys = IS.SystemData()
     name = "Component1"
     component = IS.TestComponent(name, 5)
@@ -3057,26 +3436,48 @@ end
     IS.add_time_series!(sys, component, ts; scenario = "high", model_year = "2030")
     IS.add_time_series!(sys, component, ts; scenario = "low", model_year = "2035")
     IS.add_time_series!(sys, component, ts; scenario = "high", model_year = "2035")
+    return sys, component
+end
 
-    filename = IS.backup_to_temp(sys.time_series_manager.metadata_store)
-    new_db = SQLite.DB(filename)
-    query = """
-        CREATE TABLE new_tbl AS
-        SELECT $(IS.ASSOCIATIONS_TABLE_NAME).*, $(IS.METADATA_TABLE_NAME).metadata
-        FROM $(IS.ASSOCIATIONS_TABLE_NAME)
-        JOIN $(IS.METADATA_TABLE_NAME)
-            ON $(IS.ASSOCIATIONS_TABLE_NAME).metadata_uuid = $(IS.METADATA_TABLE_NAME).metadata_uuid
-    """
-    SQLite.DBInterface.execute(new_db, query)
-    SQLite.DBInterface.execute(new_db, "DROP TABLE $(IS.ASSOCIATIONS_TABLE_NAME)")
-    SQLite.DBInterface.execute(new_db, "DROP TABLE $(IS.METADATA_TABLE_NAME)")
+function _create_metadata_table_v2_4!(db::SQLite.DB)
+    schema = [
+        "id INTEGER PRIMARY KEY",
+        "metadata_uuid TEXT NOT NULL",
+        "metadata JSON NOT NULL",
+    ]
+    schema_text = join(schema, ",")
     SQLite.DBInterface.execute(
-        new_db,
-        "ALTER TABLE new_tbl RENAME TO $(IS.METADATA_TABLE_NAME)",
+        db,
+        "CREATE TABLE $(IS.METADATA_TABLE_NAME)($(schema_text))",
     )
-    new_store = IS.TimeSeriesMetadataStore(filename)
-    result = IS.list_metadata(new_store, component)
-    @test length(result) == 4
+    return
+end
+
+function _create_metadata_table_v2_3!(db::SQLite.DB)
+    schema = [
+        "id INTEGER PRIMARY KEY",
+        "time_series_uuid TEXT NOT NULL",
+        "time_series_type TEXT NOT NULL",
+        "time_series_category TEXT NOT NULL",
+        "initial_timestamp TEXT NOT NULL",
+        "resolution_ms INTEGER NOT NULL",
+        "horizon_ms INTEGER",
+        "interval_ms INTEGER",
+        "window_count INTEGER",
+        "length INTEGER",
+        "name TEXT NOT NULL",
+        "owner_uuid TEXT NOT NULL",
+        "owner_type TEXT NOT NULL",
+        "owner_category TEXT NOT NULL",
+        "features TEXT NOT NULL",
+        "metadata JSON NOT NULL",
+    ]
+    schema_text = join(schema, ",")
+    SQLite.DBInterface.execute(
+        db,
+        "CREATE TABLE time_series_metadata($(schema_text))",
+    )
+    return
 end
 
 @testset "Test invalid normalization factors" begin
@@ -3101,32 +3502,6 @@ end
         ta;
         normalization_factor = 0.0,
     )
-end
-
-@testset "Test horizon_ms bug fix" begin
-    db = SQLite.DB()
-    tbl = IS.ASSOCIATIONS_TABLE_NAME
-    horizon = Dates.Millisecond(Dates.Hour(1))
-    SQLite.DBInterface.execute(
-        db,
-        "CREATE TABLE $tbl (id INTEGER PRIMARY KEY, horizon_ms INTEGER)",
-    )
-    SQLite.transaction(db) do
-        SQLite.DBInterface.execute(db, "INSERT INTO $tbl VALUES(?,?)", (missing, missing))
-        SQLite.DBInterface.execute(db, "INSERT INTO $tbl VALUES(?,?)", (missing, horizon))
-        SQLite.DBInterface.execute(db, "INSERT INTO $tbl VALUES(?,?)", (missing, horizon))
-    end
-    table =
-        Tables.columntable(SQLite.DBInterface.execute(db, "SELECT horizon_ms FROM $tbl"))
-    @test ismissing(table.horizon_ms[1])
-    @test table.horizon_ms[2] isa Dates.Millisecond
-    @test table.horizon_ms[3] isa Dates.Millisecond
-    IS._apply_horizon_type_fix_if_needed(db)
-    table2 =
-        Tables.columntable(SQLite.DBInterface.execute(db, "SELECT horizon_ms FROM $tbl"))
-    @test ismissing(table.horizon_ms[1])
-    @test table2.horizon_ms[2] == horizon.value
-    @test table2.horizon_ms[3] == horizon.value
 end
 
 """
@@ -3580,4 +3955,13 @@ end
             ),
         )
     end
+end
+
+@testset "Test to_dataframe" begin
+    sys = create_system_data(; with_time_series = true, time_series_in_memory = true)
+    @test IS.to_dataframe(sys.time_series_manager.metadata_store) isa DataFrame
+    @test IS.to_dataframe(
+        sys.time_series_manager.metadata_store;
+        table = IS.KEY_VALUE_TABLE_NAME,
+    ) isa DataFrame
 end

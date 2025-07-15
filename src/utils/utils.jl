@@ -403,51 +403,6 @@ macro forward(sender, receiver, exclusions = Symbol[])
     return esc(out)
 end
 
-"""
-Return the resolution from a TimeArray.
-"""
-function get_resolution(ts::TimeSeries.TimeArray)
-    if length(ts) < 2
-        throw(ConflictingInputsError("Resolution can't be inferred from the data."))
-    end
-
-    timestamps = TimeSeries.timestamp(ts)
-    return timestamps[2] - timestamps[1]
-end
-
-function check_resolution(ts::TimeSeries.TimeArray)
-    tstamps = TimeSeries.timestamp(ts)
-    timediffs = unique([tstamps[ix] - tstamps[ix - 1] for ix in 2:length(tstamps)])
-    res = []
-    for timediff in timediffs
-        if mod(timediff, Dates.Millisecond(Dates.Day(1))) == Dates.Millisecond(0)
-            push!(res, Dates.Day(timediff / Dates.Millisecond(Dates.Day(1))))
-        elseif mod(timediff, Dates.Millisecond(Dates.Hour(1))) == Dates.Millisecond(0)
-            push!(res, Dates.Hour(timediff / Dates.Millisecond(Dates.Hour(1))))
-        elseif mod(timediff, Dates.Millisecond(Dates.Minute(1))) == Dates.Millisecond(0)
-            push!(res, Dates.Minute(timediff / Dates.Millisecond(Dates.Minute(1))))
-        elseif mod(timediff, Dates.Millisecond(Dates.Second(1))) == Dates.Millisecond(0)
-            push!(res, Dates.Second(timediff / Dates.Millisecond(Dates.Second(1))))
-        else
-            throw(DataFormatError("cannot understand the resolution of the time series"))
-        end
-    end
-
-    if length(res) > 1
-        throw(
-            DataFormatError(
-                "time series has non-uniform resolution: this is currently not supported",
-            ),
-        )
-    end
-
-    return res[1]
-end
-
-function get_initial_timestamp(data::TimeSeries.TimeArray)
-    return TimeSeries.timestamp(data)[1]
-end
-
 # Looking up modules with Base.root_module is slow; cache them.
 const g_cached_modules = Dict{String, Module}()
 
@@ -483,33 +438,6 @@ function copy_file(src::AbstractString, dst::AbstractString)
         run(`cp -f $(src_path) $(dst_path)`)
     end
     return
-end
-
-function get_initial_times(
-    initial_timestamp::Dates.DateTime,
-    count::Int,
-    interval::Dates.Period,
-)
-    if count == 0
-        return []
-    elseif interval == Dates.Second(0)
-        return [initial_timestamp]
-    end
-
-    return range(initial_timestamp; length = count, step = interval)
-end
-
-function get_total_period(
-    initial_timestamp::Dates.DateTime,
-    count::Int,
-    interval::Dates.Period,
-    horizon::Dates.Period,
-    resolution::Dates.Period,
-)
-    horizon_count = get_horizon_count(horizon, resolution)
-    last_it = initial_timestamp + interval * count
-    last_timestamp = last_it + resolution * (horizon_count - 1)
-    return last_timestamp - initial_timestamp
 end
 
 function transform_array_for_hdf(data::SortedDict{Dates.DateTime, Vector{CONSTANT}})

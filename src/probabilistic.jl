@@ -2,6 +2,7 @@
     mutable struct Probabilistic <: Forecast
         name::String
         resolution::Dates.Period
+        interval::Dates.Period
         percentiles::Vector{Float64}
         data::SortedDict
         scaling_factor_multiplier::Union{Nothing, Function}
@@ -14,6 +15,7 @@ A Probabilistic forecast for a particular data field in a Component.
 
   - `name::String`: user-defined name
   - `resolution::Dates.Period`: forecast resolution
+  - `interval::Dates.Period`: forecast interval
   - `percentiles::Vector{Float64}`: Percentiles for the probabilistic forecast
   - `data::SortedDict`: timestamp - scalingfactor
   - `scaling_factor_multiplier::Union{Nothing, Function}`: Applicable when the time series
@@ -29,6 +31,8 @@ mutable struct Probabilistic <: Forecast
     percentiles::Vector{Float64}
     "forecast resolution"
     resolution::Dates.Period
+    "forecast interval"
+    interval::Dates.Period
     "Applicable when the time series data are scaling factors. Called on the associated component to convert the values."
     scaling_factor_multiplier::Union{Nothing, Function}
     internal::InfrastructureSystemsInternal
@@ -36,9 +40,10 @@ end
 
 function Probabilistic(;
     name,
-    resolution,
+    data::SortedDict{Dates.DateTime, Matrix{Float64}},
+    resolution::Dates.Period,
+    interval::Union{Nothing, Dates.Period} = nothing,
     percentiles,
-    data,
     scaling_factor_multiplier = nothing,
     normalization_factor = 1.0,
     internal = InfrastructureSystemsInternal(),
@@ -53,11 +58,16 @@ function Probabilistic(;
         )
     end
 
+    if isnothing(interval)
+        interval = get_interval_from_initial_times(get_sorted_keys(data))
+    end
+
     return Probabilistic(
         name,
         data,
         percentiles,
         resolution,
+        interval,
         scaling_factor_multiplier,
         internal,
     )
@@ -69,9 +79,12 @@ Construct Probabilistic from a SortedDict of Arrays.
 # Arguments
 
   - `name::AbstractString`: user-defined name
-  - `input_data::AbstractDict{Dates.DateTime, Matrix{Float64}}`: time series data.
+  - `data::AbstractDict{Dates.DateTime, Matrix{Float64}}`: time series data.
   - `percentiles`: Percentiles represented in the probabilistic forecast
   - `resolution::Dates.Period`: The resolution of the forecast in Dates.Period`
+  - `interval::Union{Nothing, Dates.Period}`: If nothing, infer interval from the
+    data. Otherwise, it must be the difference in time between the start of each window.
+    Interval is required if the type is irregular, such as with Dates.Month or Dates.Year.
   - `normalization_factor::NormalizationFactor = 1.0`: optional normalization factor to apply
     to each data entry
   - `scaling_factor_multiplier::Union{Nothing, Function} = nothing`: If the data are scaling
@@ -80,20 +93,42 @@ Construct Probabilistic from a SortedDict of Arrays.
 """
 function Probabilistic(
     name::AbstractString,
-    input_data::AbstractDict,
+    data::SortedDict{Dates.DateTime, Matrix{Float64}},
     percentiles::Vector,
     resolution::Dates.Period;
+    interval::Union{Nothing, Dates.Period} = nothing,
     normalization_factor::NormalizationFactor = 1.0,
     scaling_factor_multiplier::Union{Nothing, Function} = nothing,
 )
     return Probabilistic(;
         name = name,
-        data = input_data,
+        data = data,
         percentiles = percentiles,
         resolution = resolution,
+        interval = interval,
         scaling_factor_multiplier = scaling_factor_multiplier,
         normalization_factor = normalization_factor,
         internal = InfrastructureSystemsInternal(),
+    )
+end
+
+function Probabilistic(
+    name::AbstractString,
+    data::AbstractDict{Dates.DateTime, Matrix{Float64}},
+    percentiles::Vector,
+    resolution::Dates.Period;
+    interval::Union{Nothing, Dates.Period} = nothing,
+    normalization_factor::NormalizationFactor = 1.0,
+    scaling_factor_multiplier::Union{Nothing, Function} = nothing,
+)
+    return Probabilistic(
+        name,
+        SortedDict(data...),
+        percentiles,
+        resolution;
+        interval = interval,
+        normalization_factor = normalization_factor,
+        scaling_factor_multiplier = scaling_factor_multiplier,
     )
 end
 
@@ -105,6 +140,12 @@ Construct Probabilistic from a Dict of TimeArrays.
   - `name::AbstractString`: user-defined name
   - `input_data::AbstractDict{Dates.DateTime, TimeSeries.TimeArray}`: time series data.
   - `percentiles`: Percentiles represented in the probabilistic forecast
+  - `resolution::Union{Nothing, Dates.Period} = nothing`: If nothing, infer resolution from the
+    data. Otherwise, this must be the difference between each consecutive timestamps. This is
+    required if the resolution is irregular, such as Dates.Month or Dates.Year.
+  - `interval::Union{Nothing, Dates.Period} = nothing`: If nothing, infer interval from the
+    data. Otherwise, it must be the difference in time between the start of each window.
+    Interval is required if the type is irregular, such as with Dates.Month or Dates.Year.
   - `normalization_factor::NormalizationFactor = 1.0`: optional normalization factor to apply
     to each data entry
   - `scaling_factor_multiplier::Union{Nothing, Function} = nothing`: If the data are scaling
@@ -117,22 +158,18 @@ function Probabilistic(
     name::AbstractString,
     input_data::AbstractDict{Dates.DateTime, <:TimeSeries.TimeArray},
     percentiles::Vector{Float64};
+    resolution::Union{Nothing, Dates.Period} = nothing,
+    interval::Union{Nothing, Dates.Period} = nothing,
     normalization_factor::NormalizationFactor = 1.0,
     scaling_factor_multiplier::Union{Nothing, Function} = nothing,
 )
-    data = SortedDict{Dates.DateTime, Matrix{Float64}}()
-    resolution =
-        TimeSeries.timestamp(first(values(input_data)))[2] -
-        TimeSeries.timestamp(first(values(input_data)))[1]
-    for (k, v) in input_data
-        data[k] = TimeSeries.values(v)
-    end
-
+    data, res = convert_forecast_input_time_arrays(input_data; resolution = resolution)
     return Probabilistic(;
         name = name,
         data = data,
         percentiles = percentiles,
-        resolution = resolution,
+        resolution = res,
+        interval = interval,
         normalization_factor = normalization_factor,
         scaling_factor_multiplier = scaling_factor_multiplier,
     )
@@ -146,6 +183,7 @@ function Probabilistic(
     series_data::RawTimeSeries,
     percentiles::Vector,
     resolution::Dates.Period;
+    interval::Union{Nothing, Dates.Period} = nothing,
     normalization_factor::NormalizationFactor = 1.0,
     scaling_factor_multiplier::Union{Nothing, Function} = nothing,
 )
@@ -154,6 +192,7 @@ function Probabilistic(
         data = series_data.data,
         percentiles = percentiles,
         resolution = resolution,
+        interval = interval,
         normalization_factor = normalization_factor,
         scaling_factor_multiplier = scaling_factor_multiplier,
     )
@@ -164,11 +203,14 @@ function Probabilistic(ts_metadata::ProbabilisticMetadata, data::SortedDict)
         name = get_name(ts_metadata),
         percentiles = get_percentiles(ts_metadata),
         resolution = get_resolution(ts_metadata),
+        interval = get_interval(ts_metadata),
         data = data,
         scaling_factor_multiplier = get_scaling_factor_multiplier(ts_metadata),
         internal = InfrastructureSystemsInternal(get_time_series_uuid(ts_metadata)),
     )
 end
+
+# Note: interval is not support in this workflow.
 
 function Probabilistic(info::TimeSeriesParsedInfo)
     return Probabilistic(;
@@ -199,6 +241,7 @@ function Probabilistic(
         src.data,
         src.percentiles,
         src.resolution,
+        src.interval,
         scaling_factor_multiplier,
         internal,
     )
@@ -235,6 +278,10 @@ get_name(value::Probabilistic) = value.name
 Get [`Probabilistic`](@ref) `resolution`.
 """
 get_resolution(value::Probabilistic) = value.resolution
+"""
+Get [`Probabilistic`](@ref) `interval`.
+"""
+get_interval(value::Probabilistic) = value.interval
 """
 Get [`Probabilistic`](@ref) `percentiles`.
 """
@@ -291,15 +338,10 @@ function get_array_for_hdf(forecast::Probabilistic)
     return data_for_hdf
 end
 
-function get_horizon_count(forecast::Probabilistic)
-    return size(first(values(get_data(forecast))))[1]
-end
-
 # TODO see Deterministic
 eltype_data(forecast::Probabilistic) = eltype_data_common(forecast)
 get_initial_times(forecast::Probabilistic) = get_initial_times_common(forecast)
 get_initial_timestamp(forecast::Probabilistic) = get_initial_timestamp_common(forecast)
-get_interval(forecast::Probabilistic) = get_interval_common(forecast)
 get_window(f::Probabilistic, initial_time::Dates.DateTime; len = nothing) =
     get_window_common(f, initial_time; len = len)
 

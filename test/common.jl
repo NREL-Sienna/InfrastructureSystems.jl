@@ -16,8 +16,24 @@ function create_system_data(;
             IS.InfrastructureSystemsComponent,
             file,
         )
-        time_series = get_all_time_series(data)
-        IS.@assert_op length(time_series) > 0
+
+        resolution = Dates.Hour(1)
+        it1 = Dates.DateTime("2020-09-01")
+        it2 = it1 + resolution
+        name = "test"
+        horizon_count = 24
+        fdata = SortedDict(it1 => rand(horizon_count), it2 => rand(horizon_count))
+        forecast = IS.Deterministic(;
+            data = fdata,
+            name = name,
+            resolution = resolution,
+            scaling_factor_multiplier = IS.get_val,
+        )
+        IS.add_time_series!(data, component, forecast)
+
+        for ts_type in (IS.Deterministic, IS.SingleTimeSeries)
+            @assert !isempty(collect(IS.get_time_series_multiple(data; type = ts_type)))
+        end
     end
 
     if with_supplemental_attributes
@@ -43,10 +59,6 @@ function create_system_data_shared_time_series(; time_series_in_memory = false)
     IS.add_time_series!(data, component2, ts)
 
     return data
-end
-
-function get_all_time_series(data)
-    return collect(IS.get_time_series_multiple(data))
 end
 
 function create_time_array()
