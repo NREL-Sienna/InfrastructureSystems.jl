@@ -18,6 +18,7 @@ import Pkg
 import PrettyTables
 import Printf: @sprintf
 import SHA
+import StringTemplates
 import StructTypes
 import TerminalLoggers: TerminalLogger, ProgressLevel
 import TimeSeries
