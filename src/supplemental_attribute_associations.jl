@@ -124,7 +124,11 @@ function add_association!(
         placeholder = chop(repeat("?,", length(row)))
         _execute_cached(
             associations,
-            StringTemplates.render(_QUERY_INSERT_C_ATTR_ASSOCIATION, table_name = SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME, placeholder = placeholder),
+            StringTemplates.render(
+                _QUERY_INSERT_C_ATTR_ASSOCIATION;
+                table_name = SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME,
+                placeholder = placeholder,
+            ),
             row,
         )
         @debug "Added association bewteen $(summary(attribute)) and $(summary(component))"
@@ -295,17 +299,18 @@ function has_association(
 end
 
 const _QUERY_LIST_ASSOCIATED_COMP_UUIDS = """
-    SELECT component_uuid
+    SELECT DISTINCT component_uuid
     FROM $SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME
     WHERE attribute_uuid = ?
 """
 
 """
-Return the component UUIDs associated with the attribute.
+Return the distinct component UUIDs associated with the attribute.
 """
 function list_associated_component_uuids(
     associations::SupplementalAttributeAssociations,
     attribute::SupplementalAttribute,
+    ::Nothing,
 )
     params = (string(get_uuid(attribute)),)
     table = Tables.columntable(
@@ -314,12 +319,40 @@ function list_associated_component_uuids(
     return Base.UUID.(table.component_uuid)
 end
 
+const _QUERY_LIST_ASSOCIATED_COMP_UUIDS_BY_C_TYPE = StringTemplates.@template """
+    SELECT DISTINCT component_uuid
+    FROM $table_name
+    WHERE attribute_uuid = ? AND $component_type_clause
 """
-Return the component UUIDs associated with the attribute.
+
+"""
+Return the distinct component UUIDs associated with the attribute, filter by component type.
+"""
+function list_associated_component_uuids(
+    associations::SupplementalAttributeAssociations,
+    attribute::SupplementalAttribute,
+    component_type::Type{<:InfrastructureSystemsComponent},
+)
+    params = [string(get_uuid(attribute))]
+    component_type_clause = _get_type_clause!(params, component_type, "component_type")
+    query = StringTemplates.render(
+        _QUERY_LIST_ASSOCIATED_COMP_UUIDS_BY_C_TYPE;
+        table_name = SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME,
+        component_type_clause = component_type_clause,
+    )
+    table = Tables.columntable(
+        _execute_cached(associations, query, params),
+    )
+    return Base.UUID.(table.component_uuid)
+end
+
+"""
+Return the distinct component UUIDs associated with the attribute type.
 """
 function list_associated_component_uuids(
     associations::SupplementalAttributeAssociations,
     attribute_type::Type{<:SupplementalAttribute},
+    ::Nothing,
 )
     if isconcretetype(attribute_type)
         return _list_associated_component_uuids(associations, (attribute_type,))
@@ -329,25 +362,36 @@ function list_associated_component_uuids(
     return _list_associated_component_uuids(associations, subtypes)
 end
 
+const _QUERY_LIST_ASSOCIATED_COMP_UUIDS_BY_TYPES = StringTemplates.@template """
+    SELECT DISTINCT component_uuid
+    FROM $table_name
+    WHERE $attribute_type_clause AND $component_type_clause
 """
-Return the component UUIDs associated with the attribute and component type.
+
+"""
+Return the distinct component UUIDs associated with the attribute type, filter by
+component_type.
 """
 function list_associated_component_uuids(
     associations::SupplementalAttributeAssociations,
-    attribute::SupplementalAttribute,
+    attribute_type::Type{<:SupplementalAttribute},
     component_type::Type{<:InfrastructureSystemsComponent},
 )
-    params = [string(get_uuid(attribute))]
+    params = String[]
+    attribute_type_clause = _get_type_clause!(params, attribute_type, "attribute_type")
     component_type_clause = _get_type_clause!(params, component_type, "component_type")
-    query = _QUERY_LIST_ASSOCIATED_COMP_UUIDS * " AND $component_type_clause"
-    table = Tables.columntable(
-        _execute_cached(associations, query, params),
+    query = StringTemplates.render(
+        _QUERY_LIST_ASSOCIATED_COMP_UUIDS_BY_TYPES;
+        table_name = SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME,
+        attribute_type_clause = attribute_type_clause,
+        component_type_clause = component_type_clause,
     )
+    table = Tables.columntable(_execute_cached(associations, query, params))
     return Base.UUID.(table.component_uuid)
 end
 
 const _QUERY_LIST_ASSOCIATED_PAIR_UUIDS = StringTemplates.@template """
-    SELECT component_uuid, attribute_uuid
+    SELECT DISTINCT component_uuid, attribute_uuid
     FROM $table_name
     WHERE $component_type_clause AND $attribute_type_clause
 """
@@ -357,21 +401,19 @@ Return the component and attribute UUIDs that are associated with the given type
 """
 function list_associated_pair_uuids(
     associations::SupplementalAttributeAssociations,
-    component_type::Type{<:InfrastructureSystemsComponent},
     attribute_type::Type{<:SupplementalAttribute},
+    component_type::Type{<:InfrastructureSystemsComponent},
 )
     params = String[]
     component_type_clause = _get_type_clause!(params, component_type, "component_type")
     attribute_type_clause = _get_type_clause!(params, attribute_type, "attribute_type")
     query = StringTemplates.render(
-        _QUERY_LIST_ASSOCIATED_PAIR_UUIDS,
+        _QUERY_LIST_ASSOCIATED_PAIR_UUIDS;
         table_name = SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME,
         component_type_clause = component_type_clause,
         attribute_type_clause = attribute_type_clause,
     )
-    table = Tables.rowtable(
-        _execute_cached(associations, query, params),
-    )
+    table = Tables.rowtable(_execute_cached(associations, query, params))
     return [(Base.UUID(row.component_uuid), Base.UUID(row.attribute_uuid)) for row in table]
 end
 
@@ -411,7 +453,6 @@ const _QUERY_LIST_ASSOCIATED_COMP_UUIDS_BY_MULTIPLE_TYPES = StringTemplates.@tem
     WHERE attribute_type IN ($placeholder)
 """
 
-
 function _list_associated_component_uuids(
     associations::SupplementalAttributeAssociations,
     attribute_types,
@@ -426,7 +467,11 @@ function _list_associated_component_uuids(
     else
         placeholder = chop(repeat("?,", length(attribute_types)))
         params = Tuple(string(nameof(type)) for type in attribute_types)
-        query = StringTemplates.render(_QUERY_LIST_ASSOCIATED_COMP_UUIDS_BY_MULTIPLE_TYPES, table_name = SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME, placeholder = placeholder)
+        query = StringTemplates.render(
+            _QUERY_LIST_ASSOCIATED_COMP_UUIDS_BY_MULTIPLE_TYPES;
+            table_name = SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME,
+            placeholder = placeholder,
+        )
     end
 
     table = Tables.columntable(_execute_cached(associations, query, params))
@@ -454,7 +499,11 @@ function list_associated_supplemental_attribute_uuids(
         a_str = _get_attribute_type_string!(params, attribute_type)
         where_clause = "$c_str AND $a_str"
     end
-    query = StringTemplates.render(_QUERY_LIST_ASSOCIATED_SUPPLEMENTAL_ATTRIBUTE_UUIDS, table_name = SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME, where_clause = where_clause)
+    query = StringTemplates.render(
+        _QUERY_LIST_ASSOCIATED_SUPPLEMENTAL_ATTRIBUTE_UUIDS;
+        table_name = SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME,
+        where_clause = where_clause,
+    )
     table = Tables.columntable(_execute_cached(associations, query, params))
     return Base.UUID.(table.attribute_uuid)
 end
@@ -555,7 +604,11 @@ function from_records(::Type{SupplementalAttributeAssociations}, records)
     placeholder = chop(repeat("?,", num_columns))
     SQLite.DBInterface.executemany(
         associations.db,
-        StringTemplates.render(_QUERY_INSERT_ROWS_INTO_C_ATTR_TABLE, table_name = SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME, placeholder = placeholder),
+        StringTemplates.render(
+            _QUERY_INSERT_ROWS_INTO_C_ATTR_TABLE;
+            table_name = SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME,
+            placeholder = placeholder,
+        ),
         NamedTuple(Symbol(k) => v for (k, v) in data),
     )
     _create_indexes!(associations)
@@ -576,7 +629,11 @@ function _remove_associations!(
 )
     _execute_cached(
         associations,
-        StringTemplates.render(_QUERY_REMOVE_ASSOCIATIONS, table_name = SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME, where_clause = where_clause),
+        StringTemplates.render(
+            _QUERY_REMOVE_ASSOCIATIONS;
+            table_name = SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME,
+            where_clause = where_clause,
+        ),
         params,
     )
     table = Tables.rowtable(_execute(associations, _QUERY_SELECT_CHANGES))
