@@ -1093,7 +1093,7 @@ Return all components associated with the attribute that match `component_type`.
 # Arguments
 - `data::SystemData`: the `SystemData` to search
 - `attribute::SupplementalAttribute`: Only return components associated with this attribute.
-- `component_type::{Type::<:InfrastructureSystemsComponent}`: Optional, type of the
+- `component_type::Union{Nothing, Type{<:InfrastructureSystemsComponent}}`: Optional, type of the
   components to return. Can be concrete or abstract.
 """
 function get_associated_components(
