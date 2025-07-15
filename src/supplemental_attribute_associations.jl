@@ -139,16 +139,6 @@ end
 
 const _QUERY_DROP_ATTR_TABLE = "DROP TABLE IF EXISTS $SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME"
 
-"""
-Drop the supplemental attribute associations table.
-"""
-function drop_table(associations::SupplementalAttributeAssociations)
-    _execute(associations, _QUERY_DROP_ATTR_TABLE)
-    @debug "Dropped the table $SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME (if it existed)" _group =
-        LOG_GROUP_SUPPLEMENTAL_ATTRIBUTES
-    return
-end
-
 const _QUERY_GET_ATTRIBUTE_COUNTS_BY_TYPE = """
     SELECT
         attribute_type
