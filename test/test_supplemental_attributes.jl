@@ -132,7 +132,9 @@ end
     components = IS.get_components(IS.TestComponent, data)
     @test length(components) == 1
     @test IS.get_num_supplemental_attributes(data) == 1
-    @test length(IS.list_associated_component_uuids(mgr.associations, attribute)) == 1
+    @test length(
+        IS.list_associated_component_uuids(mgr.associations, attribute, nothing),
+    ) == 1
 end
 
 @testset "Test remove_supplemental_attribute" begin

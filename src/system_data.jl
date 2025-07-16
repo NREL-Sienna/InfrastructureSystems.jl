@@ -1072,29 +1072,18 @@ end
 get_components_by_name(::Type{T}, data::SystemData, args...) where {T} =
     get_components_by_name(T, data.components, args...)
 
-function get_associated_components(data::SystemData, attribute::SupplementalAttribute)
-    [
-        get_component(data, x) for x in list_associated_component_uuids(
-            data.supplemental_attribute_manager.associations,
-            attribute,
-        )
-    ]
-end
-
-get_associated_components(
-    filter_func::Function,
-    data::SystemData,
-    attribute::SupplementalAttribute,
-) =
-    filter(filter_func, get_associated_components(data, attribute))
-
 function get_associated_components(
     data::SystemData,
-    attribute_type::Type{<:SupplementalAttribute},
+    attribute_type::Type{<:SupplementalAttribute};
+    component_type::Union{Nothing, Type{<:InfrastructureSystemsComponent}} = nothing,
 )
     return [
         get_component(data, x) for x in
-        list_associated_component_uuids(data.supplemental_attribute_manager, attribute_type)
+        list_associated_component_uuids(
+            data.supplemental_attribute_manager,
+            attribute_type,
+            component_type,
+        )
     ]
 end
 
@@ -1102,15 +1091,15 @@ end
 Return all components associated with the attribute that match `component_type`.
 
 # Arguments
-- `component_type::{Type::<:InfrastructureSystemsComponent}`: Required type of the
-components to return. Can be concrete or abstract.
 - `data::SystemData`: the `SystemData` to search
 - `attribute::SupplementalAttribute`: Only return components associated with this attribute.
+- `component_type::Union{Nothing, Type{<:InfrastructureSystemsComponent}}`: Optional, type of the
+  components to return. Can be concrete or abstract.
 """
 function get_associated_components(
-    component_type::Type{<:InfrastructureSystemsComponent},
     data::SystemData,
-    attribute::SupplementalAttribute,
+    attribute::SupplementalAttribute;
+    component_type::Union{Nothing, Type{<:InfrastructureSystemsComponent}} = nothing,
 )
     return [
         get_component(data, x) for x in
@@ -1120,35 +1109,6 @@ function get_associated_components(
             component_type,
         )
     ]
-end
-
-"""
-Return all available components associated with the attribute that match `component_type`.
-
-# Arguments
-- `component_type::{Type::<:InfrastructureSystemsComponent}`: Required type of the
-components to return. Can be concrete or abstract.
-- `data::SystemData`: the `SystemData` to search
-- `attribute::SupplementalAttribute`: Only return components associated with this attribute.
-"""
-function get_available_associated_components(
-    component_type::Type{<:InfrastructureSystemsComponent},
-    data::SystemData,
-    attribute::SupplementalAttribute;
-)
-    components = component_type[]
-    for uuid in list_associated_component_uuids(
-        data.supplemental_attribute_manager.associations,
-        attribute,
-        component_type,
-    )
-        component = get_component(data, uuid)
-        if get_available(component)
-            push!(components, component)
-        end
-    end
-
-    return components
 end
 
 """
@@ -1162,7 +1122,6 @@ function get_component_supplemental_attribute_pairs(
     ::Type{T},
     ::Type{U},
     data::SystemData;
-    only_available_components::Bool = false,
     components = nothing,
     attributes = nothing,
 ) where {T <: InfrastructureSystemsComponent, U <: SupplementalAttribute}
@@ -1172,8 +1131,8 @@ function get_component_supplemental_attribute_pairs(
     for (component_uuid, attribute_uuid) in
         list_associated_pair_uuids(
         data.supplemental_attribute_manager.associations,
-        T,
         U,
+        T,
     )
         if !isnothing(components) && !(component_uuid in c_uuids)
             continue
@@ -1182,9 +1141,7 @@ function get_component_supplemental_attribute_pairs(
             continue
         end
         component = get_component(data, component_uuid)
-        if only_available_components && !get_available(component)
-            continue
-        end
+
         attribute = get_supplemental_attribute(data, attribute_uuid)
         push!(ca_pairs, (component = component, supplemental_attribute = attribute))
     end

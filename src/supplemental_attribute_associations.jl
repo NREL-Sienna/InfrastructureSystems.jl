@@ -100,6 +100,11 @@ function Base.deepcopy_internal(val::SupplementalAttributeAssociations, dict::Id
     return new_associations
 end
 
+const _QUERY_INSERT_C_ATTR_ASSOCIATION = StringTemplates.@template """
+    INSERT INTO $table_name
+    VALUES($placeholder)
+"""
+
 """
 Add a supplemental attribute association to the associations. The caller must check for
 duplicates.
@@ -116,10 +121,14 @@ function add_association!(
             string(get_uuid(component)),
             string(nameof(typeof(component))),
         )
-        params = chop(repeat("?,", length(row)))
+        placeholder = chop(repeat("?,", length(row)))
         _execute_cached(
             associations,
-            "INSERT INTO $SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME VALUES($params)",
+            StringTemplates.render(
+                _QUERY_INSERT_C_ATTR_ASSOCIATION;
+                table_name = SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME,
+                placeholder = placeholder,
+            ),
             row,
         )
         @debug "Added association bewteen $(summary(attribute)) and $(summary(component))"
@@ -128,76 +137,72 @@ function add_association!(
     return
 end
 
+const _QUERY_DROP_ATTR_TABLE = "DROP TABLE IF EXISTS $SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME"
+
+const _QUERY_GET_ATTRIBUTE_COUNTS_BY_TYPE = """
+    SELECT
+        attribute_type
+        ,count(*) AS count
+    FROM $SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME
+    GROUP BY
+        attribute_type
+    ORDER BY
+        attribute_type
 """
-Drop the supplemental attribute associations table.
-"""
-function drop_table(associations::SupplementalAttributeAssociations)
-    _execute(associations, "DROP TABLE IF EXISTS $SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME")
-    @debug "Dropped the table $SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME (if it existed)" _group =
-        LOG_GROUP_SUPPLEMENTAL_ATTRIBUTES
-    return
-end
 
 """
 Return a Vector of OrderedDict of stored time series counts by type.
 """
 function get_attribute_counts_by_type(associations::SupplementalAttributeAssociations)
-    query = """
-        SELECT
-            attribute_type
-            ,count(*) AS count
-        FROM $SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME
-        GROUP BY
-            attribute_type
-        ORDER BY
-            attribute_type
-    """
-    table = Tables.rowtable(_execute(associations, query))
+    table = Tables.rowtable(_execute(associations, _QUERY_GET_ATTRIBUTE_COUNTS_BY_TYPE))
     return [
         OrderedDict("type" => x.attribute_type, "count" => x.count) for x in table
     ]
 end
 
+const _QUERY_GET_ATTRIBUTE_SUMMARY_TABLE = """
+    SELECT
+        attribute_type
+        ,component_type
+        ,count(*) AS count
+    FROM $SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME
+    GROUP BY
+        attribute_type
+        ,component_type
+    ORDER BY
+        attribute_type
+        ,component_type
+"""
+
 """
 Return a DataFrame with the number of supplemental attributes by type for components.
 """
 function get_attribute_summary_table(associations::SupplementalAttributeAssociations)
-    query = """
-        SELECT
-            attribute_type
-            ,component_type
-            ,count(*) AS count
-        FROM $SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME
-        GROUP BY
-            attribute_type
-            ,component_type
-        ORDER BY
-            attribute_type
-            ,component_type
-    """
-    return DataFrame(_execute(associations, query))
+    return DataFrame(_execute(associations, _QUERY_GET_ATTRIBUTE_SUMMARY_TABLE))
 end
+
+const _QUERY_GET_NUM_ATTRIBUTES = """
+    SELECT COUNT(DISTINCT attribute_uuid) AS count
+    FROM $SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME
+"""
 
 """
 Return the number of supplemental attributes.
 """
 function get_num_attributes(associations::SupplementalAttributeAssociations)
-    query = """
-        SELECT COUNT(DISTINCT attribute_uuid) AS count
-        FROM $SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME
-    """
-    return _execute_count(associations, query)
+    return _execute_count(associations, _QUERY_GET_NUM_ATTRIBUTES)
 end
+
+const _QUERY_GET_NUM_COMPONENTS_WITH_ATTRIBUTES = """
+    SELECT COUNT(DISTINCT component_uuid) AS count
+    FROM $SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME
+"""
 
 """
 Return the number of components with supplemental attributes.
 """
 function get_num_components_with_attributes(associations::SupplementalAttributeAssociations)
-    query = """
-        SELECT COUNT(DISTINCT component_uuid) AS count
-        FROM $SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME
-    """
-    return _execute_count(associations, query)
+    return _execute_count(associations, _QUERY_GET_NUM_COMPONENTS_WITH_ATTRIBUTES)
 end
 
 const _QUERY_HAS_ASSOCIATION_BY_ATTRIBUTE = """
@@ -284,17 +289,18 @@ function has_association(
 end
 
 const _QUERY_LIST_ASSOCIATED_COMP_UUIDS = """
-    SELECT component_uuid
+    SELECT DISTINCT component_uuid
     FROM $SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME
     WHERE attribute_uuid = ?
 """
 
 """
-Return the component UUIDs associated with the attribute.
+Return the distinct component UUIDs associated with the attribute.
 """
 function list_associated_component_uuids(
     associations::SupplementalAttributeAssociations,
     attribute::SupplementalAttribute,
+    ::Nothing,
 )
     params = (string(get_uuid(attribute)),)
     table = Tables.columntable(
@@ -303,12 +309,40 @@ function list_associated_component_uuids(
     return Base.UUID.(table.component_uuid)
 end
 
+const _QUERY_LIST_ASSOCIATED_COMP_UUIDS_BY_C_TYPE = StringTemplates.@template """
+    SELECT DISTINCT component_uuid
+    FROM $table_name
+    WHERE attribute_uuid = ? AND $component_type_clause
 """
-Return the component UUIDs associated with the attribute.
+
+"""
+Return the distinct component UUIDs associated with the attribute, filter by component type.
+"""
+function list_associated_component_uuids(
+    associations::SupplementalAttributeAssociations,
+    attribute::SupplementalAttribute,
+    component_type::Type{<:InfrastructureSystemsComponent},
+)
+    params = [string(get_uuid(attribute))]
+    component_type_clause = _get_type_clause!(params, component_type, "component_type")
+    query = StringTemplates.render(
+        _QUERY_LIST_ASSOCIATED_COMP_UUIDS_BY_C_TYPE;
+        table_name = SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME,
+        component_type_clause = component_type_clause,
+    )
+    table = Tables.columntable(
+        _execute_cached(associations, query, params),
+    )
+    return Base.UUID.(table.component_uuid)
+end
+
+"""
+Return the distinct component UUIDs associated with the attribute type.
 """
 function list_associated_component_uuids(
     associations::SupplementalAttributeAssociations,
     attribute_type::Type{<:SupplementalAttribute},
+    ::Nothing,
 )
     if isconcretetype(attribute_type)
         return _list_associated_component_uuids(associations, (attribute_type,))
@@ -318,42 +352,58 @@ function list_associated_component_uuids(
     return _list_associated_component_uuids(associations, subtypes)
 end
 
+const _QUERY_LIST_ASSOCIATED_COMP_UUIDS_BY_TYPES = StringTemplates.@template """
+    SELECT DISTINCT component_uuid
+    FROM $table_name
+    WHERE $attribute_type_clause AND $component_type_clause
 """
-Return the component UUIDs associated with the attribute and component type.
+
+"""
+Return the distinct component UUIDs associated with the attribute type, filter by
+component_type.
 """
 function list_associated_component_uuids(
     associations::SupplementalAttributeAssociations,
-    attribute::SupplementalAttribute,
+    attribute_type::Type{<:SupplementalAttribute},
     component_type::Type{<:InfrastructureSystemsComponent},
 )
-    params = [string(get_uuid(attribute))]
+    params = String[]
+    attribute_type_clause = _get_type_clause!(params, attribute_type, "attribute_type")
     component_type_clause = _get_type_clause!(params, component_type, "component_type")
-    query = _QUERY_LIST_ASSOCIATED_COMP_UUIDS * " AND $component_type_clause"
-    table = Tables.columntable(
-        _execute_cached(associations, query, params),
+    query = StringTemplates.render(
+        _QUERY_LIST_ASSOCIATED_COMP_UUIDS_BY_TYPES;
+        table_name = SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME,
+        attribute_type_clause = attribute_type_clause,
+        component_type_clause = component_type_clause,
     )
+    table = Tables.columntable(_execute_cached(associations, query, params))
     return Base.UUID.(table.component_uuid)
 end
+
+const _QUERY_LIST_ASSOCIATED_PAIR_UUIDS = StringTemplates.@template """
+    SELECT DISTINCT component_uuid, attribute_uuid
+    FROM $table_name
+    WHERE $component_type_clause AND $attribute_type_clause
+"""
 
 """
 Return the component and attribute UUIDs that are associated with the given types.
 """
 function list_associated_pair_uuids(
     associations::SupplementalAttributeAssociations,
-    component_type::Type{<:InfrastructureSystemsComponent},
     attribute_type::Type{<:SupplementalAttribute},
+    component_type::Type{<:InfrastructureSystemsComponent},
 )
     params = String[]
     component_type_clause = _get_type_clause!(params, component_type, "component_type")
     attribute_type_clause = _get_type_clause!(params, attribute_type, "attribute_type")
-    query = """
-        SELECT component_uuid, attribute_uuid
-        FROM $SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME
-        WHERE $component_type_clause AND $attribute_type_clause
-    """
-    table = Tables.rowtable(
-        _execute_cached(associations, query, params),
+    query = StringTemplates.render(
+        _QUERY_LIST_ASSOCIATED_PAIR_UUIDS;
+        table_name = SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME,
+        component_type_clause = component_type_clause,
+        attribute_type_clause = attribute_type_clause,
     )
+    table = Tables.rowtable(_execute_cached(associations, query, params))
     return [(Base.UUID(row.component_uuid), Base.UUID(row.attribute_uuid)) for row in table]
 end
 
@@ -387,6 +437,12 @@ const _QUERY_LIST_ASSOCIATED_COMP_UUIDS_BY_ONE_TYPE = """
     WHERE attribute_type = ?
 """
 
+const _QUERY_LIST_ASSOCIATED_COMP_UUIDS_BY_MULTIPLE_TYPES = StringTemplates.@template """
+    SELECT DISTINCT component_uuid
+    FROM $table_name
+    WHERE attribute_type IN ($placeholder)
+"""
+
 function _list_associated_component_uuids(
     associations::SupplementalAttributeAssociations,
     attribute_types,
@@ -401,17 +457,22 @@ function _list_associated_component_uuids(
     else
         placeholder = chop(repeat("?,", length(attribute_types)))
         params = Tuple(string(nameof(type)) for type in attribute_types)
-        query = """
-            SELECT DISTINCT component_uuid
-            FROM $SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME
-            WHERE attribute_type IN ($placeholder)
-        """
+        query = StringTemplates.render(
+            _QUERY_LIST_ASSOCIATED_COMP_UUIDS_BY_MULTIPLE_TYPES;
+            table_name = SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME,
+            placeholder = placeholder,
+        )
     end
 
     table = Tables.columntable(_execute_cached(associations, query, params))
     return Base.UUID.(table.component_uuid)
 end
 
+const _QUERY_LIST_ASSOCIATED_SUPPLEMENTAL_ATTRIBUTE_UUIDS = StringTemplates.@template """
+    SELECT attribute_uuid
+    FROM $table_name
+    WHERE $where_clause
+"""
 """
 Return the supplemental attribute UUIDs associated with the component and attribute type.
 """
@@ -428,11 +489,11 @@ function list_associated_supplemental_attribute_uuids(
         a_str = _get_attribute_type_string!(params, attribute_type)
         where_clause = "$c_str AND $a_str"
     end
-    query = """
-        SELECT attribute_uuid
-        FROM $SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME
-        WHERE $where_clause
-    """
+    query = StringTemplates.render(
+        _QUERY_LIST_ASSOCIATED_SUPPLEMENTAL_ATTRIBUTE_UUIDS;
+        table_name = SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME,
+        where_clause = where_clause,
+    )
     table = Tables.columntable(_execute_cached(associations, query, params))
     return Base.UUID.(table.attribute_uuid)
 end
@@ -498,13 +559,21 @@ function sql(
     return DataFrames.DataFrame(_execute(associations, query, params))
 end
 
+const _QUERY_TO_RECORDS = """
+    SELECT *
+    FROM $SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME
+"""
 """
 Return all rows in the table as dictionaries.
 """
 function to_records(associations::SupplementalAttributeAssociations)
-    query = "SELECT * FROM $SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME"
-    return Tables.rowtable(_execute(associations, query))
+    return Tables.rowtable(_execute(associations, _QUERY_TO_RECORDS))
 end
+
+const _QUERY_INSERT_ROWS_INTO_C_ATTR_TABLE = StringTemplates.@template """
+    INSERT INTO $table_name
+    VALUES($placeholder)
+"""
 
 """
 Add records to the database. Expects output from [`to_records`](@ref).
@@ -522,15 +591,26 @@ function from_records(::Type{SupplementalAttributeAssociations}, records)
             data[column][i] = record[column]
         end
     end
-    params = chop(repeat("?,", num_columns))
+    placeholder = chop(repeat("?,", num_columns))
     SQLite.DBInterface.executemany(
         associations.db,
-        "INSERT INTO $SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME VALUES($params)",
+        StringTemplates.render(
+            _QUERY_INSERT_ROWS_INTO_C_ATTR_TABLE;
+            table_name = SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME,
+            placeholder = placeholder,
+        ),
         NamedTuple(Symbol(k) => v for (k, v) in data),
     )
     _create_indexes!(associations)
     return associations
 end
+
+const _QUERY_REMOVE_ASSOCIATIONS = StringTemplates.@template """
+    DELETE FROM $table_name
+    $where_clause
+"""
+
+const _QUERY_SELECT_CHANGES = "SELECT CHANGES() AS changes"
 
 function _remove_associations!(
     associations::SupplementalAttributeAssociations,
@@ -539,10 +619,14 @@ function _remove_associations!(
 )
     _execute_cached(
         associations,
-        "DELETE FROM $SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME $where_clause",
+        StringTemplates.render(
+            _QUERY_REMOVE_ASSOCIATIONS;
+            table_name = SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME,
+            where_clause = where_clause,
+        ),
         params,
     )
-    table = Tables.rowtable(_execute(associations, "SELECT CHANGES() AS changes"))
+    table = Tables.rowtable(_execute(associations, _QUERY_SELECT_CHANGES))
     @assert_op length(table) == 1
     @debug "Deleted $(table[1].changes) rows from the time series metadata table" _group =
         LOG_GROUP_SUPPLEMENTAL_ATTRIBUTES

@@ -240,11 +240,13 @@ function get_supplemental_attribute(mgr::SupplementalAttributeManager, uuid::Bas
     throw(ArgumentError("No attribute with UUID = $uuid is stored"))
 end
 
-list_associated_component_uuids(
+function list_associated_component_uuids(
     mgr::SupplementalAttributeManager,
     attribute_type::Type{<:SupplementalAttribute},
-) =
-    list_associated_component_uuids(mgr.associations, attribute_type)
+    component_type::Union{Nothing, Type{<:InfrastructureSystemsComponent}},
+)
+    return list_associated_component_uuids(mgr.associations, attribute_type, component_type)
+end
 
 function serialize(mgr::SupplementalAttributeManager)
     return Dict(

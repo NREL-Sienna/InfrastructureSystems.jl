@@ -697,9 +697,11 @@ end
     component1 = IS.TestComponent("component1", 1)
     component2 = IS.TestComponent("component2", 2)
     component3 = IS.TestComponent("component3", 3)
+    component4 = IS.AdditionalTestComponent("component4", 4)
     IS.add_component!(data, component1)
     IS.add_component!(data, component2)
     IS.add_component!(data, component3)
+    IS.add_component!(data, component4)
     for attr in (
         IS.GeographicInfo(),
         IS.GeographicInfo(),
@@ -708,23 +710,37 @@ end
     )
         IS.add_supplemental_attribute!(data, component1, attr)
         IS.add_supplemental_attribute!(data, component2, attr)
+        IS.add_supplemental_attribute!(data, component4, attr)
     end
     IS.add_supplemental_attribute!(data, component3, IS.TestSupplemental(; value = 5.0))
 
     components = IS.get_associated_components(data, IS.SupplementalAttribute)
     @test Set([IS.get_name(x) for x in components]) ==
-          Set([IS.get_name(component1), IS.get_name(component2), IS.get_name(component3)])
+          Set([
+        IS.get_name(component1),
+        IS.get_name(component2),
+        IS.get_name(component3),
+        IS.get_name(component4),
+    ])
+
+    components = IS.get_associated_components(
+        data,
+        IS.SupplementalAttribute;
+        component_type = IS.AdditionalTestComponent,
+    )
+    @test length(components) == 1
+    @test components[1] === component4
 
     components = IS.get_associated_components(data, IS.GeographicInfo)
     @test Set([IS.get_name(x) for x in components]) ==
-          Set([IS.get_name(component1), IS.get_name(component2)])
+          Set([IS.get_name(component1), IS.get_name(component2), IS.get_name(component4)])
 
     IS.remove_supplemental_attributes!(data, IS.TestSupplemental)
     @test isempty(IS.get_associated_components(data, IS.TestSupplemental))
 
     components = IS.get_associated_components(data, IS.GeographicInfo)
     @test Set([IS.get_name(x) for x in components]) ==
-          Set([IS.get_name(component1), IS.get_name(component2)])
+          Set([IS.get_name(component1), IS.get_name(component2), IS.get_name(component4)])
 
     abstract type PointlessAbstractType <: IS.SupplementalAttribute end
     @test isempty(IS.get_associated_components(data, PointlessAbstractType))
@@ -742,50 +758,20 @@ end
         IS.add_supplemental_attribute!(data, component, geo_supplemental_attribute)
     end
     components = IS.get_associated_components(
-        AbstractGenerator,
         data,
-        geo_supplemental_attribute,
+        geo_supplemental_attribute;
+        component_type = AbstractGenerator,
     )
     @test length(components) == 2
     @test get_sorted_component_names(components) == ["gen1", "gen2"]
 
-    components = IS.get_available_associated_components(
-        AbstractPowerSystemComponent,
-        data,
-        geo_supplemental_attribute,
-    )
-    @test length(components) == 3
-    @test get_sorted_component_names(components) == ["bus1", "bus2", "gen1"]
-
     components = IS.get_associated_components(
-        AbstractRenewableGenerator,
         data,
-        geo_supplemental_attribute,
+        geo_supplemental_attribute;
+        component_type = AbstractRenewableGenerator,
     )
     @test length(components) == 1
     @test components[1] === gen2
-
-    for only_available in (true, false)
-        func = if only_available
-            IS.get_available_associated_components
-        else
-            IS.get_associated_components
-        end
-        components = func(
-            Bus,
-            data,
-            geo_supplemental_attribute;
-        )
-        @test length(components) == 2
-        @test get_sorted_component_names(components) == ["bus1", "bus2"]
-
-        components = func(
-            PVGenerator,
-            data,
-            geo_supplemental_attribute;
-        )
-        @test length(components) == (only_available ? 0 : 1)
-    end
 end
 
 @testset "Test gen_num_components" begin
@@ -832,29 +818,9 @@ end
     @test component_names == ["gen1", "gen2"]
 
     ca_pairs = IS.get_component_supplemental_attribute_pairs(
-        AbstractPowerSystemComponent,
-        IS.SupplementalAttribute,
-        data;
-        only_available_components = true,
-    )
-    @test length(ca_pairs) == 3
-    sort!(ca_pairs; by = x -> IS.get_name(x.component))
-    component_names = [IS.get_name(x.component) for x in ca_pairs]
-    @test component_names == ["bus1", "bus2", "gen1"]
-
-    ca_pairs = IS.get_component_supplemental_attribute_pairs(
-        PVGenerator,
-        IS.SupplementalAttribute,
-        data;
-        only_available_components = true,
-    )
-    @test length(ca_pairs) == 0
-
-    ca_pairs = IS.get_component_supplemental_attribute_pairs(
         ThermalGenerator,
         IS.GeographicInfo,
-        data;
-        only_available_components = false,
+        data,
     )
     @test length(ca_pairs) == 1
     @test ca_pairs[1].component === gen1
