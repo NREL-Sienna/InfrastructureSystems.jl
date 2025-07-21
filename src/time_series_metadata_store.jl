@@ -1239,6 +1239,7 @@ function remove_metadata!(
     owner::TimeSeriesOwners,
     metadata::TimeSeriesMetadata,
 )
+    _check_remove_metadata(store, metadata)
     where_clause, params = _make_where_clause(owner, metadata)
     num_deleted = _remove_metadata!(store, where_clause, params)
     if num_deleted != 1
@@ -1277,6 +1278,12 @@ function remove_metadata!(
                 params,
             ),
         ).metadata_uuid
+
+    for metadata_uuid in metadata_uuids
+        metadata = store.metadata_uuids[Base.UUID(metadata_uuid)]
+        _check_remove_metadata(store, metadata)
+    end
+
     num_deleted = _remove_metadata!(store, where_clause, params)
     if num_deleted == 0
         @warn "No time series metadata was deleted."
@@ -1284,6 +1291,33 @@ function remove_metadata!(
         for metadata_uuid in metadata_uuids
             _handle_removed_metadata(store, metadata_uuid)
         end
+    end
+end
+
+_check_remove_metadata(::TimeSeriesMetadataStore, ::TimeSeriesMetadata) = nothing
+
+const _QUERY_CHECK_FOR_ATTACHED_DSTS = """
+    SELECT COUNT(*) AS count
+    FROM $ASSOCIATIONS_TABLE_NAME
+    WHERE time_series_uuid = ? AND time_series_type = '$(nameof(DeterministicSingleTimeSeries))'
+"""
+
+function _check_remove_metadata(
+    store::TimeSeriesMetadataStore,
+    metadata::SingleTimeSeriesMetadata,
+)
+    ts_uuid = get_time_series_uuid(metadata)
+    count = _execute_count(store, _QUERY_CHECK_FOR_ATTACHED_DSTS, (string(ts_uuid),))
+    if count > 0
+        # We are adding this block because of unnecessary complexity when
+        # serializing/de-serializing time series to/from the SiennaGridDB.
+        # There should not be a reason for a user to remove this SingleTimeSeries.
+        throw(
+            ArgumentError(
+                "Cannot remove SingleTimeSeries with UUID = $ts_uuid because it is attached to a " *
+                "DeterministicSingleTimeSeries.",
+            ),
+        )
     end
 end
 
