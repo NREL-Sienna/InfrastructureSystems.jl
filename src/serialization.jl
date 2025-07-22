@@ -211,7 +211,7 @@ function deserialize(::Type{T}, data::Any) where {T <: AbstractFloat}
 end
 
 function deserialize(::Type{T}, data::Dict) where {T <: NamedTuple}
-    return T(key = data[string(key)] for key in fieldnames(T))
+    return T(key in data[string(key)] for key in fieldnames(T))
 end
 
 # Some types that definitely won't be deserialized from raw Dicts

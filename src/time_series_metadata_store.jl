@@ -1091,7 +1091,7 @@ function get_time_series_resolutions(
         ORDER BY resolution
     """
     return from_iso_8601.(
-        Tables.columntable(_execute(store, query, params)).resolution
+        Tables.columntable(_execute(store, query, params)).resolution,
     )
 end
 
@@ -1504,8 +1504,9 @@ end
 _get_owner_category(
     ::Union{InfrastructureSystemsComponent, Type{<:InfrastructureSystemsComponent}},
 ) = "Component"
-_get_owner_category(::Union{SupplementalAttribute, Type{<:SupplementalAttribute}}) =
-    "SupplementalAttribute"
+_get_owner_category(
+    ::Union{SupplementalAttribute, Type{<:SupplementalAttribute}},
+) = "SupplementalAttribute"
 
 function _make_category_clause(ts_type::Type{<:TimeSeriesData})
     subtypes = [string(nameof(x)) for x in get_all_concrete_subtypes(ts_type)]
