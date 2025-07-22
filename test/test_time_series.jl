@@ -1340,14 +1340,16 @@ end
         )
 
         # Ensure that deleting one doesn't delete the other.
+        # Note: we block deletion of SingleTimeSeries when there is
+        # a DeterministicSingleTimeSeries attached to it.
         if in_memory
             IS.remove_time_series!(sys, IS.Deterministic, component, name)
             @test IS.get_time_series(IS.SingleTimeSeries, component, name) isa
                   IS.SingleTimeSeries
         else
-            IS.remove_time_series!(sys, IS.SingleTimeSeries, component, name)
-            @test IS.get_time_series(IS.Deterministic, component, name) isa
-                  IS.DeterministicSingleTimeSeries
+            IS.remove_time_series!(sys, IS.DeterministicSingleTimeSeries, component, name)
+            @test IS.get_time_series(IS.SingleTimeSeries, component, name) isa
+                  IS.SingleTimeSeries
         end
     end
 end
@@ -3964,4 +3966,50 @@ end
         sys.time_series_manager.metadata_store;
         table = IS.KEY_VALUE_TABLE_NAME,
     ) isa DataFrame
+end
+
+@testset "Test removal of SingleTimeSeries attached to a DeterministicSingleTimeSeries" begin
+    sys = IS.SystemData()
+    name = "Component1"
+    component = IS.TestComponent(name, 5)
+    IS.add_component!(sys, component)
+
+    initial_time = Dates.DateTime("2020-09-01")
+    resolution = Dates.Hour(1)
+    data = TimeSeries.TimeArray(
+        range(initial_time; length = 12, step = resolution),
+        ones(12),
+    )
+    ts_name = "test"
+    data = IS.SingleTimeSeries(; data = data, name = ts_name)
+    IS.add_time_series!(sys, component, data)
+
+    IS.transform_single_time_series!(
+        sys,
+        IS.DeterministicSingleTimeSeries,
+        Dates.Hour(2),
+        resolution;
+        resolution = resolution,
+    )
+    @test IS.has_time_series(component, IS.SingleTimeSeries, ts_name)
+    @test IS.has_time_series(component, IS.DeterministicSingleTimeSeries, ts_name)
+    metadata = IS.get_time_series_metadata(
+        component;
+        time_series_type = IS.SingleTimeSeries,
+        name = ts_name,
+        resolution = resolution,
+    )
+    @assert length(metadata) == 1
+    @test_throws(ArgumentError, IS.remove_time_series!(sys, component, metadata[1]))
+    @test_throws(
+        ArgumentError,
+        IS.remove_time_series!(sys, IS.SingleTimeSeries, component, ts_name)
+    )
+    @test IS.has_time_series(component, IS.SingleTimeSeries, ts_name)
+    @test IS.has_time_series(component, IS.DeterministicSingleTimeSeries, ts_name)
+
+    IS.remove_time_series!(sys, IS.DeterministicSingleTimeSeries, component, ts_name)
+    IS.remove_time_series!(sys, IS.SingleTimeSeries, component, ts_name)
+    @test !IS.has_time_series(component, IS.SingleTimeSeries, ts_name)
+    @test !IS.has_time_series(component, IS.DeterministicSingleTimeSeries, ts_name)
 end
