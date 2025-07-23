@@ -596,7 +596,7 @@ end
 
 "Compute the conjunction of the `==` values of all the fields in `a` and `b`"
 double_equals_from_fields(a::T, b::T) where {T} =
-    compare_over_fields(==,&,true,a,b)
+    compare_over_fields(==, &, true, a, b)
 
 "Compute the conjunction of the `isequal` values of all the fields in `a` and `b`"
 isequal_from_fields(a::T, b::T) where {T} =
