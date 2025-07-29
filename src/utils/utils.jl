@@ -475,15 +475,39 @@ function transform_array_for_hdf(
     return t_lin_cost
 end
 
+_elem_to_pad_for_hdf(::Type{Tuple{Float64, Float64}}) = (NaN, NaN)
+_elem_to_pad_for_hdf(::Type{Float64}) = NaN
+
+function _pad_array_for_hdf(data::Array{T}, max_length) where {T}
+    data_length = first(size(data))
+    max_length >= data_length ||
+        throw(
+            ArgumentError("max_length must be greater than or equal to the length of data"),
+        )
+    data_other_dims = size(data)[2:end]
+    padding_shape = (max_length - data_length, data_other_dims...)
+    padding = fill(_elem_to_pad_for_hdf(T), padding_shape)
+    return vcat(data, padding)
+end
+
+function _pad_array_for_hdf(data::Vector{<:Array{T}}) where {T}
+    max_length = maximum(length.(data))
+    result = _pad_array_for_hdf.(data, max_length)
+    return result
+end
+
+function _unpad_array_for_hdf(data::AbstractArray{T}) where {T}
+    pad_elem = _elem_to_pad_for_hdf(T)
+    # find last slice for which it is not the case that everything is padding
+    last_valid = findlast(x -> !all(isequal(pad_elem), x), eachslice(data; dims = 1))
+    return selectdim(data, 1, 1:last_valid)
+end
+
 function transform_array_for_hdf(data::Vector{<:Vector{<:Tuple}})
+    data = _pad_array_for_hdf(data)
     rows = length(data)
     n_points = length(first(data))
-    !all(length.(data) .== n_points) &&
-        throw(
-            ArgumentError(
-                "Only supported for the case where each element has the same length",
-            ),
-        )
+    @assert all(length.(data) .== n_points)  # because we padded
     @assert_op length(first(first(data))) == 2  # should be just (x, y)
     t_quad_cost = Array{Float64}(undef, rows, n_points, 2)
     for r in 1:rows, t in 1:n_points
@@ -513,14 +537,10 @@ function transform_array_for_hdf(
 end
 
 function transform_array_for_hdf(data::Vector{<:Matrix})
+    data = _pad_array_for_hdf(data)
     rows = length(data)
     n_points = size(first(data), 1)
-    !all(size.(data, 1) .== n_points) &&
-        throw(
-            ArgumentError(
-                "Only supported for the case where each element has the same length",
-            ),
-        )
+    @assert all(size.(data, 1) .== n_points)
     @assert_op size(first(data), 2) == 2  # should be just (x, y)
     combined_cost = Array{Float64}(undef, rows, n_points, 2)
     for r in 1:rows

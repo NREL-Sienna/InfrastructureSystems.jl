@@ -66,6 +66,22 @@ tst_gen_piecewise_step(start, n) = [
     IS.PiecewiseStepData([i, i + 1, i + 2], [i + 3, i + 4])
     for i::Float64 in start:6:(start + 6 * (n - 1))]
 
+tst_gen_piecewise_linear_ragged(start, n) = [
+    IS.PiecewiseLinearData([
+        (i, i + 1),
+        (i + 2, i + 3),
+        (i + 4, i + 5),
+        (iseven(i / 6) ? [(i + 6, i + 7), (i + 8, i + 9)] : [])...,
+    ])
+    for i::Float64 in start:6:(start + 6 * (n - 1))]
+
+tst_gen_piecewise_step_ragged(start, n) = [
+    IS.PiecewiseStepData(
+        [i, i + 1, i + 2, (iseven(i / 6) ? [i + 3, i + 4] : [])...],
+        [i + 5, i + 6, (iseven(i / 6) ? [i + 7, i + 8] : [])...],
+    )
+    for i::Float64 in start:6:(start + 6 * (n - 1))]
+
 tst_test_datas_1 = [
     [1.0, 2.0, 3.0],
     [(1.0, 2.0, 3.0), (4.0, 5.0, 6.0), (7.0, 8.0, 9.0), (10.0, 11.0, 12.0)],
@@ -87,6 +103,8 @@ tst_test_datas_1 = [
     ],
     tst_gen_piecewise_linear(0, 4),
     tst_gen_piecewise_step(0, 4),
+    tst_gen_piecewise_linear_ragged(0, 4),
+    tst_gen_piecewise_step_ragged(0, 4),
 ]
 
 tst_test_datas_2 = [
@@ -110,6 +128,8 @@ tst_test_datas_2 = [
     ],
     tst_gen_piecewise_linear(50, 4),
     tst_gen_piecewise_step(50, 4),
+    tst_gen_piecewise_linear_ragged(50, 5),
+    tst_gen_piecewise_step_ragged(50, 5),
 ]
 
 tst_test_datas_dated = [
