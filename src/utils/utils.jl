@@ -478,7 +478,7 @@ end
 _elem_to_pad_for_hdf(::Type{Tuple{Float64, Float64}}) = (NaN, NaN)
 _elem_to_pad_for_hdf(::Type{Float64}) = NaN
 
-function _pad_array_for_hdf(data::Array{T}, max_length) where {T}
+function _pad_fd_for_hdf(data::Array{T}, max_length) where {T}
     data_length = first(size(data))
     max_length >= data_length ||
         throw(
@@ -490,11 +490,18 @@ function _pad_array_for_hdf(data::Array{T}, max_length) where {T}
     return vcat(data, padding)
 end
 
-function _pad_array_for_hdf(data::Vector{<:Array{T}}) where {T}
-    max_length = maximum(length.(data))
-    result = _pad_array_for_hdf.(data, max_length)
+function _pad_array_for_hdf(data::Vector{<:Array{T}}, max_length) where {T}
+    result = _pad_fd_for_hdf.(data, max_length)
     return result
 end
+
+# entry point for the vector of FunctionData case
+_pad_array_for_hdf(data::Vector{<:Array{T}}) where {T} =
+    _pad_array_for_hdf(data, maximum(length.(data)))
+
+# entry point for the SortedDict of FunctionData case
+_pad_arrays_for_hdf(data) =
+    _pad_array_for_hdf.(data, maximum((x -> maximum(length.(x))).(data)))
 
 function _unpad_array_for_hdf(data::AbstractArray{T}) where {T}
     pad_elem = _elem_to_pad_for_hdf(T)
@@ -519,7 +526,7 @@ end
 function transform_array_for_hdf(
     data::SortedDict{Dates.DateTime, Vector{Vector{Tuple{Float64, Float64}}}},
 )
-    quad_cost = hcat(values(data)...)
+    quad_cost = hcat(_pad_arrays_for_hdf(values(data))...)
     rows, cols = size(quad_cost)
     n_points = length(quad_cost[1, 1])
     !all(length.(quad_cost) .== n_points) &&
@@ -553,7 +560,7 @@ function transform_array_for_hdf(
     data::SortedDict{Dates.DateTime, <:Vector{<:Matrix}},
 )
     cols = length(data)
-    costs = values(data)
+    costs = _pad_arrays_for_hdf(values(data))
     rows = length(first(costs))
     n_points = size(first(first(costs)), 1)
     for cost in costs
