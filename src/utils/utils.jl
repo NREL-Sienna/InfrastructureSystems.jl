@@ -499,7 +499,7 @@ end
 _pad_array_for_hdf(data::Vector{<:Array{T}}) where {T} =
     _pad_array_for_hdf(data, maximum(length.(data)))
 
-# entry point for the SortedDict of FunctionData case
+# entry point for the SortedDict of vector of FunctionData case
 _pad_arrays_for_hdf(data) =
     _pad_array_for_hdf.(data, maximum((x -> maximum(length.(x))).(data)))
 
@@ -529,12 +529,7 @@ function transform_array_for_hdf(
     quad_cost = hcat(_pad_arrays_for_hdf(values(data))...)
     rows, cols = size(quad_cost)
     n_points = length(quad_cost[1, 1])
-    !all(length.(quad_cost) .== n_points) &&
-        throw(
-            ArgumentError(
-                "Only supported for the case where each element has the same length",
-            ),
-        )
+    @assert all(length.(quad_cost) .== n_points)
     @assert_op length(first(quad_cost[1, 1])) == 2  # should be just (x, y)
     t_quad_cost = Array{Float64}(undef, rows, cols, n_points, 2)
     for r in 1:rows, c in 1:cols, t in 1:n_points
@@ -564,12 +559,7 @@ function transform_array_for_hdf(
     rows = length(first(costs))
     n_points = size(first(first(costs)), 1)
     for cost in costs
-        (length(cost) != rows || !all(size.(cost, 1) .== n_points)) &&
-            throw(
-                ArgumentError(
-                    "Only supported for the case where each element has the same length",
-                ),
-            )
+        @assert length(cost) == rows && all(size.(cost, 1) .== n_points)
     end
     @assert_op size(first(first(costs)), 2) == 2  # should be just (x, y)
 

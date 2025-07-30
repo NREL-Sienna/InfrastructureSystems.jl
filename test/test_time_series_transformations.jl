@@ -59,11 +59,13 @@ tst_gen_test_date_series(l) =
     collect(range(; start = Dates.Date("2024-01-01"), step = Dates.Day(1), length = l))
 
 _gen_one_piecewise(::Type{IS.PiecewiseLinearData}, start_val, n_tranches) =
-    IS.PiecewiseLinearData([(i + start_val, i + start_val + 3) for i::Float64 in 1:(n_tranches+1)])
+    IS.PiecewiseLinearData([
+        (i + start_val, i + start_val + 3) for i::Float64 in 1:(n_tranches + 1)
+    ])
 
 _gen_one_piecewise(::Type{IS.PiecewiseStepData}, start_val, n_tranches) =
     IS.PiecewiseStepData(
-        [i + start_val for i::Float64 in 1:(n_tranches+1)],
+        [i + start_val for i::Float64 in 1:(n_tranches + 1)],
         [i + start_val + 3 for i::Float64 in 1:n_tranches],
     )
 
@@ -73,17 +75,25 @@ first piecewise `FunctionData` has `first_n_tranches` tranches (`length`), last 
 `last_n_tranches`, rest have `rest_n_tranches`, values within the `FunctionData` start at
 `start_val`.
 """
-function tst_gen_piecewise(::Type{T}, start_val, n_fds, first_n_tranches, last_n_tranches, rest_n_tranches) where {T <: IS.FunctionData}
+function tst_gen_piecewise(
+    ::Type{T},
+    start_val,
+    n_fds,
+    first_n_tranches,
+    last_n_tranches,
+    rest_n_tranches,
+) where {T <: IS.FunctionData}
     result = Vector{T}(undef, n_fds)
     for i in 1:n_fds
-        my_n_tranches = (i == 1) ? first_n_tranches :
+        my_n_tranches =
+            (i == 1) ? first_n_tranches :
             ((i == n_fds) ? last_n_tranches : rest_n_tranches)
         result[i] = _gen_one_piecewise(T, start_val, my_n_tranches)
     end
     @assert length(result) == n_fds
     @assert length(first(result)) == first_n_tranches
     @assert length(last(result)) == last_n_tranches
-    @assert all(length.(result[2:end-1]) .== rest_n_tranches)
+    @assert all(length.(result[2:(end - 1)]) .== rest_n_tranches)
     return result
 end
 
