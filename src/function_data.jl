@@ -146,7 +146,7 @@ function _convert_to_xy_coords(point)
     return NamedTuple{(:x, :y)}(point)
 end
 
-function PiecewiseLinearData(points::Vector)
+function PiecewiseLinearData(points::AbstractVector)
     PiecewiseLinearData(_convert_to_xy_coords.(points))
 end
 

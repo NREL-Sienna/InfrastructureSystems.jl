@@ -582,7 +582,7 @@ function retransform_hdf_array(data::Array, ::Type{<:Vector{<:Union{Tuple, Named
     dims_to_keep = Tuple(1:(ndims(data) - 2))
     # Pop off the last dimension and call the constructor on that data
     return map(
-        x -> [Tuple(pair) for pair in eachrow(x)],
+        x -> _unpad_array_for_hdf([Tuple(pair) for pair in eachrow(x)]),
         eachslice(data; dims = dims_to_keep),
     )  # PERF possibly preallocation would be better
 end
@@ -598,7 +598,7 @@ function retransform_hdf_array(data::Array, ::Type{Matrix})
         ),
     )
     dims_to_keep = Tuple(1:(ndims(data) - 2))
-    return eachslice(data; dims = dims_to_keep)
+    return _unpad_array_for_hdf.(eachslice(data; dims = dims_to_keep))
 end
 
 function deserialize_time_series(
