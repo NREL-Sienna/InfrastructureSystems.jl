@@ -81,6 +81,8 @@ function _process_migrations_if_needed(store::TimeSeriesMetadataStore)
         _migrate_from_v2_3(store)
     elseif _needs_migration_from_v2_4(store.db)
         _migrate_from_v2_4(store)
+    else
+        _handle_infrasys_resolutions(store)
     end
 end
 
@@ -273,6 +275,50 @@ function _migrate_from_v2_4(store::TimeSeriesMetadataStore)
     end
     SQLite.DBInterface.execute(store.db, "DROP TABLE $ASSOCIATIONS_TABLE_NAME")
     _add_migrated_rows!(store, new_rows)
+end
+
+"""
+The Python package infrasys stores resolutions in the most human-readable format, such as
+P0DT1H for 1 hour and P0DT5M for 5 minutes.
+InfrastructureSystems.jl always stores regular resolutions in milliseconds.
+InfrastructureSystems.jl does this because user queries might include resolution and we don't
+want to have to search for any conceivable resolution.
+This will go away if we change infrasys to match.
+"""
+function _handle_infrasys_resolutions(store::TimeSeriesMetadataStore)
+    hours_regex = r"^P0DT\d+H$"
+    minutes_regex = r"^P0DT\d+M$"
+    seconds_regex = r"^P0DT\d+S$"
+    num_updated_rows = 0
+    SQLite.transaction(store.db) do
+        for row in Tables.rowtable(
+            SQLite.DBInterface.execute(
+                store.db,
+                """
+                    SELECT
+                        id, resolution
+                    FROM $ASSOCIATIONS_TABLE_NAME
+                    WHERE resolution NOT LIKE '%.000S%'
+                    COLLATE BINARY
+                """),
+        )
+            if occursin(hours_regex, row.resolution) ||
+               occursin(minutes_regex, row.resolution) ||
+               occursin(seconds_regex, row.resolution)
+                new_resolution = _serialize_period(from_iso_8601(row.resolution))
+                SQLite.DBInterface.execute(
+                    store.db,
+                    "UPDATE $ASSOCIATIONS_TABLE_NAME SET resolution = ? WHERE id = ?",
+                    (new_resolution, row.id),
+                )
+                num_updated_rows += 1
+            end
+        end
+    end
+
+    if num_updated_rows > 0
+        @info "Updated $num_updated_rows rows with InfrastructureSystems.jl resolution format."
+    end
 end
 
 function _create_migrated_row(metadata::SingleTimeSeriesMetadata, row)
