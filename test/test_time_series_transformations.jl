@@ -51,11 +51,11 @@ function test_outer_round_trip(
 end
 
 # TEST DATA/RESOURCES
-tst_gen_storage() = IS.make_time_series_storage(; in_memory = true)
+time_series_test_gen_storage() = IS.make_time_series_storage(; in_memory = true)
 
-tst_test_dates = [Dates.DateTime("2023-01-01"), Dates.DateTime("2024-01-01")]
+time_series_test_test_dates = [Dates.DateTime("2023-01-01"), Dates.DateTime("2024-01-01")]
 
-tst_gen_test_date_series(l) =
+time_series_test_gen_test_date_series(l) =
     collect(range(; start = Dates.Date("2024-01-01"), step = Dates.Day(1), length = l))
 
 _gen_one_piecewise(::Type{IS.PiecewiseLinearData}, start_val, n_tranches) =
@@ -75,7 +75,7 @@ first piecewise `FunctionData` has `first_n_tranches` tranches (`length`), last 
 `last_n_tranches`, rest have `rest_n_tranches`, values within the `FunctionData` start at
 `start_val`.
 """
-function tst_gen_piecewise(
+function time_series_test_gen_piecewise(
     ::Type{T},
     start_val,
     n_fds,
@@ -97,7 +97,7 @@ function tst_gen_piecewise(
     return result
 end
 
-tst_test_datas_1 = [
+time_series_test_test_datas_1 = [
     [1.0, 2.0, 3.0],
     [(1.0, 2.0, 3.0), (4.0, 5.0, 6.0), (7.0, 8.0, 9.0), (10.0, 11.0, 12.0)],
     [
@@ -116,13 +116,13 @@ tst_test_datas_1 = [
         IS.QuadraticFunctionData(7.0, 8.0, 9.0),
         IS.QuadraticFunctionData(10.0, 11.0, 12.0),
     ],
-    tst_gen_piecewise(IS.PiecewiseLinearData, 0, 4, 4, 4, 4),
-    tst_gen_piecewise(IS.PiecewiseStepData, 0, 4, 4, 4, 4),
-    tst_gen_piecewise(IS.PiecewiseLinearData, 0, 4, 5, 4, 3),
-    tst_gen_piecewise(IS.PiecewiseStepData, 0, 4, 3, 4, 5),
+    time_series_test_gen_piecewise(IS.PiecewiseLinearData, 0, 4, 4, 4, 4),
+    time_series_test_gen_piecewise(IS.PiecewiseStepData, 0, 4, 4, 4, 4),
+    time_series_test_gen_piecewise(IS.PiecewiseLinearData, 0, 4, 5, 4, 3),
+    time_series_test_gen_piecewise(IS.PiecewiseStepData, 0, 4, 3, 4, 5),
 ]
 
-tst_test_datas_2 = [
+time_series_test_test_datas_2 = [
     [4.0, 5.0, 6.0],
     [(21.0, 22.0, 23.0), (24.0, 25.0, 26.0), (27.0, 28.0, 29.0), (30.0, 31.0, 32.0)],
     [
@@ -141,42 +141,44 @@ tst_test_datas_2 = [
         IS.QuadraticFunctionData(27.0, 28.0, 29.0),
         IS.QuadraticFunctionData(30.0, 31.0, 32.0),
     ],
-    tst_gen_piecewise(IS.PiecewiseLinearData, 50, 4, 4, 4, 4),
-    tst_gen_piecewise(IS.PiecewiseStepData, 50, 4, 4, 4, 4),
-    tst_gen_piecewise(IS.PiecewiseLinearData, 50, 4, 5, 6, 3),
-    tst_gen_piecewise(IS.PiecewiseStepData, 50, 4, 3, 6, 5),
+    time_series_test_gen_piecewise(IS.PiecewiseLinearData, 50, 4, 4, 4, 4),
+    time_series_test_gen_piecewise(IS.PiecewiseStepData, 50, 4, 4, 4, 4),
+    time_series_test_gen_piecewise(IS.PiecewiseLinearData, 50, 4, 5, 6, 3),
+    time_series_test_gen_piecewise(IS.PiecewiseStepData, 50, 4, 3, 6, 5),
 ]
 
-tst_test_datas_dated = [
+time_series_test_test_datas_dated = [
     SortedDict{Dates.DateTime, typeof(data_1)}(
-        tst_test_dates[1] => data_1, tst_test_dates[2] => data_2)
-    for (data_1, data_2) in zip(tst_test_datas_1, tst_test_datas_2)]
+        time_series_test_test_dates[1] => data_1,
+        time_series_test_test_dates[2] => data_2)
+    for (data_1, data_2) in
+    zip(time_series_test_test_datas_1, time_series_test_test_datas_2)]
 
 @testset "Test HDF transformation round trip: arrays" begin
-    for test_data in tst_test_datas_1
+    for test_data in time_series_test_test_datas_1
         test_inner_round_trip(test_data)
     end
 end
 
 @testset "Test HDF transformation round trip: SortedDict{DateTime}" begin
-    for test_data in tst_test_datas_dated
+    for test_data in time_series_test_test_datas_dated
         test_inner_round_trip(test_data)
     end
 end
 
 @testset "Test HDF transformation round trip: SingleTimeSeries" begin
-    for test_data in tst_test_datas_1
-        my_dates = tst_gen_test_date_series(length(test_data))
+    for test_data in time_series_test_test_datas_1
+        my_dates = time_series_test_gen_test_date_series(length(test_data))
         test_timearray = TimeSeries.TimeArray(my_dates, test_data)
-        test_outer_round_trip(test_timearray, tst_gen_storage(), 1:3)
-        test_outer_round_trip(test_timearray, tst_gen_storage(), 2:3)
+        test_outer_round_trip(test_timearray, time_series_test_gen_storage(), 1:3)
+        test_outer_round_trip(test_timearray, time_series_test_gen_storage(), 2:3)
     end
 end
 
 @testset "Test HDF transformation round trip: Deterministic" begin
-    for test_data in tst_test_datas_dated
-        test_outer_round_trip(test_data, tst_gen_storage(), 1:3, 1:2)
-        test_outer_round_trip(test_data, tst_gen_storage(), 2:3, 1:2)
-        test_outer_round_trip(test_data, tst_gen_storage(), 1:2, 2:2)
+    for test_data in time_series_test_test_datas_dated
+        test_outer_round_trip(test_data, time_series_test_gen_storage(), 1:3, 1:2)
+        test_outer_round_trip(test_data, time_series_test_gen_storage(), 2:3, 1:2)
+        test_outer_round_trip(test_data, time_series_test_gen_storage(), 1:2, 2:2)
     end
 end
