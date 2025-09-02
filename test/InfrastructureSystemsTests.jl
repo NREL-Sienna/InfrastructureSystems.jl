@@ -10,6 +10,7 @@ import JSON3
 import HDF5
 using DataStructures: SortedDict
 using DataFrames
+using DataFramesMeta
 using Random
 using ProgressLogging
 import SQLite

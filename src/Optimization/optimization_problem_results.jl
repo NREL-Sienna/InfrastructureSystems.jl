@@ -4,12 +4,12 @@ mutable struct OptimizationProblemResults <: Results
     timestamps::Vector{Dates.DateTime}
     source_data::Union{Nothing, InfrastructureSystemsType}
     source_data_uuid::Base.UUID
-    aux_variable_values::Dict{AuxVarKey, DataFrames.DataFrame}
-    variable_values::Dict{VariableKey, DataFrames.DataFrame}
-    dual_values::Dict{ConstraintKey, DataFrames.DataFrame}
-    parameter_values::Dict{ParameterKey, DataFrames.DataFrame}
-    expression_values::Dict{ExpressionKey, DataFrames.DataFrame}
-    optimizer_stats::DataFrames.DataFrame
+    aux_variable_values::Dict{AuxVarKey, DataFrame}
+    variable_values::Dict{VariableKey, DataFrame}
+    dual_values::Dict{ConstraintKey, DataFrame}
+    parameter_values::Dict{ParameterKey, DataFrame}
+    expression_values::Dict{ExpressionKey, DataFrame}
+    optimizer_stats::DataFrame
     optimization_container_metadata::OptimizationContainerMetadata
     model_type::String
     results_dir::String
@@ -113,7 +113,7 @@ function export_result(
     path,
     key::OptimizationContainerKey,
     timestamp::Dates.DateTime,
-    df::DataFrames.DataFrame,
+    df::DataFrame,
 )
     name = encode_key_as_string(key)
     export_result(CSV.File, path, name, timestamp, df)
@@ -125,7 +125,7 @@ function export_result(
     path,
     name::AbstractString,
     timestamp::Dates.DateTime,
-    df::DataFrames.DataFrame,
+    df::DataFrame,
 )
     filename = joinpath(path, name * "_" * convert_for_path(timestamp) * ".csv")
     export_result(CSV.File, filename, df)
@@ -136,7 +136,7 @@ function export_result(
     ::Type{CSV.File},
     path,
     key::OptimizationContainerKey,
-    df::DataFrames.DataFrame,
+    df::DataFrame,
 )
     name = encode_key_as_string(key)
     export_result(CSV.File, path, name, df)
@@ -147,14 +147,14 @@ function export_result(
     ::Type{CSV.File},
     path,
     name::AbstractString,
-    df::DataFrames.DataFrame,
+    df::DataFrame,
 )
     filename = joinpath(path, name * ".csv")
     export_result(CSV.File, filename, df)
     return
 end
 
-function export_result(::Type{CSV.File}, filename, df::DataFrames.DataFrame)
+function export_result(::Type{CSV.File}, filename, df::DataFrame)
     open(filename, "w") do io
         CSV.write(io, df)
     end
@@ -305,53 +305,85 @@ function _copy_for_serialization(res::OptimizationProblemResults)
 end
 
 function _read_results(
-    result_values::Dict{<:OptimizationContainerKey, DataFrames.DataFrame},
+    result_values::Dict{<:OptimizationContainerKey, DataFrame},
     container_keys,
     timestamps::Vector{Dates.DateTime},
     time_ids,
     base_power::Float64,
     base_timestamps::Vector{Dates.DateTime},
+    table_format::TableFormat,
 )
     existing_keys = keys(result_values)
     container_keys = container_keys === nothing ? existing_keys : container_keys
     _validate_keys(existing_keys, container_keys)
-    results = Dict{OptimizationContainerKey, DataFrames.DataFrame}()
-    for (k, v) in result_values
-        if k in container_keys
-            num_rows = DataFrames.nrow(v)
-            if num_rows == 1 && num_rows < length(time_ids)
-                results[k] =
-                    if convert_result_to_natural_units(k)
-                        v .* base_power
-                    else
-                        v
-                    end
-            else
-                total_rows = size(v)[1]
-                if length(base_timestamps) == total_rows
-                    results[k] =
-                        if convert_result_to_natural_units(k)
-                            v[time_ids, :] .* base_power
-                        else
-                            v[time_ids, :]
-                        end
-                    DataFrames.insertcols!(results[k], 1, :DateTime => timestamps)
-                else
-                    @warn(
-                        "Length of variables is different than timestamps. Ignoring timestamps."
-                    )
-                    results[k] =
-                        if convert_result_to_natural_units(k)
-                            v[1:total_rows, :] .* base_power
-                        else
-                            v[1:total_rows, :]
-                        end
-                    DataFrames.insertcols!(results[k], 1)
-                end
+    results = Dict{OptimizationContainerKey, DataFrame}()
+    IS.@assert_op time_ids == collect(1:length(timestamps))
+    df_timestamps = DataFrame(:DateTime => timestamps, :time_index => time_ids)
+
+    for (key, df) in result_values
+        if !in(key, container_keys)
+            continue
+        end
+        component_cols = [:component]
+        if "component_x" in names(df)  # TODO DT: what should this name be?
+            push!(component_cols, "component_x")
+            if table_format == TableFormat.WIDE
+                error(
+                    "Wide format is not supported with 3-dimensional results",
+                )
             end
+        end
+        num_components = DataFrames.nrow(unique(df[:, component_cols]))
+        num_rows = DataFrames.nrow(df)
+        if num_rows % num_components != 0
+            error(
+                "num_rows = $num_rows is not divisible by num_components = $num_components",
+            )
+        end
+        num_rows_per_component = num_rows ÷ num_components
+        if num_rows_per_component == 1 && num_rows_per_component < length(time_ids)
+            # Case 1: Can't add a time column. TODO: Explain why this happens.
+            results[key] = df
+        else
+            if length(base_timestamps) == num_rows_per_component
+                # Case 2: Nominal case. All timestamps exist, add a time column.
+                tmp_df = innerjoin(df, df_timestamps; on = :time_index)
+                if DataFrames.nrow(tmp_df) != DataFrames.nrow(df)
+                    error(
+                        "Bug: Unexpectedly dropped rows: df2 = $tmp_df orig = $(results[key])",
+                    )
+                end
+                results[key] = select(tmp_df, [:DateTime, :component, :value])
+            else
+                # Case 3: TODO: Explain why this happens.
+                @warn(
+                    "Length of variables is different than timestamps. Ignoring timestamps."
+                )
+                results[key] = df
+            end
+        end
+        results[key] = _handle_natural_units(results[key], base_power, key)
+        if table_format == TableFormat.WIDE
+            results[key] = DataFrames.unstack(results[key], "component", "value")
         end
     end
     return results
+end
+
+"""
+Convert the value column to natural units, if required by the key.
+Does not mutate the input dataframe.
+"""
+function _handle_natural_units(
+    df::DataFrame,
+    base_power::Float64,
+    key::OptimizationContainerKey,
+)
+    return if convert_result_to_natural_units(key)
+        @transform(df, :value = :value * base_power)
+    else
+        df
+    end
 end
 
 function _process_timestamps(
@@ -407,8 +439,15 @@ function read_variable(
     key::VariableKey;
     start_time::Union{Nothing, Dates.DateTime} = nothing,
     len::Union{Int, Nothing} = nothing,
+    table_format::TableFormat = TableFormat.LONG,
 )
-    return read_results_with_keys(res, [key]; start_time = start_time, len = len)[key]
+    return read_results_with_keys(
+        res,
+        [key];
+        start_time = start_time,
+        len = len,
+        table_format = table_format,
+    )[key]
 end
 
 """
@@ -442,9 +481,16 @@ function read_variables(
     variables::Vector{<:OptimizationContainerKey};
     start_time::Union{Nothing, Dates.DateTime} = nothing,
     len::Union{Int, Nothing} = nothing,
+    table_format::TableFormat = TableFormat.LONG,
 )
     result_values =
-        read_results_with_keys(res, variables; start_time = start_time, len = len)
+        read_results_with_keys(
+            res,
+            variables;
+            start_time = start_time,
+            len = len,
+            table_format = table_format,
+        )
     return Dict(encode_key_as_string(k) => v for (k, v) in result_values)
 end
 
@@ -479,8 +525,15 @@ function read_dual(
     key::ConstraintKey;
     start_time::Union{Nothing, Dates.DateTime} = nothing,
     len::Union{Int, Nothing} = nothing,
+    table_format::TableFormat = TableFormat.LONG,
 )
-    return read_results_with_keys(res, [key]; start_time = start_time, len = len)[key]
+    return read_results_with_keys(
+        res,
+        [key];
+        start_time = start_time,
+        len = len,
+        table_format = table_format,
+    )[key]
 end
 
 """
@@ -514,8 +567,15 @@ function read_duals(
     duals::Vector{<:OptimizationContainerKey};
     start_time::Union{Nothing, Dates.DateTime} = nothing,
     len::Union{Int, Nothing} = nothing,
+    table_format::TableFormat = TableFormat.LONG,
 )
-    result_values = read_results_with_keys(res, duals; start_time = start_time, len = len)
+    result_values = read_results_with_keys(
+        res,
+        duals;
+        start_time = start_time,
+        len = len,
+        table_format = table_format,
+    )
     return Dict(encode_key_as_string(k) => v for (k, v) in result_values)
 end
 
@@ -550,8 +610,15 @@ function read_parameter(
     key::ParameterKey;
     start_time::Union{Nothing, Dates.DateTime} = nothing,
     len::Union{Int, Nothing} = nothing,
+    table_format::TableFormat = TableFormat.LONG,
 )
-    return read_results_with_keys(res, [key]; start_time = start_time, len = len)[key]
+    return read_results_with_keys(
+        res,
+        [key];
+        start_time = start_time,
+        len = len,
+        table_format = table_format,
+    )[key]
 end
 
 """
@@ -585,9 +652,16 @@ function read_parameters(
     parameters::Vector{<:OptimizationContainerKey};
     start_time::Union{Nothing, Dates.DateTime} = nothing,
     len::Union{Int, Nothing} = nothing,
+    table_format::TableFormat = TableFormat.LONG,
 )
     result_values =
-        read_results_with_keys(res, parameters; start_time = start_time, len = len)
+        read_results_with_keys(
+            res,
+            parameters;
+            start_time = start_time,
+            len = len,
+            table_format = table_format,
+        )
     return Dict(encode_key_as_string(k) => v for (k, v) in result_values)
 end
 
@@ -622,8 +696,15 @@ function read_aux_variable(
     key::AuxVarKey;
     start_time::Union{Nothing, Dates.DateTime} = nothing,
     len::Union{Int, Nothing} = nothing,
+    table_format::TableFormat = TableFormat.LONG,
 )
-    return read_results_with_keys(res, [key]; start_time = start_time, len = len)[key]
+    return read_results_with_keys(
+        res,
+        [key];
+        start_time = start_time,
+        len = len,
+        table_format = table_format,
+    )[key]
 end
 
 """
@@ -657,9 +738,16 @@ function read_aux_variables(
     aux_variables::Vector{<:OptimizationContainerKey};
     start_time::Union{Nothing, Dates.DateTime} = nothing,
     len::Union{Int, Nothing} = nothing,
+    table_format::TableFormat = TableFormat.LONG,
 )
     result_values =
-        read_results_with_keys(res, aux_variables; start_time = start_time, len = len)
+        read_results_with_keys(
+            res,
+            aux_variables;
+            start_time = start_time,
+            len = len,
+            table_format = table_format,
+        )
     return Dict(encode_key_as_string(k) => v for (k, v) in result_values)
 end
 
@@ -694,8 +782,15 @@ function read_expression(
     key::ExpressionKey;
     start_time::Union{Nothing, Dates.DateTime} = nothing,
     len::Union{Int, Nothing} = nothing,
+    table_format::TableFormat = TableFormat.LONG,
 )
-    return read_results_with_keys(res, [key]; start_time = start_time, len = len)[key]
+    return read_results_with_keys(
+        res,
+        [key];
+        start_time = start_time,
+        len = len,
+        table_format = table_format,
+    )[key]
 end
 
 """
@@ -733,9 +828,16 @@ function read_expressions(
     expressions::Vector{<:OptimizationContainerKey};
     start_time::Union{Nothing, Dates.DateTime} = nothing,
     len::Union{Int, Nothing} = nothing,
+    table_format::TableFormat = TableFormat.LONG,
 )
     result_values =
-        read_results_with_keys(res, expressions; start_time = start_time, len = len)
+        read_results_with_keys(
+            res,
+            expressions;
+            start_time = start_time,
+            len = len,
+            table_format = table_format,
+        )
     return Dict(encode_key_as_string(k) => v for (k, v) in result_values)
 end
 
@@ -751,8 +853,9 @@ function read_results_with_keys(
     result_keys::Vector{<:OptimizationContainerKey};
     start_time::Union{Nothing, Dates.DateTime} = nothing,
     len::Union{Int, Nothing} = nothing,
+    table_format::TableFormat = TableFormat.LONG,
 )
-    isempty(result_keys) && return Dict{OptimizationContainerKey, DataFrames.DataFrame}()
+    isempty(result_keys) && return Dict{OptimizationContainerKey, DataFrame}()
     (timestamp_ids, timestamps) = _process_timestamps(res, start_time, len)
     base_timestamps = get_timestamps(res)
     return _read_results(
@@ -762,6 +865,7 @@ function read_results_with_keys(
         timestamp_ids,
         get_model_base_power(res),
         base_timestamps,
+        table_format,
     )
 end
 
@@ -842,11 +946,11 @@ end
 
 function write_data(
     vars_results::Dict,
-    time::DataFrames.DataFrame,
+    time::DataFrame,
     save_path::AbstractString,
 )
     for (k, v) in vars_results
-        var = DataFrames.DataFrame()
+        var = DataFrame()
         if size(time, 1) == size(v, 1)
             var = hcat(time, v)
         else
@@ -858,7 +962,7 @@ function write_data(
 end
 
 function write_data(
-    data::DataFrames.DataFrame,
+    data::DataFrame,
     save_path::AbstractString,
     file_name::String,
 )
