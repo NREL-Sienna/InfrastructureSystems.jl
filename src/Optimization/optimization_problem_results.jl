@@ -324,9 +324,9 @@ function _read_results(
         if !in(key, container_keys)
             continue
         end
-        component_cols = [:component]
-        if "component_x" in names(df)  # TODO DT: what should this name be?
-            push!(component_cols, "component_x")
+        component_cols = [:name]
+        if "name2" in names(df)
+            push!(component_cols, ":name2")
             if table_format == TableFormat.WIDE
                 error(
                     "Wide format is not supported with 3-dimensional results",
@@ -341,30 +341,21 @@ function _read_results(
             )
         end
         num_rows_per_component = num_rows ÷ num_components
-        if num_rows_per_component == 1 && num_rows_per_component < length(time_ids)
-            # Case 1: Can't add a time column. TODO: Explain why this happens.
-            results[key] = df
-        else
-            if length(base_timestamps) == num_rows_per_component
-                # Case 2: Nominal case. All timestamps exist, add a time column.
-                tmp_df = innerjoin(df, df_timestamps; on = :time_index)
-                if DataFrames.nrow(tmp_df) != DataFrames.nrow(df)
-                    error(
-                        "Bug: Unexpectedly dropped rows: df2 = $tmp_df orig = $(results[key])",
-                    )
-                end
-                results[key] = select(tmp_df, [:DateTime, :component, :value])
-            else
-                # Case 3: TODO: Explain why this happens.
-                @warn(
-                    "Length of variables is different than timestamps. Ignoring timestamps."
+        if num_rows_per_component == length(time_ids) == length(base_timestamps)
+            tmp_df = innerjoin(df, df_timestamps; on = :time_index)
+            if DataFrames.nrow(tmp_df) != DataFrames.nrow(df)
+                error(
+                    "Bug: Unexpectedly dropped rows: df2 = $tmp_df orig = $(results[key])",
                 )
-                results[key] = df
             end
+            results[key] = select(tmp_df, [:DateTime, :name, :value])
+        else
+            @warn "Length of variables is different than timestamps. Ignoring timestamps."
+            results[key] = df
         end
         results[key] = _handle_natural_units(results[key], base_power, key)
         if table_format == TableFormat.WIDE
-            results[key] = DataFrames.unstack(results[key], "component", "value")
+            results[key] = DataFrames.unstack(results[key], "name", "value")
         end
     end
     return results
@@ -421,9 +412,17 @@ Accepts a vector of keys for the return of the values.
 
 # Arguments
 
-  - `variable::Tuple{Type{<:VariableType}, Type{<:PSY.Component}` : Tuple with variable type and device type for the desired results
-  - `start_time::Dates.DateTime` : start time of the requested results
-  - `len::Int`: length of results
+- `res::OptimizationProblemResults`: Optimization problem results
+- `variable::Tuple{Type{<:VariableType}, Type{<:PSY.Component}`: Tuple with variable type
+  and device type for the desired results
+- `start_time::Dates.DateTime`: Start time of the requested results
+- `len::Int`: length of results
+- `table_format::TableFormat`: Format of the table to be returned. Default is
+  `TableFormat.LONG` where the columns are `DateTime`, `name`, and `value` when the data
+  has two dimensions and `DateTime`, `name`, `name2`, and `value` when the data has three
+  dimensions.
+  Set to it `TableFormat.WIDE` to pivot the names as columns.
+  Note: `TableFormat.WIDE` is not supported when the data has three dimensions.
 """
 function read_variable(res::OptimizationProblemResults, args...; kwargs...)
     key = VariableKey(args...)
