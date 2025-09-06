@@ -326,7 +326,7 @@ function _read_results(
         end
         component_cols = [:name]
         if "name2" in names(df)
-            push!(component_cols, ":name2")
+            push!(component_cols, :name2)
             if table_format == TableFormat.WIDE
                 error(
                     "Wide format is not supported with 3-dimensional results",
@@ -351,7 +351,7 @@ function _read_results(
             results[key] = select(tmp_df, [:DateTime, :name, :value])
         else
             @warn "Length of variables is different than timestamps. Ignoring timestamps."
-            results[key] = df
+            results[key] = deepcopy(df)
         end
         results[key] = _handle_natural_units(results[key], base_power, key)
         if table_format == TableFormat.WIDE
@@ -422,7 +422,7 @@ Accepts a vector of keys for the return of the values.
   has two dimensions and `DateTime`, `name`, `name2`, and `value` when the data has three
   dimensions.
   Set to it `TableFormat.WIDE` to pivot the names as columns.
-  Note: `TableFormat.WIDE` is not supported when the data has three dimensions.
+  Note: `TableFormat.WIDE` is not supported when the data has more than two dimensions.
 """
 function read_variable(res::OptimizationProblemResults, args...; kwargs...)
     key = VariableKey(args...)

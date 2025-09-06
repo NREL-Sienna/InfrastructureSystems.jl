@@ -101,7 +101,7 @@ const IS = InfrastructureSystems
     )
 
     # Test with convert_result_to_natural_units = false
-    @eval IS.Optimization.convert_result_to_natural_units(::Type{<:MockVariable}) = false
+    IS.Optimization.convert_result_to_natural_units(::Type{<:MockVariable}) = false
     var_res = read_variable(opt_res1, var_key)
     @test sort!(unique(var_res.DateTime)) == timestamp_vec
     @test @rsubset(var_res, :name == "c1")[!, :value] == [1.0, 2.0]
@@ -111,7 +111,7 @@ const IS = InfrastructureSystems
         methods(IS.Optimization.convert_result_to_natural_units, (Type{<:MockVariable},))
         Base.delete_method(method)
     end
-    @eval IS.Optimization.convert_result_to_natural_units(::Type{<:MockVariable}) = true
+    IS.Optimization.convert_result_to_natural_units(::Type{<:MockVariable}) = true
     var_res = read_variable(opt_res1, var_key)
     @test @rsubset(var_res, :name == "c1")[!, :value] == [10.0, 20.0]
     @test @rsubset(var_res, :name == "c2")[!, :value] == [30.0, 40.0]
