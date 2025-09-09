@@ -42,6 +42,7 @@ Manifest.toml
 *.h5
 # ctags
 tags
+tmp-ts-dir
 
 ################################################################################
 #                              Operating systems                               #
