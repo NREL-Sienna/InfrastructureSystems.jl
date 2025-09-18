@@ -496,8 +496,8 @@ end
 """
 Return the values for all variables.
 """
-function read_variables(res::Results)
-    return Dict(x => read_variable(res, x) for x in list_variable_names(res))
+function read_variables(res::Results; kwargs...)
+    return Dict(x => read_variable(res, x; kwargs...) for x in list_variable_names(res))
 end
 
 """
@@ -581,8 +581,8 @@ end
 """
 Return the values for all duals.
 """
-function read_duals(res::Results)
-    duals = Dict(x => read_dual(res, x) for x in list_dual_names(res))
+function read_duals(res::Results; kwargs...)
+    duals = Dict(x => read_dual(res, x; kwargs...) for x in list_dual_names(res))
 end
 
 """
@@ -667,8 +667,9 @@ end
 """
 Return the values for all parameters.
 """
-function read_parameters(res::Results)
-    parameters = Dict(x => read_parameter(res, x) for x in list_parameter_names(res))
+function read_parameters(res::Results; kwargs...)
+    parameters =
+        Dict(x => read_parameter(res, x; kwargs...) for x in list_parameter_names(res))
 end
 
 """
@@ -753,8 +754,10 @@ end
 """
 Return the values for all auxiliary variables.
 """
-function read_aux_variables(res::Results)
-    return Dict(x => read_aux_variable(res, x) for x in list_aux_variable_names(res))
+function read_aux_variables(res::Results; kwargs...)
+    return Dict(
+        x => read_aux_variable(res, x; kwargs...) for x in list_aux_variable_names(res)
+    )
 end
 
 """
@@ -843,7 +846,7 @@ end
 """
 Return the values for all expressions.
 """
-function read_expressions(res::Results)
+function read_expressions(res::Results; kwargs...)
     return Dict(x => read_expression(res, x) for x in list_expression_names(res))
 end
 
