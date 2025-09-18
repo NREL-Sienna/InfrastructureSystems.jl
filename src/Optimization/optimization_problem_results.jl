@@ -350,7 +350,7 @@ function _read_results(
                     "Bug: Unexpectedly dropped rows: df2 = $tmp_df orig = $(results[key])",
                 )
             end
-            results[key] = select(tmp_df, [:DateTime, Symbol(first_dim_col), :value])
+            results[key] = select(tmp_df, [:DateTime, Symbol.(component_cols)..., :value])
         else
             @warn "Length of variables is different than timestamps. Ignoring timestamps."
             results[key] = deepcopy(df)

@@ -131,11 +131,51 @@ const IS = InfrastructureSystems
     @test @rsubset(exp_res, :name == "c1")[!, :value] == [1.0, 2.0]
     @test @rsubset(exp_res, :name == "c2")[!, :value] == [3.0, 4.0]
     exp_res = read_expression(opt_res2, exp_key2)
-    @show exp_res
     @test @rsubset(exp_res, :custom_name == "c1")[!, :value] == [10.0, 20.0]
     @test @rsubset(exp_res, :custom_name == "c2")[!, :value] == [30.0, 40.0]
 
     @test IS.Optimization.get_resolution(opt_res1) == Millisecond(3600000)
     @test IS.Optimization.get_resolution(opt_res2) == Millisecond(3600000)
     @test isnothing(IS.Optimization.get_resolution(opt_res3))
+end
+
+@testset "Test OptimizationProblemResults 3d long format" begin
+    timestamps = StepRange(
+        DateTime("2024-01-01T00:00:00"),
+        Millisecond(3600000),
+        DateTime("2024-01-01T01:00:00"),
+    )
+    data = IS.SystemData()
+    aux_variable_values = Dict()
+    var_key = VariableKey(MockVariable, IS.TestComponent)
+    vals = [1.0, 2.0, 3.0, 4.0]
+    variable_values = Dict(
+        var_key => DataFrame(
+            "time_index" => [1, 2, 1, 2],
+            "name" => ["c1", "c2", "c1", "c2"],
+            "name2" => ["c3", "c4", "c3", "c4"],
+            "value" => vals,
+        ),
+    )
+    optimizer_stats = DataFrames.DataFrame()
+    res = OptimizationProblemResults(
+        100.0,
+        timestamps,
+        data,
+        IS.make_uuid(),
+        Dict(),
+        variable_values,
+        Dict(),
+        Dict(),
+        Dict(),
+        optimizer_stats,
+        OptimizationContainerMetadata(),
+        "test_model",
+        mktempdir(),
+        mktempdir(),
+    )
+
+    var_res = read_variable(res, var_key)
+    @test @rsubset(var_res, :name == "c1" && :name2 == "c3")[!, :value] == [1.0, 3.0]
+    @test @rsubset(var_res, :name == "c2" && :name2 == "c4")[!, :value] == [2.0, 4.0]
 end
