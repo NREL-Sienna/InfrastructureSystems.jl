@@ -5,7 +5,7 @@ import InfrastructureSystems.Optimization:
 
 @testset "Testset Optimization Container Metadata" begin
     metadata = OptimizationContainerMetadata()
-    var_key = VariableKey(IS.Optimization.MockVariable, IS.TestComponent)
+    var_key = VariableKey(MockVariable, IS.TestComponent)
     IS.Optimization.add_container_key!(metadata, encode_key_as_string(var_key), var_key)
     @test IS.Optimization.has_container_key(metadata, encode_key_as_string(var_key))
     @test IS.Optimization.get_container_key(metadata, encode_key_as_string(var_key)) ==
@@ -25,7 +25,7 @@ import InfrastructureSystems.Optimization:
     )
     key = IS.Optimization.deserialize_key(
         metadata,
-        "Optimization.MockVariable__TestComponent",
+        "InfrastructureSystemsTests.MockVariable__TestComponent",
     )
     @test key == var_key
 end

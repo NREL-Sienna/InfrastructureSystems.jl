@@ -30,9 +30,6 @@ abstract type AbstractModelStore end
 # - :expressions
 
 # Required methods for subtypes:
-# - initialize_storage!
-# - write_result!
-# - read_results
 # - write_optimizer_stats!
 # - read_optimizer_stats
 #

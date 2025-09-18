@@ -3,8 +3,6 @@ import InfrastructureSystems.Optimization:
     OptimizationProblemResults,
     VariableKey,
     ExpressionKey,
-    MockVariable,
-    MockExpression,
     read_variable,
     read_expression
 import Dates:
@@ -25,10 +23,18 @@ const IS = InfrastructureSystems
     data = IS.SystemData()
     uuid = IS.make_uuid()
     aux_variable_values = Dict()
-    var_key = VariableKey(MockVariable, IS.TestComponent)
+    @test !IS.Optimization.convert_result_to_natural_units(MockVariable)
+    @test IS.Optimization.convert_result_to_natural_units(MockVariable2)
+    var_key1 = VariableKey(MockVariable, IS.TestComponent)
+    var_key2 = VariableKey(MockVariable2, IS.TestComponent)
     vals = [1.0, 2.0, 3.0, 4.0]
     variable_values = Dict(
-        var_key => DataFrame(
+        var_key1 => DataFrame(
+            "time_index" => [1, 2, 1, 2],
+            "name" => ["c1", "c1", "c2", "c2"],
+            "value" => vals,
+        ),
+        var_key2 => DataFrame(
             "time_index" => [1, 2, 1, 2],
             "name" => ["c1", "c1", "c2", "c2"],
             "value" => vals,
@@ -36,10 +42,18 @@ const IS = InfrastructureSystems
     )
     dual_values = Dict()
     parameter_values = Dict()
-    exp_key = ExpressionKey(MockExpression, IS.TestComponent)
+    @test !IS.Optimization.convert_result_to_natural_units(MockExpression)
+    @test IS.Optimization.convert_result_to_natural_units(MockExpression2)
+    exp_key1 = ExpressionKey(MockExpression, IS.TestComponent)
+    exp_key2 = ExpressionKey(MockExpression2, IS.TestComponent)
     # Expression only 1 time-step
     expression_values = Dict(
-        exp_key => DataFrame(
+        exp_key1 => DataFrame(
+            "time_index" => [1, 2, 1, 2],
+            "name" => ["c1", "c1", "c2", "c2"],
+            "value" => vals,
+        ),
+        exp_key2 => DataFrame(
             "time_index" => [1, 2, 1, 2],
             "name" => ["c1", "c1", "c2", "c2"],
             "value" => vals,
@@ -100,36 +114,23 @@ const IS = InfrastructureSystems
         mktempdir(),
     )
 
-    # Test with convert_result_to_natural_units = false
-    IS.Optimization.convert_result_to_natural_units(::Type{<:MockVariable}) = false
-    var_res = read_variable(opt_res1, var_key)
+    var_res = read_variable(opt_res1, var_key1)
     @test sort!(unique(var_res.DateTime)) == timestamp_vec
     @test @rsubset(var_res, :name == "c1")[!, :value] == [1.0, 2.0]
     @test @rsubset(var_res, :name == "c2")[!, :value] == [3.0, 4.0]
 
-    for method in
-        methods(IS.Optimization.convert_result_to_natural_units, (Type{<:MockVariable},))
-        Base.delete_method(method)
-    end
-    IS.Optimization.convert_result_to_natural_units(::Type{<:MockVariable}) = true
-    var_res = read_variable(opt_res1, var_key)
+    var_res = read_variable(opt_res1, var_key2)
     @test @rsubset(var_res, :name == "c1")[!, :value] == [10.0, 20.0]
     @test @rsubset(var_res, :name == "c2")[!, :value] == [30.0, 40.0]
 
-    var_res = read_variable(opt_res1, var_key; table_format = IS.TableFormat.WIDE)
+    var_res = read_variable(opt_res1, var_key2; table_format = IS.TableFormat.WIDE)
     @test var_res[!, :c1] == [10.0, 20.0]
     @test var_res[!, :c2] == [30.0, 40.0]
 
-    IS.Optimization.convert_result_to_natural_units(::Type{<:MockExpression}) = false
-    exp_res = read_expression(opt_res2, exp_key)
+    exp_res = read_expression(opt_res2, exp_key1)
     @test @rsubset(exp_res, :name == "c1")[!, :value] == [1.0, 2.0]
     @test @rsubset(exp_res, :name == "c2")[!, :value] == [3.0, 4.0]
-    for method in
-        methods(IS.Optimization.convert_result_to_natural_units, (Type{<:MockExpression},))
-        Base.delete_method(method)
-    end
-    IS.Optimization.convert_result_to_natural_units(::Type{<:MockExpression}) = true
-    exp_res = read_expression(opt_res2, exp_key)
+    exp_res = read_expression(opt_res2, exp_key2)
     @test @rsubset(exp_res, :name == "c1")[!, :value] == [10.0, 20.0]
     @test @rsubset(exp_res, :name == "c2")[!, :value] == [30.0, 40.0]
 

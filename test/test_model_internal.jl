@@ -2,16 +2,16 @@ import InfrastructureSystems.Optimization: ModelInternal
 const IS = InfrastructureSystems
 @testset "Test Model Internal" begin
     internal = ModelInternal(
-        IS.Optimization.MockContainer(),
+        MockContainer(),
     )
     @test IS.Optimization.get_status(internal) == IS.Optimization.ModelBuildStatus.EMPTY
     IS.Optimization.set_initial_conditions_model_container!(
         internal,
-        IS.Optimization.MockContainer(),
+        MockContainer(),
     )
     @test isa(
         IS.Optimization.get_initial_conditions_model_container(internal),
-        IS.Optimization.MockContainer,
+        MockContainer,
     )
     IS.Optimization.add_recorder!(internal, :MockRecorder)
     @test IS.Optimization.get_recorders(internal)[1] == :MockRecorder

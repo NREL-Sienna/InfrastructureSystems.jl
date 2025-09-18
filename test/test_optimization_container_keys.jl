@@ -7,48 +7,48 @@ import InfrastructureSystems.Optimization:
     InitialConditionKey
 const IS = InfrastructureSystems
 @testset "Test optimization container keys" begin
-    var_key = VariableKey(IS.Optimization.MockVariable, IS.TestComponent)
+    var_key = VariableKey(MockVariable, IS.TestComponent)
     @test IS.Optimization.encode_key(var_key) ==
-          Symbol("Optimization.MockVariable__TestComponent")
-    constraint_key = ConstraintKey(IS.Optimization.MockConstraint, IS.TestComponent)
+          Symbol("InfrastructureSystemsTests.MockVariable__TestComponent")
+    constraint_key = ConstraintKey(MockConstraint, IS.TestComponent)
     @test IS.Optimization.encode_key(constraint_key) ==
-          Symbol("Optimization.MockConstraint__TestComponent")
-    auxvar_key = AuxVarKey(IS.Optimization.MockAuxVariable, IS.TestComponent)
+          Symbol("InfrastructureSystemsTests.MockConstraint__TestComponent")
+    auxvar_key = AuxVarKey(MockAuxVariable, IS.TestComponent)
     @test IS.Optimization.encode_key(auxvar_key) ==
-          Symbol("Optimization.MockAuxVariable__TestComponent")
-    expression_key = ExpressionKey(IS.Optimization.MockExpression, IS.TestComponent)
+          Symbol("InfrastructureSystemsTests.MockAuxVariable__TestComponent")
+    expression_key = ExpressionKey(MockExpression, IS.TestComponent)
     @test IS.Optimization.encode_key(expression_key) ==
-          Symbol("Optimization.MockExpression__TestComponent")
-    parameter_key = ParameterKey(IS.Optimization.MockParameter, IS.TestComponent)
+          Symbol("InfrastructureSystemsTests.MockExpression__TestComponent")
+    parameter_key = ParameterKey(MockParameter, IS.TestComponent)
     @test IS.Optimization.encode_key(parameter_key) ==
-          Symbol("Optimization.MockParameter__TestComponent")
-    ic_key = InitialConditionKey(IS.Optimization.MockInitialCondition, IS.TestComponent)
+          Symbol("InfrastructureSystemsTests.MockParameter__TestComponent")
+    ic_key = InitialConditionKey(MockInitialCondition, IS.TestComponent)
     @test IS.Optimization.encode_key(ic_key) ==
-          Symbol("Optimization.MockInitialCondition__TestComponent")
+          Symbol("InfrastructureSystemsTests.MockInitialCondition__TestComponent")
 
     @test_throws ArgumentError ExpressionKey(
-        IS.Optimization.MockExpression,
+        MockExpression,
         IS.InfrastructureSystemsType,
     )
 
     @test_throws ArgumentError AuxVarKey(
-        IS.Optimization.MockAuxVariable,
+        MockAuxVariable,
         IS.InfrastructureSystemsType,
     )
 
     # Not tested because it is allowed.
     #@test_throws ArgumentError ConstraintKey(
-    #    IS.Optimization.MockConstraint,
+    #    MockConstraint,
     #    IS.InfrastructureSystemsType,
     #)
 
     @test_throws ArgumentError VariableKey(
-        IS.Optimization.MockVariable,
+        MockVariable,
         IS.InfrastructureSystemsType,
     )
 
     @test_throws ArgumentError ParameterKey(
-        IS.Optimization.MockParameter,
+        MockParameter,
         IS.InfrastructureSystemsType,
     )
 
@@ -66,7 +66,7 @@ const IS = InfrastructureSystems
     @test !IS.Optimization.should_write_resulting_value(expression_key)
     @test !IS.Optimization.should_write_resulting_value(parameter_key)
 
-    var_key2 = VariableKey(IS.Optimization.MockVariable2, IS.TestComponent)
+    var_key2 = VariableKey(MockVariable2, IS.TestComponent)
     @test IS.Optimization.convert_result_to_natural_units(var_key2)
     @test !IS.Optimization.should_write_resulting_value(var_key2)
 
@@ -75,7 +75,7 @@ const IS = InfrastructureSystems
 
     made_key = IS.Optimization.make_key(
         VariableKey,
-        IS.Optimization.MockVariable2,
+        MockVariable2,
         IS.TestComponent,
     )
     @test isa(made_key, VariableKey)
