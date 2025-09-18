@@ -12,6 +12,9 @@ IS.Optimization.convert_result_to_natural_units(::Type{MockVariable2}) = true
 IS.Optimization.should_write_resulting_value(::Type{MockVariable2}) = false
 IS.Optimization.convert_result_to_natural_units(::Type{MockExpression2}) = true
 IS.Optimization.should_write_resulting_value(::Type{MockExpression2}) = false
+IS.Optimization.get_first_dimension_result_column_name(
+    ::IS.Optimization.ExpressionKey{MockExpression2, ThermalGenerator},
+) = "custom_name"
 
 struct MockStoreParams <: IS.Optimization.AbstractModelStoreParams
     size::Integer

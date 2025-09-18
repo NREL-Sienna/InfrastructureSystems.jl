@@ -1,5 +1,14 @@
 abstract type OptimizationContainerKey end
 
+# These functions define the column names of DataFrames in all read-result functions.
+# The function get_second_dimension_result_column_name is only used if the result data
+# has three or more dimensions.
+# Parent packages can override these functions to provide their own column names.
+# We could consider making the time dimension ("DateTime") customizable, but it's probably
+# better not to.
+get_first_dimension_result_column_name(::OptimizationContainerKey) = "name"
+get_second_dimension_result_column_name(::OptimizationContainerKey) = "name2"
+
 const CONTAINER_KEY_EMPTY_META = ""
 
 function make_key(::Type{T}, args...) where {T <: OptimizationContainerKey}

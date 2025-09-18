@@ -45,7 +45,7 @@ const IS = InfrastructureSystems
     @test !IS.Optimization.convert_result_to_natural_units(MockExpression)
     @test IS.Optimization.convert_result_to_natural_units(MockExpression2)
     exp_key1 = ExpressionKey(MockExpression, IS.TestComponent)
-    exp_key2 = ExpressionKey(MockExpression2, IS.TestComponent)
+    exp_key2 = ExpressionKey(MockExpression2, ThermalGenerator)
     # Expression only 1 time-step
     expression_values = Dict(
         exp_key1 => DataFrame(
@@ -55,7 +55,7 @@ const IS = InfrastructureSystems
         ),
         exp_key2 => DataFrame(
             "time_index" => [1, 2, 1, 2],
-            "name" => ["c1", "c1", "c2", "c2"],
+            "custom_name" => ["c1", "c1", "c2", "c2"],
             "value" => vals,
         ),
     )
@@ -131,8 +131,9 @@ const IS = InfrastructureSystems
     @test @rsubset(exp_res, :name == "c1")[!, :value] == [1.0, 2.0]
     @test @rsubset(exp_res, :name == "c2")[!, :value] == [3.0, 4.0]
     exp_res = read_expression(opt_res2, exp_key2)
-    @test @rsubset(exp_res, :name == "c1")[!, :value] == [10.0, 20.0]
-    @test @rsubset(exp_res, :name == "c2")[!, :value] == [30.0, 40.0]
+    @show exp_res
+    @test @rsubset(exp_res, :custom_name == "c1")[!, :value] == [10.0, 20.0]
+    @test @rsubset(exp_res, :custom_name == "c2")[!, :value] == [30.0, 40.0]
 
     @test IS.Optimization.get_resolution(opt_res1) == Millisecond(3600000)
     @test IS.Optimization.get_resolution(opt_res2) == Millisecond(3600000)

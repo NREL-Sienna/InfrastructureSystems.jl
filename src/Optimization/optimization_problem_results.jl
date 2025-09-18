@@ -324,9 +324,11 @@ function _read_results(
         if !in(key, container_keys)
             continue
         end
-        component_cols = [:name]
-        if "name2" in names(df)
-            push!(component_cols, :name2)
+        first_dim_col = get_first_dimension_result_column_name(key)
+        second_dim_col = get_second_dimension_result_column_name(key)
+        component_cols = [first_dim_col]
+        if second_dim_col in names(df)
+            push!(component_cols, second_dim_col)
             if table_format == TableFormat.WIDE
                 error(
                     "Wide format is not supported with 3-dimensional results",
@@ -348,14 +350,14 @@ function _read_results(
                     "Bug: Unexpectedly dropped rows: df2 = $tmp_df orig = $(results[key])",
                 )
             end
-            results[key] = select(tmp_df, [:DateTime, :name, :value])
+            results[key] = select(tmp_df, [:DateTime, Symbol(first_dim_col), :value])
         else
             @warn "Length of variables is different than timestamps. Ignoring timestamps."
             results[key] = deepcopy(df)
         end
         results[key] = _handle_natural_units(results[key], base_power, key)
         if table_format == TableFormat.WIDE
-            results[key] = DataFrames.unstack(results[key], "name", "value")
+            results[key] = DataFrames.unstack(results[key], first_dim_col, "value")
         end
     end
     return results
