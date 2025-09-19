@@ -30,7 +30,6 @@ abstract type AbstractModelStore end
 # - :expressions
 
 # Required methods for subtypes:
-# - write_optimizer_stats!
 # - read_optimizer_stats
 #
 # Each subtype must have a field for each instance of STORE_CONTAINERS.
