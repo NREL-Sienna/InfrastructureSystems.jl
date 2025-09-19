@@ -9,6 +9,8 @@ import Dates
 
 import CSV
 import DataFrames
+import DataFrames: DataFrame, innerjoin, select, select!
+import DataFramesMeta: @chain, @combine, @transform
 
 import ..InfrastructureSystems
 const IS = InfrastructureSystems
@@ -18,6 +20,7 @@ import ..InfrastructureSystems:
     InfrastructureSystemsType,
     InfrastructureSystemsComponent,
     Results,
+    TableFormat,
     get_base_power,
     get_variables,
     get_parameters,
@@ -58,6 +61,5 @@ include("optimization_container_metadata.jl")
 include("optimizer_stats.jl")
 include("optimization_problem_results_export.jl")
 include("optimization_problem_results.jl")
-include("optimization_test_utils.jl")
 
 end

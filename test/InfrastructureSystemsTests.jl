@@ -10,6 +10,7 @@ import JSON3
 import HDF5
 using DataStructures: SortedDict
 using DataFrames
+using DataFramesMeta
 using Random
 using ProgressLogging
 import SQLite
@@ -34,6 +35,7 @@ const LOG_FILE = "infrastructure-systems.log"
 include("common.jl")
 include("components.jl")
 include("events.jl")
+include("optimization.jl")
 
 for filename in readdir(joinpath(BASE_DIR, "test"))
     if startswith(filename, "test_") && endswith(filename, ".jl")
