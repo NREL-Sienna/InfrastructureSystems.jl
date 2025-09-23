@@ -839,6 +839,7 @@ function get_static_time_series_summary_table(store::TimeSeriesMetadataStore)
         SELECT
             owner_type
             ,owner_category
+            ,name
             ,time_series_type
             ,initial_timestamp
             ,resolution AS resolution
@@ -849,6 +850,7 @@ function get_static_time_series_summary_table(store::TimeSeriesMetadataStore)
         GROUP BY
             owner_type
             ,owner_category
+            ,name
             ,time_series_type
             ,initial_timestamp
             ,resolution
@@ -856,6 +858,7 @@ function get_static_time_series_summary_table(store::TimeSeriesMetadataStore)
         ORDER BY
             owner_category
             ,owner_type
+            ,name
             ,time_series_type
             ,initial_timestamp
             ,resolution
@@ -877,6 +880,7 @@ function get_forecast_summary_table(store::TimeSeriesMetadataStore)
         SELECT
             owner_type
             ,owner_category
+            ,name
             ,time_series_type
             ,initial_timestamp
             ,resolution AS resolution
@@ -889,6 +893,7 @@ function get_forecast_summary_table(store::TimeSeriesMetadataStore)
         GROUP BY
             owner_type
             ,owner_category
+            ,name
             ,time_series_type
             ,initial_timestamp
             ,resolution
@@ -898,6 +903,7 @@ function get_forecast_summary_table(store::TimeSeriesMetadataStore)
         ORDER BY
             owner_category
             ,owner_type
+            ,name
             ,time_series_type
             ,initial_timestamp
             ,resolution
