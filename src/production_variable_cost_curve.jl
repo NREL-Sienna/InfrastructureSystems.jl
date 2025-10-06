@@ -18,6 +18,8 @@ get_initial_input(cost::ProductionVariableCostCurve) =
     get_initial_input(get_value_curve(cost))
 "Calculate the convexity of the underlying data"
 is_convex(cost::ProductionVariableCostCurve) = is_convex(get_value_curve(cost))
+"Calculate the concavity of the underlying data"
+is_concave(cost::ProductionVariableCostCurve) = is_concave(get_value_curve(cost))
 
 Base.:(==)(a::T, b::T) where {T <: ProductionVariableCostCurve} =
     double_equals_from_fields(a, b)
