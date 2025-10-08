@@ -4013,3 +4013,35 @@ end
     @test !IS.has_time_series(component, IS.SingleTimeSeries, ts_name)
     @test !IS.has_time_series(component, IS.DeterministicSingleTimeSeries, ts_name)
 end
+
+@testset "Test removal order: DeterministicSingleTimeSeries before SingleTimeSeries" begin
+    sys = IS.SystemData()
+    name = "Component1"
+    component = IS.TestComponent(name, 5)
+    IS.add_component!(sys, component)
+
+    initial_time = Dates.DateTime("2020-09-01")
+    resolution = Dates.Hour(1)
+    data = TimeSeries.TimeArray(
+        range(initial_time; length = 12, step = resolution),
+        ones(12),
+    )
+    ts_name = "test"
+    data = IS.SingleTimeSeries(; data = data, name = ts_name)
+    # prevent the indices from affecting the order of removal
+    IS._drop_all_indexes!(sys.time_series_manager.metadata_store.db)
+    IS.add_time_series!(sys, component, data)
+
+    IS.transform_single_time_series!(
+        sys,
+        IS.DeterministicSingleTimeSeries,
+        Dates.Hour(2),
+        resolution;
+        resolution = resolution,
+    )
+    @test IS.has_time_series(component, IS.SingleTimeSeries, ts_name)
+    @test IS.has_time_series(component, IS.DeterministicSingleTimeSeries, ts_name)
+    mgr = IS.get_time_series_manager(component)
+    @test !isnothing(mgr)
+    IS.clear_time_series!(mgr, component)
+end

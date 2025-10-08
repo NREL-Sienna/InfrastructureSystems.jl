@@ -1164,7 +1164,11 @@ function list_metadata(
         SELECT metadata_uuid
         FROM $ASSOCIATIONS_TABLE_NAME
         $where_clause
+        ORDER BY time_series_type
     """
+    # ORDER BY clause: DeterministicSingleTimeSeries refers to the data of a SingleTimeSeries,
+    # so must remove the Deterministic one first, else clear_time_series! errors.
+    # D < S, so alphabetical ordering works.
     table = Tables.rowtable(_execute_cached(store, query, params))
     return [store.metadata_uuids[Base.UUID(x.metadata_uuid)] for x in table]
 end
