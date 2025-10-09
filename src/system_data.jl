@@ -1087,6 +1087,21 @@ function get_associated_components(
     ]
 end
 
+function get_supplemental_attributes(
+    component_type::Type{<:InfrastructureSystemsComponent},
+    data::SystemData;
+    attribute_type::Union{Nothing, Type{<:SupplementalAttribute}} = nothing,
+)
+    return [
+        get_supplemental_attribute(data, x) for x in
+        list_associated_supplemental_attribute_uuids(
+            data.supplemental_attribute_manager,
+            component_type,
+            attribute_type,
+        )
+    ]
+end
+
 """
 Return all components associated with the attribute that match `component_type`.
 

@@ -248,6 +248,18 @@ function list_associated_component_uuids(
     return list_associated_component_uuids(mgr.associations, attribute_type, component_type)
 end
 
+function list_associated_supplemental_attribute_uuids(
+    mgr::SupplementalAttributeManager,
+    component_type::Type{<:InfrastructureSystemsComponent},
+    attribute_type::Union{Nothing, Type{<:SupplementalAttribute}},
+)
+    return list_associated_supplemental_attribute_uuids(
+        mgr.associations,
+        component_type,
+        attribute_type,
+    )
+end
+
 function serialize(mgr::SupplementalAttributeManager)
     return Dict(
         "associations" => to_records(mgr.associations),

@@ -396,6 +396,47 @@ end
     @test length(attributes) == 0
 end
 
+@testset "Test get supplemental attribute from component type" begin
+    data = IS.SystemData()
+
+    attr1 = IS.TestSupplemental(; value = 1.0)
+    attr2 = IS.TestSupplemental(; value = 2.0)
+    geo_attr1 = IS.GeographicInfo()
+    geo_attr2 = IS.GeographicInfo(; geo_json = Dict{String, Any}("foo" => 5))
+    components_to_attributes = Dict(
+        (IS.TestComponent, "component1") => [geo_attr1, attr1],
+        (IS.TestComponent, "component2") => [attr1],
+        (IS.AdditionalTestComponent, "component3") => [geo_attr1, attr2, geo_attr2],
+    )
+
+    for (comp_info, attributes) in components_to_attributes
+        component_type, name = comp_info
+        component = component_type(name, 5)
+        IS.add_component!(data, component)
+        for attribute in attributes
+            IS.add_supplemental_attribute!(data, component, attribute)
+        end
+    end
+
+    # no duplicate attr1, despite occuring twice.
+    test_comp_attrs = IS.get_supplemental_attributes(IS.TestComponent, data)
+    @test length(test_comp_attrs) == 2 && attr1 in test_comp_attrs &&
+          geo_attr1 in test_comp_attrs
+
+    add_test_comp_attrs = IS.get_supplemental_attributes(IS.AdditionalTestComponent, data)
+    @test length(add_test_comp_attrs) == 3 && attr2 in add_test_comp_attrs &&
+          geo_attr1 in add_test_comp_attrs && geo_attr2 in add_test_comp_attrs
+
+    # test additional attribute_type kwarg.
+    add_test_comp_geo_attrs = IS.get_supplemental_attributes(
+        IS.AdditionalTestComponent,
+        data;
+        attribute_type = IS.GeographicInfo,
+    )
+    @test length(add_test_comp_geo_attrs) == 2 && geo_attr1 in add_test_comp_geo_attrs &&
+          geo_attr2 in add_test_comp_geo_attrs
+end
+
 @testset "Test retrieval of supplemental_attributes" begin
     data = IS.SystemData()
     geo_supplemental_attribute = IS.GeographicInfo()
