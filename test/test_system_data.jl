@@ -419,16 +419,17 @@ end
     end
 
     # no duplicate attr1, despite occuring twice.
-    test_comp_attrs = IS.get_supplemental_attributes(data, IS.TestComponent)
+    test_comp_attrs = IS.get_associated_supplemental_attributes(data, IS.TestComponent)
     @test length(test_comp_attrs) == 2 && attr1 in test_comp_attrs &&
           geo_attr1 in test_comp_attrs
 
-    add_test_comp_attrs = IS.get_supplemental_attributes(data, IS.AdditionalTestComponent)
+    add_test_comp_attrs =
+        IS.get_associated_supplemental_attributes(data, IS.AdditionalTestComponent)
     @test length(add_test_comp_attrs) == 3 && attr2 in add_test_comp_attrs &&
           geo_attr1 in add_test_comp_attrs && geo_attr2 in add_test_comp_attrs
 
     # test additional attribute_type kwarg.
-    add_test_comp_geo_attrs = IS.get_supplemental_attributes(
+    add_test_comp_geo_attrs = IS.get_associated_supplemental_attributes(
         data,
         IS.AdditionalTestComponent;
         attribute_type = IS.GeographicInfo,
