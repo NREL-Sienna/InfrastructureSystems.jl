@@ -487,7 +487,7 @@ function list_associated_supplemental_attribute_uuids(
     query = StringTemplates.render(
         _QUERY_LIST_ASSOCIATED_SUPPLEMENTAL_ATTRIBUTE_UUIDS_BY_TYPES;
         table_name = SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME,
-        attribute_type_clause = attribute_type_clause, # PERF: swap order?
+        attribute_type_clause = attribute_type_clause,
         component_type_clause = component_type_clause,
     )
     table = Tables.columntable(_execute_cached(associations, query, params))

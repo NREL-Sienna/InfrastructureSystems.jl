@@ -1,4 +1,3 @@
-IS = InfrastructureSystems
 @testset "Random Seed" begin
     @test isa(IS.get_random_seed(), Int)
 end
