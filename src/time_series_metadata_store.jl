@@ -1307,9 +1307,14 @@ end
 _check_remove_metadata(::TimeSeriesMetadataStore, ::TimeSeriesMetadata) = nothing
 
 const _QUERY_CHECK_FOR_ATTACHED_DSTS = """
-    SELECT COUNT(*) AS count
-    FROM $ASSOCIATIONS_TABLE_NAME
-    WHERE time_series_uuid = ? AND time_series_type = '$(nameof(DeterministicSingleTimeSeries))'
+SELECT time_series_uuid
+FROM $ASSOCIATIONS_TABLE_NAME
+WHERE time_series_uuid = ?
+GROUP BY time_series_uuid
+HAVING
+    SUM(time_series_type = 'SingleTimeSeries') = 1
+    AND
+    SUM(time_series_type = 'DeterministicSingleTimeSeries') >= 1;
 """
 
 function _check_remove_metadata(
@@ -1317,8 +1322,10 @@ function _check_remove_metadata(
     metadata::SingleTimeSeriesMetadata,
 )
     ts_uuid = get_time_series_uuid(metadata)
-    count = _execute_count(store, _QUERY_CHECK_FOR_ATTACHED_DSTS, (string(ts_uuid),))
-    if count > 0
+    table = Tables.rowtable(
+        _execute(store, _QUERY_CHECK_FOR_ATTACHED_DSTS, (string(ts_uuid),)),
+    )
+    if length(table) != 0
         # We are adding this block because of unnecessary complexity when
         # serializing/de-serializing time series to/from the SiennaGridDB.
         # There should not be a reason for a user to remove this SingleTimeSeries.
