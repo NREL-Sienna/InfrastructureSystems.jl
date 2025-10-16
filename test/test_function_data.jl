@@ -209,10 +209,11 @@ end
 end
 
 @testset "Test FunctionData printing" begin
+    type_prefix = @static VERSION >= v"1.12" ? "" : "@NamedTuple{x::Float64, y::Float64}"
     repr_answers = [
         "InfrastructureSystems.LinearFunctionData(5.0, 1.0)",
         "InfrastructureSystems.QuadraticFunctionData(2.0, 3.0, 4.0)",
-        "InfrastructureSystems.PiecewiseLinearData(@NamedTuple{x::Float64, y::Float64}[(x = 1.0, y = 1.0), (x = 3.0, y = 5.0), (x = 5.0, y = 10.0)])",
+        "InfrastructureSystems.PiecewiseLinearData($(type_prefix)[(x = 1.0, y = 1.0), (x = 3.0, y = 5.0), (x = 5.0, y = 10.0)])",
         "InfrastructureSystems.PiecewiseStepData([1.0, 3.0, 5.0], [2.0, 2.5])",
     ]
     plain_answers = [
