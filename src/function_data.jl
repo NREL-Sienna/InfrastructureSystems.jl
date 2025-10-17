@@ -399,6 +399,7 @@ QuadraticFunctionData(data::LinearFunctionData) =
 Base.convert(::Type{QuadraticFunctionData}, data::LinearFunctionData) =
     QuadraticFunctionData(data)
 
+# GET_DOMAIN
 "Get the domain of the function represented by the `LinearFunctionData` or `QuadraticFunctionData` (always `(-Inf, Inf)` for these types)."
 get_domain(fd::Union{LinearFunctionData, QuadraticFunctionData}) = (-Inf, Inf)
 
@@ -406,6 +407,7 @@ get_domain(fd::Union{LinearFunctionData, QuadraticFunctionData}) = (-Inf, Inf)
 get_domain(fd::Union{PiecewiseLinearData, PiecewiseStepData}) =
     (first(get_x_coords(fd)), last(get_x_coords(fd)))
 
+# ZERO
 "Get a `LinearFunctionData` representing the function `f(x) = 0`"
 Base.zero(::Union{LinearFunctionData, Type{LinearFunctionData}}) = LinearFunctionData(0, 0)
 
@@ -432,6 +434,7 @@ Base.zero(fd::PiecewiseStepData) =
 "Get a `FunctionData` representing the function `f(x) = 0`"
 Base.zero(::Union{FunctionData, Type{FunctionData}}) = Base.zero(LinearFunctionData)
 
+# SCALAR MULTIPLICATION
 "Multiply the `LinearFunctionData` by a scalar: (c * f)(x) = c * f(x)"
 Base.:*(c::Float64, fd::LinearFunctionData) =
     LinearFunctionData(
@@ -463,3 +466,52 @@ Base.:*(c::Float64, fd::PiecewiseStepData) =
 # commutativity
 "Multiply the `FunctionData` by a scalar: (f * c)(x) = (c * f)(x) = c * f(x)"
 Base.:*(fd::FunctionData, c::Float64) = c * fd
+
+# ADDITION OF TWO FUNCTIONDATAS
+"Add two `LinearFunctionData`s: (f + g)(x) = f(x) + g(x)"
+Base.:+(f::LinearFunctionData, g::LinearFunctionData) =
+    LinearFunctionData(
+        get_proportional_term(f) + get_proportional_term(g),
+        get_constant_term(f) + get_constant_term(g),
+    )
+
+"Add two `QuadraticFunctionData`s: (f + g)(x) = f(x) + g(x)"
+Base.:+(f::QuadraticFunctionData, g::QuadraticFunctionData) =
+    QuadraticFunctionData(
+        get_quadratic_term(f) + get_quadratic_term(g),
+        get_proportional_term(f) + get_proportional_term(g),
+        get_constant_term(f) + get_constant_term(g),
+    )
+
+"Add two `PiecewiseLinearData`s: (f + g)(x) = f(x) + g(x). Errors if the x-coordinates are not the same."
+function Base.:+(f::PiecewiseLinearData, g::PiecewiseLinearData)
+    f_x_coords = get_x_coords(f)
+    g_x_coords = get_x_coords(g)
+    all(isapprox.(f_x_coords, g_x_coords)) ||
+        throw(
+            ArgumentError(
+                "Cannot add PiecewiseLinearData with different x-coordinates: " *
+                "f x-coords = $f_x_coords, g x-coords = $g_x_coords",
+            ),
+        )
+    new_points = XY_COORDS[
+        (x = f_x_coords[ix], y = get_y_coords(f)[ix] + get_y_coords(g)[ix]) for
+        ix in eachindex(f_x_coords)
+    ]
+    return PiecewiseLinearData(new_points)
+end
+
+"Add two `PiecewiseStepData`s: (f + g)(x) = f(x) + g(x). Errors if the x-coordinates are not the same."
+function Base.:+(f::PiecewiseStepData, g::PiecewiseStepData)
+    f_x_coords = get_x_coords(f)
+    g_x_coords = get_x_coords(g)
+    all(isapprox.(f_x_coords, g_x_coords)) ||
+        throw(
+            ArgumentError(
+                "Cannot add PiecewiseStepData with different x-coordinates: " *
+                "f x-coords = $f_x_coords, g x-coords = $g_x_coords",
+            ),
+        )
+    new_y_coords = get_y_coords(f) .+ get_y_coords(g)
+    return PiecewiseStepData(f_x_coords, new_y_coords)
+end

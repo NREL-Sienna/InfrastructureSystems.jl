@@ -166,6 +166,7 @@ end
 end
 
 @testset "Test FunctionData higher-level calculations" begin
+    # SCALAR MULTIPLICATION
     # Test scalar multiplication for LinearFunctionData
     ld = IS.LinearFunctionData(5, 1)  # f(x) = 5x + 1
     ld_scaled = 3.0 * ld
@@ -240,6 +241,69 @@ end
             @test IS.get_y_coords(fd_neg) == -IS.get_y_coords(fd)
         end
     end
+
+    # FUNCTIONDATA ADDITION
+    # Test addition for LinearFunctionData
+    ld1 = IS.LinearFunctionData(5, 1)   # f(x) = 5x + 1
+    ld2 = IS.LinearFunctionData(3, 2)   # g(x) = 3x + 2
+    ld_sum = ld1 + ld2                  # (f+g)(x) = 8x + 3
+    @test ld_sum isa IS.LinearFunctionData
+    @test IS.get_proportional_term(ld_sum) == 8.0  # 5 + 3
+    @test IS.get_constant_term(ld_sum) == 3.0       # 1 + 2
+
+    # Test addition for QuadraticFunctionData
+    qd1 = IS.QuadraticFunctionData(2, 3, 4)  # f(x) = 2x² + 3x + 4
+    qd2 = IS.QuadraticFunctionData(1, 2, 1)  # g(x) = x² + 2x + 1
+    qd_sum = qd1 + qd2                       # (f+g)(x) = 3x² + 5x + 5
+    @test qd_sum isa IS.QuadraticFunctionData
+    @test IS.get_quadratic_term(qd_sum) == 3.0      # 2 + 1
+    @test IS.get_proportional_term(qd_sum) == 5.0   # 3 + 2
+    @test IS.get_constant_term(qd_sum) == 5.0       # 4 + 1
+
+    # Test addition for PiecewiseLinearData with same x-coordinates
+    pld1 = IS.PiecewiseLinearData([(1, 2), (3, 6), (5, 10)])
+    pld2 = IS.PiecewiseLinearData([(1, 1), (3, 2), (5, 3)])
+    pld_sum = pld1 + pld2
+    @test pld_sum isa IS.PiecewiseLinearData
+    expected_points = [(x = 1.0, y = 3.0), (x = 3.0, y = 8.0), (x = 5.0, y = 13.0)]
+    @test IS.get_points(pld_sum) == expected_points
+    @test IS.get_x_coords(pld_sum) == [1, 3, 5]
+    @test IS.get_y_coords(pld_sum) == [3.0, 8.0, 13.0]
+
+    # Test addition for PiecewiseStepData with same x-coordinates
+    psd1 = IS.PiecewiseStepData([1, 3, 5], [4, 8])
+    psd2 = IS.PiecewiseStepData([1, 3, 5], [2, 3])
+    psd_sum = psd1 + psd2
+    @test psd_sum isa IS.PiecewiseStepData
+    @test IS.get_x_coords(psd_sum) == [1, 3, 5]
+    @test IS.get_y_coords(psd_sum) == [6.0, 11.0]  # [4+2, 8+3]
+
+    # Test addition errors for PiecewiseLinearData with different x-coordinates
+    pld_diff = IS.PiecewiseLinearData([(1, 1), (2, 2), (4, 4)])  # different x-coords
+    @test_throws ArgumentError pld1 + pld_diff
+
+    # Test addition errors for PiecewiseStepData with different x-coordinates
+    psd_diff = IS.PiecewiseStepData([1, 2, 4], [1, 2])  # different x-coords
+    @test_throws ArgumentError psd1 + psd_diff
+
+    # Test commutativity of addition (f + g = g + f)
+    @test ld1 + ld2 == ld2 + ld1
+    @test qd1 + qd2 == qd2 + qd1
+    @test pld1 + pld2 == pld2 + pld1
+    @test psd1 + psd2 == psd2 + psd1
+
+    # Test associativity of addition ((f + g) + h = f + (g + h))
+    ld3 = IS.LinearFunctionData(1, 3)
+    @test (ld1 + ld2) + ld3 == ld1 + (ld2 + ld3)
+
+    qd3 = IS.QuadraticFunctionData(1, 1, 2)
+    @test (qd1 + qd2) + qd3 == qd1 + (qd2 + qd3)
+
+    pld3 = IS.PiecewiseLinearData([(1, 0.5), (3, 1.5), (5, 2.5)])
+    @test (pld1 + pld2) + pld3 == pld1 + (pld2 + pld3)
+
+    psd3 = IS.PiecewiseStepData([1, 3, 5], [1, 1])
+    @test (psd1 + psd2) + psd3 == psd1 + (psd2 + psd3)
 end
 
 @testset "Test PiecewiseLinearData <-> PiecewiseStepData conversion" begin
