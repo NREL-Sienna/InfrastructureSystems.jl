@@ -500,6 +500,39 @@ Base.:+(fd::PiecewiseStepData, c::Float64) =
 "Add a scalar to the `FunctionData`: (c + f)(x) = (f + c)(x) = f(x) + c"
 Base.:+(c::Float64, fd::FunctionData) = fd + c
 
+# SHIFT BY A SCALAR
+"Right shift the `LinearFunctionData` by a scalar: (f >> c)(x) = f(x - c)"
+Base.:>>(fd::LinearFunctionData, c::Float64) =
+    LinearFunctionData(
+        get_proportional_term(fd),
+        get_constant_term(fd) - get_proportional_term(fd) * c,
+    )
+
+"Right shift the `QuadraticFunctionData` by a scalar: (f >> c)(x) = f(x - c)"
+Base.:>>(fd::QuadraticFunctionData, c::Float64) =
+    QuadraticFunctionData(
+        get_quadratic_term(fd),
+        get_proportional_term(fd) - 2 * get_quadratic_term(fd) * c,
+        get_constant_term(fd) +
+        get_quadratic_term(fd) * c^2 - get_proportional_term(fd) * c,
+    )
+
+"Right shift the `PiecewiseLinearData` by a scalar: (f >> c)(x) = f(x - c)"
+Base.:>>(fd::PiecewiseLinearData, c::Float64) =
+    PiecewiseLinearData(
+        [(p.x + c, p.y) for p in get_points(fd)],
+    )
+
+"Right shift the `PiecewiseStepData` by a scalar: (f >> c)(x) = f(x - c)"
+Base.:>>(fd::PiecewiseStepData, c::Float64) =
+    PiecewiseStepData(
+        get_x_coords(fd) .+ c,
+        get_y_coords(fd),
+    )
+
+"Left shift the `FunctionData` by a scalar: (f << c)(x) = (f >> -c)(x) = f(x + c)"
+Base.:<<(fd::FunctionData, c::Float64) = fd >> -c
+
 # ADDITION OF TWO FUNCTIONDATAS
 "Add two `LinearFunctionData`s: (f + g)(x) = f(x) + g(x)"
 Base.:+(f::LinearFunctionData, g::LinearFunctionData) =

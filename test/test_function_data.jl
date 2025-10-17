@@ -310,6 +310,94 @@ end
         end
     end
 
+    # SHIFT BY A SCALAR
+    # Test right shift for LinearFunctionData
+    ld = IS.LinearFunctionData(5, 1)  # f(x) = 5x + 1
+    ld_shifted = ld >> 2.0            # (f >> 2)(x) = f(x - 2) = 5(x - 2) + 1 = 5x - 9
+    @test ld_shifted isa IS.LinearFunctionData
+    @test IS.get_proportional_term(ld_shifted) == 5.0   # unchanged
+    @test IS.get_constant_term(ld_shifted) == -9.0      # 1 - 5*2
+
+    # Test right shift for QuadraticFunctionData
+    qd = IS.QuadraticFunctionData(2, 3, 4)  # f(x) = 2x² + 3x + 4
+    qd_shifted = qd >> 1.0                  # (f >> 1)(x) = f(x - 1) = 2(x-1)² + 3(x-1) + 4 = 2x² - x + 3
+    @test qd_shifted isa IS.QuadraticFunctionData
+    @test IS.get_quadratic_term(qd_shifted) == 2.0       # unchanged
+    @test IS.get_proportional_term(qd_shifted) == -1.0    # 3 - 2*2*1
+    @test IS.get_constant_term(qd_shifted) == 3.0        # 4 + 2*1² - 3*1
+
+    # Another quadratic case
+    qd2 = IS.QuadraticFunctionData(1, -2, 5)  # g(x) = x² - 2x + 5
+    qd2_shifted = qd2 >> 3.0                  # (g >> 3)(x) = g(x - 3) = (x-3)² - 2(x-3) + 5 = x² - 8x + 20
+    @test qd2_shifted isa IS.QuadraticFunctionData
+    @test IS.get_quadratic_term(qd2_shifted) == 1.0      # unchanged
+    @test IS.get_proportional_term(qd2_shifted) == -8.0  # -2 - 2*1*3 = -2 - 6 = -8
+    @test IS.get_constant_term(qd2_shifted) == 20.0      # 5 + 1*3² - (-2)*3 = 5 + 9 + 6 = 20
+
+    # Test right shift for PiecewiseLinearData
+    pld = IS.PiecewiseLinearData([(1, 2), (3, 6), (5, 10)])
+    pld_shifted = pld >> 1.5  # shifts x-coordinates right by 1.5
+    @test pld_shifted isa IS.PiecewiseLinearData
+    expected_points = [(x = 2.5, y = 2.0), (x = 4.5, y = 6.0), (x = 6.5, y = 10.0)]
+    @test IS.get_points(pld_shifted) == expected_points
+    @test IS.get_x_coords(pld_shifted) == [2.5, 4.5, 6.5]  # x-coordinates shifted
+    @test IS.get_y_coords(pld_shifted) == [2.0, 6.0, 10.0]  # y-coordinates unchanged
+
+    # Test right shift for PiecewiseStepData
+    psd = IS.PiecewiseStepData([1, 3, 5], [4, 8])
+    psd_shifted = psd >> 0.5  # shifts x-coordinates right by 0.5
+    @test psd_shifted isa IS.PiecewiseStepData
+    @test IS.get_x_coords(psd_shifted) == [1.5, 3.5, 5.5]  # x-coordinates shifted
+    @test IS.get_y_coords(psd_shifted) == [4, 8]           # y-coordinates unchanged
+
+    # Test left shift (f << c = f >> -c)
+    shifts = [2.0, 1.0, 1.5, 0.5]
+    for (fd, shift) in zip(get_test_function_data(), shifts)
+        @test fd << shift == fd >> (-shift)
+    end
+
+    # Test shifting by zero (identity)
+    for fd in get_test_function_data()
+        @test fd >> 0.0 == fd
+        @test fd << 0.0 == fd
+    end
+
+    # Test double shift equivalence: (f >> a) >> b = f >> (a + b)
+    for fd in get_test_function_data()
+        a, b = 1.0, 2.0
+        @test (fd >> a) >> b == fd >> (a + b)
+        @test (fd << a) << b == fd << (a + b)
+    end
+
+    # Test shift then reverse shift (should return to original)
+    shifts = [1.0, 2.5, 0.75, 3.0]
+    for (fd, shift) in zip(get_test_function_data(), shifts)
+        shifted_back = (fd >> shift) << shift
+        if fd isa Union{IS.LinearFunctionData, IS.QuadraticFunctionData}
+            # For polynomial functions, use approximate equality due to floating point arithmetic
+            if fd isa IS.LinearFunctionData
+                @test isapprox(
+                    IS.get_proportional_term(shifted_back),
+                    IS.get_proportional_term(fd),
+                )
+                @test isapprox(IS.get_constant_term(shifted_back), IS.get_constant_term(fd))
+            else  # QuadraticFunctionData
+                @test isapprox(
+                    IS.get_quadratic_term(shifted_back),
+                    IS.get_quadratic_term(fd),
+                )
+                @test isapprox(
+                    IS.get_proportional_term(shifted_back),
+                    IS.get_proportional_term(fd),
+                )
+                @test isapprox(IS.get_constant_term(shifted_back), IS.get_constant_term(fd))
+            end
+        else
+            # For piecewise functions, exact equality should hold
+            @test shifted_back == fd
+        end
+    end
+
     # ADDITION OF TWO FUNCTIONDATAS
     # Test addition for LinearFunctionData
     ld1 = IS.LinearFunctionData(5, 1)   # f(x) = 5x + 1
