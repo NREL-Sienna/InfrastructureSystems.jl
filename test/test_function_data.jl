@@ -242,7 +242,75 @@ end
         end
     end
 
-    # FUNCTIONDATA ADDITION
+    # SCALAR ADDITION
+    # Test scalar addition for LinearFunctionData
+    ld = IS.LinearFunctionData(5, 1)  # f(x) = 5x + 1
+    ld_plus_scalar = ld + 3.0         # (f + 3)(x) = 5x + 4
+    @test ld_plus_scalar isa IS.LinearFunctionData
+    @test IS.get_proportional_term(ld_plus_scalar) == 5.0  # unchanged
+    @test IS.get_constant_term(ld_plus_scalar) == 4.0      # 1 + 3
+
+    # Test scalar addition for QuadraticFunctionData
+    qd = IS.QuadraticFunctionData(2, 3, 4)  # f(x) = 2x² + 3x + 4
+    qd_plus_scalar = qd + 2.5               # (f + 2.5)(x) = 2x² + 3x + 6.5
+    @test qd_plus_scalar isa IS.QuadraticFunctionData
+    @test IS.get_quadratic_term(qd_plus_scalar) == 2.0      # unchanged
+    @test IS.get_proportional_term(qd_plus_scalar) == 3.0   # unchanged
+    @test IS.get_constant_term(qd_plus_scalar) == 6.5       # 4 + 2.5
+
+    # Test scalar addition for PiecewiseLinearData
+    pld = IS.PiecewiseLinearData([(1, 2), (3, 6), (5, 10)])
+    pld_plus_scalar = pld + 1.5
+    @test pld_plus_scalar isa IS.PiecewiseLinearData
+    expected_points = [(x = 1.0, y = 3.5), (x = 3.0, y = 7.5), (x = 5.0, y = 11.5)]
+    @test IS.get_points(pld_plus_scalar) == expected_points
+    @test IS.get_x_coords(pld_plus_scalar) == [1, 3, 5]  # x-coordinates unchanged
+    @test IS.get_y_coords(pld_plus_scalar) == [3.5, 7.5, 11.5]  # y-coordinates shifted up
+
+    # Test scalar addition for PiecewiseStepData
+    psd = IS.PiecewiseStepData([1, 3, 5], [4, 8])
+    psd_plus_scalar = psd + 0.5
+    @test psd_plus_scalar isa IS.PiecewiseStepData
+    @test IS.get_x_coords(psd_plus_scalar) == [1, 3, 5]    # x-coordinates unchanged
+    @test IS.get_y_coords(psd_plus_scalar) == [4.5, 8.5]   # y-coordinates shifted up: [4+0.5, 8+0.5]
+
+    # Test commutativity of scalar addition (f + c = c + f)
+    scalars = [3.0, 2.5, 1.5, 0.5]
+    for (fd, scalar) in zip(get_test_function_data(), scalars)
+        @test fd + scalar == scalar + fd
+    end
+
+    # Test adding zero (identity)
+    for fd in get_test_function_data()
+        @test fd + 0.0 == fd
+        @test 0.0 + fd == fd
+    end
+
+    # Test adding negative scalar
+    for fd in get_test_function_data()
+        fd_minus_one = fd + (-1.0)
+        @test fd_minus_one isa typeof(fd)
+        if fd isa IS.LinearFunctionData
+            @test IS.get_proportional_term(fd_minus_one) == IS.get_proportional_term(fd)
+            @test IS.get_constant_term(fd_minus_one) == IS.get_constant_term(fd) - 1.0
+        elseif fd isa IS.QuadraticFunctionData
+            @test IS.get_quadratic_term(fd_minus_one) == IS.get_quadratic_term(fd)
+            @test IS.get_proportional_term(fd_minus_one) == IS.get_proportional_term(fd)
+            @test IS.get_constant_term(fd_minus_one) == IS.get_constant_term(fd) - 1.0
+        elseif fd isa IS.PiecewiseLinearData
+            orig_points = IS.get_points(fd)
+            shifted_points = IS.get_points(fd_minus_one)
+            for (orig, shifted) in zip(orig_points, shifted_points)
+                @test orig.x == shifted.x
+                @test orig.y - 1.0 == shifted.y
+            end
+        elseif fd isa IS.PiecewiseStepData
+            @test IS.get_x_coords(fd_minus_one) == IS.get_x_coords(fd)
+            @test IS.get_y_coords(fd_minus_one) == IS.get_y_coords(fd) .- 1.0
+        end
+    end
+
+    # ADDITION OF TWO FUNCTIONDATAS
     # Test addition for LinearFunctionData
     ld1 = IS.LinearFunctionData(5, 1)   # f(x) = 5x + 1
     ld2 = IS.LinearFunctionData(3, 2)   # g(x) = 3x + 2

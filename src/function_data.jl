@@ -467,6 +467,39 @@ Base.:*(c::Float64, fd::PiecewiseStepData) =
 "Multiply the `FunctionData` by a scalar: (f * c)(x) = (c * f)(x) = c * f(x)"
 Base.:*(fd::FunctionData, c::Float64) = c * fd
 
+# SCALAR ADDITION
+"Add a scalar to the `LinearFunctionData`: (f + c)(x) = f(x) + c"
+Base.:+(fd::LinearFunctionData, c::Float64) =
+    LinearFunctionData(
+        get_proportional_term(fd),
+        get_constant_term(fd) + c,
+    )
+
+"Add a scalar to the `QuadraticFunctionData`: (f + c)(x) = f(x) + c"
+Base.:+(fd::QuadraticFunctionData, c::Float64) =
+    QuadraticFunctionData(
+        get_quadratic_term(fd),
+        get_proportional_term(fd),
+        get_constant_term(fd) + c,
+    )
+
+"Add a scalar to the `PiecewiseLinearData`: (f + c)(x) = f(x) + c"
+Base.:+(fd::PiecewiseLinearData, c::Float64) =
+    PiecewiseLinearData(
+        [(p.x, p.y + c) for p in get_points(fd)],
+    )
+
+"Add a scalar to the `PiecewiseStepData`: (f + c)(x) = f(x) + c"
+Base.:+(fd::PiecewiseStepData, c::Float64) =
+    PiecewiseStepData(
+        get_x_coords(fd),
+        get_y_coords(fd) .+ c,
+    )
+
+# commutativity
+"Add a scalar to the `FunctionData`: (c + f)(x) = (f + c)(x) = f(x) + c"
+Base.:+(c::Float64, fd::FunctionData) = fd + c
+
 # ADDITION OF TWO FUNCTIONDATAS
 "Add two `LinearFunctionData`s: (f + g)(x) = f(x) + g(x)"
 Base.:+(f::LinearFunctionData, g::LinearFunctionData) =
