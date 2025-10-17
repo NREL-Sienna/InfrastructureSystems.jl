@@ -399,8 +399,67 @@ QuadraticFunctionData(data::LinearFunctionData) =
 Base.convert(::Type{QuadraticFunctionData}, data::LinearFunctionData) =
     QuadraticFunctionData(data)
 
+"Get the domain of the function represented by the `LinearFunctionData` or `QuadraticFunctionData` (always `(-Inf, Inf)` for these types)."
+get_domain(fd::Union{LinearFunctionData, QuadraticFunctionData}) = (-Inf, Inf)
+
+"Get the domain of the function represented by the `PiecewiseLinearData` or `PiecewiseStepData`."
+get_domain(fd::Union{PiecewiseLinearData, PiecewiseStepData}) =
+    (first(get_x_coords(fd)), last(get_x_coords(fd)))
+
 "Get a `LinearFunctionData` representing the function `f(x) = 0`"
 Base.zero(::Union{LinearFunctionData, Type{LinearFunctionData}}) = LinearFunctionData(0, 0)
 
+"Get a `QuadraticFunctionData` representing the function `f(x) = 0`"
+Base.zero(::Union{QuadraticFunctionData, Type{QuadraticFunctionData}}) =
+    QuadraticFunctionData(0, 0, 0)
+
+"Get a `PiecewiseLinearData` representing the function `f(x) = 0`; optionally specify `domain` tuple to set the x-coordinates of the endpoints"
+Base.zero(::Type{PiecewiseLinearData}; domain::Tuple{Float64, Float64} = (-Inf, Inf)) =
+    PiecewiseLinearData([(first(domain), 0), (last(domain), 0)])
+
+"Get a `PiecewiseStepData` representing the function `f(x) = 0`; optionally specify `domain` tuple to set the x-coordinates of the endpoints"
+Base.zero(::Type{PiecewiseStepData}; domain::Tuple{Float64, Float64} = (-Inf, Inf)) =
+    PiecewiseStepData([domain...], [0])
+
+"Get a `PiecewiseLinearData` with the same x-coordinates as `fd` but y-coordinates equal to zero"
+Base.zero(fd::PiecewiseLinearData) =
+    PiecewiseLinearData([(p.x, 0.0) for p in get_points(fd)])
+
+"Get a `PiecewiseStepData` with the same x-coordinates as `fd` and y-coordinates equal to zero"
+Base.zero(fd::PiecewiseStepData) =
+    PiecewiseStepData(get_x_coords(fd), zeros(length(get_y_coords(fd))))
+
 "Get a `FunctionData` representing the function `f(x) = 0`"
-Base.zero(::Type{FunctionData}) = Base.zero(LinearFunctionData)
+Base.zero(::Union{FunctionData, Type{FunctionData}}) = Base.zero(LinearFunctionData)
+
+"Multiply the `LinearFunctionData` by a scalar: (c * f)(x) = c * f(x)"
+Base.:*(c::Float64, fd::LinearFunctionData) =
+    LinearFunctionData(
+        c * get_proportional_term(fd),
+        c * get_constant_term(fd),
+    )
+
+"Multiply the `QuadraticFunctionData` by a scalar: (c * f)(x) = c * f(x)"
+Base.:*(c::Float64, fd::QuadraticFunctionData) =
+    QuadraticFunctionData(
+        c * get_quadratic_term(fd),
+        c * get_proportional_term(fd),
+        c * get_constant_term(fd),
+    )
+
+"Multiply the `PiecewiseLinearData` by a scalar: (c * f)(x) = c * f(x)"
+Base.:*(c::Float64, fd::PiecewiseLinearData) =
+    PiecewiseLinearData(
+        [(p.x, c * p.y) for p in get_points(fd)],
+    )
+
+"Multiply the `PiecewiseStepData` by a scalar: (c * f)(x) = c * f(x)"
+Base.:*(c::Float64, fd::PiecewiseStepData) =
+    PiecewiseStepData(
+        get_x_coords(fd),
+        c * get_y_coords(fd),
+    )
+
+# commutativity
+"Multiply the `FunctionData` by a scalar: (f * c)(x) = (c * f)(x) = c * f(x)"
+Base.:*(fd::FunctionData, c::Float64) = c * fd

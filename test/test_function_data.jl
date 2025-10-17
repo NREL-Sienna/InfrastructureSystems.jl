@@ -5,6 +5,13 @@ get_test_function_data() = [
     IS.PiecewiseStepData([1, 3, 5], [2, 2.5]),
 ]
 
+get_test_function_data_zeros() = [
+    IS.LinearFunctionData(0.0, 0.0),
+    IS.QuadraticFunctionData(0.0, 0.0, 0.0),
+    IS.PiecewiseLinearData([(1.0, 0.0), (3.0, 0.0), (5.0, 0.0)]),
+    IS.PiecewiseStepData([1.0, 3.0, 5.0], [0.0, 0.0]),
+]
+
 # Dictionary by type and whether we want NaNs
 get_more_test_function_data() = Dict(
     (IS.LinearFunctionData, false) => IS.LinearFunctionData(1.0, 2.0),
@@ -60,7 +67,7 @@ end
     @test IS.get_y_coords(dd) == [3, 6]
 end
 
-@testset "Test FunctionData calculations" begin
+@testset "Test FunctionData core calculations" begin
     @test length(IS.PiecewiseLinearData([(0, 0), (1, 1), (1.1, 2)])) == 2
     @test length(IS.PiecewiseStepData([1, 1.1, 1.2], [1.1, 10])) == 2
 
@@ -138,9 +145,101 @@ end
           convert(IS.QuadraticFunctionData, IS.LinearFunctionData(1, 2)) ==
           IS.QuadraticFunctionData(0, 1, 2)
 
-    @test zero(IS.LinearFunctionData(1, 2)) == IS.LinearFunctionData(0, 0)
+    @test IS.get_domain(IS.LinearFunctionData(1, 2)) == (-Inf, Inf)
+    @test IS.get_domain(IS.QuadraticFunctionData(1, 2, 3)) == (-Inf, Inf)
+    @test IS.get_domain(IS.PiecewiseLinearData([(1, 1), (3, 1), (5, 1)])) == (1, 5)
+    @test IS.get_domain(IS.PiecewiseStepData([1, 3, 5], [1, 1])) == (1, 5)
+
+    for (fd, answer) in zip(get_test_function_data(), get_test_function_data_zeros())
+        @test zero(fd) == answer
+    end
+
     @test zero(IS.LinearFunctionData) == IS.LinearFunctionData(0, 0)
+    @test zero(IS.QuadraticFunctionData) == IS.QuadraticFunctionData(0, 0, 0)
+    @test zero(IS.PiecewiseLinearData) == IS.PiecewiseLinearData([(-Inf, 0), (Inf, 0)])
+    @test zero(IS.PiecewiseStepData) == IS.PiecewiseStepData([-Inf, Inf], [0.0])
+    @test zero(IS.PiecewiseLinearData; domain = (1.0, 5.0)) ==
+          IS.PiecewiseLinearData([(1.0, 0), (5.0, 0)])
+    @test zero(IS.PiecewiseStepData; domain = (1.0, 5.0)) ==
+          IS.PiecewiseStepData([1.0, 5.0], [0.0])
     @test zero(IS.FunctionData) == IS.LinearFunctionData(0, 0)
+end
+
+@testset "Test FunctionData higher-level calculations" begin
+    # Test scalar multiplication for LinearFunctionData
+    ld = IS.LinearFunctionData(5, 1)  # f(x) = 5x + 1
+    ld_scaled = 3.0 * ld
+    @test ld_scaled isa IS.LinearFunctionData
+    @test IS.get_proportional_term(ld_scaled) == 15.0  # 3 * 5
+    @test IS.get_constant_term(ld_scaled) == 3.0       # 3 * 1
+
+    # Test scalar multiplication for QuadraticFunctionData
+    qd = IS.QuadraticFunctionData(2, 3, 4)  # f(x) = 2x² + 3x + 4
+    qd_scaled = 2.5 * qd
+    @test qd_scaled isa IS.QuadraticFunctionData
+    @test IS.get_quadratic_term(qd_scaled) == 5.0    # 2.5 * 2
+    @test IS.get_proportional_term(qd_scaled) == 7.5 # 2.5 * 3
+    @test IS.get_constant_term(qd_scaled) == 10.0    # 2.5 * 4
+
+    # Test scalar multiplication for PiecewiseLinearData
+    pld = IS.PiecewiseLinearData([(1, 2), (3, 6), (5, 10)])
+    pld_scaled = 0.5 * pld
+    @test pld_scaled isa IS.PiecewiseLinearData
+    expected_points = [(x = 1.0, y = 1.0), (x = 3.0, y = 3.0), (x = 5.0, y = 5.0)]
+    @test IS.get_points(pld_scaled) == expected_points
+    @test IS.get_x_coords(pld_scaled) == [1, 3, 5]  # x-coordinates unchanged
+    @test IS.get_y_coords(pld_scaled) == [1.0, 3.0, 5.0]  # y-coordinates scaled
+
+    # Test scalar multiplication for PiecewiseStepData
+    psd = IS.PiecewiseStepData([1, 3, 5], [4, 8])
+    psd_scaled = 0.25 * psd
+    @test psd_scaled isa IS.PiecewiseStepData
+    @test IS.get_x_coords(psd_scaled) == [1, 3, 5]  # x-coordinates unchanged
+    @test IS.get_y_coords(psd_scaled) == [1.0, 2.0]  # y-coordinates scaled: [0.25*4, 0.25*8]
+
+    # Test commutativity of scalar multiplication
+    scalars = [3.0, 2.5, 0.5, 0.25]
+    for (fd, scalar) in zip(get_test_function_data(), scalars)
+        @test fd * scalar == scalar * fd
+    end
+
+    # Test multiplication by zero
+    for (fd, answer) in zip(get_test_function_data(), get_test_function_data_zeros())
+        fd_zero = 0.0 * fd
+        @test fd_zero isa typeof(fd)
+        @test fd_zero == answer
+    end
+
+    # Test multiplication by one (identity)
+    for fd in get_test_function_data()
+        fd_identity = 1.0 * fd
+        @test fd_identity == fd
+        @test fd * 1.0 == fd
+    end
+
+    # Test multiplication by negative scalar
+    for fd in get_test_function_data()
+        fd_neg = -1.0 * fd
+        @test fd_neg isa typeof(fd)
+        if fd isa IS.LinearFunctionData
+            @test IS.get_proportional_term(fd_neg) == -IS.get_proportional_term(fd)
+            @test IS.get_constant_term(fd_neg) == -IS.get_constant_term(fd)
+        elseif fd isa IS.QuadraticFunctionData
+            @test IS.get_quadratic_term(fd_neg) == -IS.get_quadratic_term(fd)
+            @test IS.get_proportional_term(fd_neg) == -IS.get_proportional_term(fd)
+            @test IS.get_constant_term(fd_neg) == -IS.get_constant_term(fd)
+        elseif fd isa IS.PiecewiseLinearData
+            orig_points = IS.get_points(fd)
+            neg_points = IS.get_points(fd_neg)
+            for (orig, neg) in zip(orig_points, neg_points)
+                @test orig.x == neg.x
+                @test orig.y == -neg.y
+            end
+        elseif fd isa IS.PiecewiseStepData
+            @test IS.get_x_coords(fd_neg) == IS.get_x_coords(fd)
+            @test IS.get_y_coords(fd_neg) == -IS.get_y_coords(fd)
+        end
+    end
 end
 
 @testset "Test PiecewiseLinearData <-> PiecewiseStepData conversion" begin
