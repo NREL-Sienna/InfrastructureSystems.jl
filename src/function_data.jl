@@ -533,6 +533,39 @@ Base.:>>(fd::PiecewiseStepData, c::Float64) =
 "Left shift the `FunctionData` by a scalar: (f << c)(x) = (f >> -c)(x) = f(x + c)"
 Base.:<<(fd::FunctionData, c::Float64) = fd >> -c
 
+# NEGATION
+"Negate the `FunctionData`: (-f)(x) = -f(x)"
+Base.:-(fd::FunctionData) = -1.0 * fd
+
+# FLIP ABOUT Y-AXIS
+"Flip the `LinearFunctionData` about the y-axis: (~f)(x) = f(-x)"
+Base.:~(fd::LinearFunctionData) =
+    LinearFunctionData(
+        -get_proportional_term(fd),
+        get_constant_term(fd),
+    )
+
+"Flip the `QuadraticFunctionData` about the y-axis: (~f)(x) = f(-x)"
+Base.:~(fd::QuadraticFunctionData) =
+    QuadraticFunctionData(
+        get_quadratic_term(fd),
+        -get_proportional_term(fd),
+        get_constant_term(fd),
+    )
+
+"Flip the `PiecewiseLinearData` about the y-axis: (~f)(x) = f(-x)"
+Base.:~(fd::PiecewiseLinearData) =
+    PiecewiseLinearData(
+        [(-p.x, p.y) for p in reverse(get_points(fd))],
+    )
+
+"Flip the `PiecewiseStepData` about the y-axis: (~f)(x) = f(-x)"
+Base.:~(fd::PiecewiseStepData) =
+    PiecewiseStepData(
+        reverse(-get_x_coords(fd)),
+        reverse(get_y_coords(fd)),
+    )
+
 # ADDITION OF TWO FUNCTIONDATAS
 "Add two `LinearFunctionData`s: (f + g)(x) = f(x) + g(x)"
 Base.:+(f::LinearFunctionData, g::LinearFunctionData) =

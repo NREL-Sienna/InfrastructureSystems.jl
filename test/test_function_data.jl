@@ -166,7 +166,7 @@ end
 end
 
 @testset "Test FunctionData higher-level calculations" begin
-    # SCALAR MULTIPLICATION
+    # SCALAR MULTIPLICATION AND UNARY NEGATION
     # Test scalar multiplication for LinearFunctionData
     ld = IS.LinearFunctionData(5, 1)  # f(x) = 5x + 1
     ld_scaled = 3.0 * ld
@@ -240,6 +240,8 @@ end
             @test IS.get_x_coords(fd_neg) == IS.get_x_coords(fd)
             @test IS.get_y_coords(fd_neg) == -IS.get_y_coords(fd)
         end
+
+        @test -fd == fd_neg
     end
 
     # SCALAR ADDITION
@@ -396,6 +398,44 @@ end
             # For piecewise functions, exact equality should hold
             @test shifted_back == fd
         end
+    end
+
+    # FLIP ABOUT Y-AXIS
+    # Test flip for LinearFunctionData
+    ld = IS.LinearFunctionData(5, 1)  # f(x) = 5x + 1
+    ld_flipped = ~ld                  # (~f)(x) = f(-x) = 5(-x) + 1 = -5x + 1
+    @test ld_flipped isa IS.LinearFunctionData
+    @test IS.get_proportional_term(ld_flipped) == -5.0  # -5
+    @test IS.get_constant_term(ld_flipped) == 1.0       # unchanged
+
+    # Test flip for QuadraticFunctionData
+    qd = IS.QuadraticFunctionData(2, 3, 4)  # f(x) = 2x² + 3x + 4
+    qd_flipped = ~qd                        # (~f)(x) = f(-x) = 2(-x)² + 3(-x) + 4 = 2x² - 3x + 4
+    @test qd_flipped isa IS.QuadraticFunctionData
+    @test IS.get_quadratic_term(qd_flipped) == 2.0      # unchanged (even power)
+    @test IS.get_proportional_term(qd_flipped) == -3.0  # -3 (odd power)
+    @test IS.get_constant_term(qd_flipped) == 4.0       # unchanged
+
+    # Test flip for PiecewiseLinearData
+    pld = IS.PiecewiseLinearData([(1, 2), (3, 6), (5, 10)])
+    pld_flipped = ~pld  # flips x-coordinates and reverses order
+    @test pld_flipped isa IS.PiecewiseLinearData
+    expected_points = [(x = -5.0, y = 10.0), (x = -3.0, y = 6.0), (x = -1.0, y = 2.0)]
+    @test IS.get_points(pld_flipped) == expected_points
+    @test IS.get_x_coords(pld_flipped) == [-5.0, -3.0, -1.0]  # negated and reversed
+    @test IS.get_y_coords(pld_flipped) == [10.0, 6.0, 2.0]    # reversed
+
+    # Test flip for PiecewiseStepData
+    psd = IS.PiecewiseStepData([1, 3, 5], [4, 8])
+    psd_flipped = ~psd  # flips x-coordinates and reverses both x and y arrays
+    @test psd_flipped isa IS.PiecewiseStepData
+    @test IS.get_x_coords(psd_flipped) == [-5, -3, -1]  # negated and reversed
+    @test IS.get_y_coords(psd_flipped) == [8, 4]        # reversed
+
+    # Test double flip returns to original
+    for fd in get_test_function_data()
+        double_flipped = ~(~fd)
+        @test double_flipped == fd
     end
 
     # ADDITION OF TWO FUNCTIONDATAS
