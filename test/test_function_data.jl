@@ -165,7 +165,7 @@ end
     @test zero(IS.FunctionData) == IS.LinearFunctionData(0, 0)
 end
 
-@testset "Test FunctionData higher-level calculations" begin
+@testset "Test FunctionData higher-level arithmetic" begin
     # SCALAR MULTIPLICATION AND UNARY NEGATION
     # Test scalar multiplication for LinearFunctionData
     ld = IS.LinearFunctionData(5, 1)  # f(x) = 5x + 1
@@ -175,7 +175,7 @@ end
     @test IS.get_constant_term(ld_scaled) == 3.0       # 3 * 1
 
     # Test scalar multiplication for QuadraticFunctionData
-    qd = IS.QuadraticFunctionData(2, 3, 4)  # f(x) = 2x² + 3x + 4
+    qd = IS.QuadraticFunctionData(2, 3, 4)  # f(x) = 2x^2 + 3x + 4
     qd_scaled = 2.5 * qd
     @test qd_scaled isa IS.QuadraticFunctionData
     @test IS.get_quadratic_term(qd_scaled) == 5.0    # 2.5 * 2
@@ -218,7 +218,7 @@ end
         @test fd * 1.0 == fd
     end
 
-    # Test multiplication by negative scalar
+    # Test multiplication by negative scalar and unary negation
     for fd in get_test_function_data()
         fd_neg = -1.0 * fd
         @test fd_neg isa typeof(fd)
@@ -253,8 +253,8 @@ end
     @test IS.get_constant_term(ld_plus_scalar) == 4.0      # 1 + 3
 
     # Test scalar addition for QuadraticFunctionData
-    qd = IS.QuadraticFunctionData(2, 3, 4)  # f(x) = 2x² + 3x + 4
-    qd_plus_scalar = qd + 2.5               # (f + 2.5)(x) = 2x² + 3x + 6.5
+    qd = IS.QuadraticFunctionData(2, 3, 4)  # f(x) = 2x^2 + 3x + 4
+    qd_plus_scalar = qd + 2.5               # (f + 2.5)(x) = 2x^2 + 3x + 6.5
     @test qd_plus_scalar isa IS.QuadraticFunctionData
     @test IS.get_quadratic_term(qd_plus_scalar) == 2.0      # unchanged
     @test IS.get_proportional_term(qd_plus_scalar) == 3.0   # unchanged
@@ -321,20 +321,20 @@ end
     @test IS.get_constant_term(ld_shifted) == -9.0      # 1 - 5*2
 
     # Test right shift for QuadraticFunctionData
-    qd = IS.QuadraticFunctionData(2, 3, 4)  # f(x) = 2x² + 3x + 4
-    qd_shifted = qd >> 1.0                  # (f >> 1)(x) = f(x - 1) = 2(x-1)² + 3(x-1) + 4 = 2x² - x + 3
+    qd = IS.QuadraticFunctionData(2, 3, 4)  # f(x) = 2x^2 + 3x + 4
+    qd_shifted = qd >> 1.0                  # (f >> 1)(x) = f(x - 1) = 2(x-1)^2 + 3(x-1) + 4 = 2x^2 - x + 3
     @test qd_shifted isa IS.QuadraticFunctionData
     @test IS.get_quadratic_term(qd_shifted) == 2.0       # unchanged
     @test IS.get_proportional_term(qd_shifted) == -1.0    # 3 - 2*2*1
-    @test IS.get_constant_term(qd_shifted) == 3.0        # 4 + 2*1² - 3*1
+    @test IS.get_constant_term(qd_shifted) == 3.0        # 4 + 2*1^2 - 3*1
 
     # Another quadratic case
-    qd2 = IS.QuadraticFunctionData(1, -2, 5)  # g(x) = x² - 2x + 5
-    qd2_shifted = qd2 >> 3.0                  # (g >> 3)(x) = g(x - 3) = (x-3)² - 2(x-3) + 5 = x² - 8x + 20
+    qd2 = IS.QuadraticFunctionData(1, -2, 5)  # g(x) = x^2 - 2x + 5
+    qd2_shifted = qd2 >> 3.0                  # (g >> 3)(x) = g(x - 3) = (x-3)^2 - 2(x-3) + 5 = x^2 - 8x + 20
     @test qd2_shifted isa IS.QuadraticFunctionData
     @test IS.get_quadratic_term(qd2_shifted) == 1.0      # unchanged
     @test IS.get_proportional_term(qd2_shifted) == -8.0  # -2 - 2*1*3 = -2 - 6 = -8
-    @test IS.get_constant_term(qd2_shifted) == 20.0      # 5 + 1*3² - (-2)*3 = 5 + 9 + 6 = 20
+    @test IS.get_constant_term(qd2_shifted) == 20.0      # 5 + 1*3^2 - (-2)*3 = 5 + 9 + 6 = 20
 
     # Test right shift for PiecewiseLinearData
     pld = IS.PiecewiseLinearData([(1, 2), (3, 6), (5, 10)])
@@ -409,8 +409,8 @@ end
     @test IS.get_constant_term(ld_flipped) == 1.0       # unchanged
 
     # Test flip for QuadraticFunctionData
-    qd = IS.QuadraticFunctionData(2, 3, 4)  # f(x) = 2x² + 3x + 4
-    qd_flipped = ~qd                        # (~f)(x) = f(-x) = 2(-x)² + 3(-x) + 4 = 2x² - 3x + 4
+    qd = IS.QuadraticFunctionData(2, 3, 4)  # f(x) = 2x^2 + 3x + 4
+    qd_flipped = ~qd                        # (~f)(x) = f(-x) = 2(-x)^2 + 3(-x) + 4 = 2x^2 - 3x + 4
     @test qd_flipped isa IS.QuadraticFunctionData
     @test IS.get_quadratic_term(qd_flipped) == 2.0      # unchanged (even power)
     @test IS.get_proportional_term(qd_flipped) == -3.0  # -3 (odd power)
@@ -448,9 +448,9 @@ end
     @test IS.get_constant_term(ld_sum) == 3.0       # 1 + 2
 
     # Test addition for QuadraticFunctionData
-    qd1 = IS.QuadraticFunctionData(2, 3, 4)  # f(x) = 2x² + 3x + 4
-    qd2 = IS.QuadraticFunctionData(1, 2, 1)  # g(x) = x² + 2x + 1
-    qd_sum = qd1 + qd2                       # (f+g)(x) = 3x² + 5x + 5
+    qd1 = IS.QuadraticFunctionData(2, 3, 4)  # f(x) = 2x^2 + 3x + 4
+    qd2 = IS.QuadraticFunctionData(1, 2, 1)  # g(x) = x^2 + 2x + 1
+    qd_sum = qd1 + qd2                       # (f+g)(x) = 3x^2 + 5x + 5
     @test qd_sum isa IS.QuadraticFunctionData
     @test IS.get_quadratic_term(qd_sum) == 3.0      # 2 + 1
     @test IS.get_proportional_term(qd_sum) == 5.0   # 3 + 2
@@ -511,11 +511,11 @@ end
     @test ld(1.5) == 8.5    # f(1.5) = 5*1.5 + 1 = 8.5
 
     # Test QuadraticFunctionData evaluation
-    qd = IS.QuadraticFunctionData(2, 3, 4)  # f(x) = 2x² + 3x + 4
-    @test qd(0) == 4.0      # f(0) = 2*0² + 3*0 + 4 = 4
-    @test qd(1) == 9.0      # f(1) = 2*1² + 3*1 + 4 = 9
-    @test qd(-1) == 3.0     # f(-1) = 2*(-1)² + 3*(-1) + 4 = 3
-    @test qd(2) == 18.0     # f(2) = 2*2² + 3*2 + 4 = 18
+    qd = IS.QuadraticFunctionData(2, 3, 4)  # f(x) = 2x^2 + 3x + 4
+    @test qd(0) == 4.0      # f(0) = 2*0^2 + 3*0 + 4 = 4
+    @test qd(1) == 9.0      # f(1) = 2*1^2 + 3*1 + 4 = 9
+    @test qd(-1) == 3.0     # f(-1) = 2*(-1)^2 + 3*(-1) + 4 = 3
+    @test qd(2) == 18.0     # f(2) = 2*2^2 + 3*2 + 4 = 18
     @test qd(0.5) == 6.0    # f(0.5) = 2*0.25 + 3*0.5 + 4 = 6
 
     # Test PiecewiseLinearData evaluation
@@ -552,7 +552,7 @@ end
     @test ld(1 + 2im) == 6 + 10im  # 5*(1 + 2im) + 1
     @test ld(2 - im) == 11 - 5im  # 5*(2 - im) + 1
 
-    # QuadraticFunctionData: f(x) = 2x² + 3x + 4
+    # QuadraticFunctionData: f(x) = 2x^2 + 3x + 4
     @test qd(1im) == 2 + 3im  # 2*(1im)^2 + 3*(1im) + 4
     @test qd(1 + im) == 7 + 7im  # 2*(1 + im)^2 + 3*(1 + im) + 4
 

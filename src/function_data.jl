@@ -401,10 +401,14 @@ Base.convert(::Type{QuadraticFunctionData}, data::LinearFunctionData) =
 
 # GET_DOMAIN
 "Get the domain of the function represented by the `LinearFunctionData` or `QuadraticFunctionData` (always `(-Inf, Inf)` for these types)."
-get_domain(fd::Union{LinearFunctionData, QuadraticFunctionData}) = (-Inf, Inf)
+get_domain(::Union{LinearFunctionData, QuadraticFunctionData}) = (-Inf, Inf)
 
-"Get the domain of the function represented by the `PiecewiseLinearData` or `PiecewiseStepData`."
-get_domain(fd::Union{PiecewiseLinearData, PiecewiseStepData}) =
+"Get the domain of the function represented by the `PiecewiseLinearData`."
+get_domain(fd::PiecewiseLinearData) =
+    (first(get_points(fd)).x, last(get_points(fd)).x)  # avoiding get_x_coords to avoid extra allocation
+
+"Get the domain of the function represented by the `PiecewiseStepData`."
+get_domain(fd::PiecewiseStepData) =
     (first(get_x_coords(fd)), last(get_x_coords(fd)))
 
 # ZERO
@@ -594,8 +598,8 @@ function Base.:+(f::PiecewiseLinearData, g::PiecewiseLinearData)
             ),
         )
     new_points = XY_COORDS[
-        (x = f_x_coords[ix], y = get_y_coords(f)[ix] + get_y_coords(g)[ix]) for
-        ix in eachindex(f_x_coords)
+        (x = f_x, y = f_y + g_y) for
+        (f_x, f_y, g_y) in zip(f_x_coords, get_y_coords(f), get_y_coords(g))
     ]
     return PiecewiseLinearData(new_points)
 end
