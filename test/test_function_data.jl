@@ -502,6 +502,78 @@ end
     @test (psd1 + psd2) + psd3 == psd1 + (psd2 + psd3)
 end
 
+@testset "Test FunctionData evaluation" begin
+    # Test LinearFunctionData evaluation
+    ld = IS.LinearFunctionData(5, 1)  # f(x) = 5x + 1
+    @test ld(0) == 1.0      # f(0) = 5*0 + 1 = 1
+    @test ld(2) == 11.0     # f(2) = 5*2 + 1 = 11
+    @test ld(-1) == -4.0    # f(-1) = 5*(-1) + 1 = -4
+    @test ld(1.5) == 8.5    # f(1.5) = 5*1.5 + 1 = 8.5
+
+    # Test QuadraticFunctionData evaluation
+    qd = IS.QuadraticFunctionData(2, 3, 4)  # f(x) = 2x² + 3x + 4
+    @test qd(0) == 4.0      # f(0) = 2*0² + 3*0 + 4 = 4
+    @test qd(1) == 9.0      # f(1) = 2*1² + 3*1 + 4 = 9
+    @test qd(-1) == 3.0     # f(-1) = 2*(-1)² + 3*(-1) + 4 = 3
+    @test qd(2) == 18.0     # f(2) = 2*2² + 3*2 + 4 = 18
+    @test qd(0.5) == 6.0    # f(0.5) = 2*0.25 + 3*0.5 + 4 = 6
+
+    # Test PiecewiseLinearData evaluation
+    pld = IS.PiecewiseLinearData([(1, 2), (3, 6), (5, 10)])
+    @test pld(1) == 2.0     # at first point
+    @test pld(3) == 6.0     # at middle point
+    @test pld(5) == 10.0    # at last point
+    @test pld(2) == 4.0     # interpolated: halfway between (1,2) and (3,6)
+    @test pld(4) == 8.0     # interpolated: halfway between (3,6) and (5,10)
+    @test pld(1.5) == 3.0   # interpolated: 1/4 way from (1,2) to (3,6)
+
+    # Test PiecewiseStepData evaluation
+    psd = IS.PiecewiseStepData([1, 3, 5], [4, 8])
+    @test psd(1) == 4       # at first x-coordinate
+    @test psd(2) == 4       # in first interval [1, 3)
+    @test psd(2.9) == 4     # still in first interval
+    @test psd(3) == 8       # at second x-coordinate
+    @test psd(4) == 8       # in second interval [3, 5)
+    @test psd(5) == 8       # at last x-coordinate
+
+    # Test domain checking for piecewise functions
+    @test_throws ArgumentError pld(0.5)  # below domain
+    @test_throws ArgumentError pld(5.5)  # above domain
+    @test_throws ArgumentError psd(0.5)  # below domain
+    @test_throws ArgumentError psd(5.5)  # above domain
+
+    # Test evaluation with various numeric types
+    for fd in [ld, qd, pld, psd]
+        @test fd(2) == fd(2.0) == fd(2 // 1)  # Int, Float64, Rational
+    end
+
+    # Test evaluation with complex numbers
+    # LinearFunctionData: f(x) = 5x + 1
+    @test ld(1 + 2im) == 6 + 10im  # 5*(1 + 2im) + 1
+    @test ld(2 - im) == 11 - 5im  # 5*(2 - im) + 1
+
+    # QuadraticFunctionData: f(x) = 2x² + 3x + 4
+    @test qd(1im) == 2 + 3im  # 2*(1im)^2 + 3*(1im) + 4
+    @test qd(1 + im) == 7 + 7im  # 2*(1 + im)^2 + 3*(1 + im) + 4
+
+    # Test consistency: evaluation after mathematical operations
+    ld1 = IS.LinearFunctionData(2, 1)  # f(x) = 2x + 1
+    ld2 = IS.LinearFunctionData(3, 2)  # g(x) = 3x + 2
+    x_test = 1.5
+
+    # Test that (f + g)(x) = f(x) + g(x)
+    sum_fd = ld1 + ld2
+    @test sum_fd(x_test) ≈ ld1(x_test) + ld2(x_test)
+
+    # Test that (c * f)(x) = c * f(x)
+    scaled_fd = 2.5 * ld1
+    @test scaled_fd(x_test) ≈ 2.5 * ld1(x_test)
+
+    # Test that (f + c)(x) = f(x) + c
+    shifted_fd = ld1 + 3.0
+    @test shifted_fd(x_test) ≈ ld1(x_test) + 3.0
+end
+
 @testset "Test PiecewiseLinearData <-> PiecewiseStepData conversion" begin
     rng = Random.Xoshiro(47)  # Set random seed for determinism
     n_tests = 100

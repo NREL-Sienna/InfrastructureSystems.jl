@@ -614,3 +614,45 @@ function Base.:+(f::PiecewiseStepData, g::PiecewiseStepData)
     new_y_coords = get_y_coords(f) .+ get_y_coords(g)
     return PiecewiseStepData(f_x_coords, new_y_coords)
 end
+
+# FUNCTION EVALUATION
+"Evaluate the `LinearFunctionData` at a given x-coordinate"
+(fd::LinearFunctionData)(x::Number) =
+    get_proportional_term(fd) * x + get_constant_term(fd)
+
+"Evaluate the `QuadraticFunctionData` at a given x-coordinate"
+(fd::QuadraticFunctionData)(x::Number) =
+    get_quadratic_term(fd) * x^2 + get_proportional_term(fd) * x + get_constant_term(fd)
+
+_eval_fd_impl(
+    i::Int64,
+    x::Real,
+    x_coords::Vector{Float64},
+    y_coords::Vector{Float64},
+    ::PiecewiseLinearData,
+) =
+    y_coords[i] +
+    (y_coords[i + 1] - y_coords[i]) *
+    (x - x_coords[i]) /
+    (x_coords[i + 1] - x_coords[i])
+
+_eval_fd_impl(
+    i::Int64,
+    ::Real,
+    ::Vector{Float64},
+    y_coords::Vector{Float64},
+    ::PiecewiseStepData,
+) =
+    y_coords[i]
+
+"Evaluate the `PiecewiseLinearData` or `PiecewiseStepData` at a given x-coordinate"
+function (fd::Union{PiecewiseLinearData, PiecewiseStepData})(x::Real)
+    lb, ub = get_domain(fd)
+    (x < lb || x > ub) &&
+        throw(ArgumentError("x=$x is outside the domain [$lb, $ub]"))
+    x_coords = get_x_coords(fd)
+    y_coords = get_y_coords(fd)
+    i_leq = searchsortedlast(x_coords, x)  # uses binary search!
+    (i_leq == length(x_coords)) && return last(y_coords)
+    return _eval_fd_impl(i_leq, x, x_coords, y_coords, fd)
+end
