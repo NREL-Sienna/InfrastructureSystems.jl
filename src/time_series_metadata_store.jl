@@ -1306,6 +1306,8 @@ end
 
 _check_remove_metadata(::TimeSeriesMetadataStore, ::TimeSeriesMetadata) = nothing
 
+# if first SUM = 1 condition is met, then the 2nd SUM should be 0, else we error.
+# optimize for non-error case, so stick with SUM >= 1 instead of a WHERE EXISTS.
 const _QUERY_CHECK_FOR_ATTACHED_DSTS = """
 SELECT time_series_uuid
 FROM $ASSOCIATIONS_TABLE_NAME
