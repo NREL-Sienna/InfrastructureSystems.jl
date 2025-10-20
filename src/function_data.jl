@@ -420,11 +420,11 @@ Base.zero(::Union{QuadraticFunctionData, Type{QuadraticFunctionData}}) =
     QuadraticFunctionData(0, 0, 0)
 
 "Get a `PiecewiseLinearData` representing the function `f(x) = 0`; optionally specify `domain` tuple to set the x-coordinates of the endpoints"
-Base.zero(::Type{PiecewiseLinearData}; domain::Tuple{Float64, Float64} = (-Inf, Inf)) =
+Base.zero(::Type{PiecewiseLinearData}; domain::Tuple{Real, Real} = (-Inf, Inf)) =
     PiecewiseLinearData([(first(domain), 0), (last(domain), 0)])
 
 "Get a `PiecewiseStepData` representing the function `f(x) = 0`; optionally specify `domain` tuple to set the x-coordinates of the endpoints"
-Base.zero(::Type{PiecewiseStepData}; domain::Tuple{Float64, Float64} = (-Inf, Inf)) =
+Base.zero(::Type{PiecewiseStepData}; domain::Tuple{Real, Real} = (-Inf, Inf)) =
     PiecewiseStepData([domain...], [0])
 
 "Get a `PiecewiseLinearData` with the same x-coordinates as `fd` but y-coordinates equal to zero"
@@ -440,14 +440,14 @@ Base.zero(::Union{FunctionData, Type{FunctionData}}) = Base.zero(LinearFunctionD
 
 # SCALAR MULTIPLICATION
 "Multiply the `LinearFunctionData` by a scalar: (c * f)(x) = c * f(x)"
-Base.:*(c::Float64, fd::LinearFunctionData) =
+Base.:*(c::Real, fd::LinearFunctionData) =
     LinearFunctionData(
         c * get_proportional_term(fd),
         c * get_constant_term(fd),
     )
 
 "Multiply the `QuadraticFunctionData` by a scalar: (c * f)(x) = c * f(x)"
-Base.:*(c::Float64, fd::QuadraticFunctionData) =
+Base.:*(c::Real, fd::QuadraticFunctionData) =
     QuadraticFunctionData(
         c * get_quadratic_term(fd),
         c * get_proportional_term(fd),
@@ -455,13 +455,13 @@ Base.:*(c::Float64, fd::QuadraticFunctionData) =
     )
 
 "Multiply the `PiecewiseLinearData` by a scalar: (c * f)(x) = c * f(x)"
-Base.:*(c::Float64, fd::PiecewiseLinearData) =
+Base.:*(c::Real, fd::PiecewiseLinearData) =
     PiecewiseLinearData(
         [(p.x, c * p.y) for p in get_points(fd)],
     )
 
 "Multiply the `PiecewiseStepData` by a scalar: (c * f)(x) = c * f(x)"
-Base.:*(c::Float64, fd::PiecewiseStepData) =
+Base.:*(c::Real, fd::PiecewiseStepData) =
     PiecewiseStepData(
         get_x_coords(fd),
         c * get_y_coords(fd),
@@ -469,18 +469,18 @@ Base.:*(c::Float64, fd::PiecewiseStepData) =
 
 # commutativity
 "Multiply the `FunctionData` by a scalar: (f * c)(x) = (c * f)(x) = c * f(x)"
-Base.:*(fd::FunctionData, c::Float64) = c * fd
+Base.:*(fd::FunctionData, c::Real) = c * fd
 
 # SCALAR ADDITION
 "Add a scalar to the `LinearFunctionData`: (f + c)(x) = f(x) + c"
-Base.:+(fd::LinearFunctionData, c::Float64) =
+Base.:+(fd::LinearFunctionData, c::Real) =
     LinearFunctionData(
         get_proportional_term(fd),
         get_constant_term(fd) + c,
     )
 
 "Add a scalar to the `QuadraticFunctionData`: (f + c)(x) = f(x) + c"
-Base.:+(fd::QuadraticFunctionData, c::Float64) =
+Base.:+(fd::QuadraticFunctionData, c::Real) =
     QuadraticFunctionData(
         get_quadratic_term(fd),
         get_proportional_term(fd),
@@ -488,13 +488,13 @@ Base.:+(fd::QuadraticFunctionData, c::Float64) =
     )
 
 "Add a scalar to the `PiecewiseLinearData`: (f + c)(x) = f(x) + c"
-Base.:+(fd::PiecewiseLinearData, c::Float64) =
+Base.:+(fd::PiecewiseLinearData, c::Real) =
     PiecewiseLinearData(
         [(p.x, p.y + c) for p in get_points(fd)],
     )
 
 "Add a scalar to the `PiecewiseStepData`: (f + c)(x) = f(x) + c"
-Base.:+(fd::PiecewiseStepData, c::Float64) =
+Base.:+(fd::PiecewiseStepData, c::Real) =
     PiecewiseStepData(
         get_x_coords(fd),
         get_y_coords(fd) .+ c,
@@ -502,18 +502,18 @@ Base.:+(fd::PiecewiseStepData, c::Float64) =
 
 # commutativity
 "Add a scalar to the `FunctionData`: (c + f)(x) = (f + c)(x) = f(x) + c"
-Base.:+(c::Float64, fd::FunctionData) = fd + c
+Base.:+(c::Real, fd::FunctionData) = fd + c
 
 # SHIFT BY A SCALAR
 "Right shift the `LinearFunctionData` by a scalar: (f >> c)(x) = f(x - c)"
-Base.:>>(fd::LinearFunctionData, c::Float64) =
+Base.:>>(fd::LinearFunctionData, c::Real) =
     LinearFunctionData(
         get_proportional_term(fd),
         get_constant_term(fd) - get_proportional_term(fd) * c,
     )
 
 "Right shift the `QuadraticFunctionData` by a scalar: (f >> c)(x) = f(x - c)"
-Base.:>>(fd::QuadraticFunctionData, c::Float64) =
+Base.:>>(fd::QuadraticFunctionData, c::Real) =
     QuadraticFunctionData(
         get_quadratic_term(fd),
         get_proportional_term(fd) - 2 * get_quadratic_term(fd) * c,
@@ -522,20 +522,20 @@ Base.:>>(fd::QuadraticFunctionData, c::Float64) =
     )
 
 "Right shift the `PiecewiseLinearData` by a scalar: (f >> c)(x) = f(x - c)"
-Base.:>>(fd::PiecewiseLinearData, c::Float64) =
+Base.:>>(fd::PiecewiseLinearData, c::Real) =
     PiecewiseLinearData(
         [(p.x + c, p.y) for p in get_points(fd)],
     )
 
 "Right shift the `PiecewiseStepData` by a scalar: (f >> c)(x) = f(x - c)"
-Base.:>>(fd::PiecewiseStepData, c::Float64) =
+Base.:>>(fd::PiecewiseStepData, c::Real) =
     PiecewiseStepData(
         get_x_coords(fd) .+ c,
         get_y_coords(fd),
     )
 
 "Left shift the `FunctionData` by a scalar: (f << c)(x) = (f >> -c)(x) = f(x + c)"
-Base.:<<(fd::FunctionData, c::Float64) = fd >> -c
+Base.:<<(fd::FunctionData, c::Real) = fd >> -c
 
 # NEGATION
 "Negate the `FunctionData`: (-f)(x) = -f(x)"

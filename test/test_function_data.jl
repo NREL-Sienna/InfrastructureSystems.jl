@@ -154,15 +154,23 @@ end
         @test zero(fd) == answer
     end
 
+    pld_zero = IS.PiecewiseLinearData([(1.0, 0), (5.0, 0)])
+    psd_zero = IS.PiecewiseStepData([1.0, 5.0], [0.0])
+
     @test zero(IS.LinearFunctionData) == IS.LinearFunctionData(0, 0)
     @test zero(IS.QuadraticFunctionData) == IS.QuadraticFunctionData(0, 0, 0)
     @test zero(IS.PiecewiseLinearData) == IS.PiecewiseLinearData([(-Inf, 0), (Inf, 0)])
     @test zero(IS.PiecewiseStepData) == IS.PiecewiseStepData([-Inf, Inf], [0.0])
-    @test zero(IS.PiecewiseLinearData; domain = (1.0, 5.0)) ==
-          IS.PiecewiseLinearData([(1.0, 0), (5.0, 0)])
-    @test zero(IS.PiecewiseStepData; domain = (1.0, 5.0)) ==
-          IS.PiecewiseStepData([1.0, 5.0], [0.0])
+    @test zero(IS.PiecewiseLinearData; domain = (1.0, 5.0)) == pld_zero
+    @test zero(IS.PiecewiseStepData; domain = (1.0, 5.0)) == psd_zero
     @test zero(IS.FunctionData) == IS.LinearFunctionData(0, 0)
+
+    # non-Float64 Reals
+    for arg in
+        ((1, 5), (1 // 1, 5 // 1), (Float32(1), Float32(5)), (BigFloat(1), BigFloat(5)))
+        @test zero(IS.PiecewiseLinearData; domain = arg) == pld_zero
+        @test zero(IS.PiecewiseStepData; domain = arg) == psd_zero
+    end
 end
 
 @testset "Test FunctionData higher-level arithmetic" begin
@@ -397,6 +405,18 @@ end
         else
             # For piecewise functions, exact equality should hold
             @test shifted_back == fd
+        end
+    end
+
+    # Test applicability to non-Float64 Reals
+    for fd in get_test_function_data()
+        for arg in (3, 3 // 1, Float32(3), BigFloat(3))
+            @test arg * fd == 3.0 * fd
+            @test fd * arg == fd * 3.0
+            @test fd + arg == fd + 3.0
+            @test arg + fd == 3.0 + fd
+            @test fd >> arg == fd >> 3.0
+            @test fd << arg == fd << 3.0
         end
     end
 
