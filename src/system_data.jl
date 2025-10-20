@@ -1088,6 +1088,31 @@ function get_associated_components(
 end
 
 """
+Return all supplemental attributes associated with the components of the given type, optionally filtered by `attribute_type`.
+
+# Arguments
+- `data::SystemData`: the `SystemData` to search
+- `component_type`::Type{<:InfrastructureSystemsComponent}: Only return attributes
+ associated with the components of this type.
+- `attribute_type`::Union{Nothing, Type{<:SupplementalAttribute}}`: Optional, type of the
+  attributes to return. Can be concrete or abstract.
+"""
+function get_associated_supplemental_attributes(
+    data::SystemData,
+    component_type::Type{<:InfrastructureSystemsComponent};
+    attribute_type::Union{Nothing, Type{<:SupplementalAttribute}} = nothing,
+)
+    return [
+        get_supplemental_attribute(data, x) for x in
+        list_associated_supplemental_attribute_uuids(
+            data.supplemental_attribute_manager,
+            component_type,
+            attribute_type,
+        )
+    ]
+end
+
+"""
 Return all components associated with the attribute that match `component_type`.
 
 # Arguments

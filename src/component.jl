@@ -87,8 +87,8 @@ function _get_supplemental_attributes(
         get_supplemental_attribute(mgr, x) for
         x in list_associated_supplemental_attribute_uuids(
             mgr.associations,
-            component;
-            attribute_type = supplemental_attribute_type,
+            component,
+            supplemental_attribute_type,
         )
     ]
 end
@@ -118,8 +118,8 @@ function _get_supplemental_attributes(
     attrs = Vector{supplemental_attribute_type}()
     for uuid in list_associated_supplemental_attribute_uuids(
         mgr.associations,
-        component;
-        attribute_type = supplemental_attribute_type,
+        component,
+        supplemental_attribute_type,
     )
         attribute = get_supplemental_attribute(mgr, uuid)
         if filter_func(attribute)

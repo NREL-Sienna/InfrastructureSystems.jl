@@ -288,6 +288,7 @@ function has_association(
     )
 end
 
+# component UUIDS from attribute
 const _QUERY_LIST_ASSOCIATED_COMP_UUIDS = """
     SELECT DISTINCT component_uuid
     FROM $SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME
@@ -309,6 +310,38 @@ function list_associated_component_uuids(
     return Base.UUID.(table.component_uuid)
 end
 
+# attribute UUIDS from component
+const _QUERY_LIST_ASSOCIATED_SUPPLEMENTAL_ATTRIBUTE_UUIDS = """
+    SELECT DISTINCT attribute_uuid
+    FROM $SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME
+    WHERE component_uuid = ?
+"""
+
+"""
+Return the distinct attribute UUIDs associated with the component.
+"""
+function list_associated_supplemental_attribute_uuids(
+    associations::SupplementalAttributeAssociations,
+    component::InfrastructureSystemsComponent,
+    ::Nothing,
+)
+    params = (string(get_uuid(component)),)
+    table = Tables.columntable(
+        _execute_cached(
+            associations,
+            _QUERY_LIST_ASSOCIATED_SUPPLEMENTAL_ATTRIBUTE_UUIDS,
+            params,
+        ),
+    )
+    return Base.UUID.(table.attribute_uuid)
+end
+
+list_associated_supplemental_attribute_uuids(
+    associations::SupplementalAttributeAssociations,
+    component::InfrastructureSystemsComponent,
+) = list_associated_supplemental_attribute_uuids(associations, component, nothing)
+
+# component UUIDS from attribute plus component type
 const _QUERY_LIST_ASSOCIATED_COMP_UUIDS_BY_C_TYPE = StringTemplates.@template """
     SELECT DISTINCT component_uuid
     FROM $table_name
@@ -336,6 +369,36 @@ function list_associated_component_uuids(
     return Base.UUID.(table.component_uuid)
 end
 
+# attribute UUIDS from component plus attribute type
+const _QUERY_LIST_ASSOCIATED_SUPPLEMENTAL_ATTRIBUTE_UUIDS_BY_A_TYPE =
+    StringTemplates.@template """
+    SELECT DISTINCT attribute_uuid
+    FROM $table_name
+    WHERE component_uuid = ? AND $attribute_type_clause
+"""
+
+"""
+Return the distinct attribute UUIDs associated with the component, filter by attribute type.
+"""
+function list_associated_supplemental_attribute_uuids(
+    associations::SupplementalAttributeAssociations,
+    component::InfrastructureSystemsComponent,
+    attribute_type::Type{<:SupplementalAttribute},
+)
+    params = [string(get_uuid(component))]
+    attribute_type_clause = _get_type_clause!(params, attribute_type, "attribute_type")
+    query = StringTemplates.render(
+        _QUERY_LIST_ASSOCIATED_SUPPLEMENTAL_ATTRIBUTE_UUIDS_BY_A_TYPE;
+        table_name = SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME,
+        attribute_type_clause = attribute_type_clause,
+    )
+    table = Tables.columntable(
+        _execute_cached(associations, query, params),
+    )
+    return Base.UUID.(table.attribute_uuid)
+end
+
+# component UUIDS from attribute type driver function
 """
 Return the distinct component UUIDs associated with the attribute type.
 """
@@ -352,6 +415,27 @@ function list_associated_component_uuids(
     return _list_associated_component_uuids(associations, subtypes)
 end
 
+# attribute UUIDS from component type driver function
+"""
+Return the distinct attribute UUIDs associated with the component type.
+"""
+function list_associated_supplemental_attribute_uuids(
+    associations::SupplementalAttributeAssociations,
+    component_type::Type{<:InfrastructureSystemsComponent},
+    ::Nothing,
+)
+    if isconcretetype(component_type)
+        return _list_associated_supplemental_attribute_uuids(
+            associations,
+            (component_type,),
+        )
+    end
+
+    subtypes = get_all_concrete_subtypes(component_type)
+    return _list_associated_supplemental_attribute_uuids(associations, subtypes)
+end
+
+# component UUIDS from attribute type plus component type
 const _QUERY_LIST_ASSOCIATED_COMP_UUIDS_BY_TYPES = StringTemplates.@template """
     SELECT DISTINCT component_uuid
     FROM $table_name
@@ -378,6 +462,36 @@ function list_associated_component_uuids(
     )
     table = Tables.columntable(_execute_cached(associations, query, params))
     return Base.UUID.(table.component_uuid)
+end
+
+# attribute UUIDS from attribute type plus component type
+const _QUERY_LIST_ASSOCIATED_SUPPLEMENTAL_ATTRIBUTE_UUIDS_BY_TYPES =
+    StringTemplates.@template """
+    SELECT DISTINCT attribute_uuid
+    FROM $table_name
+    WHERE $attribute_type_clause AND $component_type_clause
+"""
+
+"""
+Return the distinct attribute UUIDs associated with the component type, filter by
+attribute_type.
+"""
+function list_associated_supplemental_attribute_uuids(
+    associations::SupplementalAttributeAssociations,
+    component_type::Type{<:InfrastructureSystemsComponent},
+    attribute_type::Type{<:SupplementalAttribute},
+)
+    params = String[]
+    attribute_type_clause = _get_type_clause!(params, attribute_type, "attribute_type")
+    component_type_clause = _get_type_clause!(params, component_type, "component_type")
+    query = StringTemplates.render(
+        _QUERY_LIST_ASSOCIATED_SUPPLEMENTAL_ATTRIBUTE_UUIDS_BY_TYPES;
+        table_name = SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME,
+        attribute_type_clause = attribute_type_clause,
+        component_type_clause = component_type_clause,
+    )
+    table = Tables.columntable(_execute_cached(associations, query, params))
+    return Base.UUID.(table.attribute_uuid)
 end
 
 const _QUERY_LIST_ASSOCIATED_PAIR_UUIDS = StringTemplates.@template """
@@ -431,6 +545,7 @@ function _get_type_clause!(
     return type_clause
 end
 
+# component UUIDs from attribute type implementation
 const _QUERY_LIST_ASSOCIATED_COMP_UUIDS_BY_ONE_TYPE = """
     SELECT DISTINCT component_uuid
     FROM $SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME
@@ -468,32 +583,41 @@ function _list_associated_component_uuids(
     return Base.UUID.(table.component_uuid)
 end
 
-const _QUERY_LIST_ASSOCIATED_SUPPLEMENTAL_ATTRIBUTE_UUIDS = StringTemplates.@template """
-    SELECT attribute_uuid
+# attribute UUIDs from component type implementation
+const _QUERY_LIST_ASSOCIATED_SUPPLEMENTAL_ATTRIBUTE_UUIDS_BY_ONE_TYPE = """
+    SELECT DISTINCT attribute_uuid
+    FROM $SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME
+    WHERE component_type = ?
+"""
+
+const _QUERY_LIST_ASSOCIATED_SUPPLEMENTAL_ATTRIBUTE_UUIDS_BY_MULTIPLE_TYPES =
+    StringTemplates.@template """
+    SELECT DISTINCT attribute_uuid
     FROM $table_name
-    WHERE $where_clause
+    WHERE component_type IN ($placeholder)
 """
-"""
-Return the supplemental attribute UUIDs associated with the component and attribute type.
-"""
-function list_associated_supplemental_attribute_uuids(
+
+function _list_associated_supplemental_attribute_uuids(
     associations::SupplementalAttributeAssociations,
-    component::InfrastructureSystemsComponent;
-    attribute_type::Union{Nothing, Type{<:SupplementalAttribute}} = nothing,
+    component_types,
 )
-    c_str = "component_uuid = ?"
-    params = [string(get_uuid(component))]
-    if isnothing(attribute_type)
-        where_clause = c_str
+    len = length(component_types)
+    if len == 0
+        # This would require an abstract type with no subtypes. Just here for completeness.
+        return Base.UUID[]
+    elseif len == 1
+        query = _QUERY_LIST_ASSOCIATED_SUPPLEMENTAL_ATTRIBUTE_UUIDS_BY_ONE_TYPE
+        params = (string(nameof(first(component_types))),)
     else
-        a_str = _get_attribute_type_string!(params, attribute_type)
-        where_clause = "$c_str AND $a_str"
+        placeholder = chop(repeat("?,", length(component_types)))
+        params = Tuple(string(nameof(type)) for type in component_types)
+        query = StringTemplates.render(
+            _QUERY_LIST_ASSOCIATED_SUPPLEMENTAL_ATTRIBUTE_UUIDS_BY_MULTIPLE_TYPES;
+            table_name = SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME,
+            placeholder = placeholder,
+        )
     end
-    query = StringTemplates.render(
-        _QUERY_LIST_ASSOCIATED_SUPPLEMENTAL_ATTRIBUTE_UUIDS;
-        table_name = SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME,
-        where_clause = where_clause,
-    )
+
     table = Tables.columntable(_execute_cached(associations, query, params))
     return Base.UUID.(table.attribute_uuid)
 end
