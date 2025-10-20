@@ -3972,7 +3972,9 @@ end
     sys = IS.SystemData()
     name = "Component1"
     component = IS.TestComponent(name, 5)
+    component2 = IS.TestComponent("Component2", 3)
     IS.add_component!(sys, component)
+    IS.add_component!(sys, component2)
 
     initial_time = Dates.DateTime("2020-09-01")
     resolution = Dates.Hour(1)
@@ -3983,6 +3985,7 @@ end
     ts_name = "test"
     data = IS.SingleTimeSeries(; data = data, name = ts_name)
     IS.add_time_series!(sys, component, data)
+    IS.add_time_series!(sys, component2, data)
 
     IS.transform_single_time_series!(
         sys,
@@ -3993,6 +3996,16 @@ end
     )
     @test IS.has_time_series(component, IS.SingleTimeSeries, ts_name)
     @test IS.has_time_series(component, IS.DeterministicSingleTimeSeries, ts_name)
+    @test IS.has_time_series(component2, IS.SingleTimeSeries, ts_name)
+    @test IS.has_time_series(component2, IS.DeterministicSingleTimeSeries, ts_name)
+
+    # removing from one component is fine, as long as another still has the SingleTimeSeries
+    mgr = IS.get_time_series_manager(component2)
+    @test !isnothing(mgr)
+    IS.remove_time_series!(mgr, IS.SingleTimeSeries, component2, ts_name)
+    # so that we can test removing just the SingleTimeSeries from the other component
+    IS.remove_time_series!(mgr, IS.DeterministicSingleTimeSeries, component2, ts_name)
+
     metadata = IS.get_time_series_metadata(
         component;
         time_series_type = IS.SingleTimeSeries,
@@ -4016,9 +4029,10 @@ end
 
 @testset "Test removal order: DeterministicSingleTimeSeries before SingleTimeSeries" begin
     sys = IS.SystemData()
-    name = "Component1"
-    component = IS.TestComponent(name, 5)
-    IS.add_component!(sys, component)
+    component1 = IS.TestComponent("Component1", 5)
+    component2 = IS.TestComponent("Component2", 3)
+    IS.add_component!(sys, component1)
+    IS.add_component!(sys, component2)
 
     initial_time = Dates.DateTime("2020-09-01")
     resolution = Dates.Hour(1)
@@ -4030,7 +4044,8 @@ end
     data = IS.SingleTimeSeries(; data = data, name = ts_name)
     # prevent the indices from affecting the order of removal
     IS._drop_all_indexes!(sys.time_series_manager.metadata_store.db)
-    IS.add_time_series!(sys, component, data)
+    IS.add_time_series!(sys, component1, data)
+    IS.add_time_series!(sys, component2, data)
 
     IS.transform_single_time_series!(
         sys,
@@ -4039,9 +4054,19 @@ end
         resolution;
         resolution = resolution,
     )
-    @test IS.has_time_series(component, IS.SingleTimeSeries, ts_name)
-    @test IS.has_time_series(component, IS.DeterministicSingleTimeSeries, ts_name)
-    mgr = IS.get_time_series_manager(component)
+    @test IS.has_time_series(component1, IS.SingleTimeSeries, ts_name)
+    @test IS.has_time_series(component1, IS.DeterministicSingleTimeSeries, ts_name)
+    @test IS.has_time_series(component2, IS.SingleTimeSeries, ts_name)
+    @test IS.has_time_series(component2, IS.DeterministicSingleTimeSeries, ts_name)
+    mgr = IS.get_time_series_manager(component1)
     @test !isnothing(mgr)
-    IS.clear_time_series!(mgr, component)
+    # removing all from one component is fine, as long as another still has the SingleTimeSeries
+    IS.clear_time_series!(mgr, component1)
+    # can't remove just the SingleTimeSeries from the other component
+    @test_throws(
+        ArgumentError,
+        IS.remove_time_series!(sys, IS.SingleTimeSeries, component2, ts_name)
+    )
+    # but removing both is ok.
+    IS.clear_time_series!(mgr, component2)
 end
