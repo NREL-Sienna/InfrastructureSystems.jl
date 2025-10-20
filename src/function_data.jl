@@ -399,8 +399,264 @@ QuadraticFunctionData(data::LinearFunctionData) =
 Base.convert(::Type{QuadraticFunctionData}, data::LinearFunctionData) =
     QuadraticFunctionData(data)
 
+# GET_DOMAIN
+"Get the domain of the function represented by the `LinearFunctionData` or `QuadraticFunctionData` (always `(-Inf, Inf)` for these types)."
+get_domain(::Union{LinearFunctionData, QuadraticFunctionData}) = (-Inf, Inf)
+
+"Get the domain of the function represented by the `PiecewiseLinearData`."
+get_domain(fd::PiecewiseLinearData) =
+    (first(get_points(fd)).x, last(get_points(fd)).x)  # avoiding get_x_coords to avoid extra allocation
+
+"Get the domain of the function represented by the `PiecewiseStepData`."
+get_domain(fd::PiecewiseStepData) =
+    (first(get_x_coords(fd)), last(get_x_coords(fd)))
+
+# ZERO
 "Get a `LinearFunctionData` representing the function `f(x) = 0`"
 Base.zero(::Union{LinearFunctionData, Type{LinearFunctionData}}) = LinearFunctionData(0, 0)
 
+"Get a `QuadraticFunctionData` representing the function `f(x) = 0`"
+Base.zero(::Union{QuadraticFunctionData, Type{QuadraticFunctionData}}) =
+    QuadraticFunctionData(0, 0, 0)
+
+"Get a `PiecewiseLinearData` representing the function `f(x) = 0`; optionally specify `domain` tuple to set the x-coordinates of the endpoints"
+Base.zero(::Type{PiecewiseLinearData}; domain::Tuple{Real, Real} = (-Inf, Inf)) =
+    PiecewiseLinearData([(first(domain), 0), (last(domain), 0)])
+
+"Get a `PiecewiseStepData` representing the function `f(x) = 0`; optionally specify `domain` tuple to set the x-coordinates of the endpoints"
+Base.zero(::Type{PiecewiseStepData}; domain::Tuple{Real, Real} = (-Inf, Inf)) =
+    PiecewiseStepData([domain...], [0])
+
+"Get a `PiecewiseLinearData` with the same x-coordinates as `fd` but y-coordinates equal to zero"
+Base.zero(fd::PiecewiseLinearData) =
+    PiecewiseLinearData([(p.x, 0.0) for p in get_points(fd)])
+
+"Get a `PiecewiseStepData` with the same x-coordinates as `fd` and y-coordinates equal to zero"
+Base.zero(fd::PiecewiseStepData) =
+    PiecewiseStepData(get_x_coords(fd), zeros(length(get_y_coords(fd))))
+
 "Get a `FunctionData` representing the function `f(x) = 0`"
-Base.zero(::Type{FunctionData}) = Base.zero(LinearFunctionData)
+Base.zero(::Union{FunctionData, Type{FunctionData}}) = Base.zero(LinearFunctionData)
+
+# SCALAR MULTIPLICATION
+"Multiply the `LinearFunctionData` by a scalar: (c * f)(x) = c * f(x)"
+Base.:*(c::Real, fd::LinearFunctionData) =
+    LinearFunctionData(
+        c * get_proportional_term(fd),
+        c * get_constant_term(fd),
+    )
+
+"Multiply the `QuadraticFunctionData` by a scalar: (c * f)(x) = c * f(x)"
+Base.:*(c::Real, fd::QuadraticFunctionData) =
+    QuadraticFunctionData(
+        c * get_quadratic_term(fd),
+        c * get_proportional_term(fd),
+        c * get_constant_term(fd),
+    )
+
+"Multiply the `PiecewiseLinearData` by a scalar: (c * f)(x) = c * f(x)"
+Base.:*(c::Real, fd::PiecewiseLinearData) =
+    PiecewiseLinearData(
+        [(p.x, c * p.y) for p in get_points(fd)],
+    )
+
+"Multiply the `PiecewiseStepData` by a scalar: (c * f)(x) = c * f(x)"
+Base.:*(c::Real, fd::PiecewiseStepData) =
+    PiecewiseStepData(
+        get_x_coords(fd),
+        c * get_y_coords(fd),
+    )
+
+# commutativity
+"Multiply the `FunctionData` by a scalar: (f * c)(x) = (c * f)(x) = c * f(x)"
+Base.:*(fd::FunctionData, c::Real) = c * fd
+
+# SCALAR ADDITION
+"Add a scalar to the `LinearFunctionData`: (f + c)(x) = f(x) + c"
+Base.:+(fd::LinearFunctionData, c::Real) =
+    LinearFunctionData(
+        get_proportional_term(fd),
+        get_constant_term(fd) + c,
+    )
+
+"Add a scalar to the `QuadraticFunctionData`: (f + c)(x) = f(x) + c"
+Base.:+(fd::QuadraticFunctionData, c::Real) =
+    QuadraticFunctionData(
+        get_quadratic_term(fd),
+        get_proportional_term(fd),
+        get_constant_term(fd) + c,
+    )
+
+"Add a scalar to the `PiecewiseLinearData`: (f + c)(x) = f(x) + c"
+Base.:+(fd::PiecewiseLinearData, c::Real) =
+    PiecewiseLinearData(
+        [(p.x, p.y + c) for p in get_points(fd)],
+    )
+
+"Add a scalar to the `PiecewiseStepData`: (f + c)(x) = f(x) + c"
+Base.:+(fd::PiecewiseStepData, c::Real) =
+    PiecewiseStepData(
+        get_x_coords(fd),
+        get_y_coords(fd) .+ c,
+    )
+
+# commutativity
+"Add a scalar to the `FunctionData`: (c + f)(x) = (f + c)(x) = f(x) + c"
+Base.:+(c::Real, fd::FunctionData) = fd + c
+
+# SHIFT BY A SCALAR
+"Right shift the `LinearFunctionData` by a scalar: (f >> c)(x) = f(x - c)"
+Base.:>>(fd::LinearFunctionData, c::Real) =
+    LinearFunctionData(
+        get_proportional_term(fd),
+        get_constant_term(fd) - get_proportional_term(fd) * c,
+    )
+
+"Right shift the `QuadraticFunctionData` by a scalar: (f >> c)(x) = f(x - c)"
+Base.:>>(fd::QuadraticFunctionData, c::Real) =
+    QuadraticFunctionData(
+        get_quadratic_term(fd),
+        get_proportional_term(fd) - 2 * get_quadratic_term(fd) * c,
+        get_constant_term(fd) +
+        get_quadratic_term(fd) * c^2 - get_proportional_term(fd) * c,
+    )
+
+"Right shift the `PiecewiseLinearData` by a scalar: (f >> c)(x) = f(x - c)"
+Base.:>>(fd::PiecewiseLinearData, c::Real) =
+    PiecewiseLinearData(
+        [(p.x + c, p.y) for p in get_points(fd)],
+    )
+
+"Right shift the `PiecewiseStepData` by a scalar: (f >> c)(x) = f(x - c)"
+Base.:>>(fd::PiecewiseStepData, c::Real) =
+    PiecewiseStepData(
+        get_x_coords(fd) .+ c,
+        get_y_coords(fd),
+    )
+
+"Left shift the `FunctionData` by a scalar: (f << c)(x) = (f >> -c)(x) = f(x + c)"
+Base.:<<(fd::FunctionData, c::Real) = fd >> -c
+
+# NEGATION
+"Negate the `FunctionData`: (-f)(x) = -f(x)"
+Base.:-(fd::FunctionData) = -1.0 * fd
+
+# FLIP ABOUT Y-AXIS
+"Flip the `LinearFunctionData` about the y-axis: (~f)(x) = f(-x)"
+Base.:~(fd::LinearFunctionData) =
+    LinearFunctionData(
+        -get_proportional_term(fd),
+        get_constant_term(fd),
+    )
+
+"Flip the `QuadraticFunctionData` about the y-axis: (~f)(x) = f(-x)"
+Base.:~(fd::QuadraticFunctionData) =
+    QuadraticFunctionData(
+        get_quadratic_term(fd),
+        -get_proportional_term(fd),
+        get_constant_term(fd),
+    )
+
+"Flip the `PiecewiseLinearData` about the y-axis: (~f)(x) = f(-x)"
+Base.:~(fd::PiecewiseLinearData) =
+    PiecewiseLinearData(
+        [(-p.x, p.y) for p in reverse(get_points(fd))],
+    )
+
+"Flip the `PiecewiseStepData` about the y-axis: (~f)(x) = f(-x)"
+Base.:~(fd::PiecewiseStepData) =
+    PiecewiseStepData(
+        reverse(-get_x_coords(fd)),
+        reverse(get_y_coords(fd)),
+    )
+
+# ADDITION OF TWO FUNCTIONDATAS
+"Add two `LinearFunctionData`s: (f + g)(x) = f(x) + g(x)"
+Base.:+(f::LinearFunctionData, g::LinearFunctionData) =
+    LinearFunctionData(
+        get_proportional_term(f) + get_proportional_term(g),
+        get_constant_term(f) + get_constant_term(g),
+    )
+
+"Add two `QuadraticFunctionData`s: (f + g)(x) = f(x) + g(x)"
+Base.:+(f::QuadraticFunctionData, g::QuadraticFunctionData) =
+    QuadraticFunctionData(
+        get_quadratic_term(f) + get_quadratic_term(g),
+        get_proportional_term(f) + get_proportional_term(g),
+        get_constant_term(f) + get_constant_term(g),
+    )
+
+"Add two `PiecewiseLinearData`s: (f + g)(x) = f(x) + g(x). Errors if the x-coordinates are not the same."
+function Base.:+(f::PiecewiseLinearData, g::PiecewiseLinearData)
+    f_x_coords = get_x_coords(f)
+    g_x_coords = get_x_coords(g)
+    all(isapprox.(f_x_coords, g_x_coords)) ||
+        throw(
+            ArgumentError(
+                "Cannot add PiecewiseLinearData with different x-coordinates: " *
+                "f x-coords = $f_x_coords, g x-coords = $g_x_coords",
+            ),
+        )
+    new_points = XY_COORDS[
+        (x = f_x, y = f_y + g_y) for
+        (f_x, f_y, g_y) in zip(f_x_coords, get_y_coords(f), get_y_coords(g))
+    ]
+    return PiecewiseLinearData(new_points)
+end
+
+"Add two `PiecewiseStepData`s: (f + g)(x) = f(x) + g(x). Errors if the x-coordinates are not the same."
+function Base.:+(f::PiecewiseStepData, g::PiecewiseStepData)
+    f_x_coords = get_x_coords(f)
+    g_x_coords = get_x_coords(g)
+    all(isapprox.(f_x_coords, g_x_coords)) ||
+        throw(
+            ArgumentError(
+                "Cannot add PiecewiseStepData with different x-coordinates: " *
+                "f x-coords = $f_x_coords, g x-coords = $g_x_coords",
+            ),
+        )
+    new_y_coords = get_y_coords(f) .+ get_y_coords(g)
+    return PiecewiseStepData(f_x_coords, new_y_coords)
+end
+
+# FUNCTION EVALUATION
+"Evaluate the `LinearFunctionData` at a given x-coordinate"
+(fd::LinearFunctionData)(x::Number) =
+    get_proportional_term(fd) * x + get_constant_term(fd)
+
+"Evaluate the `QuadraticFunctionData` at a given x-coordinate"
+(fd::QuadraticFunctionData)(x::Number) =
+    get_quadratic_term(fd) * x^2 + get_proportional_term(fd) * x + get_constant_term(fd)
+
+_eval_fd_impl(
+    i::Int64,
+    x::Real,
+    x_coords::Vector{Float64},
+    y_coords::Vector{Float64},
+    ::PiecewiseLinearData,
+) =
+    y_coords[i] +
+    (y_coords[i + 1] - y_coords[i]) *
+    (x - x_coords[i]) /
+    (x_coords[i + 1] - x_coords[i])
+
+_eval_fd_impl(
+    i::Int64,
+    ::Real,
+    ::Vector{Float64},
+    y_coords::Vector{Float64},
+    ::PiecewiseStepData,
+) =
+    y_coords[i]
+
+"Evaluate the `PiecewiseLinearData` or `PiecewiseStepData` at a given x-coordinate"
+function (fd::Union{PiecewiseLinearData, PiecewiseStepData})(x::Real)
+    lb, ub = get_domain(fd)
+    (x < lb || x > ub) &&
+        throw(ArgumentError("x=$x is outside the domain [$lb, $ub]"))
+    x_coords = get_x_coords(fd)
+    y_coords = get_y_coords(fd)
+    i_leq = searchsortedlast(x_coords, x)  # uses binary search!
+    (i_leq == length(x_coords)) && return last(y_coords)
+    return _eval_fd_impl(i_leq, x, x_coords, y_coords, fd)
+end
