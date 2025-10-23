@@ -17,7 +17,7 @@ const IS = InfrastructureSystems
         StepRange(
             DateTime("2024-01-01T00:00:00"),
             Millisecond(3600000),
-            DateTime("2024-01-01T01:00:00"),
+            DateTime("2024-01-01T03:00:00"),
         )
     timestamp_vec = collect(timestamp_range)
     data = IS.SystemData()
@@ -27,16 +27,16 @@ const IS = InfrastructureSystems
     @test IS.Optimization.convert_result_to_natural_units(MockVariable2)
     var_key1 = VariableKey(MockVariable, IS.TestComponent)
     var_key2 = VariableKey(MockVariable2, IS.TestComponent)
-    vals = [1.0, 2.0, 3.0, 4.0]
+    vals = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]
     variable_values = Dict(
         var_key1 => DataFrame(
-            "time_index" => [1, 2, 1, 2],
-            "name" => ["c1", "c1", "c2", "c2"],
+            "time_index" => [1, 2, 3, 4, 1, 2, 3, 4],
+            "name" => ["c1", "c1", "c1", "c1", "c2", "c2", "c2", "c2"],
             "value" => vals,
         ),
         var_key2 => DataFrame(
-            "time_index" => [1, 2, 1, 2],
-            "name" => ["c1", "c1", "c2", "c2"],
+            "time_index" => [1, 2, 3, 4, 1, 2, 3, 4],
+            "name" => ["c1", "c1", "c1", "c1", "c2", "c2", "c2", "c2"],
             "value" => vals,
         ),
     )
@@ -49,13 +49,13 @@ const IS = InfrastructureSystems
     # Expression only 1 time-step
     expression_values = Dict(
         exp_key1 => DataFrame(
-            "time_index" => [1, 2, 1, 2],
-            "name" => ["c1", "c1", "c2", "c2"],
+            "time_index" => [1, 2, 3, 4, 1, 2, 3, 4],
+            "name" => ["c1", "c1", "c1", "c1", "c2", "c2", "c2", "c2"],
             "value" => vals,
         ),
         exp_key2 => DataFrame(
-            "time_index" => [1, 2, 1, 2],
-            "custom_name" => ["c1", "c1", "c2", "c2"],
+            "time_index" => [1, 2, 3, 4, 1, 2, 3, 4],
+            "custom_name" => ["c1", "c1", "c1", "c1", "c2", "c2", "c2", "c2"],
             "value" => vals,
         ),
     )
@@ -95,11 +95,9 @@ const IS = InfrastructureSystems
         mktempdir(),
         mktempdir(),
     )
-    timestamp_vec2 = deepcopy(timestamp_vec)
-    pop!(timestamp_vec2)
     opt_res3 = OptimizationProblemResults(
         base_power,
-        timestamp_vec2,
+        [timestamp_vec[1]],
         data,
         uuid,
         aux_variable_values,
@@ -116,26 +114,45 @@ const IS = InfrastructureSystems
 
     var_res = read_variable(opt_res1, var_key1)
     @test sort!(unique(var_res.DateTime)) == timestamp_vec
-    @test @rsubset(var_res, :name == "c1")[!, :value] == [1.0, 2.0]
-    @test @rsubset(var_res, :name == "c2")[!, :value] == [3.0, 4.0]
+    @test @rsubset(var_res, :name == "c1")[!, :value] == [1.0, 2.0, 3.0, 4.0]
+    @test @rsubset(var_res, :name == "c2")[!, :value] == [5.0, 6.0, 7.0, 8.0]
 
     var_res = read_variable(opt_res1, var_key2)
-    @test @rsubset(var_res, :name == "c1")[!, :value] == [10.0, 20.0]
-    @test @rsubset(var_res, :name == "c2")[!, :value] == [30.0, 40.0]
+    @test @rsubset(var_res, :name == "c1")[!, :value] == [10.0, 20.0, 30.0, 40.0]
+    @test @rsubset(var_res, :name == "c2")[!, :value] == [50.0, 60.0, 70.0, 80.0]
+
+    var_res2 = read_variable(
+        opt_res1,
+        var_key1;
+        start_time = DateTime("2024-01-01T01:00:00"),
+        len = 2,
+    )
+    @test @rsubset(var_res2, :name == "c1")[!, :value] == [2.0, 3.0]
+    @test @rsubset(var_res2, :name == "c2")[!, :value] == [6.0, 7.0]
+
+    var_res2 = read_variable(
+        opt_res1,
+        var_key2;
+        start_time = DateTime("2024-01-01T01:00:00"),
+        len = 2,
+    )
+    @test @rsubset(var_res2, :name == "c1")[!, :value] == [20.0, 30.0]
+    @test @rsubset(var_res2, :name == "c2")[!, :value] == [60.0, 70.0]
 
     var_res = read_variable(opt_res1, var_key2; table_format = IS.TableFormat.WIDE)
-    @test var_res[!, :c1] == [10.0, 20.0]
-    @test var_res[!, :c2] == [30.0, 40.0]
+    @test var_res[!, :c1] == [10.0, 20.0, 30.0, 40.0]
+    @test var_res[!, :c2] == [50.0, 60.0, 70.0, 80.0]
 
     exp_res = read_expression(opt_res2, exp_key1)
-    @test @rsubset(exp_res, :name == "c1")[!, :value] == [1.0, 2.0]
-    @test @rsubset(exp_res, :name == "c2")[!, :value] == [3.0, 4.0]
+    @test @rsubset(exp_res, :name == "c1")[!, :value] == [1.0, 2.0, 3.0, 4.0]
+    @test @rsubset(exp_res, :name == "c2")[!, :value] == [5.0, 6.0, 7.0, 8.0]
     exp_res = read_expression(opt_res2, exp_key2)
-    @test @rsubset(exp_res, :custom_name == "c1")[!, :value] == [10.0, 20.0]
-    @test @rsubset(exp_res, :custom_name == "c2")[!, :value] == [30.0, 40.0]
+    @test @rsubset(exp_res, :custom_name == "c1")[!, :value] == [10.0, 20.0, 30.0, 40.0]
+    @test @rsubset(exp_res, :custom_name == "c2")[!, :value] == [50.0, 60.0, 70.0, 80.0]
 
     @test IS.Optimization.get_resolution(opt_res1) == Millisecond(3600000)
     @test IS.Optimization.get_resolution(opt_res2) == Millisecond(3600000)
+    @show IS.Optimization.get_resolution(opt_res3)
     @test isnothing(IS.Optimization.get_resolution(opt_res3))
 end
 

@@ -10,7 +10,7 @@ import Dates
 import CSV
 import DataFrames
 import DataFrames: DataFrame, innerjoin, select, select!
-import DataFramesMeta: @chain, @combine, @transform
+import DataFramesMeta: @chain, @combine, @subset, @transform
 
 import ..InfrastructureSystems
 const IS = InfrastructureSystems
