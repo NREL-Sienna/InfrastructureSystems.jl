@@ -404,11 +404,16 @@ function _process_timestamps(
         requested_range = findall(x -> x >= start_time, timestamps)
         def_len = length(requested_range)
     end
-    len = len === nothing ? def_len : len
-    if len > def_len
+    actual_len = if len === nothing
+        def_len
+    elseif len < 0
+        throw(InvalidValue("len cannot be negative: $len"))
+    elseif len > def_len
         throw(InvalidValue("requested results have less than $len values"))
+    else
+        len
     end
-    timestamp_ids = requested_range[1:len]
+    timestamp_ids = requested_range[1:actual_len]
     return timestamp_ids, timestamps[timestamp_ids]
 end
 
