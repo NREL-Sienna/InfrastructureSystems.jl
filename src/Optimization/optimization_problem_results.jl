@@ -317,12 +317,16 @@ function _read_results(
     container_keys = container_keys === nothing ? existing_keys : container_keys
     _validate_keys(existing_keys, container_keys)
     results = Dict{OptimizationContainerKey, DataFrame}()
-    IS.@assert_op time_ids == collect(1:length(timestamps))
+    IS.@assert_op length(time_ids) == length(timestamps)
     df_timestamps = DataFrame(:DateTime => timestamps, :time_index => time_ids)
+    filter_timestamps = timestamps != base_timestamps
 
     for (key, df) in result_values
         if !in(key, container_keys)
             continue
+        end
+        if filter_timestamps
+            df = @subset(df, :time_index .∈ Ref(time_ids))
         end
         first_dim_col = get_first_dimension_result_column_name(key)
         second_dim_col = get_second_dimension_result_column_name(key)
@@ -343,7 +347,7 @@ function _read_results(
             )
         end
         num_rows_per_component = num_rows ÷ num_components
-        if num_rows_per_component == length(time_ids) == length(base_timestamps)
+        if num_rows_per_component == length(time_ids) == length(timestamps)
             tmp_df = innerjoin(df, df_timestamps; on = :time_index)
             if DataFrames.nrow(tmp_df) != DataFrames.nrow(df)
                 error(
@@ -861,6 +865,7 @@ function read_results_with_keys(
 )
     isempty(result_keys) && return Dict{OptimizationContainerKey, DataFrame}()
     (timestamp_ids, timestamps) = _process_timestamps(res, start_time, len)
+
     base_timestamps = get_timestamps(res)
     return _read_results(
         get_result_values(res, first(result_keys)),
