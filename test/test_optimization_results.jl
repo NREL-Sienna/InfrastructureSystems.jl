@@ -179,3 +179,69 @@ end
     @test @rsubset(var_res, :name == "c1" && :name2 == "c3")[!, :value] == [1.0, 3.0]
     @test @rsubset(var_res, :name == "c2" && :name2 == "c4")[!, :value] == [2.0, 4.0]
 end
+
+@testset "Test OptimizationProblemResults _process_timestamps" begin
+    time_ids = [1, 2, 3, 4]
+    timestamps = [
+        DateTime("2024-01-01T00:00:00"),
+        DateTime("2024-01-01T01:00:00"),
+        DateTime("2024-01-01T02:00:00"),
+        DateTime("2024-01-01T03:00:00"),
+    ]
+    data = IS.SystemData()
+    var_key = VariableKey(MockVariable, IS.TestComponent)
+    vals = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]
+    variable_values = Dict(
+        var_key => DataFrame(
+            "time_index" => [1, 2, 3, 4, 1, 2, 3, 4],
+            "name" => ["c1", "c1", "c1", "c1", "c2", "c2", "c2", "c2"],
+            "value" => vals,
+        ),
+    )
+    optimizer_stats = DataFrames.DataFrame()
+    metadata = OptimizationContainerMetadata()
+    opt_res = OptimizationProblemResults(
+        100.0,
+        timestamps,
+        data,
+        IS.make_uuid(),
+        Dict(),
+        variable_values,
+        Dict(),
+        Dict(),
+        Dict(),
+        optimizer_stats,
+        metadata,
+        "DecisionModel",
+        mktempdir(),
+        mktempdir(),
+    )
+    @test IS.Optimization._process_timestamps(opt_res, nothing, nothing) ==
+          (time_ids, timestamps)
+    @test IS.Optimization._process_timestamps(opt_res, timestamps[2], nothing) ==
+          (time_ids[2:end], timestamps[2:end])
+    @test IS.Optimization._process_timestamps(opt_res, timestamps[4], nothing) ==
+          ([time_ids[4]], [timestamps[4]])
+    @test IS.Optimization._process_timestamps(opt_res, nothing, 3) ==
+          (time_ids[1:3], timestamps[1:3])
+    @test IS.Optimization._process_timestamps(opt_res, timestamps[2], 2) ==
+          (time_ids[2:3], timestamps[2:3])
+
+    @test_throws IS.InvalidValue IS.Optimization._process_timestamps(
+        opt_res,
+        timestamps[1] - Hour(1),
+        nothing,
+    )
+    @test_throws IS.InvalidValue IS.Optimization._process_timestamps(
+        opt_res,
+        timestamps[4] + Hour(1),
+        nothing,
+    )
+    @test_throws IS.InvalidValue IS.Optimization._process_timestamps(opt_res, nothing, -1)
+    @test_throws IS.InvalidValue IS.Optimization._process_timestamps(opt_res, nothing, 10)
+    @test_throws IS.InvalidValue IS.Optimization._process_timestamps(
+        opt_res,
+        timestamps[2],
+        10,
+    )
+end
