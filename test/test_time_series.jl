@@ -2383,19 +2383,19 @@ end
     @test TimeSeries.values(ta2) == IS.get_time_series_values(component, ts)
 
     # Get data from cached instance, custom offsets
-    ta2 = IS.get_time_series_array(component, ts, dates[5]; len = 5)
+    ta2 = IS.get_time_series_array(component, ts; start_time = dates[5], len = 5)
     @test TimeSeries.timestamp(ta2) == dates[5:9]
     @test TimeSeries.timestamp(ta2) ==
-          IS.get_time_series_timestamps(component, ts, dates[5]; len = 5)
+          IS.get_time_series_timestamps(component, ts; start_time = dates[5], len = 5)
     @test TimeSeries.values(ta2) == data[5:9] * IS.get_val(component)
     @test TimeSeries.values(ta2) ==
-          IS.get_time_series_values(component, ts, dates[5]; len = 5)
+          IS.get_time_series_values(component, ts; start_time = dates[5], len = 5)
 
     # Get data from cached instance, custom offsets, ignore_scaling_factors.
     ta2 = IS.get_time_series_array(
         component,
-        ts,
-        dates[5];
+        ts;
+        start_time = dates[5],
         len = 5,
         ignore_scaling_factors = true,
     )
@@ -2403,8 +2403,8 @@ end
     @test TimeSeries.values(ta2) == data[5:9]
     @test TimeSeries.values(ta2) == IS.get_time_series_values(
         component,
-        ts,
-        dates[5];
+        ts;
+        start_time = dates[5],
         len = 5,
         ignore_scaling_factors = true,
     )
@@ -2459,7 +2459,7 @@ end
         start_time = start_time,
     )
     @test TimeSeries.timestamp(ta2) ==
-          IS.get_time_series_timestamps(component, forecast, start_time)
+          IS.get_time_series_timestamps(component, forecast; start_time = start_time)
     @test TimeSeries.values(ta2) == data[initial_times[2]] * IS.get_val(component)
     @test TimeSeries.values(ta2) == IS.get_time_series_values(
         IS.Deterministic,
@@ -2468,9 +2468,11 @@ end
         start_time = start_time,
     )
     @test TimeSeries.values(ta2) ==
-          IS.get_time_series_values(component, forecast, start_time)
+          IS.get_time_series_values(component, forecast; start_time = start_time)
     @test TimeSeries.values(ta2) ==
-          TimeSeries.values(IS.get_time_series_array(component, forecast, start_time))
+          TimeSeries.values(
+        IS.get_time_series_array(component, forecast; start_time = start_time),
+    )
 
     # ignore_scaling_factors
     TimeSeries.values(
@@ -2491,8 +2493,8 @@ end
     ) == data[start_time]
     IS.get_time_series_values(
         component,
-        forecast,
-        start_time;
+        forecast;
+        start_time = start_time,
         ignore_scaling_factors = true,
     ) == data[start_time]
 
@@ -2506,7 +2508,12 @@ end
         len = 10,
     )
     @test TimeSeries.timestamp(ta2)[1:10] ==
-          IS.get_time_series_timestamps(component, forecast, start_time; len = 10)
+          IS.get_time_series_timestamps(
+        component,
+        forecast;
+        start_time = start_time,
+        len = 10,
+    )
     @test TimeSeries.values(ta2)[1:10] == IS.get_time_series_values(
         IS.Deterministic,
         component,
@@ -2515,9 +2522,9 @@ end
         len = len,
     )
     @test TimeSeries.values(ta2)[1:10] ==
-          IS.get_time_series_values(component, forecast, start_time; len = 10)
+          IS.get_time_series_values(component, forecast; start_time = start_time, len = 10)
     @test TimeSeries.values(ta2)[1:10] == TimeSeries.values(
-        IS.get_time_series_array(component, forecast, start_time; len = 10),
+        IS.get_time_series_array(component, forecast; start_time = start_time, len = 10),
     )
 end
 
@@ -2843,13 +2850,13 @@ end
             expected2 = use_scaling_factor ? ta_vals * component.val2 : ta_vals
             @test IS.get_time_series_values(
                 component,
-                ts1b,
-                initial_time;
+                ts1b;
+                start_time = initial_time,
             ) == expected1
             @test IS.get_time_series_values(
                 component,
-                ts2b,
-                initial_time;
+                ts2b;
+                start_time = initial_time,
             ) == expected2
         end
     end
@@ -2935,20 +2942,20 @@ function test_forecasts_with_shared_component_fields(forecast_type)
             end
             @test IS.get_time_series_values(
                 component,
-                forecast1b,
-                initial_time;
+                forecast1b;
+                start_time = initial_time,
             ) == expected1
             @test IS.get_time_series_values(
                 component,
-                forecast2b,
-                initial_time;
+                forecast2b;
+                start_time = initial_time,
             ) == expected2
             IS.remove_time_series!(sys, forecast_type, component, "val")
             @test IS.get_num_time_series(sys) == 1
             @test IS.get_time_series_values(
                 component,
-                forecast2b,
-                initial_time;
+                forecast2b;
+                start_time = initial_time,
             ) == expected2
             IS.remove_time_series!(sys, forecast_type, component, "val2")
             @test IS.get_num_time_series(sys) == 0
@@ -3042,6 +3049,242 @@ end
             @test getproperty(key2, field) == getproperty(key, field)
         end
     end
+end
+
+@testset "Test get_time_series_timestamps with TimeSeriesKey" begin
+    sys = IS.SystemData()
+    name = "Component1"
+    component = IS.TestComponent(name, 5)
+    IS.add_component!(sys, component)
+
+    initial_time = Dates.DateTime("2020-09-01")
+    resolution = Dates.Hour(1)
+    dates = collect(range(initial_time; length = 24, step = resolution))
+    data = collect(1:24)
+    ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
+    ts_name = "test_single"
+    ts = IS.SingleTimeSeries(; data = ta, name = ts_name)
+    key = IS.add_time_series!(sys, component, ts)
+    timestamps = IS.get_time_series_timestamps(component, key)
+    @test timestamps == dates
+    @test timestamps ==
+          IS.get_time_series_timestamps(IS.SingleTimeSeries, component, ts_name)
+
+    timestamps_subset =
+        IS.get_time_series_timestamps(component, key; start_time = dates[5], len = 5)
+    @test timestamps_subset == dates[5:9]
+    @test timestamps_subset == IS.get_time_series_timestamps(
+        IS.SingleTimeSeries, component, ts_name; start_time = dates[5], len = 5,
+    )
+
+    other_time = initial_time + resolution
+    horizon_count = 12
+    forecast_data = SortedDict{DateTime, Vector{Float64}}(
+        initial_time => collect(1:horizon_count),
+        other_time => collect(1:horizon_count) .+ 100,
+    )
+    forecast_name = "test_forecast"
+    forecast = IS.Deterministic(;
+        data = forecast_data,
+        name = forecast_name,
+        resolution = resolution,
+    )
+    forecast_key = IS.add_time_series!(sys, component, forecast)
+    forecast_timestamps =
+        IS.get_time_series_timestamps(component, forecast_key; start_time = other_time)
+    expected_timestamps =
+        collect(range(other_time; length = horizon_count, step = resolution))
+    @test forecast_timestamps == expected_timestamps
+    @test forecast_timestamps == IS.get_time_series_timestamps(
+        IS.Deterministic, component, forecast_name; start_time = other_time,
+    )
+end
+
+@testset "Test get_time_series_array with TimeSeriesKey" begin
+    sys = IS.SystemData()
+    name = "Component1"
+    component_val = 5
+    component = IS.TestComponent(name, component_val)
+    IS.add_component!(sys, component)
+
+    initial_time = Dates.DateTime("2020-09-01")
+    resolution = Dates.Hour(1)
+    dates = collect(range(initial_time; length = 24, step = resolution))
+    data = collect(1:24)
+    ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
+    ts_name = "test_array"
+    ts = IS.SingleTimeSeries(;
+        data = ta,
+        name = ts_name,
+        scaling_factor_multiplier = IS.get_val,
+    )
+    key = IS.add_time_series!(sys, component, ts)
+
+    ta_result = IS.get_time_series_array(component, key)
+    @test ta_result isa TimeSeries.TimeArray
+    @test TimeSeries.timestamp(ta_result) == dates
+    @test TimeSeries.values(ta_result) == data * component_val
+
+    ta_by_name = IS.get_time_series_array(IS.SingleTimeSeries, component, ts_name)
+    @test TimeSeries.timestamp(ta_result) == TimeSeries.timestamp(ta_by_name)
+    @test TimeSeries.values(ta_result) == TimeSeries.values(ta_by_name)
+
+    ta_subset = IS.get_time_series_array(component, key; start_time = dates[5], len = 5)
+    @test TimeSeries.timestamp(ta_subset) == dates[5:9]
+    @test TimeSeries.values(ta_subset) == data[5:9] * component_val
+
+    ta_unscaled = IS.get_time_series_array(component, key; ignore_scaling_factors = true)
+    @test TimeSeries.timestamp(ta_unscaled) == dates
+    @test TimeSeries.values(ta_unscaled) == data
+
+    other_time = initial_time + resolution
+    horizon_count = 12
+    forecast_data = SortedDict{DateTime, Vector{Float64}}(
+        initial_time => ones(horizon_count),
+        other_time => ones(horizon_count) * 2,
+    )
+    forecast_name = "test_forecast_array"
+    forecast = IS.Deterministic(;
+        data = forecast_data,
+        name = forecast_name,
+        resolution = resolution,
+        scaling_factor_multiplier = IS.get_val,
+    )
+    forecast_key = IS.add_time_series!(sys, component, forecast)
+
+    ta_forecast = IS.get_time_series_array(component, forecast_key; start_time = other_time)
+    expected_timestamps =
+        collect(range(other_time; length = horizon_count, step = resolution))
+    @test TimeSeries.timestamp(ta_forecast) == expected_timestamps
+    @test TimeSeries.values(ta_forecast) == ones(horizon_count) * 2 * component_val
+
+    ta_forecast_by_name = IS.get_time_series_array(
+        IS.Deterministic, component, forecast_name; start_time = other_time,
+    )
+    @test TimeSeries.timestamp(ta_forecast) == TimeSeries.timestamp(ta_forecast_by_name)
+    @test TimeSeries.values(ta_forecast) == TimeSeries.values(ta_forecast_by_name)
+end
+
+@testset "Test get_time_series_values with TimeSeriesKey" begin
+    sys = IS.SystemData()
+    name = "Component1"
+    component_val = 5
+    component = IS.TestComponent(name, component_val)
+    IS.add_component!(sys, component)
+
+    initial_time = Dates.DateTime("2020-09-01")
+    resolution = Dates.Hour(1)
+    dates = collect(range(initial_time; length = 24, step = resolution))
+    data = collect(1:24)
+    ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
+    ts_name = "test_values"
+    ts = IS.SingleTimeSeries(;
+        data = ta,
+        name = ts_name,
+        scaling_factor_multiplier = IS.get_val,
+    )
+    key = IS.add_time_series!(sys, component, ts)
+    values = IS.get_time_series_values(component, key)
+    @test values == data * component_val
+    @test values == IS.get_time_series_values(IS.SingleTimeSeries, component, ts_name)
+
+    values_subset =
+        IS.get_time_series_values(component, key; start_time = dates[5], len = 5)
+    @test values_subset == data[5:9] * component_val
+    @test values_subset == IS.get_time_series_values(
+        IS.SingleTimeSeries, component, ts_name; start_time = dates[5], len = 5,
+    )
+
+    values_unscaled =
+        IS.get_time_series_values(component, key; ignore_scaling_factors = true)
+    @test values_unscaled == data
+    @test values_unscaled == IS.get_time_series_values(
+        IS.SingleTimeSeries, component, ts_name; ignore_scaling_factors = true,
+    )
+
+    other_time = initial_time + resolution
+    horizon_count = 12
+    forecast_data = SortedDict{DateTime, Vector{Float64}}(
+        initial_time => ones(horizon_count),
+        other_time => ones(horizon_count) * 2,
+    )
+    forecast_name = "test_forecast_values"
+    forecast = IS.Deterministic(;
+        data = forecast_data,
+        name = forecast_name,
+        resolution = resolution,
+        scaling_factor_multiplier = IS.get_val,
+    )
+    forecast_key = IS.add_time_series!(sys, component, forecast)
+    forecast_values =
+        IS.get_time_series_values(component, forecast_key; start_time = other_time)
+    @test forecast_values == ones(horizon_count) * 2 * component_val
+    @test forecast_values == IS.get_time_series_values(
+        IS.Deterministic, component, forecast_name; start_time = other_time,
+    )
+
+    forecast_values_unscaled = IS.get_time_series_values(
+        component, forecast_key; start_time = other_time, ignore_scaling_factors = true,
+    )
+    @test forecast_values_unscaled == ones(horizon_count) * 2
+end
+
+@testset "Test get_time_series functions with TimeSeriesKey and features" begin
+    sys = IS.SystemData()
+    name = "Component1"
+    component = IS.TestComponent(name, 5)
+    IS.add_component!(sys, component)
+
+    initial_time = Dates.DateTime("2020-09-01")
+    resolution = Dates.Hour(1)
+
+    ts_keys = []
+    for scenario in ["high", "low"]
+        dates = collect(range(initial_time; length = 24, step = resolution))
+        data = scenario == "high" ? collect(1:24) : collect(24:-1:1)
+        ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component)])
+        ts_name = "power"
+        ts = IS.SingleTimeSeries(; data = ta, name = ts_name)
+        key = IS.add_time_series!(sys, component, ts; scenario = scenario)
+        push!(ts_keys, key)
+    end
+
+    for key in ts_keys
+        timestamps = IS.get_time_series_timestamps(component, key)
+        values = IS.get_time_series_values(component, key)
+
+        @test length(timestamps) == 24
+        @test length(values) == 24
+
+        # Verify the values match the expected pattern
+        if haskey(key.features, "scenario") && key.features["scenario"] == "high"
+            @test values == collect(1:24)
+        elseif haskey(key.features, "scenario") && key.features["scenario"] == "low"
+            @test values == collect(24:-1:1)
+        end
+    end
+
+    # Test with subset parameters
+    high_key = filter(
+        k -> haskey(k.features, "scenario") && k.features["scenario"] == "high",
+        ts_keys,
+    )[1]
+    timestamps_subset = IS.get_time_series_timestamps(
+        component,
+        high_key;
+        start_time = initial_time + resolution * 5,
+        len = 10,
+    )
+    values_subset = IS.get_time_series_values(
+        component,
+        high_key;
+        start_time = initial_time + resolution * 5,
+        len = 10,
+    )
+
+    @test length(timestamps_subset) == 10
+    @test length(values_subset) == 10
+    @test values_subset == collect(6:15)
 end
 
 @testset "Test get_total_period" begin
@@ -3760,19 +4003,23 @@ end
         component,
         f_name;
         resolution = resolution1,
-    ) == IS.get_time_series_array(component, f1, initial_time)
+    ) == IS.get_time_series_array(component, f1; start_time = initial_time)
     @test IS.get_time_series_values(
         IS.Deterministic,
         component,
         f_name;
         resolution = resolution1,
-    ) == TimeSeries.values(IS.get_time_series_array(component, f1, initial_time))
+    ) == TimeSeries.values(
+        IS.get_time_series_array(component, f1; start_time = initial_time),
+    )
     @test IS.get_time_series_timestamps(
         IS.Deterministic,
         component,
         f_name;
         resolution = resolution1,
-    ) == TimeSeries.timestamp(IS.get_time_series_array(component, f1, initial_time))
+    ) == TimeSeries.timestamp(
+        IS.get_time_series_array(component, f1; start_time = initial_time),
+    )
 
     ts_multiple = collect(
         IS.get_time_series_multiple(

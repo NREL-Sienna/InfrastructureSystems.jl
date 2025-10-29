@@ -20,8 +20,9 @@
     for (i, ta) in enumerate(cache)
         it = initial_times[i]
         @test TimeSeries.timestamp(ta) ==
-              IS.get_time_series_timestamps(component, forecast, it)
-        @test TimeSeries.values(ta) == IS.get_time_series_values(component, forecast, it)
+              IS.get_time_series_timestamps(component, forecast; start_time = it)
+        @test TimeSeries.values(ta) ==
+              IS.get_time_series_values(component, forecast; start_time = it)
     end
 
     IS.reset!(cache)
@@ -29,8 +30,9 @@
         ta = IS.get_next_time_series_array!(cache)
         @test first(TimeSeries.timestamp(ta)) == it
         @test TimeSeries.timestamp(ta) ==
-              IS.get_time_series_timestamps(component, forecast, it)
-        @test TimeSeries.values(ta) == IS.get_time_series_values(component, forecast, it)
+              IS.get_time_series_timestamps(component, forecast; start_time = it)
+        @test TimeSeries.values(ta) ==
+              IS.get_time_series_values(component, forecast; start_time = it)
     end
     @test IS.get_next_time(cache) === nothing
 
@@ -40,16 +42,18 @@
     for (i, ta) in enumerate(cache)
         it = initial_times[i]
         @test TimeSeries.timestamp(ta) ==
-              IS.get_time_series_timestamps(component, forecast, it)
-        @test TimeSeries.values(ta) == IS.get_time_series_values(component, forecast, it)
+              IS.get_time_series_timestamps(component, forecast; start_time = it)
+        @test TimeSeries.values(ta) ==
+              IS.get_time_series_values(component, forecast; start_time = it)
     end
 
     IS.reset!(cache)
     for it in initial_times
         ta = IS.get_next_time_series_array!(cache)
         @test TimeSeries.timestamp(ta) ==
-              IS.get_time_series_timestamps(component, forecast, it)
-        @test TimeSeries.values(ta) == IS.get_time_series_values(component, forecast, it)
+              IS.get_time_series_timestamps(component, forecast; start_time = it)
+        @test TimeSeries.values(ta) ==
+              IS.get_time_series_values(component, forecast; start_time = it)
     end
 
     # Start at an offset.
@@ -62,8 +66,9 @@
     for (i, ta) in enumerate(cache)
         it = initial_times[i + 24]
         @test TimeSeries.timestamp(ta) ==
-              IS.get_time_series_timestamps(component, forecast, it)
-        @test TimeSeries.values(ta) == IS.get_time_series_values(component, forecast, it)
+              IS.get_time_series_timestamps(component, forecast; start_time = it)
+        @test TimeSeries.values(ta) ==
+              IS.get_time_series_values(component, forecast; start_time = it)
     end
 
     # Test caching internals.
@@ -74,17 +79,18 @@
         ta = IS.get_next_time_series_array!(cache)
         @test IS._get_last_cached_time(cache) == initial_times[5]
         @test TimeSeries.timestamp(ta) ==
-              IS.get_time_series_timestamps(component, forecast, it)
-        @test TimeSeries.values(ta) == IS.get_time_series_values(component, forecast, it)
+              IS.get_time_series_timestamps(component, forecast; start_time = it)
+        @test TimeSeries.values(ta) ==
+              IS.get_time_series_values(component, forecast; start_time = it)
     end
 
     # The next access should trigger a read.
     ta = IS.get_next_time_series_array!(cache)
     @test IS._get_last_cached_time(cache) == initial_times[10]
     @test TimeSeries.timestamp(ta) ==
-          IS.get_time_series_timestamps(component, forecast, initial_times[6])
+          IS.get_time_series_timestamps(component, forecast; start_time = initial_times[6])
     @test TimeSeries.values(ta) ==
-          IS.get_time_series_values(component, forecast, initial_times[6])
+          IS.get_time_series_values(component, forecast; start_time = initial_times[6])
     @test IS.get_next_time(cache) == initial_times[7]
 end
 
@@ -115,16 +121,22 @@ end
     for (i, ta) in enumerate(cache)
         it = initial_timestamp + (i - 1) * resolution
         @test TimeSeries.timestamp(ta) ==
-              IS.get_time_series_timestamps(component, ts, it; len = 1)
-        @test TimeSeries.values(ta) == IS.get_time_series_values(component, ts, it; len = 1)
+              IS.get_time_series_timestamps(component, ts; start_time = it, len = 1)
+        @test TimeSeries.values(ta) ==
+              IS.get_time_series_values(component, ts; start_time = it, len = 1)
     end
 
     ta = IS.get_next_time_series_array!(cache)
     @test first(TimeSeries.timestamp(ta)) == initial_timestamp
     @test TimeSeries.timestamp(ta) ==
-          IS.get_time_series_timestamps(component, ts, initial_timestamp; len = 1)
+          IS.get_time_series_timestamps(
+        component,
+        ts;
+        start_time = initial_timestamp,
+        len = 1,
+    )
     @test TimeSeries.values(ta) ==
-          IS.get_time_series_values(component, ts, initial_timestamp; len = 1)
+          IS.get_time_series_values(component, ts; start_time = initial_timestamp, len = 1)
 
     # Iterate over all initial times with custom cache size.
     cache_size_bytes = 96
@@ -145,8 +157,9 @@ end
     for (i, ta) in enumerate(cache)
         it = initial_timestamp + (i - 1) * resolution
         @test TimeSeries.timestamp(ta) ==
-              IS.get_time_series_timestamps(component, ts, it; len = 1)
-        @test TimeSeries.values(ta) == IS.get_time_series_values(component, ts, it; len = 1)
+              IS.get_time_series_timestamps(component, ts; start_time = it, len = 1)
+        @test TimeSeries.values(ta) ==
+              IS.get_time_series_values(component, ts; start_time = it, len = 1)
     end
 
     IS.reset!(cache)
@@ -154,8 +167,9 @@ end
         ta = IS.get_next_time_series_array!(cache)
         it = initial_timestamp + (i - 1) * resolution
         @test TimeSeries.timestamp(ta) ==
-              IS.get_time_series_timestamps(component, ts, it; len = 1)
-        @test TimeSeries.values(ta) == IS.get_time_series_values(component, ts, it; len = 1)
+              IS.get_time_series_timestamps(component, ts; start_time = it, len = 1)
+        @test TimeSeries.values(ta) ==
+              IS.get_time_series_values(component, ts; start_time = it, len = 1)
     end
 
     cache_size_bytes = 96
@@ -175,8 +189,9 @@ end
         ta = IS.get_next_time_series_array!(cache)
         it = start_time + (i - 1) * resolution
         @test TimeSeries.timestamp(ta) ==
-              IS.get_time_series_timestamps(component, ts, it; len = 1)
-        @test TimeSeries.values(ta) == IS.get_time_series_values(component, ts, it; len = 1)
+              IS.get_time_series_timestamps(component, ts; start_time = it, len = 1)
+        @test TimeSeries.values(ta) ==
+              IS.get_time_series_values(component, ts; start_time = it, len = 1)
     end
 end
 
@@ -209,9 +224,13 @@ end
 
     for (i, ta) in enumerate(cache)
         @test TimeSeries.timestamp(ta) ==
-              IS.get_time_series_timestamps(component, forecast, initial_times[i])
+              IS.get_time_series_timestamps(
+            component,
+            forecast;
+            start_time = initial_times[i],
+        )
         @test TimeSeries.values(ta) ==
-              IS.get_time_series_values(component, forecast, initial_times[i])
+              IS.get_time_series_values(component, forecast; start_time = initial_times[i])
     end
 end
 
@@ -240,8 +259,9 @@ end
     for (i, ta) in enumerate(cache)
         it = initial_times[i]
         @test TimeSeries.timestamp(ta) ==
-              IS.get_time_series_timestamps(component, forecast, it)
-        @test TimeSeries.values(ta) == IS.get_time_series_values(component, forecast, it)
+              IS.get_time_series_timestamps(component, forecast; start_time = it)
+        @test TimeSeries.values(ta) ==
+              IS.get_time_series_values(component, forecast; start_time = it)
     end
 end
 
@@ -264,14 +284,15 @@ end
     @test length(cache) == cache.common.num_iterations == 168
 
     for it in initial_times
-        expected_timestamps = IS.get_time_series_timestamps(component, forecast, it)
-        expected_values = IS.get_time_series_values(component, forecast, it)
+        expected_timestamps =
+            IS.get_time_series_timestamps(component, forecast; start_time = it)
+        expected_values = IS.get_time_series_values(component, forecast; start_time = it)
         for _ in 1:2
             ta = IS.get_time_series_array!(cache, it)
             @test TimeSeries.timestamp(ta) ==
-                  IS.get_time_series_timestamps(component, forecast, it)
+                  IS.get_time_series_timestamps(component, forecast; start_time = it)
             @test TimeSeries.values(ta) ==
-                  IS.get_time_series_values(component, forecast, it)
+                  IS.get_time_series_values(component, forecast; start_time = it)
         end
     end
 
