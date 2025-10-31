@@ -45,8 +45,8 @@ function get_time_series_array!(cache::TimeSeriesCache, timestamp::Dates.DateTim
     len = _get_length(cache)
     ta = get_time_series_array(
         _get_component(cache),
-        _get_time_series(cache),
-        timestamp;
+        _get_time_series(cache);
+        start_time = timestamp,
         len = len,
         ignore_scaling_factors = _get_ignore_scaling_factors(cache),
     )
@@ -260,8 +260,8 @@ function ForecastCache(
     )
     vals = get_time_series_values(
         component,
-        ts,
-        start_time;
+        ts;
+        start_time = start_time,
         len = get_horizon_count(ts_metadata),
     )
     row_size = _get_row_size(vals)
@@ -375,7 +375,7 @@ function StaticTimeSeriesCache(
 
     # Get an instance to assess data size.
     ts = get_time_series(T, component, name; start_time = start_time, len = 1)
-    vals = get_time_series_values(component, ts, start_time; len = 1)
+    vals = get_time_series_values(component, ts; start_time = start_time, len = 1)
     row_size = _get_row_size(vals)
 
     if row_size > cache_size_bytes
