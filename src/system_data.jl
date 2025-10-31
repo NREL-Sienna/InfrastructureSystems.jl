@@ -666,6 +666,34 @@ function _check_transform_single_time_series(
         )
         check_params_compatibility(system_params, params)
         component = get_component(data, item.owner_uuid)
+
+        # We do not allow a component to have both Deterministic and
+        # DeterministicSingleTimeSeries with the same parameters.
+        # The user might be calling this function because some components are missing
+        # Deterministic forecasts. If other components already have Deterministic forecasts,
+        # this check will fail.
+        # transform_single_time_series! cannot be called at the component level.
+        ts_name = get_name(item.metadata)
+        ts_resolution = get_resolution(item.metadata)
+        ts_features = get_features(item.metadata)
+        ts_features_symbols = Dict{Symbol, Any}(Symbol(k) => v for (k, v) in ts_features)
+        if has_metadata(
+            data.time_series_manager.metadata_store,
+            component;
+            time_series_type = Deterministic,
+            name = ts_name,
+            resolution = ts_resolution,
+            ts_features_symbols...,
+        )
+            throw(
+                ConflictingInputsError(
+                    "Cannot transform SingleTimeSeries to DeterministicSingleTimeSeries: " *
+                    "A Deterministic forecast already exists for component $(summary(component)) " *
+                    "with name='$ts_name', resolution=$ts_resolution, and features=$ts_features",
+                ),
+            )
+        end
+
         components_with_params_and_metadata[i] =
             (component = component, params = params, metadata = item.metadata)
     end
