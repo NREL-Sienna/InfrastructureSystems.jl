@@ -1472,6 +1472,103 @@ end
     )
 end
 
+@testset "Test transform_single_time_series with conflicting Deterministic" begin
+    # Test 1: Transformation fails when Deterministic exists with same name, resolution, and features
+    sys1 = IS.SystemData()
+    component1 = IS.TestComponent("Component1", 1)
+    IS.add_component!(sys1, component1)
+
+    resolution = Dates.Hour(1)
+    initial_time = Dates.DateTime("2020-01-01T00:00:00")
+
+    # Add a Deterministic forecast with interval = 1 hour, horizon = 24 hours, 2 windows
+    horizon_count = 24
+    interval = Dates.Hour(1)
+    other_time = initial_time + interval
+    name = "power"
+    forecast_data = SortedDict(
+        initial_time => ones(horizon_count),
+        other_time => ones(horizon_count) * 2,
+    )
+    forecast =
+        IS.Deterministic(; data = forecast_data, name = name, resolution = resolution)
+    IS.add_time_series!(sys1, component1, forecast)
+
+    # Add a SingleTimeSeries with the same name, resolution, and no features
+    dates = create_dates("2020-01-01T00:00:00", resolution, "2020-01-02T00:00:00")
+    data = collect(1:length(dates))
+    ta = TimeSeries.TimeArray(dates, data, [IS.get_name(component1)])
+    ts = IS.SingleTimeSeries(name, ta)
+    IS.add_time_series!(sys1, component1, ts)
+
+    # Attempt to transform - this should fail because there's already a Deterministic
+    # with the same name, resolution, and features
+    horizon = horizon_count * resolution
+    @test_throws IS.ConflictingInputsError IS.transform_single_time_series!(
+        sys1,
+        IS.DeterministicSingleTimeSeries,
+        horizon,
+        interval,
+    )
+
+    # Test 2: Transformation succeeds when features are different
+    sys2 = IS.SystemData()
+    component2 = IS.TestComponent("Component2", 2)
+    IS.add_component!(sys2, component2)
+
+    forecast2 =
+        IS.Deterministic(; data = forecast_data, name = name, resolution = resolution)
+    IS.add_time_series!(sys2, component2, forecast2)
+
+    ts_with_features = IS.SingleTimeSeries(name, ta)
+    IS.add_time_series!(sys2, component2, ts_with_features; scenario = "high")
+
+    IS.transform_single_time_series!(
+        sys2,
+        IS.DeterministicSingleTimeSeries,
+        horizon,
+        interval,
+    )
+    @test IS.has_time_series(component2, IS.DeterministicSingleTimeSeries, name)
+    @test IS.has_time_series(component2, IS.Deterministic, name)
+    @test IS.has_time_series(component2, IS.SingleTimeSeries, name; scenario = "high")
+
+    # Test 3: Transformation succeeds when resolution is different
+    sys3 = IS.SystemData()
+    component3 = IS.TestComponent("Component3", 3)
+    IS.add_component!(sys3, component3)
+
+    forecast3 =
+        IS.Deterministic(; data = forecast_data, name = name, resolution = resolution)
+    IS.add_time_series!(sys3, component3, forecast3)
+
+    # Add SingleTimeSeries with different resolution (30 minutes)
+    resolution_30min = Dates.Minute(30)
+    dates_30min =
+        create_dates("2020-01-01T00:00:00", resolution_30min, "2020-01-02T00:00:00")
+    data_30min = collect(1:length(dates_30min))
+    ta_30min = TimeSeries.TimeArray(dates_30min, data_30min, [IS.get_name(component3)])
+    ts_different_resolution =
+        IS.SingleTimeSeries(name, ta_30min; resolution = resolution_30min)
+    IS.add_time_series!(sys3, component3, ts_different_resolution)
+
+    horizon_30min = 48 * resolution_30min  # 24 hours
+    interval_30min = Dates.Minute(30)
+    IS.transform_single_time_series!(
+        sys3,
+        IS.DeterministicSingleTimeSeries,
+        horizon_30min,
+        interval_30min,
+    )
+    @test IS.has_time_series(
+        component3,
+        IS.DeterministicSingleTimeSeries,
+        name;
+        resolution = resolution_30min,
+    )
+    @test IS.has_time_series(component3, IS.Deterministic, name; resolution = resolution)
+end
+
 function _test_add_single_time_series_type(test_value, type_name)
     sys = IS.SystemData()
     name = "Component1"
