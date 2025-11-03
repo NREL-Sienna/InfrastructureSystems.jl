@@ -20,13 +20,10 @@ end
 Construct a GeographicInfo supplemental attribute.
 
 # Arguments
- - `geo_json::Dict{String, <:Any}`: dictionary containing GeoJSON data. Defaults to an empty
+ - `geo_json::Dict{String, Any}`: dictionary containing GeoJSON data. Defaults to an empty
    dictionary if not provided
  - `internal::InfrastructureSystemsInternal`: internal infrastructure systems data. Defaults to
    a new InfrastructureSystemsInternal instance if not provided
-
-# Returns
- - `GeographicInfo`: a new GeographicInfo instance
 
 # Example
 ```julia
@@ -52,9 +49,6 @@ Get the GeoJSON dictionary from a GeographicInfo attribute.
 
 # Arguments
  - `geo::GeographicInfo`: the GeographicInfo attribute
-
-# Returns
- - `Dict{String, Any}`: the GeoJSON dictionary
 """
 get_geo_json(geo::GeographicInfo) = geo.geo_json
 
@@ -65,9 +59,6 @@ Get the internal infrastructure systems data from a GeographicInfo attribute.
 
 # Arguments
  - `geo::GeographicInfo`: the GeographicInfo attribute
-
-# Returns
- - `InfrastructureSystemsInternal`: the internal infrastructure systems data
 """
 get_internal(geo::GeographicInfo) = geo.internal
 
@@ -78,8 +69,5 @@ Get the UUID from a GeographicInfo attribute.
 
 # Arguments
  - `geo::GeographicInfo`: the GeographicInfo attribute
-
-# Returns
- - `UUIDs.UUID`: the UUID of the GeographicInfo attribute
 """
 get_uuid(geo::GeographicInfo) = get_uuid(get_internal(geo))
