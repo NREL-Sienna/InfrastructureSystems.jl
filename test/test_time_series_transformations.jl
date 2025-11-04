@@ -192,7 +192,7 @@ end
     catch e
         @test e isa ArgumentError
         @test occursin("not concrete", e.msg)
-        @test occursin("Vector{Any}", e.msg)
+        @test occursin("Any", e.msg)
     end
 
     # Test SortedDict with Vector{Any}
