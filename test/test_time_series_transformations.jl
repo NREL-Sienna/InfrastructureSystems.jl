@@ -185,7 +185,8 @@ end
 
 @testset "Test error messages for non-concrete types" begin
     # Test Vector{Any} - should give informative error about non-concrete type
-    data_any = Vector{Any}([1.0, 2.0, 3.0])
+    # Using mixed types to illustrate when this occurs in practice
+    data_any = Any[1.0, 2, 3.0]
     @test_throws ArgumentError IS.transform_array_for_hdf(data_any)
     try
         IS.transform_array_for_hdf(data_any)
@@ -196,9 +197,10 @@ end
     end
 
     # Test SortedDict with Vector{Any}
+    # Using mixed types to illustrate realistic scenarios
     data_sorted_any = SortedDict{Dates.DateTime, Vector{Any}}(
-        Dates.DateTime("2020-01-01") => Any[1.0, 2.0, 3.0],
-        Dates.DateTime("2020-01-02") => Any[4.0, 5.0, 6.0],
+        Dates.DateTime("2020-01-01") => Any[1.0, 2, 3.0],
+        Dates.DateTime("2020-01-02") => Any[4, 5.0, 6],
     )
     @test_throws ArgumentError IS.transform_array_for_hdf(data_sorted_any)
     try
