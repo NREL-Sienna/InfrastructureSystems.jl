@@ -194,6 +194,7 @@ end
         @test e isa ArgumentError
         @test occursin("not concrete", e.msg)
         @test occursin("Any", e.msg)
+        @test occursin("Supported types:", e.msg)
     end
 
     # Test SortedDict with Vector{Any}
@@ -209,6 +210,7 @@ end
         @test e isa ArgumentError
         @test occursin("not concrete", e.msg)
         @test occursin("SortedDict", e.msg)
+        @test occursin("Supported types:", e.msg)
     end
 
     # Test unsupported concrete type - should give informative error about no method
@@ -223,5 +225,7 @@ end
         @test e isa ArgumentError
         @test occursin("No transform_array_for_hdf method is defined", e.msg)
         @test occursin("TestUnsupportedType", e.msg)
+        @test occursin("Supported types:", e.msg)
+        @test occursin("you need to implement", e.msg)
     end
 end
