@@ -570,6 +570,53 @@ function transform_array_for_hdf(
     return combined_cost
 end
 
+# Catchall methods for better error messages when element type cannot be determined
+function transform_array_for_hdf(data::Vector{T}) where {T}
+    if !isconcretetype(T)
+        throw(
+            ArgumentError(
+                "Cannot determine the correct HDF5 data format to store time series data. " *
+                "The vector has element type $T which is not concrete. " *
+                "This typically occurs when Julia cannot infer the element type of your data. " *
+                "Please ensure your time series data has a concrete element type " *
+                "(e.g., Vector{Float64}, Vector{LinearFunctionData}, etc.) " *
+                "rather than Vector{Any} or other abstract types.",
+            ),
+        )
+    end
+    throw(
+        ArgumentError(
+            "Cannot determine the correct HDF5 data format for time series data with element type $T. " *
+            "No transform_array_for_hdf method is defined for this type. " *
+            "Supported types include numeric vectors, tuples, and FunctionData subtypes " *
+            "(LinearFunctionData, QuadraticFunctionData, PiecewiseLinearData, PiecewiseStepData).",
+        ),
+    )
+end
+
+function transform_array_for_hdf(data::SortedDict{Dates.DateTime, Vector{T}}) where {T}
+    if !isconcretetype(T)
+        throw(
+            ArgumentError(
+                "Cannot determine the correct HDF5 data format to store time series data. " *
+                "The SortedDict has value type Vector{$T} where $T is not concrete. " *
+                "This typically occurs when Julia cannot infer the element type of your data. " *
+                "Please ensure your time series data has a concrete element type " *
+                "(e.g., Vector{Float64}, Vector{LinearFunctionData}, etc.) " *
+                "rather than Vector{Any} or other abstract types.",
+            ),
+        )
+    end
+    throw(
+        ArgumentError(
+            "Cannot determine the correct HDF5 data format for time series data with element type $T. " *
+            "No transform_array_for_hdf method is defined for this type. " *
+            "Supported types include numeric vectors, tuples, and FunctionData subtypes " *
+            "(LinearFunctionData, QuadraticFunctionData, PiecewiseLinearData, PiecewiseStepData).",
+        ),
+    )
+end
+
 to_namedtuple(val) = (; (x => getproperty(val, x) for x in fieldnames(typeof(val)))...)
 
 function compute_file_hash(path::String, files::Vector{String})
