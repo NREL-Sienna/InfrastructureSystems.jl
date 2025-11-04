@@ -46,7 +46,9 @@ function Deterministic(;
     if isnothing(interval)
         interval = get_interval_from_initial_times(get_sorted_keys(data))
     end
-    data = handle_normalization_factor(convert_data(data), normalization_factor)
+    converted_data = convert_data(data)
+    validate_time_series_data_for_hdf(converted_data)
+    data = handle_normalization_factor(converted_data, normalization_factor)
     return Deterministic(
         name,
         data,
