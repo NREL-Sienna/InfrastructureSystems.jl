@@ -20,34 +20,18 @@ const TRANSFORM_ARRAY_FOR_HDF_SUPPORTED_ELTYPES = [
 """
 Check if the element type T is supported by transform_array_for_hdf.
 Returns true if supported, false otherwise.
+Uses multiple dispatch for a more Julian approach.
 """
-function is_transform_array_for_hdf_supported(::Type{T}) where {T}
-    # Check if it's a concrete type first
-    if !isconcretetype(T)
-        return false
-    end
-    
-    # Check for supported types
-    if T <: Real
-        return true
-    elseif T <: Tuple
-        return true
-    elseif T <: Vector{<:Tuple}
-        return true
-    elseif T <: Matrix
-        return true
-    elseif T <: LinearFunctionData
-        return true
-    elseif T <: QuadraticFunctionData
-        return true
-    elseif T <: PiecewiseLinearData
-        return true
-    elseif T <: PiecewiseStepData
-        return true
-    else
-        return false
-    end
-end
+is_transform_array_for_hdf_supported(::Type{T}) where {T <: Real} = isconcretetype(T)
+is_transform_array_for_hdf_supported(::Type{T}) where {T <: Tuple} = isconcretetype(T)
+is_transform_array_for_hdf_supported(::Type{T}) where {T <: Vector{<:Tuple}} = isconcretetype(T)
+is_transform_array_for_hdf_supported(::Type{T}) where {T <: Matrix} = isconcretetype(T)
+is_transform_array_for_hdf_supported(::Type{T}) where {T <: LinearFunctionData} = isconcretetype(T)
+is_transform_array_for_hdf_supported(::Type{T}) where {T <: QuadraticFunctionData} = isconcretetype(T)
+is_transform_array_for_hdf_supported(::Type{T}) where {T <: PiecewiseLinearData} = isconcretetype(T)
+is_transform_array_for_hdf_supported(::Type{T}) where {T <: PiecewiseStepData} = isconcretetype(T)
+# Catchall for unsupported types
+is_transform_array_for_hdf_supported(::Type{T}) where {T} = false
 
 """
 Validate that data in a SortedDict has supported element types for transform_array_for_hdf.
