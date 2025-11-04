@@ -17,6 +17,72 @@ const TRANSFORM_ARRAY_FOR_HDF_SUPPORTED_ELTYPES = [
     "PiecewiseStepData",
 ]
 
+"""
+Check if the element type T is supported by transform_array_for_hdf.
+Returns true if supported, false otherwise.
+"""
+function is_transform_array_for_hdf_supported(::Type{T}) where {T}
+    # Check if it's a concrete type first
+    if !isconcretetype(T)
+        return false
+    end
+    
+    # Check for supported types
+    if T <: Real
+        return true
+    elseif T <: Tuple
+        return true
+    elseif T <: Vector{<:Tuple}
+        return true
+    elseif T <: Matrix
+        return true
+    elseif T <: LinearFunctionData
+        return true
+    elseif T <: QuadraticFunctionData
+        return true
+    elseif T <: PiecewiseLinearData
+        return true
+    elseif T <: PiecewiseStepData
+        return true
+    else
+        return false
+    end
+end
+
+"""
+Validate that data in a SortedDict has supported element types for transform_array_for_hdf.
+Throws an ArgumentError if any vector has an unsupported element type.
+"""
+function validate_time_series_data_for_hdf(data::SortedDict{Dates.DateTime, Vector{T}}) where {T}
+    if !is_transform_array_for_hdf_supported(T)
+        supported = join(TRANSFORM_ARRAY_FOR_HDF_SUPPORTED_ELTYPES, ", ")
+        if !isconcretetype(T)
+            throw(
+                ArgumentError(
+                    "Cannot create time series with non-concrete element type. " *
+                    "The data has value type Vector{$T} where $T is not concrete. " *
+                    "This typically occurs when Julia cannot infer the element type of your data. " *
+                    "Please ensure your time series data has a concrete element type. " *
+                    "Supported types: $supported.",
+                ),
+            )
+        else
+            throw(
+                ArgumentError(
+                    "Cannot create time series with unsupported element type $T. " *
+                    "No transform_array_for_hdf method is defined for this type. " *
+                    "Supported types: $supported. " *
+                    "To use type $T, you need to implement a specific transform_array_for_hdf method for it.",
+                ),
+            )
+        end
+    end
+    return nothing
+end
+
+# Fallback for other SortedDict types - no validation needed
+validate_time_series_data_for_hdf(data::SortedDict) = nothing
+
 g_cached_subtypes = Dict{DataType, Vector{DataType}}()
 
 """
