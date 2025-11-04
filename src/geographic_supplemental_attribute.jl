@@ -17,7 +17,7 @@ end
 """
     GeographicInfo(; geo_json, internal)
 
-Construct a GeographicInfo supplemental attribute.
+Construct a [`GeographicInfo`](@ref) supplemental attribute.
 
 # Arguments
  - `geo_json::Dict{String, Any}`: dictionary containing GeoJSON data. Defaults to an empty
@@ -45,29 +45,29 @@ end
 """
     get_geo_json(geo::GeographicInfo)
 
-Get the GeoJSON dictionary from a GeographicInfo attribute.
+Get the GeoJSON dictionary from a [`GeographicInfo`](@ref) attribute.
 
 # Arguments
- - `geo::GeographicInfo`: the GeographicInfo attribute
+ - `geo::GeographicInfo`: the [`GeographicInfo`](@ref) attribute
 """
 get_geo_json(geo::GeographicInfo) = geo.geo_json
 
 """
     get_internal(geo::GeographicInfo)
 
-Get the internal infrastructure systems data from a GeographicInfo attribute.
+Get the internal infrastructure systems data from a [`GeographicInfo`](@ref) attribute.
 
 # Arguments
- - `geo::GeographicInfo`: the GeographicInfo attribute
+ - `geo::GeographicInfo`: the [`GeographicInfo`](@ref) attribute
 """
 get_internal(geo::GeographicInfo) = geo.internal
 
 """
     get_uuid(geo::GeographicInfo)
 
-Get the UUID from a GeographicInfo attribute.
+Get the UUID from a [`GeographicInfo`](@ref) attribute.
 
 # Arguments
- - `geo::GeographicInfo`: the GeographicInfo attribute
+ - `geo::GeographicInfo`: the [`GeographicInfo`](@ref) attribute
 """
 get_uuid(geo::GeographicInfo) = get_uuid(get_internal(geo))
