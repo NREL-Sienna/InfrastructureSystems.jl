@@ -182,3 +182,44 @@ end
         test_outer_round_trip(test_data, time_series_test_gen_storage(), 1:2, 2:2)
     end
 end
+
+@testset "Test error messages for non-concrete types" begin
+    # Test Vector{Any} - should give informative error about non-concrete type
+    data_any = Vector{Any}([1.0, 2.0, 3.0])
+    @test_throws ArgumentError IS.transform_array_for_hdf(data_any)
+    try
+        IS.transform_array_for_hdf(data_any)
+    catch e
+        @test e isa ArgumentError
+        @test occursin("not concrete", e.msg)
+        @test occursin("Vector{Any}", e.msg)
+    end
+
+    # Test SortedDict with Vector{Any}
+    data_sorted_any = SortedDict{Dates.DateTime, Vector{Any}}(
+        Dates.DateTime("2020-01-01") => Any[1.0, 2.0, 3.0],
+        Dates.DateTime("2020-01-02") => Any[4.0, 5.0, 6.0],
+    )
+    @test_throws ArgumentError IS.transform_array_for_hdf(data_sorted_any)
+    try
+        IS.transform_array_for_hdf(data_sorted_any)
+    catch e
+        @test e isa ArgumentError
+        @test occursin("not concrete", e.msg)
+        @test occursin("SortedDict", e.msg)
+    end
+
+    # Test unsupported concrete type - should give informative error about no method
+    struct TestUnsupportedType
+        value::Int
+    end
+    data_unsupported = [TestUnsupportedType(1), TestUnsupportedType(2)]
+    @test_throws ArgumentError IS.transform_array_for_hdf(data_unsupported)
+    try
+        IS.transform_array_for_hdf(data_unsupported)
+    catch e
+        @test e isa ArgumentError
+        @test occursin("No transform_array_for_hdf method is defined", e.msg)
+        @test occursin("TestUnsupportedType", e.msg)
+    end
+end
