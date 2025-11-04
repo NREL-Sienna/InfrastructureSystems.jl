@@ -22,14 +22,15 @@ Check if the element type T is supported by transform_array_for_hdf.
 Returns true if supported, false otherwise.
 Uses multiple dispatch for a more Julian approach.
 """
-is_transform_array_for_hdf_supported(::Type{T}) where {T <: Real} = isconcretetype(T)
+is_transform_array_for_hdf_supported(::Type{T}) where {T <: Real} = true
 is_transform_array_for_hdf_supported(::Type{T}) where {T <: Tuple} = isconcretetype(T)
-is_transform_array_for_hdf_supported(::Type{T}) where {T <: Vector{<:Tuple}} = isconcretetype(T)
-is_transform_array_for_hdf_supported(::Type{T}) where {T <: Matrix} = isconcretetype(T)
-is_transform_array_for_hdf_supported(::Type{T}) where {T <: LinearFunctionData} = isconcretetype(T)
-is_transform_array_for_hdf_supported(::Type{T}) where {T <: QuadraticFunctionData} = isconcretetype(T)
-is_transform_array_for_hdf_supported(::Type{T}) where {T <: PiecewiseLinearData} = isconcretetype(T)
-is_transform_array_for_hdf_supported(::Type{T}) where {T <: PiecewiseStepData} = isconcretetype(T)
+is_transform_array_for_hdf_supported(::Type{T}) where {T <: Vector{<:Tuple}} =
+    isconcretetype(T)
+is_transform_array_for_hdf_supported(::Type{T}) where {T <: Matrix} = true
+is_transform_array_for_hdf_supported(::Type{T}) where {T <: LinearFunctionData} = true
+is_transform_array_for_hdf_supported(::Type{T}) where {T <: QuadraticFunctionData} = true
+is_transform_array_for_hdf_supported(::Type{T}) where {T <: PiecewiseLinearData} = true
+is_transform_array_for_hdf_supported(::Type{T}) where {T <: PiecewiseStepData} = true
 # Catchall for unsupported types
 is_transform_array_for_hdf_supported(::Type{T}) where {T} = false
 
@@ -37,7 +38,9 @@ is_transform_array_for_hdf_supported(::Type{T}) where {T} = false
 Validate that data in a SortedDict has supported element types for transform_array_for_hdf.
 Throws an ArgumentError if any vector has an unsupported element type.
 """
-function validate_time_series_data_for_hdf(data::SortedDict{Dates.DateTime, Vector{T}}) where {T}
+function validate_time_series_data_for_hdf(
+    ::SortedDict{Dates.DateTime, Vector{T}},
+) where {T}
     if !is_transform_array_for_hdf_supported(T)
         supported = join(TRANSFORM_ARRAY_FOR_HDF_SUPPORTED_ELTYPES, ", ")
         if !isconcretetype(T)
@@ -45,8 +48,7 @@ function validate_time_series_data_for_hdf(data::SortedDict{Dates.DateTime, Vect
                 ArgumentError(
                     "Cannot create time series with non-concrete element type. " *
                     "The data has value type Vector{$T} where $T is not concrete. " *
-                    "This typically occurs when Julia cannot infer the element type of your data. " *
-                    "Please ensure your time series data has a concrete element type. " *
+                    "Please ensure your time series data has a concrete element type like Float64. " *
                     "Supported types: $supported.",
                 ),
             )
@@ -54,9 +56,8 @@ function validate_time_series_data_for_hdf(data::SortedDict{Dates.DateTime, Vect
             throw(
                 ArgumentError(
                     "Cannot create time series with unsupported element type $T. " *
-                    "No transform_array_for_hdf method is defined for this type. " *
                     "Supported types: $supported. " *
-                    "To use type $T, you need to implement a specific transform_array_for_hdf method for it.",
+                    "Please ensure your time series data has a valid element type like Float64. ",
                 ),
             )
         end
@@ -644,7 +645,7 @@ function transform_array_for_hdf(
 end
 
 # Catchall methods for better error messages when element type cannot be determined
-function transform_array_for_hdf(data::Vector{T}) where {T}
+function transform_array_for_hdf(::Vector{T}) where {T}
     if !isconcretetype(T)
         supported = join(TRANSFORM_ARRAY_FOR_HDF_SUPPORTED_ELTYPES, ", ")
         throw(
@@ -663,7 +664,7 @@ function transform_array_for_hdf(data::Vector{T}) where {T}
             "Cannot determine the correct HDF5 data format for time series data with element type $T. " *
             "No transform_array_for_hdf method is defined for this type. " *
             "Supported types: $supported. " *
-            "To use type $T, you need to implement a specific transform_array_for_hdf method for it.",
+            "To use type $T, you need to implement a specific transform_array_for_hdf method for it in InfrastructureSystems.",
         ),
     )
 end
