@@ -4418,53 +4418,55 @@ end
 @testset "Test early validation of time series data types in Deterministic constructor" begin
     initial_time = Dates.DateTime("2020-09-01")
     resolution = Dates.Hour(1)
-    
+
     # Test 1: Vector{Any} should be caught early
     data_any = Dict(
         initial_time => Any[1.0, 2, 3.0],
-        initial_time + resolution => Any[4, 5.0, 6]
+        initial_time + resolution => Any[4, 5.0, 6],
     )
     @test_throws ArgumentError IS.Deterministic(
-        name="test",
-        data=data_any,
-        resolution=resolution
+        name = "test",
+        data = data_any,
+        resolution = resolution,
     )
     try
-        IS.Deterministic(name="test", data=data_any, resolution=resolution)
+        IS.Deterministic(; name = "test", data = data_any, resolution = resolution)
     catch e
         @test e isa ArgumentError
         @test occursin("non-concrete element type", e.msg)
         @test occursin("Supported types:", e.msg)
     end
-    
+
     # Test 2: Unsupported concrete type should be caught early
     struct TestUnsupportedTypeInConstructor
         value::Int
     end
     data_custom = Dict(
-        initial_time => [TestUnsupportedTypeInConstructor(1), TestUnsupportedTypeInConstructor(2)],
-        initial_time + resolution => [TestUnsupportedTypeInConstructor(3), TestUnsupportedTypeInConstructor(4)]
+        initial_time =>
+            [TestUnsupportedTypeInConstructor(1), TestUnsupportedTypeInConstructor(2)],
+        initial_time + resolution =>
+            [TestUnsupportedTypeInConstructor(3), TestUnsupportedTypeInConstructor(4)],
     )
     @test_throws ArgumentError IS.Deterministic(
-        name="test",
-        data=data_custom,
-        resolution=resolution
+        name = "test",
+        data = data_custom,
+        resolution = resolution,
     )
     try
-        IS.Deterministic(name="test", data=data_custom, resolution=resolution)
+        IS.Deterministic(; name = "test", data = data_custom, resolution = resolution)
     catch e
         @test e isa ArgumentError
         @test occursin("unsupported element type", e.msg)
         @test occursin("you need to implement", e.msg)
         @test occursin("Supported types:", e.msg)
     end
-    
+
     # Test 3: Supported types should work fine
     data_float = Dict(
         initial_time => [1.0, 2.0, 3.0],
-        initial_time + resolution => [4.0, 5.0, 6.0]
+        initial_time + resolution => [4.0, 5.0, 6.0],
     )
-    det = IS.Deterministic(name="test", data=data_float, resolution=resolution)
+    det = IS.Deterministic(; name = "test", data = data_float, resolution = resolution)
     @test det isa IS.Deterministic
     @test IS.get_name(det) == "test"
 end
@@ -4472,20 +4474,20 @@ end
 @testset "Test validation rejects arbitrary SortedDict types" begin
     initial_time = Dates.DateTime("2020-09-01")
     resolution = Dates.Hour(1)
-    
+
     # Test: Arbitrary SortedDict (not SortedDict{DateTime, Vector{T}}) should be rejected
     # For example, SortedDict{String, Vector{Float64}} is not supported
     data_wrong_key = SortedDict{String, Vector{Float64}}(
         "key1" => [1.0, 2.0, 3.0],
-        "key2" => [4.0, 5.0, 6.0]
+        "key2" => [4.0, 5.0, 6.0],
     )
     @test_throws ArgumentError IS.Deterministic(
-        name="test",
-        data=data_wrong_key,
-        resolution=resolution
+        name = "test",
+        data = data_wrong_key,
+        resolution = resolution,
     )
     try
-        IS.Deterministic(name="test", data=data_wrong_key, resolution=resolution)
+        IS.Deterministic(; name = "test", data = data_wrong_key, resolution = resolution)
     catch e
         @test e isa ArgumentError
         @test occursin("Cannot create time series with this data structure", e.msg)
