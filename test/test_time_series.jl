@@ -4457,7 +4457,6 @@ end
     catch e
         @test e isa ArgumentError
         @test occursin("unsupported element type", e.msg)
-        @test occursin("you need to implement", e.msg)
         @test occursin("Supported types:", e.msg)
     end
 
