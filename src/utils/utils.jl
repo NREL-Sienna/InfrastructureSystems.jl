@@ -64,8 +64,19 @@ function validate_time_series_data_for_hdf(data::SortedDict{Dates.DateTime, Vect
     return nothing
 end
 
-# Fallback for other SortedDict types - no validation needed
-validate_time_series_data_for_hdf(data::SortedDict) = nothing
+# Fallback for other SortedDict types - throw error since Deterministic only supports
+# SortedDict{Dates.DateTime, Vector{T}} where T is a supported type
+function validate_time_series_data_for_hdf(data::SortedDict)
+    supported = join(TRANSFORM_ARRAY_FOR_HDF_SUPPORTED_ELTYPES, ", ")
+    throw(
+        ArgumentError(
+            "Cannot create time series with this data structure. " *
+            "Deterministic only supports SortedDict{Dates.DateTime, Vector{T}} " *
+            "where T is a supported element type. " *
+            "Supported types: $supported.",
+        ),
+    )
+end
 
 g_cached_subtypes = Dict{DataType, Vector{DataType}}()
 

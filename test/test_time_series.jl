@@ -4468,3 +4468,28 @@ end
     @test det isa IS.Deterministic
     @test IS.get_name(det) == "test"
 end
+
+@testset "Test validation rejects arbitrary SortedDict types" begin
+    initial_time = Dates.DateTime("2020-09-01")
+    resolution = Dates.Hour(1)
+    
+    # Test: Arbitrary SortedDict (not SortedDict{DateTime, Vector{T}}) should be rejected
+    # For example, SortedDict{String, Vector{Float64}} is not supported
+    data_wrong_key = SortedDict{String, Vector{Float64}}(
+        "key1" => [1.0, 2.0, 3.0],
+        "key2" => [4.0, 5.0, 6.0]
+    )
+    @test_throws ArgumentError IS.Deterministic(
+        name="test",
+        data=data_wrong_key,
+        resolution=resolution
+    )
+    try
+        IS.Deterministic(name="test", data=data_wrong_key, resolution=resolution)
+    catch e
+        @test e isa ArgumentError
+        @test occursin("Cannot create time series with this data structure", e.msg)
+        @test occursin("SortedDict{Dates.DateTime, Vector{T}}", e.msg)
+        @test occursin("Supported types:", e.msg)
+    end
+end
