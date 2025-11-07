@@ -92,13 +92,17 @@ end
 
 @inline Base.eltype(A::TypeSortedCollection) = Union{map(eltype, A.data)...}
 
+# lots of lisp-y type recursion in definitions below
+
+# eltypes just looks at the types of the vectors stored in the TSC.
 eltypes(::Type{TypeSortedCollection{D, N}}) where {D, N} = eltypes(D)
+
 function eltypes(::Type{T}) where {T <: TupleOfVectors}
     Base.tuple_type_cons(eltype(Base.tuple_type_head(T)), eltypes(Base.tuple_type_tail(T)))
 end
 eltypes(::Type{Tuple{}}) = Tuple{}
 
-function vectortypes(::Type{T}) where {T <: Tuple}
+function vectortypes(::Type{T}) where {T <: Tuple} # Tuple, not TupleOfVectors. needed why?
     Base.tuple_type_cons(
         Vector{Base.tuple_type_head(T)},
         vectortypes(Base.tuple_type_tail(T)),
@@ -141,14 +145,15 @@ Base.empty!(x::TypeSortedCollection) = foreach(empty!, x.data)
 @inline Base.length(x::TypeSortedCollection) = mapreduce(length, +, x.data; init = 0)
 indices(x::TypeSortedCollection) = x.indices
 
-# Trick from StaticArrays:
+# Trick from StaticArrays: [find the first TypeSortedCollection in a vararg list]
 @inline first_tsc(a1::TypeSortedCollection, as...) = a1
 @inline first_tsc(a1, as...) = first_tsc(as...)
 
 @inline first_tsc_type(a1::Type{<:TypeSortedCollection}, as::Type...) = a1
 @inline first_tsc_type(a1::Type, as::Type...) = first_tsc_type(as...)
 
-# inspired by Base.ith_all
+# inspired by Base.ith_all. 
+# example: _getindex_all(Val(i), j, tsc1, tsc2, tsc3) returns (tsc1[i][j], tsc2[i][j], tsc3[i][j])
 @inline _getindex_all(::Val, j, vecindex) = ()
 Base.@propagate_inbounds @inline _getindex_all(
     vali::Val{i},
@@ -158,6 +163,7 @@ Base.@propagate_inbounds @inline _getindex_all(
     as...,
 ) where {i} = (_getindex(vali, j, vecindex, a1), _getindex_all(vali, j, vecindex, as...)...)
 @inline _getindex(::Val, j, vecindex, a) = a # for anything that's not an AbstractVector or TypeSortedCollection, don't index (for use in broadcast!)
+# concretely: in an expression like tsc .+ 5, 5 should be broadcasted, not indexed.
 @inline _getindex(::Val, j, vecindex, a::AbstractVector) = a[vecindex]
 @inline _getindex(::Val, j, vecindex, a::Ref) = a[]
 @inline _getindex(::Val{i}, j, vecindex, a::TypeSortedCollection) where {i} = a.data[i][j]
@@ -165,6 +171,7 @@ Base.@propagate_inbounds @inline _getindex_all(
 @inline _setindex!(::Val{i}, j, vecindex, a::TypeSortedCollection, val) where {i} =
     a.data[i][j] = val
 
+# defined so that we can check if it's okay to do a .+ b on two TSCs a, b.
 @inline lengths_match(a1) = true
 @inline lengths_match(a1::TSCOrAbstractVector, a2::TSCOrAbstractVector, as...) =
     length(a1) == length(a2) && lengths_match(a2, as...)
@@ -313,35 +320,61 @@ end
     end
 end
 
-#=
-@generated function Base.iterate(tsc::TSCOrAbstractVector{N}) where {N}
-    expr = Expr(:block)
-    for i in 1:N
-        vali = Val(i)
-        push!(
-            expr.args,
-            quote
-                let inds = leading_tsc.indices[$i]
-                    @boundscheck indices_match($vali, inds, A1, As...) ||
-                                 indices_match_fail()
-                    @inbounds for j in LinearIndices(inds)
-                        vecindex = inds[j]
-                        f(_getindex_all($vali, j, vecindex, A1, As...)...)
-                    end
-                end
-            end,
-        )
+# TODO seems like this should really be written using axes.
+# TODO are structs Val-friendly? I don't see a simple way to make do with just a single Int state.
+struct TSCIterState
+    type_index::Int   # Which type group (1 to N)
+    elem_index::Int   # Position within that type group
+end
+
+# TODO do I need @inline or @generated here on left side?
+Base.iterate(tsc::TypeSortedCollection{D, N}) where {D, N} = _iterate_tsc(tsc, Val(1), 1)
+Base.iterate(
+    tsc::TypeSortedCollection{D, N},
+    state::TSCIterState,
+) where {D, N} = _iterate_tsc(tsc, Val(state.type_index), state.elem_index)
+
+# TODO what about TSCOrAbstractVector?
+# TODO bounds errors and @inbounds?
+# PERF: for "large" N (how large?), the recursive tail might be unwieldy, very long.
+# if we could assume the collections are all non-empty, this would be simpler.
+@generated function _iterate_tsc(
+    tsc::TypeSortedCollection{D, N},
+    ::Val{group},
+    elem_idx::Int,
+) where {D, N, group}
+    if group > N
+        return :(nothing)
     end
+
     quote
-        Base.@_inline_meta
-        leading_tsc = first_tsc(A1, As...)
-        @boundscheck lengths_match(A1, As...) || lengths_match_fail()
-        $expr
-        nothing
+        vec = tsc.data[$group]
+
+        if elem_idx <= length(vec)
+            element = vec[elem_idx]
+            return (element, TSCIterState($group, elem_idx + 1))
+        end
+
+        # Move to next group (compile-time recursion)
+        return _iterate_tsc(tsc, Val($(group + 1)), 1)
     end
 end
 
-@generated function Base.iterate(tsc::TypeSortedCollection, state::Int)
-    return
+# slow: only intended for testing purposes.
+function Base.collect(tsc::TypeSortedCollection)
+    if isempty(tsc)
+        return Vector{eltype(tsc)}()
+    end
+    nonempty_data_array = 1
+    while isempty(tsc.data[nonempty_data_array])
+        nonempty_data_array += 1
+    end
+    sample_element = first(tsc.data[nonempty_data_array])
+    result = Vector{eltype(tsc)}(fill(sample_element, length(tsc)))
+    for (indices, items) in zip(tsc.indices, tsc.data)
+        for (i, item) in zip(indices, items)
+            result[i] = item
+        end
+    end
+    return result
 end
-=#
