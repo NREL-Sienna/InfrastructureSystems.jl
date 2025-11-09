@@ -2,9 +2,16 @@ import InfrastructureSystems
 const IS = InfrastructureSystems
 import InfrastructureSystems.Optimization:
     get_store_container_type,
-    get_data_field,
-    list_fields,
-    list_keys,
+    get_variables,
+    get_aux_variables,
+    get_duals,
+    get_parameters,
+    get_expressions,
+    list_variable_keys,
+    list_aux_variable_keys,
+    list_dual_keys,
+    list_parameter_keys,
+    list_expression_keys,
     get_value,
     VariableKey,
     AuxVarKey,
@@ -43,7 +50,7 @@ end
 
     # Add some data
     var_key = VariableKey(MockVariable, IS.TestComponent)
-    store.variables[var_key] = [1.0 2.0; 3.0 4.0]
+    get_variables(store)[var_key] = [1.0 2.0; 3.0 4.0]
     @test !isempty(store)
 
     # Test empty!
@@ -51,42 +58,38 @@ end
     @test isempty(store)
 end
 
-@testset "Test MockModelStore get_data_field" begin
+@testset "Test MockModelStore container getters" begin
     store = MockModelStore()
 
-    # Test getting each field
-    @test isa(get_data_field(store, :variables), Dict)
-    @test isa(get_data_field(store, :aux_variables), Dict)
-    @test isa(get_data_field(store, :duals), Dict)
-    @test isa(get_data_field(store, :parameters), Dict)
-    @test isa(get_data_field(store, :expressions), Dict)
+    # Test getting each container
+    @test isa(get_variables(store), Dict)
+    @test isa(get_aux_variables(store), Dict)
+    @test isa(get_duals(store), Dict)
+    @test isa(get_parameters(store), Dict)
+    @test isa(get_expressions(store), Dict)
 
-    # Verify they are the actual fields
-    @test get_data_field(store, :variables) === store.variables
-    @test get_data_field(store, :aux_variables) === store.aux_variables
-    @test get_data_field(store, :duals) === store.duals
-    @test get_data_field(store, :parameters) === store.parameters
-    @test get_data_field(store, :expressions) === store.expressions
+    # Verify getters return the actual container fields
+    @test get_variables(store) === store.variables
+    @test get_aux_variables(store) === store.aux_variables
+    @test get_duals(store) === store.duals
+    @test get_parameters(store) === store.parameters
+    @test get_expressions(store) === store.expressions
 end
 
-@testset "Test MockModelStore list_fields and list_keys" begin
+@testset "Test MockModelStore list functions" begin
     store = MockModelStore()
 
     var_key1 = VariableKey(MockVariable, IS.TestComponent)
     var_key2 = VariableKey(MockVariable2, IS.TestComponent)
-    store.variables[var_key1] = [1.0 2.0; 3.0 4.0]
-    store.variables[var_key2] = [5.0 6.0; 7.0 8.0]
+    get_variables(store)[var_key1] = [1.0 2.0; 3.0 4.0]
+    get_variables(store)[var_key2] = [5.0 6.0; 7.0 8.0]
 
-    # Test list_fields
-    fields = list_fields(store, :variables)
-    @test var_key1 in fields
-    @test var_key2 in fields
-
-    # Test list_keys
-    keys_list = list_keys(store, :variables)
+    # Test list_variable_keys
+    keys_list = list_variable_keys(store)
     @test isa(keys_list, Vector)
     @test var_key1 in keys_list
     @test var_key2 in keys_list
+    @test length(keys_list) == 2
 end
 
 @testset "Test MockModelStore get_value for VariableKey" begin
@@ -94,7 +97,7 @@ end
 
     var_key = VariableKey(MockVariable, IS.TestComponent)
     test_data = [1.0 2.0; 3.0 4.0]
-    store.variables[var_key] = test_data
+    get_variables(store)[var_key] = test_data
 
     # Test get_value
     retrieved = get_value(store, MockVariable(), IS.TestComponent)
@@ -106,7 +109,7 @@ end
 
     aux_key = AuxVarKey(MockAuxVariable, IS.TestComponent)
     test_data = [10.0 20.0; 30.0 40.0]
-    store.aux_variables[aux_key] = test_data
+    get_aux_variables(store)[aux_key] = test_data
 
     # Test get_value
     retrieved = get_value(store, MockAuxVariable(), IS.TestComponent)
@@ -118,7 +121,7 @@ end
 
     constraint_key = ConstraintKey(MockConstraint, IS.TestComponent)
     test_data = [100.0 200.0; 300.0 400.0]
-    store.duals[constraint_key] = test_data
+    get_duals(store)[constraint_key] = test_data
 
     # Test get_value
     retrieved = get_value(store, MockConstraint(), IS.TestComponent)
@@ -130,7 +133,7 @@ end
 
     param_key = ParameterKey(MockParameter, IS.TestComponent)
     test_data = [0.1 0.2; 0.3 0.4]
-    store.parameters[param_key] = test_data
+    get_parameters(store)[param_key] = test_data
 
     # Test get_value
     retrieved = get_value(store, MockParameter(), IS.TestComponent)
@@ -142,7 +145,7 @@ end
 
     expr_key = ExpressionKey(MockExpression, IS.TestComponent)
     test_data = [1000.0 2000.0; 3000.0 4000.0]
-    store.expressions[expr_key] = test_data
+    get_expressions(store)[expr_key] = test_data
 
     # Test get_value
     retrieved = get_value(store, MockExpression(), IS.TestComponent)
@@ -159,27 +162,27 @@ end
     param_key = ParameterKey(MockParameter, IS.TestComponent)
     expr_key = ExpressionKey(MockExpression, IS.TestComponent)
 
-    store.variables[var_key] = [1.0]
-    store.aux_variables[aux_key] = [2.0]
-    store.duals[constraint_key] = [3.0]
-    store.parameters[param_key] = [4.0]
-    store.expressions[expr_key] = [5.0]
+    get_variables(store)[var_key] = [1.0]
+    get_aux_variables(store)[aux_key] = [2.0]
+    get_duals(store)[constraint_key] = [3.0]
+    get_parameters(store)[param_key] = [4.0]
+    get_expressions(store)[expr_key] = [5.0]
 
     @test !isempty(store)
 
-    # Verify all data is stored
-    @test length(list_keys(store, :variables)) == 1
-    @test length(list_keys(store, :aux_variables)) == 1
-    @test length(list_keys(store, :duals)) == 1
-    @test length(list_keys(store, :parameters)) == 1
-    @test length(list_keys(store, :expressions)) == 1
+    # Verify all data is stored using specific list functions
+    @test length(list_variable_keys(store)) == 1
+    @test length(list_aux_variable_keys(store)) == 1
+    @test length(list_dual_keys(store)) == 1
+    @test length(list_parameter_keys(store)) == 1
+    @test length(list_expression_keys(store)) == 1
 
     # Test empty! clears everything
     empty!(store)
     @test isempty(store)
-    @test length(list_keys(store, :variables)) == 0
-    @test length(list_keys(store, :aux_variables)) == 0
-    @test length(list_keys(store, :duals)) == 0
-    @test length(list_keys(store, :parameters)) == 0
-    @test length(list_keys(store, :expressions)) == 0
+    @test length(list_variable_keys(store)) == 0
+    @test length(list_aux_variable_keys(store)) == 0
+    @test length(list_dual_keys(store)) == 0
+    @test length(list_parameter_keys(store)) == 0
+    @test length(list_expression_keys(store)) == 0
 end
