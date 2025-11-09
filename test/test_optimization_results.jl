@@ -262,3 +262,303 @@ end
         10,
     )
 end
+
+@testset "Test OptimizationProblemResults read_duals" begin
+    base_power = 100.0
+    timestamps = [
+        DateTime("2024-01-01T00:00:00"),
+        DateTime("2024-01-01T01:00:00"),
+    ]
+    data = IS.SystemData()
+    uuid = IS.make_uuid()
+
+    dual_key = IS.Optimization.ConstraintKey(MockConstraint, IS.TestComponent)
+    dual_values = Dict(
+        dual_key => DataFrame(
+            "time_index" => [1, 2, 1, 2],
+            "name" => ["c1", "c1", "c2", "c2"],
+            "value" => [10.0, 20.0, 30.0, 40.0],
+        ),
+    )
+
+    res = OptimizationProblemResults(
+        base_power,
+        timestamps,
+        data,
+        uuid,
+        Dict(),
+        Dict(),
+        dual_values,
+        Dict(),
+        Dict(),
+        DataFrames.DataFrame(),
+        OptimizationContainerMetadata(),
+        "test_model",
+        mktempdir(),
+        mktempdir(),
+    )
+
+    # Test read_dual
+    dual_res = IS.Optimization.read_dual(res, dual_key)
+    @test @rsubset(dual_res, :name == "c1")[!, :value] == [10.0, 20.0]
+    @test @rsubset(dual_res, :name == "c2")[!, :value] == [30.0, 40.0]
+
+    # Test list_dual_keys
+    @test dual_key in IS.Optimization.list_dual_keys(res)
+end
+
+@testset "Test OptimizationProblemResults read_parameters" begin
+    base_power = 100.0
+    timestamps = [
+        DateTime("2024-01-01T00:00:00"),
+        DateTime("2024-01-01T01:00:00"),
+    ]
+    data = IS.SystemData()
+    uuid = IS.make_uuid()
+
+    param_key = IS.Optimization.ParameterKey(MockParameter, IS.TestComponent)
+    parameter_values = Dict(
+        param_key => DataFrame(
+            "time_index" => [1, 2, 1, 2],
+            "name" => ["c1", "c1", "c2", "c2"],
+            "value" => [0.5, 0.6, 0.7, 0.8],
+        ),
+    )
+
+    res = OptimizationProblemResults(
+        base_power,
+        timestamps,
+        data,
+        uuid,
+        Dict(),
+        Dict(),
+        Dict(),
+        parameter_values,
+        Dict(),
+        DataFrames.DataFrame(),
+        OptimizationContainerMetadata(),
+        "test_model",
+        mktempdir(),
+        mktempdir(),
+    )
+
+    # Test read_parameter
+    param_res = IS.Optimization.read_parameter(res, param_key)
+    @test @rsubset(param_res, :name == "c1")[!, :value] == [0.5, 0.6]
+    @test @rsubset(param_res, :name == "c2")[!, :value] == [0.7, 0.8]
+
+    # Test list_parameter_keys
+    @test param_key in IS.Optimization.list_parameter_keys(res)
+end
+
+@testset "Test OptimizationProblemResults read_aux_variables" begin
+    base_power = 100.0
+    timestamps = [
+        DateTime("2024-01-01T00:00:00"),
+        DateTime("2024-01-01T01:00:00"),
+    ]
+    data = IS.SystemData()
+    uuid = IS.make_uuid()
+
+    aux_key = IS.Optimization.AuxVarKey(MockAuxVariable, IS.TestComponent)
+    aux_variable_values = Dict(
+        aux_key => DataFrame(
+            "time_index" => [1, 2, 1, 2],
+            "name" => ["c1", "c1", "c2", "c2"],
+            "value" => [100.0, 200.0, 300.0, 400.0],
+        ),
+    )
+
+    res = OptimizationProblemResults(
+        base_power,
+        timestamps,
+        data,
+        uuid,
+        aux_variable_values,
+        Dict(),
+        Dict(),
+        Dict(),
+        Dict(),
+        DataFrames.DataFrame(),
+        OptimizationContainerMetadata(),
+        "test_model",
+        mktempdir(),
+        mktempdir(),
+    )
+
+    # Test read_aux_variable
+    aux_res = IS.Optimization.read_aux_variable(res, aux_key)
+    @test @rsubset(aux_res, :name == "c1")[!, :value] == [100.0, 200.0]
+    @test @rsubset(aux_res, :name == "c2")[!, :value] == [300.0, 400.0]
+
+    # Test list_aux_variable_keys
+    @test aux_key in IS.Optimization.list_aux_variable_keys(res)
+end
+
+@testset "Test OptimizationProblemResults getters" begin
+    base_power = 150.0
+    timestamps = [DateTime("2024-01-01T00:00:00")]
+    data = IS.SystemData()
+    uuid = IS.make_uuid()
+
+    res = OptimizationProblemResults(
+        base_power,
+        timestamps,
+        data,
+        uuid,
+        Dict(),
+        Dict(),
+        Dict(),
+        Dict(),
+        Dict(),
+        DataFrames.DataFrame(:objective_value => [1234.5]),
+        OptimizationContainerMetadata(),
+        "TestModel",
+        "/test/results",
+        "/test/output",
+    )
+
+    @test IS.Optimization.get_model_base_power(res) == base_power
+    @test IS.Optimization.get_timestamps(res) == timestamps
+    @test IS.Optimization.get_source_data(res) === data
+    @test IS.Optimization.get_source_data_uuid(res) == uuid
+    @test IS.Optimization.get_results_dir(res) == "/test/results"
+    @test IS.Optimization.get_output_dir(res) == "/test/output"
+    @test IS.Optimization.get_forecast_horizon(res) == 1
+    @test IS.Optimization.get_objective_value(res) == 1234.5
+end
+
+@testset "Test OptimizationProblemResults list functions" begin
+    base_power = 100.0
+    timestamps = [DateTime("2024-01-01T00:00:00")]
+    data = IS.SystemData()
+    uuid = IS.make_uuid()
+
+    var_key = VariableKey(MockVariable, IS.TestComponent)
+    aux_key = IS.Optimization.AuxVarKey(MockAuxVariable, IS.TestComponent)
+    dual_key = IS.Optimization.ConstraintKey(MockConstraint, IS.TestComponent)
+    param_key = IS.Optimization.ParameterKey(MockParameter, IS.TestComponent)
+    expr_key = ExpressionKey(MockExpression, IS.TestComponent)
+
+    res = OptimizationProblemResults(
+        base_power,
+        timestamps,
+        data,
+        uuid,
+        Dict(aux_key => DataFrame()),
+        Dict(var_key => DataFrame()),
+        Dict(dual_key => DataFrame()),
+        Dict(param_key => DataFrame()),
+        Dict(expr_key => DataFrame()),
+        DataFrames.DataFrame(),
+        OptimizationContainerMetadata(),
+        "test_model",
+        mktempdir(),
+        mktempdir(),
+    )
+
+    # Test list functions
+    @test var_key in IS.Optimization.list_variable_keys(res)
+    @test aux_key in IS.Optimization.list_aux_variable_keys(res)
+    @test dual_key in IS.Optimization.list_dual_keys(res)
+    @test param_key in IS.Optimization.list_parameter_keys(res)
+    @test expr_key in IS.Optimization.list_expression_keys(res)
+
+    # Test name encoding functions
+    var_names = IS.Optimization.list_variable_names(res)
+    @test length(var_names) == 1
+    @test isa(var_names[1], String)
+
+    aux_names = IS.Optimization.list_aux_variable_names(res)
+    @test length(aux_names) == 1
+
+    dual_names = IS.Optimization.list_dual_names(res)
+    @test length(dual_names) == 1
+
+    param_names = IS.Optimization.list_parameter_names(res)
+    @test length(param_names) == 1
+
+    expr_names = IS.Optimization.list_expression_names(res)
+    @test length(expr_names) == 1
+end
+
+@testset "Test OptimizationProblemResults serialize and deserialize" begin
+    base_power = 100.0
+    timestamps = [DateTime("2024-01-01T00:00:00")]
+    data = IS.SystemData()
+    uuid = IS.make_uuid()
+
+    var_key = VariableKey(MockVariable, IS.TestComponent)
+    variable_values = Dict(
+        var_key => DataFrame(
+            "time_index" => [1],
+            "name" => ["c1"],
+            "value" => [42.0],
+        ),
+    )
+
+    res = OptimizationProblemResults(
+        base_power,
+        timestamps,
+        data,
+        uuid,
+        Dict(),
+        variable_values,
+        Dict(),
+        Dict(),
+        Dict(),
+        DataFrames.DataFrame(:objective_value => [100.0]),
+        OptimizationContainerMetadata(),
+        "test_model",
+        mktempdir(),
+        mktempdir(),
+    )
+
+    # Serialize
+    temp_dir = mktempdir()
+    IS.Optimization.serialize_results(res, temp_dir)
+
+    # Deserialize
+    res2 = OptimizationProblemResults(temp_dir)
+
+    # Verify data is preserved
+    @test IS.Optimization.get_model_base_power(res2) == base_power
+    @test IS.Optimization.get_timestamps(res2) == timestamps
+    @test IS.Optimization.get_source_data_uuid(res2) == uuid
+    @test IS.Optimization.get_objective_value(res2) == 100.0
+
+    # Source data should be nothing after deserialization
+    @test isnothing(IS.Optimization.get_source_data(res2))
+end
+
+@testset "Test OptimizationProblemResults set_source_data!" begin
+    base_power = 100.0
+    timestamps = [DateTime("2024-01-01T00:00:00")]
+    data = IS.SystemData()
+    uuid = IS.make_uuid()
+
+    res = OptimizationProblemResults(
+        base_power,
+        timestamps,
+        nothing,  # No source data initially
+        uuid,
+        Dict(),
+        Dict(),
+        Dict(),
+        Dict(),
+        Dict(),
+        DataFrames.DataFrame(),
+        OptimizationContainerMetadata(),
+        "test_model",
+        mktempdir(),
+        mktempdir(),
+    )
+
+    # Set source data with matching UUID
+    IS.Optimization.set_source_data!(res, data)
+    @test IS.Optimization.get_source_data(res) === data
+
+    # Try to set source data with mismatched UUID
+    data2 = IS.SystemData()
+    @test_throws IS.InvalidValue IS.Optimization.set_source_data!(res, data2)
+end

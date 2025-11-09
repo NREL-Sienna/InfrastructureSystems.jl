@@ -1,0 +1,247 @@
+import InfrastructureSystems
+const IS = InfrastructureSystems
+import InfrastructureSystems.Optimization:
+    OptimizationProblemResultsExport,
+    VariableKey,
+    AuxVarKey,
+    ConstraintKey,
+    ParameterKey,
+    ExpressionKey,
+    should_export_dual,
+    should_export_expression,
+    should_export_parameter,
+    should_export_variable,
+    should_export_aux_variable
+
+@testset "Test OptimizationProblemResultsExport basic constructor" begin
+    exports = OptimizationProblemResultsExport(:TestProblem)
+
+    @test exports.name == :TestProblem
+    @test isempty(exports.duals)
+    @test isempty(exports.expressions)
+    @test isempty(exports.parameters)
+    @test isempty(exports.variables)
+    @test isempty(exports.aux_variables)
+    @test exports.optimizer_stats == true
+    @test exports.store_all_flags[:duals] == false
+    @test exports.store_all_flags[:expressions] == false
+    @test exports.store_all_flags[:parameters] == false
+    @test exports.store_all_flags[:variables] == false
+    @test exports.store_all_flags[:aux_variables] == false
+end
+
+@testset "Test OptimizationProblemResultsExport with specific keys" begin
+    var_key = VariableKey(MockVariable, IS.TestComponent)
+    dual_key = ConstraintKey(MockConstraint, IS.TestComponent)
+    expr_key = ExpressionKey(MockExpression, IS.TestComponent)
+    param_key = ParameterKey(MockParameter, IS.TestComponent)
+    aux_key = AuxVarKey(MockAuxVariable, IS.TestComponent)
+
+    exports = OptimizationProblemResultsExport(
+        :TestProblem;
+        variables = [var_key],
+        duals = [dual_key],
+        expressions = [expr_key],
+        parameters = [param_key],
+        aux_variables = [aux_key],
+        optimizer_stats = false,
+    )
+
+    @test exports.name == :TestProblem
+    @test var_key in exports.variables
+    @test dual_key in exports.duals
+    @test expr_key in exports.expressions
+    @test param_key in exports.parameters
+    @test aux_key in exports.aux_variables
+    @test exports.optimizer_stats == false
+end
+
+@testset "Test OptimizationProblemResultsExport with store_all flags" begin
+    exports = OptimizationProblemResultsExport(
+        :TestProblem;
+        store_all_duals = true,
+        store_all_expressions = true,
+        store_all_parameters = true,
+        store_all_variables = true,
+        store_all_aux_variables = true,
+    )
+
+    @test exports.store_all_flags[:duals] == true
+    @test exports.store_all_flags[:expressions] == true
+    @test exports.store_all_flags[:parameters] == true
+    @test exports.store_all_flags[:variables] == true
+    @test exports.store_all_flags[:aux_variables] == true
+end
+
+@testset "Test OptimizationProblemResultsExport should_export functions" begin
+    var_key1 = VariableKey(MockVariable, IS.TestComponent)
+    var_key2 = VariableKey(MockVariable2, IS.TestComponent)
+
+    # Test with specific keys
+    exports = OptimizationProblemResultsExport(
+        :TestProblem;
+        variables = [var_key1],
+    )
+
+    @test should_export_variable(exports, var_key1) == true
+    @test should_export_variable(exports, var_key2) == false
+
+    # Test with store_all flag
+    exports_all = OptimizationProblemResultsExport(
+        :TestProblem;
+        store_all_variables = true,
+    )
+
+    @test should_export_variable(exports_all, var_key1) == true
+    @test should_export_variable(exports_all, var_key2) == true
+end
+
+@testset "Test OptimizationProblemResultsExport should_export_dual" begin
+    dual_key1 = ConstraintKey(MockConstraint, IS.TestComponent)
+    dual_key2 = ConstraintKey(MockConstraint, ThermalGenerator)
+
+    exports = OptimizationProblemResultsExport(
+        :TestProblem;
+        duals = [dual_key1],
+    )
+
+    @test should_export_dual(exports, dual_key1) == true
+    @test should_export_dual(exports, dual_key2) == false
+
+    # Test with store_all flag
+    exports_all = OptimizationProblemResultsExport(
+        :TestProblem;
+        store_all_duals = true,
+    )
+
+    @test should_export_dual(exports_all, dual_key1) == true
+    @test should_export_dual(exports_all, dual_key2) == true
+end
+
+@testset "Test OptimizationProblemResultsExport should_export_expression" begin
+    expr_key1 = ExpressionKey(MockExpression, IS.TestComponent)
+    expr_key2 = ExpressionKey(MockExpression2, IS.TestComponent)
+
+    exports = OptimizationProblemResultsExport(
+        :TestProblem;
+        expressions = [expr_key1],
+    )
+
+    @test should_export_expression(exports, expr_key1) == true
+    @test should_export_expression(exports, expr_key2) == false
+
+    # Test with store_all flag
+    exports_all = OptimizationProblemResultsExport(
+        :TestProblem;
+        store_all_expressions = true,
+    )
+
+    @test should_export_expression(exports_all, expr_key1) == true
+    @test should_export_expression(exports_all, expr_key2) == true
+end
+
+@testset "Test OptimizationProblemResultsExport should_export_parameter" begin
+    param_key1 = ParameterKey(MockParameter, IS.TestComponent)
+    param_key2 = ParameterKey(MockParameter, ThermalGenerator)
+
+    exports = OptimizationProblemResultsExport(
+        :TestProblem;
+        parameters = [param_key1],
+    )
+
+    @test should_export_parameter(exports, param_key1) == true
+    @test should_export_parameter(exports, param_key2) == false
+
+    # Test with store_all flag
+    exports_all = OptimizationProblemResultsExport(
+        :TestProblem;
+        store_all_parameters = true,
+    )
+
+    @test should_export_parameter(exports_all, param_key1) == true
+    @test should_export_parameter(exports_all, param_key2) == true
+end
+
+@testset "Test OptimizationProblemResultsExport should_export_aux_variable" begin
+    aux_key1 = AuxVarKey(MockAuxVariable, IS.TestComponent)
+    aux_key2 = AuxVarKey(MockAuxVariable, ThermalGenerator)
+
+    exports = OptimizationProblemResultsExport(
+        :TestProblem;
+        aux_variables = [aux_key1],
+    )
+
+    @test should_export_aux_variable(exports, aux_key1) == true
+    @test should_export_aux_variable(exports, aux_key2) == false
+
+    # Test with store_all flag
+    exports_all = OptimizationProblemResultsExport(
+        :TestProblem;
+        store_all_aux_variables = true,
+    )
+
+    @test should_export_aux_variable(exports_all, aux_key1) == true
+    @test should_export_aux_variable(exports_all, aux_key2) == true
+end
+
+@testset "Test OptimizationProblemResultsExport with mixed settings" begin
+    var_key = VariableKey(MockVariable, IS.TestComponent)
+    dual_key = ConstraintKey(MockConstraint, IS.TestComponent)
+
+    exports = OptimizationProblemResultsExport(
+        :TestProblem;
+        variables = [var_key],
+        store_all_duals = true,
+        store_all_expressions = true,
+        optimizer_stats = false,
+    )
+
+    @test should_export_variable(exports, var_key) == true
+    @test should_export_dual(exports, dual_key) == true  # store_all is true
+    @test exports.optimizer_stats == false
+
+    # Test keys not explicitly added
+    expr_key = ExpressionKey(MockExpression, IS.TestComponent)
+    @test should_export_expression(exports, expr_key) == true  # store_all is true
+
+    param_key = ParameterKey(MockParameter, IS.TestComponent)
+    @test should_export_parameter(exports, param_key) == false  # store_all is false
+end
+
+@testset "Test OptimizationProblemResultsExport with Sets" begin
+    var_key1 = VariableKey(MockVariable, IS.TestComponent)
+    var_key2 = VariableKey(MockVariable2, IS.TestComponent)
+
+    # Test with Set input
+    exports = OptimizationProblemResultsExport(
+        :TestProblem;
+        variables = Set([var_key1, var_key2]),
+    )
+
+    @test isa(exports.variables, Set)
+    @test var_key1 in exports.variables
+    @test var_key2 in exports.variables
+end
+
+@testset "Test OptimizationProblemResultsExport with Vector input" begin
+    var_key1 = VariableKey(MockVariable, IS.TestComponent)
+    var_key2 = VariableKey(MockVariable2, IS.TestComponent)
+
+    # Test with Vector input (should be converted to Set)
+    exports = OptimizationProblemResultsExport(
+        :TestProblem;
+        variables = [var_key1, var_key2],
+    )
+
+    @test isa(exports.variables, Set)
+    @test var_key1 in exports.variables
+    @test var_key2 in exports.variables
+end
+
+@testset "Test OptimizationProblemResultsExport name as Symbol" begin
+    # Test with String name (should be converted to Symbol)
+    exports = OptimizationProblemResultsExport("TestProblemString")
+
+    @test exports.name isa Symbol
+    @test exports.name == :TestProblemString
+end
