@@ -11,6 +11,10 @@ import InfrastructureSystems.Optimization:
     get_optimization_container,
     get_output_dir,
     get_time_series_cache,
+    get_console_level,
+    get_file_level,
+    get_ext,
+    get_base_conversion,
     set_container!,
     set_store_params!,
     set_console_level!,
@@ -45,7 +49,7 @@ const IS = InfrastructureSystems
     # Test with custom ext
     custom_ext = Dict("key" => "value")
     internal2 = ModelInternal(container; ext = custom_ext)
-    @test internal2.ext == custom_ext
+    @test get_ext(internal2) == custom_ext
 
     # Test with custom recorders
     custom_recorders = [:recorder1, :recorder2]
@@ -85,16 +89,16 @@ end
 
     # Test console and file levels
     set_console_level!(internal, Logging.Info)
-    @test internal.console_level == Logging.Info
+    @test get_console_level(internal) == Logging.Info
 
     set_file_level!(internal, Logging.Debug)
-    @test internal.file_level == Logging.Debug
+    @test get_file_level(internal) == Logging.Debug
 
     set_console_level!(internal, Logging.Error)
-    @test internal.console_level == Logging.Error
+    @test get_console_level(internal) == Logging.Error
 
     set_file_level!(internal, Logging.Warn)
-    @test internal.file_level == Logging.Warn
+    @test get_file_level(internal) == Logging.Warn
 
     # Test store_params
     store_params = MockStoreParams(100)
@@ -165,5 +169,5 @@ end
     internal = ModelInternal(container)
 
     # Test default value
-    @test internal.base_conversion == true
+    @test get_base_conversion(internal) == true
 end

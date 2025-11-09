@@ -56,6 +56,10 @@ get_initial_conditions_model_container(internal::ModelInternal) =
 get_optimization_container(internal::ModelInternal) = internal.container
 get_output_dir(internal::ModelInternal) = internal.output_dir
 get_time_series_cache(internal::ModelInternal) = internal.time_series_cache
+get_console_level(internal::ModelInternal) = internal.console_level
+get_file_level(internal::ModelInternal) = internal.file_level
+get_ext(internal::ModelInternal) = internal.ext
+get_base_conversion(internal::ModelInternal) = internal.base_conversion
 
 set_container!(internal::ModelInternal, val) = internal.container = val
 set_store_params!(internal::ModelInternal, store_params) =
