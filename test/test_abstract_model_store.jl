@@ -2,11 +2,11 @@ import InfrastructureSystems
 const IS = InfrastructureSystems
 import InfrastructureSystems.Optimization:
     get_store_container_type,
-    get_variables,
-    get_aux_variables,
-    get_duals,
-    get_parameters,
-    get_expressions,
+    get_variables_container,
+    get_aux_variables_container,
+    get_duals_container,
+    get_parameters_container,
+    get_expressions_container,
     list_variable_keys,
     list_aux_variable_keys,
     list_dual_keys,
@@ -50,7 +50,7 @@ end
 
     # Add some data
     var_key = VariableKey(MockVariable, IS.TestComponent)
-    get_variables(store)[var_key] = [1.0 2.0; 3.0 4.0]
+    get_variables_container(store)[var_key] = [1.0 2.0; 3.0 4.0]
     @test !isempty(store)
 
     # Test empty!
@@ -62,18 +62,18 @@ end
     store = MockModelStore()
 
     # Test getting each container
-    @test isa(get_variables(store), Dict)
-    @test isa(get_aux_variables(store), Dict)
-    @test isa(get_duals(store), Dict)
-    @test isa(get_parameters(store), Dict)
-    @test isa(get_expressions(store), Dict)
+    @test isa(get_variables_container(store), Dict)
+    @test isa(get_aux_variables_container(store), Dict)
+    @test isa(get_duals_container(store), Dict)
+    @test isa(get_parameters_container(store), Dict)
+    @test isa(get_expressions_container(store), Dict)
 
     # Verify getters return the actual container fields
-    @test get_variables(store) === store.variables
-    @test get_aux_variables(store) === store.aux_variables
-    @test get_duals(store) === store.duals
-    @test get_parameters(store) === store.parameters
-    @test get_expressions(store) === store.expressions
+    @test get_variables_container(store) === store.variables
+    @test get_aux_variables_container(store) === store.aux_variables
+    @test get_duals_container(store) === store.duals
+    @test get_parameters_container(store) === store.parameters
+    @test get_expressions_container(store) === store.expressions
 end
 
 @testset "Test MockModelStore list functions" begin
@@ -81,8 +81,8 @@ end
 
     var_key1 = VariableKey(MockVariable, IS.TestComponent)
     var_key2 = VariableKey(MockVariable2, IS.TestComponent)
-    get_variables(store)[var_key1] = [1.0 2.0; 3.0 4.0]
-    get_variables(store)[var_key2] = [5.0 6.0; 7.0 8.0]
+    get_variables_container(store)[var_key1] = [1.0 2.0; 3.0 4.0]
+    get_variables_container(store)[var_key2] = [5.0 6.0; 7.0 8.0]
 
     # Test list_variable_keys
     keys_list = list_variable_keys(store)
@@ -97,7 +97,7 @@ end
 
     var_key = VariableKey(MockVariable, IS.TestComponent)
     test_data = [1.0 2.0; 3.0 4.0]
-    get_variables(store)[var_key] = test_data
+    get_variables_container(store)[var_key] = test_data
 
     # Test get_value
     retrieved = get_value(store, MockVariable(), IS.TestComponent)
@@ -109,7 +109,7 @@ end
 
     aux_key = AuxVarKey(MockAuxVariable, IS.TestComponent)
     test_data = [10.0 20.0; 30.0 40.0]
-    get_aux_variables(store)[aux_key] = test_data
+    get_aux_variables_container(store)[aux_key] = test_data
 
     # Test get_value
     retrieved = get_value(store, MockAuxVariable(), IS.TestComponent)
@@ -121,7 +121,7 @@ end
 
     constraint_key = ConstraintKey(MockConstraint, IS.TestComponent)
     test_data = [100.0 200.0; 300.0 400.0]
-    get_duals(store)[constraint_key] = test_data
+    get_duals_container(store)[constraint_key] = test_data
 
     # Test get_value
     retrieved = get_value(store, MockConstraint(), IS.TestComponent)
@@ -133,7 +133,7 @@ end
 
     param_key = ParameterKey(MockParameter, IS.TestComponent)
     test_data = [0.1 0.2; 0.3 0.4]
-    get_parameters(store)[param_key] = test_data
+    get_parameters_container(store)[param_key] = test_data
 
     # Test get_value
     retrieved = get_value(store, MockParameter(), IS.TestComponent)
@@ -145,7 +145,7 @@ end
 
     expr_key = ExpressionKey(MockExpression, IS.TestComponent)
     test_data = [1000.0 2000.0; 3000.0 4000.0]
-    get_expressions(store)[expr_key] = test_data
+    get_expressions_container(store)[expr_key] = test_data
 
     # Test get_value
     retrieved = get_value(store, MockExpression(), IS.TestComponent)
@@ -162,11 +162,11 @@ end
     param_key = ParameterKey(MockParameter, IS.TestComponent)
     expr_key = ExpressionKey(MockExpression, IS.TestComponent)
 
-    get_variables(store)[var_key] = [1.0]
-    get_aux_variables(store)[aux_key] = [2.0]
-    get_duals(store)[constraint_key] = [3.0]
-    get_parameters(store)[param_key] = [4.0]
-    get_expressions(store)[expr_key] = [5.0]
+    get_variables_container(store)[var_key] = [1.0]
+    get_aux_variables_container(store)[aux_key] = [2.0]
+    get_duals_container(store)[constraint_key] = [3.0]
+    get_parameters_container(store)[param_key] = [4.0]
+    get_expressions_container(store)[expr_key] = [5.0]
 
     @test !isempty(store)
 
