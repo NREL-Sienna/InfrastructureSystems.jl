@@ -2,7 +2,6 @@
 
 !!! note "For Maintainers and Contributors"
     
-    
     This page documents the internal database schemas used by InfrastructureSystems.jl to manage associations between components and their time series data and supplemental attributes. This information is intended for maintainers and contributors working on the codebase. **End users should not need to interact with these databases directly.**
 
 ## Overview
@@ -55,25 +54,25 @@ This is the primary table that stores the associations between time series data 
 
 **Schema:**
 
-| Column Name                 | Type    | Description                                                              |
-|:--------------------------- |:------- |:------------------------------------------------------------------------ |
-| `id`                        | INTEGER | Primary key, auto-incremented                                            |
-| `time_series_uuid`          | TEXT    | UUID of the time series data array                                       |
-| `time_series_type`          | TEXT    | Type name of the time series (e.g., "SingleTimeSeries", "Deterministic") |
-| `initial_timestamp`         | TEXT    | ISO 8601 formatted initial timestamp                                     |
-| `resolution`                | TEXT    | Resolution encoded as [ISO 8601 duration](https://en.wikipedia.org/wiki/ISO_8601#Durations)                                       |
-| `horizon`                   | TEXT    | ISO 8601 formatted forecast horizon (NULL for static time series)        |
-| `interval`                  | TEXT    | ISO 8601 formatted forecast interval (NULL for static time series)       |
-| `window_count`              | INTEGER | Number of forecast windows (NULL for static time series)                 |
-| `length`                    | INTEGER | Length of static time series (NULL for forecasts)                        |
-| `name`                      | TEXT    | User-defined name for the time series                                    |
-| `owner_uuid`                | TEXT    | UUID of the component or supplemental attribute that owns this           |
-| `owner_type`                | TEXT    | Type name of the owner                                                   |
-| `owner_category`            | TEXT    | Either "Component" or "SupplementalAttribute"                            |
-| `features`                  | TEXT    | JSON string of feature key-value pairs for filtering                     |
-| `scaling_factor_multiplier` | JSON    | Optional function for scaling (NULL if not used)                         |
-| `metadata_uuid`             | TEXT    | UUID of the metadata object                                              |
-| `units`                     | TEXT    | Optional units specification (NULL if not used)                          |
+| Column Name                 | Type    | Description                                                                                 |
+|:--------------------------- |:------- |:------------------------------------------------------------------------------------------- |
+| `id`                        | INTEGER | Primary key, auto-incremented                                                               |
+| `time_series_uuid`          | TEXT    | UUID of the time series data array                                                          |
+| `time_series_type`          | TEXT    | Type name of the time series (e.g., "SingleTimeSeries", "Deterministic")                    |
+| `initial_timestamp`         | TEXT    | ISO 8601 formatted initial timestamp                                                        |
+| `resolution`                | TEXT    | Resolution encoded as [ISO 8601 duration](https://en.wikipedia.org/wiki/ISO_8601#Durations) |
+| `horizon`                   | TEXT    | ISO 8601 formatted forecast horizon (NULL for static time series)                           |
+| `interval`                  | TEXT    | ISO 8601 formatted forecast interval (NULL for static time series)                          |
+| `window_count`              | INTEGER | Number of forecast windows (NULL for static time series)                                    |
+| `length`                    | INTEGER | Length of static time series (NULL for forecasts)                                           |
+| `name`                      | TEXT    | User-defined name for the time series                                                       |
+| `owner_uuid`                | TEXT    | UUID of the component or supplemental attribute that owns this                              |
+| `owner_type`                | TEXT    | Type name of the owner                                                                      |
+| `owner_category`            | TEXT    | Either "Component" or "SupplementalAttribute"                                               |
+| `features`                  | TEXT    | JSON string of feature key-value pairs for filtering                                        |
+| `scaling_factor_multiplier` | JSON    | Optional function for scaling (NULL if not used)                                            |
+| `metadata_uuid`             | TEXT    | UUID of the metadata object                                                                 |
+| `units`                     | TEXT    | Optional units specification (NULL if not used)                                             |
 
 **Indexes:**
 
