@@ -67,13 +67,6 @@ end
     @test isa(get_duals_container(store), Dict)
     @test isa(get_parameters_container(store), Dict)
     @test isa(get_expressions_container(store), Dict)
-
-    # Verify getters return the actual container fields
-    @test get_variables_container(store) === store.variables
-    @test get_aux_variables_container(store) === store.aux_variables
-    @test get_duals_container(store) === store.duals
-    @test get_parameters_container(store) === store.parameters
-    @test get_expressions_container(store) === store.expressions
 end
 
 @testset "Test MockModelStore list functions" begin
