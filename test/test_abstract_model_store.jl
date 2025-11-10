@@ -162,11 +162,11 @@ end
     param_key = ParameterKey(MockParameter, IS.TestComponent)
     expr_key = ExpressionKey(MockExpression, IS.TestComponent)
 
-    get_variables_container(store)[var_key] = [1.0]
-    get_aux_variables_container(store)[aux_key] = [2.0]
-    get_duals_container(store)[constraint_key] = [3.0]
-    get_parameters_container(store)[param_key] = [4.0]
-    get_expressions_container(store)[expr_key] = [5.0]
+    get_variables_container(store)[var_key] = [1.0;;]
+    get_aux_variables_container(store)[aux_key] = [2.0;;]
+    get_duals_container(store)[constraint_key] = [3.0;;]
+    get_parameters_container(store)[param_key] = [4.0;;]
+    get_expressions_container(store)[expr_key] = [5.0;;]
 
     @test !isempty(store)
 
