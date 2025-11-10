@@ -77,6 +77,16 @@ function _check_fields(fields)
     return fields
 end
 
+# Getter functions for OptimizationProblemResultsExport
+get_name(x::OptimizationProblemResultsExport) = x.name
+get_duals_set(x::OptimizationProblemResultsExport) = x.duals
+get_expressions_set(x::OptimizationProblemResultsExport) = x.expressions
+get_parameters_set(x::OptimizationProblemResultsExport) = x.parameters
+get_variables_set(x::OptimizationProblemResultsExport) = x.variables
+get_aux_variables_set(x::OptimizationProblemResultsExport) = x.aux_variables
+get_optimizer_stats_flag(x::OptimizationProblemResultsExport) = x.optimizer_stats
+get_store_all_flags(x::OptimizationProblemResultsExport) = x.store_all_flags
+
 should_export_dual(x::OptimizationProblemResultsExport, key) =
     _should_export(x, :duals, key)
 should_export_expression(x::OptimizationProblemResultsExport, key) =
@@ -89,7 +99,7 @@ should_export_aux_variable(x::OptimizationProblemResultsExport, key) =
     _should_export(x, :aux_variables, key)
 
 function _should_export(exports::OptimizationProblemResultsExport, field_name, key)
-    exports.store_all_flags[field_name] && return true
+    get_store_all_flags(exports)[field_name] && return true
     container = getproperty(exports, field_name)
     return key in container
 end

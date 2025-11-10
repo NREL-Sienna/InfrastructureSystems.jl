@@ -7,6 +7,14 @@ import InfrastructureSystems.Optimization:
     ConstraintKey,
     ParameterKey,
     ExpressionKey,
+    get_name,
+    get_duals_set,
+    get_expressions_set,
+    get_parameters_set,
+    get_variables_set,
+    get_aux_variables_set,
+    get_optimizer_stats_flag,
+    get_store_all_flags,
     should_export_dual,
     should_export_expression,
     should_export_parameter,
@@ -16,18 +24,18 @@ import InfrastructureSystems.Optimization:
 @testset "Test OptimizationProblemResultsExport basic constructor" begin
     exports = OptimizationProblemResultsExport(:TestProblem)
 
-    @test exports.name == :TestProblem
-    @test isempty(exports.duals)
-    @test isempty(exports.expressions)
-    @test isempty(exports.parameters)
-    @test isempty(exports.variables)
-    @test isempty(exports.aux_variables)
-    @test exports.optimizer_stats == true
-    @test exports.store_all_flags[:duals] == false
-    @test exports.store_all_flags[:expressions] == false
-    @test exports.store_all_flags[:parameters] == false
-    @test exports.store_all_flags[:variables] == false
-    @test exports.store_all_flags[:aux_variables] == false
+    @test get_name(exports) == :TestProblem
+    @test isempty(get_duals_set(exports))
+    @test isempty(get_expressions_set(exports))
+    @test isempty(get_parameters_set(exports))
+    @test isempty(get_variables_set(exports))
+    @test isempty(get_aux_variables_set(exports))
+    @test get_optimizer_stats_flag(exports) == true
+    @test get_store_all_flags(exports)[:duals] == false
+    @test get_store_all_flags(exports)[:expressions] == false
+    @test get_store_all_flags(exports)[:parameters] == false
+    @test get_store_all_flags(exports)[:variables] == false
+    @test get_store_all_flags(exports)[:aux_variables] == false
 end
 
 @testset "Test OptimizationProblemResultsExport with specific keys" begin
@@ -47,13 +55,13 @@ end
         optimizer_stats = false,
     )
 
-    @test exports.name == :TestProblem
-    @test var_key in exports.variables
-    @test dual_key in exports.duals
-    @test expr_key in exports.expressions
-    @test param_key in exports.parameters
-    @test aux_key in exports.aux_variables
-    @test exports.optimizer_stats == false
+    @test get_name(exports) == :TestProblem
+    @test var_key in get_variables_set(exports)
+    @test dual_key in get_duals_set(exports)
+    @test expr_key in get_expressions_set(exports)
+    @test param_key in get_parameters_set(exports)
+    @test aux_key in get_aux_variables_set(exports)
+    @test get_optimizer_stats_flag(exports) == false
 end
 
 @testset "Test OptimizationProblemResultsExport with store_all flags" begin
@@ -66,11 +74,11 @@ end
         store_all_aux_variables = true,
     )
 
-    @test exports.store_all_flags[:duals] == true
-    @test exports.store_all_flags[:expressions] == true
-    @test exports.store_all_flags[:parameters] == true
-    @test exports.store_all_flags[:variables] == true
-    @test exports.store_all_flags[:aux_variables] == true
+    @test get_store_all_flags(exports)[:duals] == true
+    @test get_store_all_flags(exports)[:expressions] == true
+    @test get_store_all_flags(exports)[:parameters] == true
+    @test get_store_all_flags(exports)[:variables] == true
+    @test get_store_all_flags(exports)[:aux_variables] == true
 end
 
 @testset "Test OptimizationProblemResultsExport should_export functions" begin
@@ -198,7 +206,7 @@ end
 
     @test should_export_variable(exports, var_key) == true
     @test should_export_dual(exports, dual_key) == true  # store_all is true
-    @test exports.optimizer_stats == false
+    @test get_optimizer_stats_flag(exports) == false
 
     # Test keys not explicitly added
     expr_key = ExpressionKey(MockExpression, IS.TestComponent)
@@ -218,9 +226,9 @@ end
         variables = Set([var_key1, var_key2]),
     )
 
-    @test isa(exports.variables, Set)
-    @test var_key1 in exports.variables
-    @test var_key2 in exports.variables
+    @test isa(get_variables_set(exports), Set)
+    @test var_key1 in get_variables_set(exports)
+    @test var_key2 in get_variables_set(exports)
 end
 
 @testset "Test OptimizationProblemResultsExport with Vector input" begin
@@ -233,15 +241,15 @@ end
         variables = [var_key1, var_key2],
     )
 
-    @test isa(exports.variables, Set)
-    @test var_key1 in exports.variables
-    @test var_key2 in exports.variables
+    @test isa(get_variables_set(exports), Set)
+    @test var_key1 in get_variables_set(exports)
+    @test var_key2 in get_variables_set(exports)
 end
 
 @testset "Test OptimizationProblemResultsExport name as Symbol" begin
     # Test with String name (should be converted to Symbol)
     exports = OptimizationProblemResultsExport("TestProblemString")
 
-    @test exports.name isa Symbol
-    @test exports.name == :TestProblemString
+    @test get_name(exports) isa Symbol
+    @test get_name(exports) == :TestProblemString
 end
