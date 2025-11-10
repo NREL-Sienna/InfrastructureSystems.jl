@@ -2,6 +2,7 @@
 
 !!! note "For Maintainers and Contributors"
     
+    
     This page documents the internal database schemas used by InfrastructureSystems.jl to manage associations between components and their time series data and supplemental attributes. This information is intended for maintainers and contributors working on the codebase. **End users should not need to interact with these databases directly.**
 
 ## Overview
