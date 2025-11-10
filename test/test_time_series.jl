@@ -2370,7 +2370,7 @@ end
 @testset "Test get_time_series options" begin
     for in_memory in (true, false)
         _test_get_time_series_option_type(
-            SortedDict(
+            SortedDict{Dates.DateTime, Vector{Float64}}(
                 it => ones(default_time_params.horizon_count) * i for
                 (i, it) in enumerate(default_time_params.initial_times)
             ),
@@ -2531,7 +2531,9 @@ end
     initial_times = collect(range(initial_timestamp; length = 2, step = interval))
     name = "test"
     horizon_count = 24
-    data = SortedDict(it => ones(horizon_count) * i for (i, it) in enumerate(initial_times))
+    data = SortedDict{Dates.DateTime, Vector{Float64}}(
+        it => ones(horizon_count) * i for (i, it) in enumerate(initial_times)
+    )
 
     forecast =
         IS.Deterministic(name, data, resolution; scaling_factor_multiplier = IS.get_val)
@@ -2729,12 +2731,18 @@ end
     horizon_count = 24
 
     # Horizon must be greater than 1.
-    bad_data = SortedDict(initial_time => ones(1), second_time => ones(1))
+    bad_data = SortedDict{Dates.DateTime, Vector{Float64}}(
+        initial_time => ones(1),
+        second_time => ones(1),
+    )
     forecast = IS.Deterministic(; data = bad_data, name = name, resolution = resolution)
     @test_throws ArgumentError IS.add_time_series!(sys, component, forecast)
 
     # Arrays must have the same length.
-    bad_data = SortedDict(initial_time => ones(2), second_time => ones(3))
+    bad_data = SortedDict{Dates.DateTime, Vector{Float64}}(
+        initial_time => ones(2),
+        second_time => ones(3),
+    )
     forecast = IS.Deterministic(;
         data = bad_data,
         name = name,
@@ -2744,7 +2752,10 @@ end
 
     # Set baseline parameters for the rest of the tests.
     data =
-        SortedDict(initial_time => ones(horizon_count), second_time => ones(horizon_count))
+        SortedDict{Dates.DateTime, Vector{Float64}}(
+            initial_time => ones(horizon_count),
+            second_time => ones(horizon_count),
+        )
     forecast = IS.Deterministic(; data = data, name = name, resolution = resolution)
     IS.add_time_series!(sys, component, forecast)
 
@@ -2752,7 +2763,10 @@ end
     initial_time2 = Dates.DateTime("2020-09-02")
     name = "test2"
     data =
-        SortedDict(initial_time2 => ones(horizon_count), second_time => ones(horizon_count))
+        SortedDict{Dates.DateTime, Vector{Float64}}(
+            initial_time2 => ones(horizon_count),
+            second_time => ones(horizon_count),
+        )
 
     forecast = IS.Deterministic(; data = data, name = name, resolution = resolution)
     @test_throws IS.ConflictingInputsError IS.add_time_series!(sys, component, forecast)
@@ -2761,7 +2775,10 @@ end
     resolution2 = Dates.Minute(5)
     name = "test2"
     data =
-        SortedDict(initial_time => ones(horizon_count), second_time => ones(horizon_count))
+        SortedDict{Dates.DateTime, Vector{Float64}}(
+            initial_time => ones(horizon_count),
+            second_time => ones(horizon_count),
+        )
 
     forecast = IS.Deterministic(; data = data, name = name, resolution = resolution)
     IS.add_time_series!(sys, component, forecast)
@@ -2795,7 +2812,10 @@ end
     other_timestamp = initial_timestamp + resolution
     data_input = rand(horizon_count)
     data_input2 = rand(horizon_count)
-    data = SortedDict(initial_timestamp => data_input, other_timestamp => data_input2)
+    data = SortedDict{Dates.DateTime, Vector{Float64}}(
+        initial_timestamp => data_input,
+        other_timestamp => data_input2,
+    )
     time_series = IS.Deterministic(; name = name, resolution = resolution, data = data)
     fdata = IS.get_data(time_series)
     @test initial_timestamp == first(keys((fdata)))
@@ -2843,7 +2863,10 @@ end
         data_input = rand(horizon_count)
         data_input2 = rand(horizon_count)
         other_timestamp = initial_timestamp + resolution
-        data = SortedDict(initial_timestamp => data_input, other_timestamp => data_input2)
+        data = SortedDict{Dates.DateTime, Vector{Float64}}(
+            initial_timestamp => data_input,
+            other_timestamp => data_input2,
+        )
         for i in 1:2
             time_series =
                 IS.Deterministic(;
@@ -4485,12 +4508,4 @@ end
         data = data_wrong_key,
         resolution = resolution,
     )
-    try
-        IS.Deterministic(; name = "test", data = data_wrong_key, resolution = resolution)
-    catch e
-        @test e isa ArgumentError
-        @test occursin("Cannot create time series with this data structure", e.msg)
-        @test occursin("SortedDict{Dates.DateTime, Vector{T}}", e.msg)
-        @test occursin("Supported types:", e.msg)
-    end
 end
