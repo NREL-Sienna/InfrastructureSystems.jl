@@ -61,7 +61,7 @@ This is the primary table that stores the associations between time series data 
 | `time_series_uuid`          | TEXT    | UUID of the time series data array                                       |
 | `time_series_type`          | TEXT    | Type name of the time series (e.g., "SingleTimeSeries", "Deterministic") |
 | `initial_timestamp`         | TEXT    | ISO 8601 formatted initial timestamp                                     |
-| `resolution`                | TEXT    | ISO 8601 formatted time resolution                                       |
+| `resolution`                | TEXT    | Resolution encoded as [ISO 8601 duration](https://en.wikipedia.org/wiki/ISO_8601#Durations)                                       |
 | `horizon`                   | TEXT    | ISO 8601 formatted forecast horizon (NULL for static time series)        |
 | `interval`                  | TEXT    | ISO 8601 formatted forecast interval (NULL for static time series)       |
 | `window_count`              | INTEGER | Number of forecast windows (NULL for static time series)                 |
