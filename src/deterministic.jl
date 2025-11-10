@@ -33,7 +33,7 @@ mutable struct Deterministic <: AbstractDeterministic
     scaling_factor_multiplier::Union{Nothing, Function}
     internal::InfrastructureSystemsInternal
 
-    function Deterministic(;
+    function Deterministic(
         name::String,
         data::SortedDict,
         resolution::Dates.Period,
@@ -41,7 +41,7 @@ mutable struct Deterministic <: AbstractDeterministic
         scaling_factor_multiplier::Union{Nothing, Function},
         internal::InfrastructureSystemsInternal,
     )
-        validate_time_series_data_for_hdf(converted_data)
+        validate_time_series_data_for_hdf(data)
         new(
             name,
             data,
