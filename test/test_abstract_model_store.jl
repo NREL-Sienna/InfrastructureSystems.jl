@@ -93,7 +93,7 @@ end
     get_variables_container(store)[var_key] = test_data
 
     # Test get_value
-    retrieved = get_value(store, MockVariable(), IS.TestComponent)
+    retrieved = get_value(store, MockVariable, IS.TestComponent)
     @test retrieved == test_data
 end
 
@@ -105,7 +105,7 @@ end
     get_aux_variables_container(store)[aux_key] = test_data
 
     # Test get_value
-    retrieved = get_value(store, MockAuxVariable(), IS.TestComponent)
+    retrieved = get_value(store, MockAuxVariable, IS.TestComponent)
     @test retrieved == test_data
 end
 
@@ -117,7 +117,7 @@ end
     get_duals_container(store)[constraint_key] = test_data
 
     # Test get_value
-    retrieved = get_value(store, MockConstraint(), IS.TestComponent)
+    retrieved = get_value(store, MockConstraint, IS.TestComponent)
     @test retrieved == test_data
 end
 
@@ -129,7 +129,7 @@ end
     get_parameters_container(store)[param_key] = test_data
 
     # Test get_value
-    retrieved = get_value(store, MockParameter(), IS.TestComponent)
+    retrieved = get_value(store, MockParameter, IS.TestComponent)
     @test retrieved == test_data
 end
 
@@ -141,7 +141,7 @@ end
     get_expressions_container(store)[expr_key] = test_data
 
     # Test get_value
-    retrieved = get_value(store, MockExpression(), IS.TestComponent)
+    retrieved = get_value(store, MockExpression, IS.TestComponent)
     @test retrieved == test_data
 end
 

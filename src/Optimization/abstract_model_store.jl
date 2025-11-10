@@ -87,7 +87,7 @@ list_expression_keys(store::AbstractModelStore) = collect(keys(get_expressions_c
 
 function get_value(
     store::AbstractModelStore,
-    ::T,
+    ::Type{T},
     ::Type{U},
 ) where {T <: VariableType, U <: InfrastructureSystemsType}
     return get_variables_container(store)[VariableKey(T, U)]
@@ -95,7 +95,7 @@ end
 
 function get_value(
     store::AbstractModelStore,
-    ::T,
+    ::Type{T},
     ::Type{U},
 ) where {T <: AuxVariableType, U <: InfrastructureSystemsType}
     return get_aux_variables_container(store)[AuxVarKey(T, U)]
@@ -103,7 +103,7 @@ end
 
 function get_value(
     store::AbstractModelStore,
-    ::T,
+    ::Type{T},
     ::Type{U},
 ) where {T <: ConstraintType, U <: InfrastructureSystemsType}
     return get_duals_container(store)[ConstraintKey(T, U)]
@@ -111,7 +111,7 @@ end
 
 function get_value(
     store::AbstractModelStore,
-    ::T,
+    ::Type{T},
     ::Type{U},
 ) where {T <: ParameterType, U <: InfrastructureSystemsType}
     return get_parameters_container(store)[ParameterKey(T, U)]
@@ -119,7 +119,7 @@ end
 
 function get_value(
     store::AbstractModelStore,
-    ::T,
+    ::Type{T},
     ::Type{U},
 ) where {T <: ExpressionType, U <: InfrastructureSystemsType}
     return get_expressions_container(store)[ExpressionKey(T, U)]
