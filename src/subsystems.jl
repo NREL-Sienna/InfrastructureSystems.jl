@@ -1,7 +1,7 @@
 """
 Add a new subsystem to the system.
 """
-function add_subsystem!(data::SystemData, subsystem_name::AbstractString)
+function add_subsystem!(data::SystemData, subsystem_name::String)
     if haskey(data.subsystems, subsystem_name)
         throw(ArgumentError("There is already a subsystem with name = $subsystem_name."))
     end
@@ -30,7 +30,7 @@ Remove a subsystem from the system.
 
 Throws ArgumentError if the subsystem name is not stored.
 """
-function remove_subsystem!(data::SystemData, subsystem_name::AbstractString)
+function remove_subsystem!(data::SystemData, subsystem_name::String)
     _throw_if_not_stored(data, subsystem_name)
     container = pop!(data.subsystems, subsystem_name)
     @debug "Removed subystem $subsystem_name" length(container) _group = LOG_GROUP_SYSTEM
@@ -42,7 +42,7 @@ Add a component to a subsystem.
 """
 function add_component_to_subsystem!(
     data::SystemData,
-    subsystem_name::AbstractString,
+    subsystem_name::String,
     component::InfrastructureSystemsComponent,
 )
     if !has_component(data, component)
@@ -71,12 +71,12 @@ Return a Generator of all components in the subsystem.
 
 Throws ArgumentError if the subsystem name is not stored.
 """
-function get_subsystem_components(data::SystemData, subsystem_name::AbstractString)
+function get_subsystem_components(data::SystemData, subsystem_name::String)
     _throw_if_not_stored(data, subsystem_name)
     return (get_component(data, x) for x in data.subsystems[subsystem_name])
 end
 
-function get_component_uuids(data::SystemData, subsystem_name::AbstractString)
+function get_component_uuids(data::SystemData, subsystem_name::String)
     _throw_if_not_stored(data, subsystem_name)
     return data.subsystems[subsystem_name]
 end
@@ -88,7 +88,7 @@ Throws ArgumentError if the subsystem name or component is not stored.
 """
 function remove_component_from_subsystem!(
     data::SystemData,
-    subsystem_name::AbstractString,
+    subsystem_name::String,
     component::InfrastructureSystemsComponent,
 )
     if !has_component(data, subsystem_name, component)
@@ -121,7 +121,7 @@ Return true if the component is in the subsystem.
 """
 function has_component(
     data::SystemData,
-    subsystem_name::AbstractString,
+    subsystem_name::String,
     component::InfrastructureSystemsComponent,
 )
     _throw_if_not_stored(data, subsystem_name)
@@ -162,13 +162,13 @@ Return true if the component is assigned to the subsystem.
 function is_assigned_to_subsystem(
     data::SystemData,
     component::InfrastructureSystemsComponent,
-    subsystem_name::AbstractString,
+    subsystem_name::String,
 )
     _throw_if_not_stored(data, subsystem_name)
     return get_uuid(component) in data.subsystems[subsystem_name]
 end
 
-function _throw_if_not_stored(data::SystemData, subsystem_name::AbstractString)
+function _throw_if_not_stored(data::SystemData, subsystem_name::String)
     if !haskey(data.subsystems, subsystem_name)
         throw(ArgumentError("There is no subsystem with name = $subsystem_name."))
     end

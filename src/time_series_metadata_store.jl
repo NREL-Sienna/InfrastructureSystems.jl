@@ -59,7 +59,7 @@ end
 """
 Load a TimeSeriesMetadataStore from a saved database into an in-memory database.
 """
-function TimeSeriesMetadataStore(filename::AbstractString)
+function TimeSeriesMetadataStore(filename::String)
     src = SQLite.DB(filename)
     db = SQLite.DB()
     backup(db, src)
@@ -354,7 +354,7 @@ end
 """
 Load a TimeSeriesMetadataStore from an HDF5 file into an in-memory database.
 """
-function from_h5_file(::Type{TimeSeriesMetadataStore}, src::AbstractString, directory)
+function from_h5_file(::Type{TimeSeriesMetadataStore}, src::String, directory)
     data = HDF5.h5open(src, "r") do file
         file[HDF5_TS_METADATA_ROOT_PATH][:]
     end
@@ -1476,7 +1476,7 @@ _execute_count(s::TimeSeriesMetadataStore, q, p = nothing) =
 
 function _remove_metadata!(
     store::TimeSeriesMetadataStore,
-    where_clause::AbstractString,
+    where_clause::String,
     params,
 )
     _execute(store, "DELETE FROM $ASSOCIATIONS_TABLE_NAME $where_clause", params)
@@ -1578,7 +1578,7 @@ function _make_feature_filter!(params; features...)
     strings = []
     for (key, val) in data
         push!(strings, "features LIKE ?")
-        if val isa AbstractString
+        if val isa String
             push!(params, "%$(key)\":\"%$(val)%")
         else
             push!(params, "%$(key)\":$(val)%")

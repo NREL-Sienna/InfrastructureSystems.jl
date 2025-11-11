@@ -3,23 +3,23 @@
 Thrown upon detection of user data that is not supported.
 """
 struct DataFormatError <: Exception
-    msg::AbstractString
+    msg::String
 end
 
 struct InvalidRange <: Exception
-    msg::AbstractString
+    msg::String
 end
 
 struct InvalidValue <: Exception
-    msg::AbstractString
+    msg::String
 end
 
 struct ConflictingInputsError <: Exception
-    msg::AbstractString
+    msg::String
 end
 
 struct HashMismatchError <: Exception
-    msg::AbstractString
+    msg::String
 end
 
 """
@@ -28,7 +28,7 @@ though it could be. If it is a category mistake to imagine this feature defined 
 data, use another exception, like `TypeError` or `ArgumentError`.
 """
 struct NotImplementedError <: Exception
-    msg::AbstractString
+    msg::String
 end
 
 NotImplementedError(feature, data) =

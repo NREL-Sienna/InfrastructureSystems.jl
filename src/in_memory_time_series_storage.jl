@@ -147,7 +147,7 @@ function get_num_time_series(storage::InMemoryTimeSeriesStorage)
     return length(storage.data)
 end
 
-function convert_to_hdf5(storage::InMemoryTimeSeriesStorage, filename::AbstractString)
+function convert_to_hdf5(storage::InMemoryTimeSeriesStorage, filename::String)
     create_file = true
     hdf5_storage = Hdf5TimeSeriesStorage(create_file; filename = filename)
     for ts in values(storage.data)

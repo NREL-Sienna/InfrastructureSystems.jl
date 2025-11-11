@@ -228,7 +228,7 @@ function configure_logging(;
     return configure_logging(config)
 end
 
-function configure_logging(config_filename::AbstractString)
+function configure_logging(config_filename::String)
     return configure_logging(LoggingConfiguration(config_filename))
 end
 

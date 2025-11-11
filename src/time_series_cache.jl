@@ -225,7 +225,7 @@ will return a TimeSeries.TimeArray covering one forecast window of length `horiz
 
   - `::Type{T}`: subtype of Forecast
   - `component::InfrastructureSystemsComponent`: component
-  - `name::AbstractString`: forecast name
+  - `name::String`: forecast name
   - `start_time::Union{Nothing, Dates.DateTime} = nothing`: forecast start time
   - `horizon_count::Union{Nothing, Int} = nothing`: forecast horizon count
   - `cache_size_bytes = TIME_SERIES_CACHE_SIZE_BYTES`: maximum size of data to keep in memory
@@ -235,7 +235,7 @@ will return a TimeSeries.TimeArray covering one forecast window of length `horiz
 function ForecastCache(
     ::Type{T},
     component::InfrastructureSystemsComponent,
-    name::AbstractString;
+    name::String;
     start_time::Union{Nothing, Dates.DateTime} = nothing,
     horizon_count::Union{Nothing, Int} = nothing,
     cache_size_bytes = TIME_SERIES_CACHE_SIZE_BYTES,
@@ -349,7 +349,7 @@ return a TimeSeries.TimeArray of size 1.
 
   - `::Type{T}`: subtype of StaticTimeSeries
   - `component::InfrastructureSystemsComponent`: component
-  - `name::AbstractString`: time series name
+  - `name::String`: time series name
   - `cache_size_bytes = TIME_SERIES_CACHE_SIZE_BYTES`: maximum size of data to keep in memory
   - `ignore_scaling_factors = false`: controls whether to ignore `scaling_factor_multiplier`
     in the time series instance
@@ -357,7 +357,7 @@ return a TimeSeries.TimeArray of size 1.
 function StaticTimeSeriesCache(
     ::Type{T},
     component::InfrastructureSystemsComponent,
-    name::AbstractString;
+    name::String;
     cache_size_bytes = TIME_SERIES_CACHE_SIZE_BYTES,
     start_time::Union{Nothing, Dates.DateTime} = nothing,
     ignore_scaling_factors = false,

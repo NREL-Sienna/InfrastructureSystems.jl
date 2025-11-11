@@ -112,7 +112,7 @@ unique-per-system string.
 """
 component_to_qualified_string(
     component_type::Type{<:InfrastructureSystemsComponent},
-    component_name::AbstractString,
+    component_name::String,
 ) = subtype_to_string(component_type) * COMPONENT_NAME_DELIMITER * component_name
 component_to_qualified_string(component::InfrastructureSystemsComponent) =
     component_to_qualified_string(typeof(component), get_name(component))
@@ -399,14 +399,14 @@ doesn't.
 """
 @kwdef struct NameComponentSelector <: SingularComponentSelector
     component_type::Type{<:InfrastructureSystemsComponent}
-    component_name::AbstractString
+    component_name::String
     name::String
 end
 
 # Construction (default constructor works if name is not nothing)
 NameComponentSelector(
     component_type::Type{<:InfrastructureSystemsComponent},
-    component_name::AbstractString,
+    component_name::String,
     ::Nothing = nothing,
 ) =
     NameComponentSelector(
@@ -425,7 +425,7 @@ it doesn't.
 
   - `component_type::Type{<:InfrastructureSystemsComponent}`: the type of the target
     component
-  - `component_name::AbstractString`: the name of the target component
+  - `component_name::String`: the name of the target component
   - `name::Union{String, Nothing} = nothing`: the name of the selector; if not provided, one
     will be constructed automatically
 
@@ -440,7 +440,7 @@ See also: [`make_selector`](@ref) unified function documentation
 """
 make_selector(
     component_type::Type{<:InfrastructureSystemsComponent},
-    component_name::AbstractString;
+    component_name::String;
     name::Union{String, Nothing} = nothing,
 ) = NameComponentSelector(component_type, component_name, name)
 """
@@ -469,7 +469,7 @@ make_selector(
     component::InfrastructureSystemsComponent;
     name::Union{String, Nothing} = nothing,
 ) =
-    make_selector(typeof(component), get_name(component)::AbstractString; name = name)
+    make_selector(typeof(component), get_name(component)::String; name = name)
 
 # Contents
 """

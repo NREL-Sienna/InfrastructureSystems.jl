@@ -32,7 +32,7 @@ Does not apply a scaling factor multiplier.
 
   - `::Type{T}`: Concrete subtype of `TimeSeriesData` to return
   - `owner::TimeSeriesOwners`: Component or attribute containing the time series
-  - `name::AbstractString`: name of time series
+  - `name::String`: name of time series
   - `resolution::Union{Nothing, Dates.Period} = nothing`: Required if resolution is needed
      to uniquely identify the time series.
   - `start_time::Union{Nothing, Dates.DateTime} = nothing`: If nothing, use the
@@ -57,7 +57,7 @@ See also: [`get_time_series_array`](@ref), [`get_time_series_values`](@ref),
 function get_time_series(
     ::Type{T},
     owner::TimeSeriesOwners,
-    name::AbstractString;
+    name::String;
     start_time::Union{Nothing, Dates.DateTime} = nothing,
     len::Union{Nothing, Int} = nothing,
     count::Union{Nothing, Int} = nothing,
@@ -101,7 +101,7 @@ Does not apply a scaling factor multiplier.
 See also: [`get_time_series` by name](@ref get_time_series(
     ::Type{T},
     owner::TimeSeriesOwners,
-    name::AbstractString;
+    name::String;
     start_time::Union{Nothing, Dates.DateTime} = nothing,
     len::Union{Nothing, Int} = nothing,
     count::Union{Nothing, Int} = nothing,
@@ -141,7 +141,7 @@ Call `collect` on the result to get an array.
   - `owner::TimeSeriesOwners`: component or attribute from which to get time_series
   - `filter_func = nothing`: Only return time_series for which this returns true.
   - `type::Union{Nothing, ::Type{<:TimeSeriesData}} = nothing`: Only return time_series with this type.
-  - `name::Union{Nothing, AbstractString} = nothing`: Only return time_series matching this value.
+  - `name::Union{Nothing, String} = nothing`: Only return time_series matching this value.
   - `resolution::Union{Nothing, Dates.Period} = nothing`: Only return time_series matching this value.
 
 See also: [`get_time_series_multiple` from a `System`](@ref get_time_series_multiple(
@@ -155,7 +155,7 @@ function get_time_series_multiple(
     owner::TimeSeriesOwners,
     filter_func = nothing;
     type::Union{Nothing, Type{<:TimeSeriesData}} = nothing,
-    name::Union{Nothing, AbstractString} = nothing,
+    name::Union{Nothing, String} = nothing,
     resolution::Union{Nothing, Dates.Period} = nothing,
 )
     throw_if_does_not_support_time_series(owner)
@@ -190,7 +190,7 @@ end
 function get_time_series_uuid(
     ::Type{T},
     component::InfrastructureSystemsComponent,
-    name::AbstractString,
+    name::String,
 ) where {T <: TimeSeriesData}
     metadata = get_time_series_metadata(T, component, name)
     return get_time_series_uuid(metadata)
@@ -199,7 +199,7 @@ end
 function get_time_series_metadata(
     ::Type{T},
     owner::TimeSeriesOwners,
-    name::AbstractString;
+    name::String;
     resolution::Union{Nothing, Dates.Period} = nothing,
     features...,
 ) where {T <: TimeSeriesData}
@@ -221,7 +221,7 @@ Specify `start_time` and `len` if you only need a subset of data.
 # Arguments
   - `::Type{T}`: the type of time series (a concrete subtype of `TimeSeriesData`)
   - `owner::TimeSeriesOwners`: Component or attribute containing the time series
-  - `name::AbstractString`: name of time series
+  - `name::String`: name of time series
   - `resolution::Union{Nothing, Dates.Period} = nothing`: Required if resolution is needed
      to uniquely identify the time series.
   - `start_time::Union{Nothing, Dates.DateTime} = nothing`: If nothing, use the
@@ -237,7 +237,7 @@ Specify `start_time` and `len` if you only need a subset of data.
 See also: [`get_time_series_values`](@ref get_time_series_values(
     ::Type{T},
     owner::TimeSeriesOwners,
-    name::AbstractString;
+    name::String;
     start_time::Union{Nothing, Dates.DateTime} = nothing,
     len::Union{Nothing, Int} = nothing,
     ignore_scaling_factors = false,
@@ -245,7 +245,7 @@ features...,) where {T <: TimeSeriesData}),
 [`get_time_series_timestamps`](@ref get_time_series_timestamps(
     ::Type{T},
     owner::TimeSeriesOwners,
-    name::AbstractString;
+    name::String;
     start_time::Union{Nothing, Dates.DateTime} = nothing,
     len::Union{Nothing, Int} = nothing,
     features...,
@@ -268,7 +268,7 @@ features...,) where {T <: TimeSeriesData}),
 function get_time_series_array(
     ::Type{T},
     owner::TimeSeriesOwners,
-    name::AbstractString;
+    name::String;
     resolution::Union{Nothing, Dates.Period} = nothing,
     start_time::Union{Nothing, Dates.DateTime} = nothing,
     len::Union{Nothing, Int} = nothing,
@@ -318,7 +318,7 @@ factor multiplier by default.
 See also: [`get_time_series_array` by name](@ref get_time_series_array(
     ::Type{T},
     owner::TimeSeriesOwners,
-    name::AbstractString;
+    name::String;
     start_time::Union{Nothing, Dates.DateTime} = nothing,
     len::Union{Nothing, Int} = nothing,
     ignore_scaling_factors = false,
@@ -379,7 +379,7 @@ See also [`get_time_series_values`](@ref get_time_series_values(
 [`get_time_series_array` by name from storage](@ref get_time_series_array(
     ::Type{T},
     owner::TimeSeriesOwners,
-    name::AbstractString;
+    name::String;
     start_time::Union{Nothing, Dates.DateTime} = nothing,
     len::Union{Nothing, Int} = nothing,
     ignore_scaling_factors = false,
@@ -426,7 +426,7 @@ See also: [`get_time_series_values`](@ref get_time_series_values(owner::TimeSeri
 [`get_time_series_array` by name from storage](@ref get_time_series_array(
     ::Type{T},
     owner::TimeSeriesOwners,
-    name::AbstractString;
+    name::String;
     start_time::Union{Nothing, Dates.DateTime} = nothing,
     len::Union{Nothing, Int} = nothing,
     ignore_scaling_factors = false,
@@ -464,7 +464,7 @@ Return a vector of timestamps from storage for the given time series parameters.
 # Arguments
   - `::Type{T}`: the type of time series (a concrete subtype of `TimeSeriesData`)
   - `owner::TimeSeriesOwners`: Component or attribute containing the time series
-  - `name::AbstractString`: name of time series
+  - `name::String`: name of time series
   - `resolution::Union{Nothing, Dates.Period} = nothing`: Required if resolution is needed
      to uniquely identify the time series.
   - `start_time::Union{Nothing, Dates.DateTime} = nothing`: If nothing, use the
@@ -478,7 +478,7 @@ Return a vector of timestamps from storage for the given time series parameters.
 See also: [`get_time_series_array`](@ref get_time_series_array(
     ::Type{T},
     owner::TimeSeriesOwners,
-    name::AbstractString;
+    name::String;
     start_time::Union{Nothing, Dates.DateTime} = nothing,
     len::Union{Nothing, Int} = nothing,
     ignore_scaling_factors = false,
@@ -487,7 +487,7 @@ See also: [`get_time_series_array`](@ref get_time_series_array(
 [`get_time_series_values`](@ref get_time_series_values(
     ::Type{T},
     owner::TimeSeriesOwners,
-    name::AbstractString;
+    name::String;
     start_time::Union{Nothing, Dates.DateTime} = nothing,
     len::Union{Nothing, Int} = nothing,
     ignore_scaling_factors = false,
@@ -508,7 +508,7 @@ features...,) where {T <: TimeSeriesData}),
 function get_time_series_timestamps(
     ::Type{T},
     owner::TimeSeriesOwners,
-    name::AbstractString;
+    name::String;
     resolution::Union{Nothing, Dates.Period} = nothing,
     start_time::Union{Nothing, Dates.DateTime} = nothing,
     len::Union{Nothing, Int} = nothing,
@@ -542,7 +542,7 @@ Return a vector of timestamps from storage, using a time series key.
 See also: [`get_time_series_timestamps` by name](@ref get_time_series_timestamps(
     ::Type{T},
     owner::TimeSeriesOwners,
-    name::AbstractString;
+    name::String;
     start_time::Union{Nothing, Dates.DateTime} = nothing,
     len::Union{Nothing, Int} = nothing,
     features...,
@@ -595,7 +595,7 @@ See also: [`get_time_series_array`](@ref get_time_series_array(
 [`get_time_series_timestamps` by name from storage](@ref get_time_series_timestamps(
     ::Type{T},
     owner::TimeSeriesOwners,
-    name::AbstractString;
+    name::String;
     start_time::Union{Nothing, Dates.DateTime} = nothing,
     len::Union{Nothing, Int} = nothing,
     features...,
@@ -640,7 +640,7 @@ See also: [`get_time_series_array`](@ref get_time_series_array(
 [`get_time_series_timestamps` by name from storage](@ref get_time_series_timestamps(
     ::Type{T},
     owner::TimeSeriesOwners,
-    name::AbstractString;
+    name::String;
     start_time::Union{Nothing, Dates.DateTime} = nothing,
     len::Union{Nothing, Int} = nothing,
     features...,
@@ -672,7 +672,7 @@ that accepts a cached `TimeSeriesData` instance.
 # Arguments
   - `::Type{T}`: type of the time series (a concrete subtype of `TimeSeriesData`)
   - `owner::TimeSeriesOwners`: Component or attribute containing the time series
-  - `name::AbstractString`: name of time series
+  - `name::String`: name of time series
   - `resolution::Union{Nothing, Dates.Period} = nothing`: Required if resolution is needed
      to uniquely identify the time series.
   - `start_time::Union{Nothing, Dates.DateTime} = nothing`: If nothing, use the
@@ -688,7 +688,7 @@ that accepts a cached `TimeSeriesData` instance.
 See also: [`get_time_series_array`](@ref get_time_series_array(
     ::Type{T},
     owner::TimeSeriesOwners,
-    name::AbstractString;
+    name::String;
     start_time::Union{Nothing, Dates.DateTime} = nothing,
     len::Union{Nothing, Int} = nothing,
     ignore_scaling_factors = false,
@@ -697,7 +697,7 @@ See also: [`get_time_series_array`](@ref get_time_series_array(
 [`get_time_series_timestamps`](@ref get_time_series_timestamps(
     ::Type{T},
     owner::TimeSeriesOwners,
-    name::AbstractString;
+    name::String;
     start_time::Union{Nothing, Dates.DateTime} = nothing,
     len::Union{Nothing, Int} = nothing,
     features...,
@@ -721,7 +721,7 @@ See also: [`get_time_series_array`](@ref get_time_series_array(
 function get_time_series_values(
     ::Type{T},
     owner::TimeSeriesOwners,
-    name::AbstractString;
+    name::String;
     resolution::Union{Nothing, Dates.Period} = nothing,
     start_time::Union{Nothing, Dates.DateTime} = nothing,
     len::Union{Nothing, Int} = nothing,
@@ -759,7 +759,7 @@ Return a vector of time series data without timestamps from storage, using a tim
 See also: [`get_time_series_values` by name](@ref get_time_series_values(
     ::Type{T},
     owner::TimeSeriesOwners,
-    name::AbstractString;
+    name::String;
     start_time::Union{Nothing, Dates.DateTime} = nothing,
     len::Union{Nothing, Int} = nothing,
     ignore_scaling_factors = false,
@@ -817,7 +817,7 @@ See also: [`get_time_series_array`](@ref get_time_series_array(
 [`get_time_series_values` by name from storage](@ref get_time_series_values(
     ::Type{T},
     owner::TimeSeriesOwners,
-    name::AbstractString;
+    name::String;
     start_time::Union{Nothing, Dates.DateTime} = nothing,
     len::Union{Nothing, Int} = nothing,
     ignore_scaling_factors = false,
@@ -873,7 +873,7 @@ See also: [`get_time_series_array`](@ref get_time_series_array(
 [`get_time_series_values` by name from storage](@ref get_time_series_values(
     ::Type{T},
     owner::TimeSeriesOwners,
-    name::AbstractString;
+    name::String;
     start_time::Union{Nothing, Dates.DateTime} = nothing,
     len::Union{Nothing, Int} = nothing,
     ignore_scaling_factors = false,
@@ -943,7 +943,7 @@ end
 function has_time_series(
     val::TimeSeriesOwners,
     ::Type{T},
-    name::AbstractString;
+    name::String;
     resolution::Union{Nothing, Dates.Period} = nothing,
     features...,
 ) where {T <: TimeSeriesData}
@@ -967,7 +967,7 @@ has_time_series(
 has_time_series(
     T::Type{<:TimeSeriesData},
     owner::TimeSeriesOwners,
-    name::AbstractString;
+    name::String;
     resolution::Union{Nothing, Dates.Period} = nothing,
     features...,
 ) = has_time_series(owner, T, name; resolution = resolution, features...)

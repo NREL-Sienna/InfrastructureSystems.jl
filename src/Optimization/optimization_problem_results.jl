@@ -123,7 +123,7 @@ end
 function export_result(
     ::Type{CSV.File},
     path,
-    name::AbstractString,
+    name::String,
     timestamp::Dates.DateTime,
     df::DataFrame,
 )
@@ -146,7 +146,7 @@ end
 function export_result(
     ::Type{CSV.File},
     path,
-    name::AbstractString,
+    name::String,
     df::DataFrame,
 )
     filename = joinpath(path, name * ".csv")
@@ -212,7 +212,7 @@ end
 function _deserialize_key(
     ::Type{<:OptimizationContainerKey},
     results::OptimizationProblemResults,
-    name::AbstractString,
+    name::String,
 )
     return deserialize_key(results.optimization_container_metadata, name)
 end
@@ -267,7 +267,7 @@ It is recommended that `directory` be the directory that contains a serialized
 OperationModel. That will allow automatic deserialization of the PowerSystems.System.
 The `OptimizationProblemResults` instance can be deserialized with `OptimizationProblemResults(directory)`.
 """
-function serialize_results(res::OptimizationProblemResults, directory::AbstractString)
+function serialize_results(res::OptimizationProblemResults, directory::String)
     mkpath(directory)
     filename = joinpath(directory, _PROBLEM_RESULTS_FILENAME)
     isfile(filename) && rm(filename)
@@ -279,7 +279,7 @@ end
 Construct a OptimizationProblemResults instance from a serialized directory. It is up to the
 user or a higher-level package to set the source data using [`set_source_data!`](@ref).
 """
-function OptimizationProblemResults(directory::AbstractString)
+function OptimizationProblemResults(directory::String)
     filename = joinpath(directory, _PROBLEM_RESULTS_FILENAME)
     isfile(filename) || error("No results file exists in $directory")
     return Serialization.deserialize(filename)
@@ -440,7 +440,7 @@ function read_variable(res::OptimizationProblemResults, args...; kwargs...)
     return read_variable(res, key; kwargs...)
 end
 
-function read_variable(res::OptimizationProblemResults, key::AbstractString; kwargs...)
+function read_variable(res::OptimizationProblemResults, key::String; kwargs...)
     return read_variable(res, _deserialize_key(VariableKey, res, key); kwargs...)
 end
 
@@ -476,7 +476,7 @@ end
 
 function read_variables(
     res::OptimizationProblemResults,
-    variables::Vector{<:AbstractString};
+    variables::Vector{<:String};
     kwargs...,
 )
     return read_variables(
@@ -526,7 +526,7 @@ function read_dual(res::OptimizationProblemResults, args...; kwargs...)
     return read_dual(res, key; kwargs...)
 end
 
-function read_dual(res::OptimizationProblemResults, key::AbstractString; kwargs...)
+function read_dual(res::OptimizationProblemResults, key::String; kwargs...)
     return read_dual(res, _deserialize_key(ConstraintKey, res, key); kwargs...)
 end
 
@@ -562,7 +562,7 @@ end
 
 function read_duals(
     res::OptimizationProblemResults,
-    duals::Vector{<:AbstractString};
+    duals::Vector{<:String};
     kwargs...,
 )
     return read_duals(
@@ -611,7 +611,7 @@ function read_parameter(res::OptimizationProblemResults, args...; kwargs...)
     return read_parameter(res, key; kwargs...)
 end
 
-function read_parameter(res::OptimizationProblemResults, key::AbstractString; kwargs...)
+function read_parameter(res::OptimizationProblemResults, key::String; kwargs...)
     return read_parameter(res, _deserialize_key(ParameterKey, res, key); kwargs...)
 end
 
@@ -647,7 +647,7 @@ end
 
 function read_parameters(
     res::OptimizationProblemResults,
-    parameters::Vector{<:AbstractString};
+    parameters::Vector{<:String};
     kwargs...,
 )
     return read_parameters(
@@ -698,7 +698,7 @@ function read_aux_variable(res::OptimizationProblemResults, args...; kwargs...)
     return read_aux_variable(res, key; kwargs...)
 end
 
-function read_aux_variable(res::OptimizationProblemResults, key::AbstractString; kwargs...)
+function read_aux_variable(res::OptimizationProblemResults, key::String; kwargs...)
     return read_aux_variable(res, _deserialize_key(AuxVarKey, res, key); kwargs...)
 end
 
@@ -734,7 +734,7 @@ end
 
 function read_aux_variables(
     res::OptimizationProblemResults,
-    aux_variables::Vector{<:AbstractString};
+    aux_variables::Vector{<:String};
     kwargs...,
 )
     return read_aux_variables(
@@ -786,7 +786,7 @@ function read_expression(res::OptimizationProblemResults, args...; kwargs...)
     return read_expression(res, key; kwargs...)
 end
 
-function read_expression(res::OptimizationProblemResults, key::AbstractString; kwargs...)
+function read_expression(res::OptimizationProblemResults, key::String; kwargs...)
     return read_expression(res, _deserialize_key(ExpressionKey, res, key); kwargs...)
 end
 
@@ -826,7 +826,7 @@ end
 
 function read_expressions(
     res::OptimizationProblemResults,
-    expressions::Vector{<:AbstractString};
+    expressions::Vector{<:String};
     kwargs...,
 )
     return read_expressions(
@@ -890,7 +890,7 @@ expressions, and optimizer statistics.
 # Arguments
 
   - `res::Results`: Results
-  - `save_path::AbstractString` : path to save results (defaults to simulation path)
+  - `save_path::String` : path to save results (defaults to simulation path)
 """
 function export_realized_results(res::Results)
     save_path = mkpath(joinpath(get_output_dir(res), "export"))
@@ -899,7 +899,7 @@ end
 
 function export_realized_results(
     res::Results,
-    save_path::AbstractString,
+    save_path::String,
 )
     if !isdir(save_path)
         throw(IS.ConflictingInputsError("Specified path is not valid."))
@@ -939,12 +939,12 @@ Save the optimizer statistics to CSV or JSON
 # Arguments
 
   - `res::Union{OptimizationProblemResults, SimulationProblmeResults`: Results
-  - `directory::AbstractString` : target directory
+  - `directory::String` : target directory
   - `format = "CSV"` : can be "csv" or "json
 """
 function export_optimizer_stats(
     res::Results,
-    directory::AbstractString;
+    directory::String;
     format = "csv",
 )
     data = read_optimizer_stats(res)
@@ -961,7 +961,7 @@ end
 function write_data(
     vars_results::Dict,
     time::DataFrame,
-    save_path::AbstractString,
+    save_path::String,
 )
     for (k, v) in vars_results
         var = DataFrame()
@@ -977,7 +977,7 @@ end
 
 function write_data(
     data::DataFrame,
-    save_path::AbstractString,
+    save_path::String,
     file_name::String,
 )
     if isfile(save_path)

@@ -214,7 +214,7 @@ function get_resolution(ts::TimeSeries.TimeArray)
     return resolution
 end
 
-get_sorted_keys(x::AbstractDict) = sort(collect(keys(x)))
+get_sorted_keys(x::AbstractDict) = sort!(collect(keys(x)))
 get_sorted_keys(x::SortedDict) = collect(keys(x))
 
 function get_total_period(

@@ -39,7 +39,7 @@ mutable struct Scenarios <: Forecast
 end
 
 function Scenarios(;
-    name::AbstractString,
+    name::String,
     data::SortedDict{Dates.DateTime, Matrix{Float64}},
     scenario_count::Int,
     resolution::Dates.Period,
@@ -70,7 +70,7 @@ Construct Scenarios from a SortedDict of Arrays.
 
 # Arguments
 
-  - `name::AbstractString`: user-defined name
+  - `name::String`: user-defined name
   - `input_data::SortedDict{Dates.DateTime, Matrix{Float64}}`: time series data.
   - `resolution::Dates.Period`: The resolution of the forecast in `Dates.Period`
   - `interval::Union{Nothing, Dates.Period}`: If nothing, infer interval from the
@@ -83,7 +83,7 @@ Construct Scenarios from a SortedDict of Arrays.
     [`get_time_series_array`](@ref) is called.
 """
 function Scenarios(
-    name::AbstractString,
+    name::String,
     data::SortedDict{Dates.DateTime, Matrix{Float64}},
     resolution::Dates.Period;
     interval::Union{Nothing, Dates.Period} = nothing,
@@ -103,7 +103,7 @@ function Scenarios(
 end
 
 function Scenarios(
-    name::AbstractString,
+    name::String,
     data::AbstractDict{Dates.DateTime, Matrix{Float64}},
     resolution::Dates.Period;
     interval::Union{Nothing, Dates.Period} = nothing,
@@ -125,7 +125,7 @@ Construct Scenarios from a Dict of TimeArrays.
 
 # Arguments
 
-  - `name::AbstractString`: user-defined name
+  - `name::String`: user-defined name
   - `input_data::AbstractDict{Dates.DateTime, TimeSeries.TimeArray}`: time series data.
   - `resolution::Union{Nothing, Dates.Period} = nothing`: If nothing, infer resolution from
     the data. Otherwise, it must be the difference between each consecutive timestamps.
@@ -142,7 +142,7 @@ Construct Scenarios from a Dict of TimeArrays.
     contains timestamps.
 """
 function Scenarios(
-    name::AbstractString,
+    name::String,
     input_data::AbstractDict{Dates.DateTime, <:TimeSeries.TimeArray};
     resolution::Union{Nothing, Dates.Period} = nothing,
     interval::Union{Nothing, Dates.Period} = nothing,
@@ -169,7 +169,7 @@ two different attributes.
 """
 function Scenarios(
     src::Scenarios,
-    name::AbstractString;
+    name::String;
     scaling_factor_multiplier::Union{Nothing, Function} = nothing,
 )
     # units and ext are not copied

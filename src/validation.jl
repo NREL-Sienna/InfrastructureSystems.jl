@@ -3,13 +3,13 @@ import YAML
 
 struct ValidationInfo
     field_descriptor::Dict
-    struct_name::AbstractString
+    struct_name::String
     ist_struct::InfrastructureSystemsType
     field_type::Any
     limits::Union{NamedTuple{(:min, :max)}, NamedTuple{(:min, :max, :zero)}}
 end
 
-function read_validation_descriptor(filename::AbstractString)
+function read_validation_descriptor(filename::String)
     if occursin(r"(\.yaml)|(\.yml)"i, filename)
         data = open(filename) do file
             return YAML.load(file)
@@ -41,7 +41,7 @@ function read_validation_descriptor(filename::AbstractString)
 end
 
 # Get validation info for one struct.
-function get_config_descriptor(config::Vector, name::AbstractString)
+function get_config_descriptor(config::Vector, name::String)
     for item in config
         if item["struct_name"] == name
             return item
@@ -55,7 +55,7 @@ function get_config_descriptor(config::Vector, name::AbstractString)
 end
 
 # Get validation info for one field of one struct.
-function get_field_descriptor(struct_descriptor::Dict, fieldname::AbstractString)
+function get_field_descriptor(struct_descriptor::Dict, fieldname::String)
     for field in struct_descriptor["fields"]
         if field["name"] == fieldname
             return field

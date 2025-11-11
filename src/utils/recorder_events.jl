@@ -12,7 +12,7 @@ struct RecorderEventCommon
     timestamp::Dates.DateTime
 end
 
-function RecorderEventCommon(name::AbstractString)
+function RecorderEventCommon(name::String)
     return RecorderEventCommon(name, Dates.now())
 end
 
@@ -35,7 +35,7 @@ function serialize(event::T) where {T <: AbstractRecorderEvent}
 end
 
 to_json(event::AbstractRecorderEvent) = JSON3.write(serialize(event))
-from_json(::Type{T}, text::AbstractString) where {T <: AbstractRecorderEvent} =
+from_json(::Type{T}, text::String) where {T <: AbstractRecorderEvent} =
     deserialize(T, JSON3.read(text, Dict))
 
 function deserialize(::Type{T}, data::Dict) where {T <: AbstractRecorderEvent}
@@ -161,14 +161,14 @@ Return the events of type T in filename.
 # Arguments
 
   - `T`: event type
-  - `filename::AbstractString`: filename containing recorder events
+  - `filename::String`: filename containing recorder events
   - `filter_func::Union{Nothing, Function} = nothing`: Optional function that accepts an event
     of type T and returns a Bool. Apply this function to each event and only return events
     where the result is true.
 """
 function list_recorder_events(
     ::Type{T},
-    filename::AbstractString,
+    filename::String,
     filter_func::Union{Nothing, Function} = nothing,
 ) where {T <: AbstractRecorderEvent}
     events = Vector{T}()
@@ -198,7 +198,7 @@ for accepted kwargs.
 # Arguments
 
   - `T`: event type
-  - `filename::AbstractString`: filename containing recorder events
+  - `filename::String`: filename containing recorder events
   - `filter_func::Union{Nothing, Function} = nothing`: Optional function that accepts an event
     of type T and returns a Bool. Apply this function to each event and only return events
     where the result is true.
@@ -214,7 +214,7 @@ show_recorder_events(TestEvent, test_recorder.log, x -> x.val2 > 2)
 """
 function show_recorder_events(
     ::Type{T},
-    filename::AbstractString,
+    filename::String,
     filter_func::Union{Nothing, Function} = nothing;
     kwargs...,
 ) where {T <: AbstractRecorderEvent}
@@ -224,7 +224,7 @@ end
 function show_recorder_events(
     io::IO,
     ::Type{T},
-    filename::AbstractString,
+    filename::String,
     filter_func::Union{Nothing, Function} = nothing;
     kwargs...,
 ) where {T <: AbstractRecorderEvent}

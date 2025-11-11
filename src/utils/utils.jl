@@ -480,7 +480,7 @@ end
 # Looking up modules with Base.root_module is slow; cache them.
 const g_cached_modules = Dict{String, Module}()
 
-function get_module(module_name::AbstractString)
+function get_module(module_name::String)
     cached_module = get(g_cached_modules, module_name, nothing)
     if !isnothing(cached_module)
         return cached_module
@@ -503,7 +503,7 @@ get_type_from_strings(module_name, type) =
 
 # This function is used instead of cp given
 # https://github.com/JuliaLang/julia/issues/30723
-function copy_file(src::AbstractString, dst::AbstractString)
+function copy_file(src::String, dst::String)
     src_path = normpath(src)
     dst_path = normpath(dst)
     if Sys.iswindows()
@@ -716,7 +716,7 @@ end
 """
 Return the SHA 256 hash of a file.
 """
-function compute_sha256(filename::AbstractString)
+function compute_sha256(filename::String)
     return open(filename) do io
         return bytes2hex(SHA.sha256(io))
     end

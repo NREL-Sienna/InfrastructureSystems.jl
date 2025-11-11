@@ -6,8 +6,8 @@ Backup a SQLite database.
 function backup(
     dst::SQLite.DB,
     src::SQLite.DB;
-    dst_name::AbstractString = "main",
-    src_name::AbstractString = "main",
+    dst_name::String = "main",
+    src_name::String = "main",
     pages::Int = -1,
     sleep::Float64 = 0.25,
 )
@@ -46,7 +46,7 @@ as well as log messages.
 """
 function execute(
     db::SQLite.DB,
-    query::AbstractString,
+    query::String,
     params::Union{Nothing, Vector, Tuple},
     log_group::Symbol,
 )
@@ -86,7 +86,7 @@ Run a query to find a count. The query must produce a column called count with o
 """
 function execute_count(
     db::SQLite.DB,
-    query::AbstractString,
+    query::String,
     params::Union{Nothing, Tuple, Vector},
     log_group::Symbol,
 )

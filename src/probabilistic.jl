@@ -78,7 +78,7 @@ Construct Probabilistic from a SortedDict of Arrays.
 
 # Arguments
 
-  - `name::AbstractString`: user-defined name
+  - `name::String`: user-defined name
   - `data::AbstractDict{Dates.DateTime, Matrix{Float64}}`: time series data.
   - `percentiles`: Percentiles represented in the probabilistic forecast
   - `resolution::Dates.Period`: The resolution of the forecast in Dates.Period`
@@ -92,7 +92,7 @@ Construct Probabilistic from a SortedDict of Arrays.
     [`get_time_series_array`](@ref) is called.
 """
 function Probabilistic(
-    name::AbstractString,
+    name::String,
     data::SortedDict{Dates.DateTime, Matrix{Float64}},
     percentiles::Vector,
     resolution::Dates.Period;
@@ -113,7 +113,7 @@ function Probabilistic(
 end
 
 function Probabilistic(
-    name::AbstractString,
+    name::String,
     data::AbstractDict{Dates.DateTime, Matrix{Float64}},
     percentiles::Vector,
     resolution::Dates.Period;
@@ -137,7 +137,7 @@ Construct Probabilistic from a Dict of TimeArrays.
 
 # Arguments
 
-  - `name::AbstractString`: user-defined name
+  - `name::String`: user-defined name
   - `input_data::AbstractDict{Dates.DateTime, TimeSeries.TimeArray}`: time series data.
   - `percentiles`: Percentiles represented in the probabilistic forecast
   - `resolution::Union{Nothing, Dates.Period} = nothing`: If nothing, infer resolution from the
@@ -155,7 +155,7 @@ Construct Probabilistic from a Dict of TimeArrays.
     contains timestamps.
 """
 function Probabilistic(
-    name::AbstractString,
+    name::String,
     input_data::AbstractDict{Dates.DateTime, <:TimeSeries.TimeArray},
     percentiles::Vector{Float64};
     resolution::Union{Nothing, Dates.Period} = nothing,
@@ -179,7 +179,7 @@ end
 Construct Deterministic from RawTimeSeries.
 """
 function Probabilistic(
-    name::AbstractString,
+    name::String,
     series_data::RawTimeSeries,
     percentiles::Vector,
     resolution::Dates.Period;
@@ -231,7 +231,7 @@ two different attributes.
 """
 function Probabilistic(
     src::Probabilistic,
-    name::AbstractString;
+    name::String;
     scaling_factor_multiplier::Union{Nothing, Function} = nothing,
 )
     # units and ext are not copied

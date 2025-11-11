@@ -78,7 +78,7 @@ function Deterministic(;
 end
 
 function Deterministic(
-    name::AbstractString,
+    name::String,
     data::AbstractDict,
     resolution::Dates.Period;
     interval::Union{Nothing, Dates.Period} = nothing,
@@ -100,7 +100,7 @@ Construct Deterministic from a Dict of TimeArrays.
 
 # Arguments
 
-  - `name::AbstractString`: user-defined name
+  - `name::String`: user-defined name
   - `input_data::AbstractDict{Dates.DateTime, TimeSeries.TimeArray}`: time series data.
   - `resolution::Union{Nothing, Dates.Period} = nothing`: If nothing, infer resolution from
     the data. Otherwise, it must be the difference between each consecutive timestamps.
@@ -119,7 +119,7 @@ Construct Deterministic from a Dict of TimeArrays.
     column name that contains timestamps.
 """
 function Deterministic(
-    name::AbstractString,
+    name::String,
     input_data::AbstractDict{Dates.DateTime, <:TimeSeries.TimeArray};
     resolution::Union{Nothing, Dates.Period} = nothing,
     interval::Union{Nothing, Dates.Period} = nothing,
@@ -149,8 +149,8 @@ DateTime format and the columns the values in the forecast window.
 
 # Arguments
 
-  - `name::AbstractString`: user-defined name
-  - `filename::AbstractString`: name of CSV file containing data
+  - `name::String`: user-defined name
+  - `filename::String`: name of CSV file containing data
   - `component::InfrastructureSystemsComponent`: component associated with the data
   - `normalization_factor::NormalizationFactor = 1.0`: optional normalization factor to apply
     to each data entry
@@ -159,8 +159,8 @@ DateTime format and the columns the values in the forecast window.
     [`get_time_series_array`](@ref) is called.
 """
 function Deterministic(
-    name::AbstractString,
-    filename::AbstractString,
+    name::String,
+    filename::String,
     component::InfrastructureSystemsComponent,
     resolution::Dates.Period;
     interval::Union{Nothing, Dates.Period} = nothing,
@@ -183,7 +183,7 @@ end
 Construct Deterministic from RawTimeSeries.
 """
 function Deterministic(
-    name::AbstractString,
+    name::String,
     series_data::RawTimeSeries,
     resolution::Dates.Period;
     interval::Union{Nothing, Dates.Period} = nothing,
@@ -276,7 +276,7 @@ add_time_series!(sys, generator, forecast_max_reactive_power)
 """
 function Deterministic(
     src::Deterministic,
-    name::AbstractString;
+    name::String;
     scaling_factor_multiplier::Union{Nothing, Function} = nothing,
 )
     # units and ext are not copied

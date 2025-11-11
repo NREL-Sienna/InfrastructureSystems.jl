@@ -159,7 +159,7 @@ Throws ArgumentError if the component is not stored.
 function remove_component!(
     ::Type{T},
     components::Components,
-    name::AbstractString;
+    name::String;
     remove_time_series = true,
     remove_supplemental_attributes = true,
 ) where {T <: InfrastructureSystemsComponent}
@@ -175,7 +175,7 @@ end
 function _remove_component!(
     ::Type{T},
     components::Components,
-    name::AbstractString;
+    name::String;
     remove_time_series = true,
     remove_supplemental_attributes = true,
 ) where {T <: InfrastructureSystemsComponent}
@@ -210,7 +210,7 @@ Check to see if a component with name exists.
 function has_component(
     components::Components,
     T::Type{<:InfrastructureSystemsComponent},
-    name::AbstractString,
+    name::String,
 )
     !isconcretetype(T) && return !isempty(get_components_by_name(T, components, name))
     !haskey(components.data, T) && return false
@@ -246,7 +246,7 @@ requested name
 function get_component(
     ::Type{T},
     components::Components,
-    name::AbstractString,
+    name::String,
 ) where {T <: InfrastructureSystemsComponent}
     if !isconcretetype(T)
         components = get_components_by_name(T, components, name)
@@ -280,7 +280,7 @@ Throws ArgumentError if T is not an abstract type.
 function get_components_by_name(
     ::Type{T},
     components::Components,
-    name::AbstractString,
+    name::String,
 ) where {T <: InfrastructureSystemsComponent}
     if isconcretetype(T)
         throw(ArgumentError("get_components_by_name does not support concrete types: $T"))
