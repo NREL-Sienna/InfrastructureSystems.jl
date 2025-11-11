@@ -32,6 +32,25 @@ mutable struct Deterministic <: AbstractDeterministic
     "Applicable when the time series data are scaling factors. Called on the associated component to convert the values."
     scaling_factor_multiplier::Union{Nothing, Function}
     internal::InfrastructureSystemsInternal
+
+    function Deterministic(
+        name::String,
+        data::SortedDict,
+        resolution::Dates.Period,
+        interval::Dates.Period,
+        scaling_factor_multiplier::Union{Nothing, Function},
+        internal::InfrastructureSystemsInternal,
+    )
+        validate_time_series_data_for_hdf(data)
+        new(
+            name,
+            data,
+            resolution,
+            interval,
+            scaling_factor_multiplier,
+            internal,
+        )
+    end
 end
 
 function Deterministic(;
@@ -46,7 +65,8 @@ function Deterministic(;
     if isnothing(interval)
         interval = get_interval_from_initial_times(get_sorted_keys(data))
     end
-    data = handle_normalization_factor(convert_data(data), normalization_factor)
+    converted_data = convert_data(data)
+    data = handle_normalization_factor(converted_data, normalization_factor)
     return Deterministic(
         name,
         data,

@@ -163,13 +163,17 @@ end
 """
 Return the interval by subtracting the first two initial times.
 """
-function get_interval_from_initial_times(initial_times)
+function get_interval_from_initial_times(initial_times::Vector{Dates.DateTime})
     if length(initial_times) == 1
         return Dates.Second(0)
     end
     first_it, state = iterate(initial_times)
     second_it, state = iterate(initial_times, state)
     return second_it - first_it
+end
+
+function get_interval_from_initial_times(x::Vector{T}) where {T}
+    throw(ArgumentError("Cannot compute interval from initial times of type $(T)."))
 end
 
 # This method requires that the forecast type implement a `get_data` method like

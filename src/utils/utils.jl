@@ -5,6 +5,80 @@ import JSON3
 const HASH_FILENAME = "check.sha256"
 const COMPARE_VALUES_SENTINEL = :(!NOUPGRADE)  # A Symbol that can't be a field name
 
+# Supported element types for transform_array_for_hdf Vector inputs
+const TRANSFORM_ARRAY_FOR_HDF_SUPPORTED_ELTYPES = [
+    "Real (Float64, Int, etc.)",
+    "Tuple",
+    "Vector{Tuple}",
+    "Matrix",
+    "LinearFunctionData",
+    "QuadraticFunctionData",
+    "PiecewiseLinearData",
+    "PiecewiseStepData",
+]
+
+"""
+Check if the element type T is supported by transform_array_for_hdf.
+Returns true if supported, false otherwise.
+Uses multiple dispatch for a more Julian approach.
+"""
+is_transform_array_for_hdf_supported(::Type{T}) where {T <: Real} = true
+is_transform_array_for_hdf_supported(::Type{T}) where {T <: Tuple} = isconcretetype(T)
+is_transform_array_for_hdf_supported(::Type{T}) where {T <: Vector{<:Tuple}} =
+    isconcretetype(T)
+is_transform_array_for_hdf_supported(::Type{T}) where {T <: Matrix} = true
+is_transform_array_for_hdf_supported(::Type{T}) where {T <: LinearFunctionData} = true
+is_transform_array_for_hdf_supported(::Type{T}) where {T <: QuadraticFunctionData} = true
+is_transform_array_for_hdf_supported(::Type{T}) where {T <: PiecewiseLinearData} = true
+is_transform_array_for_hdf_supported(::Type{T}) where {T <: PiecewiseStepData} = true
+# Catchall for unsupported types
+is_transform_array_for_hdf_supported(::Type{T}) where {T} = false
+
+"""
+Validate that data in a SortedDict has supported element types for transform_array_for_hdf.
+Throws an ArgumentError if any vector has an unsupported element type.
+"""
+function validate_time_series_data_for_hdf(
+    ::SortedDict{Dates.DateTime, Vector{T}},
+) where {T}
+    if !is_transform_array_for_hdf_supported(T)
+        supported = join(TRANSFORM_ARRAY_FOR_HDF_SUPPORTED_ELTYPES, ", ")
+        if !isconcretetype(T)
+            throw(
+                ArgumentError(
+                    "Cannot create time series with non-concrete element type. " *
+                    "The data has value type Vector{$T} where $T is not concrete. " *
+                    "Please ensure your time series data has a concrete element type like Float64. " *
+                    "Supported types: $supported.",
+                ),
+            )
+        else
+            throw(
+                ArgumentError(
+                    "Cannot create time series with unsupported element type $T. " *
+                    "Supported types: $supported. " *
+                    "Please ensure your time series data has a valid element type like Float64. ",
+                ),
+            )
+        end
+    end
+    return nothing
+end
+
+# Fallback for other SortedDict types - throw error since Deterministic only supports
+# SortedDict{Dates.DateTime, Vector{T}} where T is a supported type
+function validate_time_series_data_for_hdf(data::SortedDict)
+    supported = join(TRANSFORM_ARRAY_FOR_HDF_SUPPORTED_ELTYPES, ", ")
+    throw(
+        ArgumentError(
+            "Cannot create time series with this data structure. " *
+            "Deterministic only supports SortedDict{Dates.DateTime, Vector{T}} " *
+            "where T is a supported element type. " *
+            "Supported types: $supported.",
+        ),
+    )
+end
+
 g_cached_subtypes = Dict{DataType, Vector{DataType}}()
 
 """
@@ -568,6 +642,55 @@ function transform_array_for_hdf(
         combined_cost[r, c, :, :] = ca[r]
     end
     return combined_cost
+end
+
+# Catchall methods for better error messages when element type cannot be determined
+function transform_array_for_hdf(::Vector{T}) where {T}
+    if !isconcretetype(T)
+        supported = join(TRANSFORM_ARRAY_FOR_HDF_SUPPORTED_ELTYPES, ", ")
+        throw(
+            ArgumentError(
+                "Cannot determine the correct HDF5 data format to store time series data. " *
+                "The vector has element type $T which is not concrete. " *
+                "This typically occurs when Julia cannot infer the element type of your data. " *
+                "Please ensure your time series data has a concrete element type. " *
+                "Supported types: $supported.",
+            ),
+        )
+    end
+    supported = join(TRANSFORM_ARRAY_FOR_HDF_SUPPORTED_ELTYPES, ", ")
+    throw(
+        ArgumentError(
+            "Cannot determine the correct HDF5 data format for time series data with element type $T. " *
+            "No transform_array_for_hdf method is defined for this type. " *
+            "Supported types: $supported. " *
+            "To use type $T, you need to implement a specific transform_array_for_hdf method for it in InfrastructureSystems.",
+        ),
+    )
+end
+
+function transform_array_for_hdf(data::SortedDict{Dates.DateTime, Vector{T}}) where {T}
+    if !isconcretetype(T)
+        supported = join(TRANSFORM_ARRAY_FOR_HDF_SUPPORTED_ELTYPES, ", ")
+        throw(
+            ArgumentError(
+                "Cannot determine the correct HDF5 data format to store time series data. " *
+                "The SortedDict has value type Vector{$T} where $T is not concrete. " *
+                "This typically occurs when Julia cannot infer the element type of your data. " *
+                "Please ensure your time series data has a concrete element type. " *
+                "Supported types: $supported.",
+            ),
+        )
+    end
+    supported = join(TRANSFORM_ARRAY_FOR_HDF_SUPPORTED_ELTYPES, ", ")
+    throw(
+        ArgumentError(
+            "Cannot determine the correct HDF5 data format for time series data with element type $T. " *
+            "No transform_array_for_hdf method is defined for this type. " *
+            "Supported types: $supported. " *
+            "To use type $T, you need to implement a specific transform_array_for_hdf method for it.",
+        ),
+    )
 end
 
 to_namedtuple(val) = (; (x => getproperty(val, x) for x in fieldnames(typeof(val)))...)
