@@ -48,6 +48,13 @@ end
 
 get_data_field(store::AbstractModelStore, type::Symbol) = getproperty(store, type)
 
+# Getter functions for each container type
+get_variables_container(store::AbstractModelStore) = store.variables
+get_aux_variables_container(store::AbstractModelStore) = store.aux_variables
+get_duals_container(store::AbstractModelStore) = store.duals
+get_parameters_container(store::AbstractModelStore) = store.parameters
+get_expressions_container(store::AbstractModelStore) = store.expressions
+
 function Base.isempty(store::T) where {T <: AbstractModelStore}
     for (name, type) in zip(fieldnames(T), fieldtypes(T))
         val = get_data_field(store, name)
@@ -71,42 +78,49 @@ function list_keys(store::AbstractModelStore, container_type::Symbol)
     return collect(keys(container))
 end
 
+# Specific list functions for each container type
+list_variable_keys(store::AbstractModelStore) = collect(keys(get_variables_container(store)))
+list_aux_variable_keys(store::AbstractModelStore) = collect(keys(get_aux_variables_container(store)))
+list_dual_keys(store::AbstractModelStore) = collect(keys(get_duals_container(store)))
+list_parameter_keys(store::AbstractModelStore) = collect(keys(get_parameters_container(store)))
+list_expression_keys(store::AbstractModelStore) = collect(keys(get_expressions_container(store)))
+
 function get_value(
     store::AbstractModelStore,
-    ::T,
+    ::Type{T},
     ::Type{U},
 ) where {T <: VariableType, U <: InfrastructureSystemsType}
-    return get_data_field(store, STORE_CONTAINER_VARIABLES)[VariableKey(T, U)]
+    return get_variables_container(store)[VariableKey(T, U)]
 end
 
 function get_value(
     store::AbstractModelStore,
-    ::T,
+    ::Type{T},
     ::Type{U},
 ) where {T <: AuxVariableType, U <: InfrastructureSystemsType}
-    return get_data_field(store, STORE_CONTAINER_AUX_VARIABLES)[AuxVarKey(T, U)]
+    return get_aux_variables_container(store)[AuxVarKey(T, U)]
 end
 
 function get_value(
     store::AbstractModelStore,
-    ::T,
+    ::Type{T},
     ::Type{U},
 ) where {T <: ConstraintType, U <: InfrastructureSystemsType}
-    return get_data_field(store, STORE_CONTAINER_DUALS)[ConstraintKey(T, U)]
+    return get_duals_container(store)[ConstraintKey(T, U)]
 end
 
 function get_value(
     store::AbstractModelStore,
-    ::T,
+    ::Type{T},
     ::Type{U},
 ) where {T <: ParameterType, U <: InfrastructureSystemsType}
-    return get_data_field(store, STORE_CONTAINER_PARAMETERS)[ParameterKey(T, U)]
+    return get_parameters_container(store)[ParameterKey(T, U)]
 end
 
 function get_value(
     store::AbstractModelStore,
-    ::T,
+    ::Type{T},
     ::Type{U},
 ) where {T <: ExpressionType, U <: InfrastructureSystemsType}
-    return get_data_field(store, STORE_CONTAINER_EXPRESSIONS)[ExpressionKey(T, U)]
+    return get_expressions_container(store)[ExpressionKey(T, U)]
 end
