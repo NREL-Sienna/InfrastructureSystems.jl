@@ -85,7 +85,7 @@ Constructs Hdf5TimeSeriesStorage from an existing file.
 """
 function from_file(
     ::Type{Hdf5TimeSeriesStorage},
-    filename::AbstractString;
+    filename::String;
     read_only = false,
     directory = nothing,
 )
@@ -172,7 +172,7 @@ end
 Copies an HDF5 file to a new file. This should be used instead of a system call to copy
 because it won't copy unused space that results from deleting datasets.
 """
-function copy_h5_file(src::AbstractString, dst::AbstractString)
+function copy_h5_file(src::String, dst::String)
     HDF5.h5open(dst, "w") do fw
         HDF5.h5open(src, "r") do fr
             HDF5.copy_object(fr[HDF5_TS_ROOT_PATH], fw, HDF5_TS_ROOT_PATH)

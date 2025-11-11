@@ -235,8 +235,8 @@ function generate_structs(directory, data::Vector; print_results = true)
 end
 
 function generate_structs(
-    input_file::AbstractString,
-    output_directory::AbstractString;
+    input_file::String,
+    output_directory::String;
     print_results = true,
 )
     # Include each generated file.

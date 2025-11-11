@@ -120,14 +120,14 @@ Adds time_series from a metadata file or metadata descriptors.
 
   - `data::SystemData`: system
   - `::Type{T}`: type of the component associated with time series data; may be abstract
-  - `metadata_file::AbstractString`: metadata file for time series
+  - `metadata_file::String`: metadata file for time series
     that includes an array of TimeSeriesFileMetadata instances or a vector.
   - `resolution::DateTime.Period=nothing`: skip time_series that don't match this resolution.
 """
 function add_time_series_from_file_metadata!(
     data::SystemData,
     ::Type{T},
-    metadata_file::AbstractString;
+    metadata_file::String;
     resolution = nothing,
 ) where {T <: InfrastructureSystemsComponent}
     metadata = read_time_series_file_metadata(metadata_file)
@@ -793,7 +793,7 @@ appropriate path information for the time series data.
 """
 function prepare_for_serialization_to_file!(
     data::SystemData,
-    filename::AbstractString;
+    filename::String;
     force = false,
 )
     directory = dirname(filename)
@@ -1060,7 +1060,7 @@ Check to see if a component exists.
 has_component(
     data::SystemData,
     T::Type{<:InfrastructureSystemsComponent},
-    name::AbstractString,
+    name::String,
 ) = has_component(data.components, T, name)
 
 function has_component(data::SystemData, component::InfrastructureSystemsComponent)
@@ -1082,7 +1082,7 @@ function get_components(
     filter_func::Function,
     ::Type{T},
     data::SystemData;
-    subsystem_name::Union{Nothing, AbstractString} = nothing,
+    subsystem_name::Union{Nothing, String} = nothing,
 ) where {T}
     uuids = isnothing(subsystem_name) ? nothing : get_component_uuids(data, subsystem_name)
     return get_components(filter_func, T, data.components; component_uuids = uuids)
@@ -1091,7 +1091,7 @@ end
 function get_components(
     ::Type{T},
     data::SystemData;
-    subsystem_name::Union{Nothing, AbstractString} = nothing,
+    subsystem_name::Union{Nothing, String} = nothing,
 ) where {T}
     uuids = isnothing(subsystem_name) ? nothing : get_component_uuids(data, subsystem_name)
     return get_components(T, data.components; component_uuids = uuids)
@@ -1287,7 +1287,7 @@ function get_component_counts_by_type(data::SystemData)
     end
 
     return [
-        OrderedDict("type" => x, "count" => counts[x]) for x in sort(collect(keys(counts)))
+        OrderedDict("type" => x, "count" => counts[x]) for x in sort!(collect(keys(counts)))
     ]
 end
 

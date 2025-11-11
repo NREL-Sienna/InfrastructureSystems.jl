@@ -90,10 +90,10 @@ function StructField(;
 end
 
 struct StructDefinition
-    struct_name::AbstractString
+    struct_name::String
     fields::Vector{StructField}
     supertype::String
-    docstring::AbstractString
+    docstring::String
 end
 
 """
@@ -101,9 +101,9 @@ Construct a StructDefinition for code auto-generation purposes.
 
 # Arguments
 
-  - `struct_name::AbstractString`: Struct name
+  - `struct_name::String`: Struct name
   - `fields::Vector{StructField}`: Struct fields. Refer to [`StructField`](@ref).
-  - `docstring::AbstractString`: Struct docstring. Defaults to an empty string.
+  - `docstring::String`: Struct docstring. Defaults to an empty string.
   - `supertype::Union{String, DataType}`: Struct supertype. Defaults to no supertype.
   - `is_component::Bool`: Set to true for component types that will be attached to a
     system. Do not set to Default to true.
@@ -159,9 +159,9 @@ Refer to `StructDefinition` and `StructField` for descriptions of the available 
 # Arguments
 
   - `definition::StructDefinition`: Defines the struct and all fields.
-  - `filename::AbstractString`: Add the struct definition to this JSON file. Defaults to
+  - `filename::String`: Add the struct definition to this JSON file. Defaults to
     `src/descriptors/structs.json`
-  - `output_directory::AbstractString`: Generate the files in this directory. Defaults to
+  - `output_directory::String`: Generate the files in this directory. Defaults to
     `src/generated`
 """
 function generate_struct_file(
@@ -185,9 +185,9 @@ Refer to `StructDefinition` and `StructField` for descriptions of the available 
 # Arguments
 
   - `definitions`: Defines the structs and all fields.
-  - `filename::AbstractString`: Add the struct definition to this JSON file. Defaults to
+  - `filename::String`: Add the struct definition to this JSON file. Defaults to
     `src/descriptors/power_system_structs.json`
-  - `output_directory::AbstractString`: Generate the files in this directory. Defaults to
+  - `output_directory::String`: Generate the files in this directory. Defaults to
     `src/generated`
 """
 function generate_struct_files(definitions; filename = nothing, output_directory = nothing)

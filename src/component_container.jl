@@ -66,7 +66,7 @@ end
 get_available_component(
     ::Type{T},
     sys::ComponentContainer,
-    name::AbstractString;
+    name::String;
     kwargs...,
 ) where {T <: InfrastructureSystemsComponent} =
     _get_available_component(sys, T, sys, name; kwargs...)

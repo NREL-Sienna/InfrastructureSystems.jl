@@ -71,7 +71,7 @@ get_components(
 get_component(
     ::Type{T},
     res::Results,
-    name::AbstractString;
+    name::String;
     kwargs...,
 ) where {T <: InfrastructureSystemsComponent} =
     get_available_component(T, _get_components_source_data(res), name; kwargs...)

@@ -14,7 +14,7 @@ Pass component_name when the file does not have the component name in a column h
 """
 function read_time_series(
     ::Type{T},
-    data_file::AbstractString,
+    data_file::String,
     component_name = nothing;
     kwargs...,
 ) where {T <: TimeSeriesData}
@@ -220,7 +220,7 @@ function read_time_series(
     ::Type{T},
     ::Type{<:StaticTimeSeries},
     file::CSV.File,
-    component_name::AbstractString;
+    component_name::String;
     kwargs...,
 ) where {T <: TimeSeriesFormatPeriodAsHeader}
     period_cols_as_symbols = get_period_columns(T, file)

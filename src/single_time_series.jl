@@ -62,7 +62,7 @@ two different attribtues.
 """
 function SingleTimeSeries(
     src::SingleTimeSeries,
-    name::AbstractString;
+    name::String;
     scaling_factor_multiplier::Union{Nothing, Function} = nothing,
 )
     # units and ext are not copied
@@ -81,7 +81,7 @@ Construct SingleTimeSeries from a TimeArray or DataFrame.
 
 # Arguments
 
-  - `name::AbstractString`: user-defined name
+  - `name::String`: user-defined name
   - `data::Union{TimeSeries.TimeArray, DataFrames.DataFrame}`: time series data
   - `normalization_factor::NormalizationFactor = 1.0`: optional normalization factor to apply
     to each data entry
@@ -96,7 +96,7 @@ Construct SingleTimeSeries from a TimeArray or DataFrame.
     Dates.Year.
 """
 function SingleTimeSeries(
-    name::AbstractString,
+    name::String,
     data::Union{TimeSeries.TimeArray, DataFrames.DataFrame};
     normalization_factor::NormalizationFactor = 1.0,
     scaling_factor_multiplier::Union{Nothing, Function} = nothing,
@@ -127,8 +127,8 @@ component.
 
 # Arguments
 
-  - `name::AbstractString`: user-defined name
-  - `filename::AbstractString`: name of CSV file containing data
+  - `name::String`: user-defined name
+  - `filename::String`: name of CSV file containing data
   - `component::InfrastructureSystemsComponent`: component associated with the data
   - `resolution::Dates.Period`: resolution of the time series
   - `normalization_factor::NormalizationFactor = 1.0`: optional normalization factor to apply
@@ -138,8 +138,8 @@ component.
     [`get_time_series_array`](@ref) is called.
 """
 function SingleTimeSeries(
-    name::AbstractString,
-    filename::AbstractString,
+    name::String,
+    filename::String,
     component::InfrastructureSystemsComponent,
     resolution::Dates.Period;
     normalization_factor::NormalizationFactor = 1.0,

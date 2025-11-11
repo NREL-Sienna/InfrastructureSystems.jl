@@ -738,7 +738,7 @@ const _QUERY_SELECT_CHANGES = "SELECT CHANGES() AS changes"
 
 function _remove_associations!(
     associations::SupplementalAttributeAssociations,
-    where_clause::AbstractString,
+    where_clause::String,
     params,
 )
     _execute_cached(

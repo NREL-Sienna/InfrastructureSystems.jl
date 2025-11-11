@@ -11,7 +11,7 @@ Serializes a InfrastructureSystemsType to a JSON file.
 """
 function to_json(
     obj::T,
-    filename::AbstractString;
+    filename::String;
     force = false,
     pretty = false,
 ) where {T <: InfrastructureSystemsType}
@@ -216,7 +216,7 @@ function deserialize(::Type{T}, data::Dict{String, U}) where {T <: NamedTuple, U
 end
 
 # Some types that definitely won't be deserialized from raw Dicts
-const _NOT_FROM_DICT = Union{Nothing, Real, AbstractString, TimeSeriesKey}
+const _NOT_FROM_DICT = Union{Nothing, Real, String, TimeSeriesKey}
 
 # If deserializing into a Union of some _NOT_FROM_DICT and something else (e.g., a
 # NamedTuple) and we are given a Dict as input data, pick the something else. NOTE: it would
@@ -251,7 +251,7 @@ function deserialize(::Type{Dates.Period}, data::Dict)
     return getproperty(Dates, Symbol(data[TYPE_KEY]))(data["value"])
 end
 
-deserialize(::Type{Dates.DateTime}, val::AbstractString) = Dates.DateTime(val)
+deserialize(::Type{Dates.DateTime}, val::String) = Dates.DateTime(val)
 
 # The next methods fix serialization of UUIDs. The underlying type of a UUID is a UInt128.
 # JSON tries to encode this as a number in JSON. Encoding integers greater than can

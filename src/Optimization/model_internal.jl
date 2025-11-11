@@ -79,7 +79,7 @@ function set_status!(internal::ModelInternal, status::ModelBuildStatus)
     return
 end
 
-set_output_dir!(internal::ModelInternal, path::AbstractString) = internal.output_dir = path
+set_output_dir!(internal::ModelInternal, path::String) = internal.output_dir = path
 set_store_params!(internal::ModelInternal, store_params::AbstractModelStoreParams) =
     internal.store_params = store_params
 
