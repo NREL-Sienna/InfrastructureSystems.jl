@@ -436,16 +436,6 @@ function isotonic_regression(values::Vector{Float64}, weights::Vector{Float64})
 end
 
 """
-    antitonic_regression(values::Vector{Float64}, weights::Vector{Float64}) -> Vector{Float64}
-
-Weighted antitonic (non-increasing) regression using PAVA.
-Returns the closest (weighted L2) non-increasing sequence to `values`.
-"""
-function antitonic_regression(values::Vector{Float64}, weights::Vector{Float64})
-    return -isotonic_regression(-values, weights)
-end
-
-"""
 Compute weights for isotonic regression based on the weighting scheme.
 
 # Arguments
@@ -505,38 +495,11 @@ function make_convex(data::PiecewiseStepData; weights = :length)
 end
 
 """
-    make_concave(data::PiecewiseStepData; weights=:length) -> PiecewiseStepData
-
-Return the closest concave approximation of `data` using antitonic regression.
-
-A concave piecewise step function has non-increasing y-coordinates.
-
-# Arguments
-- `data::PiecewiseStepData`: the input step data
-- `weights`: weighting scheme (see [`make_convex`](@ref))
-
-# Returns
-A new `PiecewiseStepData` that is concave (has non-increasing y-coordinates).
-Returns the input unchanged if already concave.
-"""
-function make_concave(data::PiecewiseStepData; weights = :length)
-    is_concave(data) && return data
-
-    y_coords = get_y_coords(data)
-    x_coords = get_x_coords(data)
-    w = _compute_convex_weights(x_coords, weights)
-
-    new_y_coords = antitonic_regression(y_coords, w)
-
-    return PiecewiseStepData(x_coords, new_y_coords)
-end
-
-"""
 Reconstruct PiecewiseLinearData points from corrected slopes.
 
 # Arguments
 - `original_points`: original points from the PiecewiseLinearData
-- `new_slopes`: corrected slopes from isotonic/antitonic regression
+- `new_slopes`: corrected slopes from isotonic regression
 - `anchor`: which point to preserve exactly
   - `:first` - preserve first point, adjust all others (default)
   - `:last` - preserve last point, adjust backwards
@@ -624,36 +587,6 @@ function make_convex(data::PiecewiseLinearData; weights = :length, anchor = :fir
     new_slopes = isotonic_regression(slopes, w)
 
     # Reconstruct points from corrected slopes
-    new_points = _reconstruct_points(points, new_slopes, anchor)
-
-    return PiecewiseLinearData(new_points)
-end
-
-"""
-    make_concave(data::PiecewiseLinearData; weights=:length, anchor=:first) -> PiecewiseLinearData
-
-Return the closest concave approximation of `data` using antitonic regression.
-
-A concave piecewise linear function has non-increasing slopes.
-
-# Arguments
-- `data::PiecewiseLinearData`: the input piecewise linear data
-- `weights`: weighting scheme (see [`make_convex`](@ref))
-- `anchor`: point reconstruction anchor (see [`make_convex`](@ref))
-
-# Returns
-A new `PiecewiseLinearData` that is concave (has non-increasing slopes).
-Returns the input unchanged if already concave.
-"""
-function make_concave(data::PiecewiseLinearData; weights = :length, anchor = :first)
-    is_concave(data) && return data
-
-    points = get_points(data)
-    x_coords = get_x_coords(data)
-    slopes = get_slopes(data)
-    w = _compute_convex_weights(x_coords, weights)
-
-    new_slopes = antitonic_regression(slopes, w)
     new_points = _reconstruct_points(points, new_slopes, anchor)
 
     return PiecewiseLinearData(new_points)

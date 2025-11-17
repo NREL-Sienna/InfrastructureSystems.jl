@@ -690,7 +690,7 @@ end
     end
 end
 
-@testset "Test isotonic and antitonic regression" begin
+@testset "Test isotonic regression" begin
     # Test basic isotonic regression
     values = [3.0, 1.0, 4.0, 1.0, 5.0]
     weights = ones(5)
@@ -726,12 +726,6 @@ end
     weights = ones(3)
     result = IS.isotonic_regression(values, weights)
     @test result ≈ values
-
-    # Test antitonic regression (non-increasing)
-    values = [1.0, 5.0, 2.0]
-    weights = ones(3)
-    result = IS.antitonic_regression(values, weights)
-    @test all(result[i] >= result[i+1] for i in 1:length(result)-1)  # Non-increasing
 
     # Test empty input
     @test IS.isotonic_regression(Float64[], Float64[]) == Float64[]
@@ -786,22 +780,6 @@ end
     @test_throws ArgumentError IS.make_convex(step_data; weights = :invalid)
 end
 
-@testset "Test make_concave for PiecewiseStepData" begin
-    # Test basic non-concave case
-    # Slopes: [5, 10, 3] - violation at index 1 (5 < 10)
-    step_data = IS.PiecewiseStepData([0.0, 1.0, 2.0, 3.0], [5.0, 10.0, 3.0])
-    @test !IS.is_concave(step_data)
-
-    concave_step = IS.make_concave(step_data; weights = :uniform)
-    @test IS.is_concave(concave_step)
-
-    # Test already concave data
-    concave_data = IS.PiecewiseStepData([0.0, 1.0, 2.0], [10.0, 5.0])
-    @test IS.is_concave(concave_data)
-    result = IS.make_concave(concave_data)
-    @test result === concave_data
-end
-
 @testset "Test make_convex for PiecewiseLinearData" begin
     # Test basic non-convex case
     linear_data = IS.PiecewiseLinearData([
@@ -853,27 +831,6 @@ end
 
     # Test invalid anchor
     @test_throws ArgumentError IS.make_convex(linear_data; anchor = :invalid)
-end
-
-@testset "Test make_concave for PiecewiseLinearData" begin
-    # Test basic non-concave case
-    linear_data = IS.PiecewiseLinearData([
-        (x = 0.0, y = 30.0),
-        (x = 1.0, y = 20.0),   # slope = -10
-        (x = 2.0, y = 15.0),   # slope = -5  <- violation!
-        (x = 3.0, y = 0.0),    # slope = -15
-    ])
-    @test !IS.is_concave(linear_data)
-
-    concave_linear = IS.make_concave(linear_data; anchor = :first)
-    @test IS.is_concave(concave_linear)
-    @test IS.get_points(concave_linear)[1] == IS.get_points(linear_data)[1]
-
-    # Test already concave data
-    concave_data = IS.PiecewiseLinearData([(0, 3), (1, 2), (1.1, 1), (1.2, 0)])
-    @test IS.is_concave(concave_data)
-    result = IS.make_concave(concave_data)
-    @test result === concave_data
 end
 
 @testset "Test convexity_violations" begin
@@ -1021,14 +978,6 @@ end
     convex2 = IS.make_convex(convex1)
     @test convex2 === convex1  # Second call should return same object
 
-    # Test that make_concave on a convex function produces different result
-    # (unless it's also concave, i.e., linear)
-    convex_data = IS.PiecewiseLinearData([(0, 0), (1, 1), (2, 3)])
-    @test IS.is_convex(convex_data)
-    @test !IS.is_concave(convex_data)
-    concave_result = IS.make_concave(convex_data)
-    @test IS.is_concave(concave_result)
-
     # Test with step data
     step_data = IS.PiecewiseStepData([0.0, 1.0, 2.0, 3.0], [10.0, 5.0, 15.0])
     convex1 = IS.make_convex(step_data)
@@ -1052,11 +1001,6 @@ end
         @test IS.is_convex(convex)
         @test IS.get_x_coords(convex) == IS.get_x_coords(pointwise)
 
-        # Make concave
-        concave = IS.make_concave(pointwise)
-        @test IS.is_concave(concave)
-        @test IS.get_x_coords(concave) == IS.get_x_coords(pointwise)
-
         # Generate random step data
         rand_x_step = sort(rand(rng, n_points))
         rand_y_step = rand(rng, n_points - 1) * 100
@@ -1065,9 +1009,5 @@ end
         # Make convex
         convex_step = IS.make_convex(stepwise)
         @test IS.is_convex(convex_step)
-
-        # Make concave
-        concave_step = IS.make_concave(stepwise)
-        @test IS.is_concave(concave_step)
     end
 end
