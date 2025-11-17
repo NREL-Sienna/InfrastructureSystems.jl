@@ -612,6 +612,70 @@ end
     end
 end
 
+@testset "Test PiecewiseLinearData <-> PiecewiseStepData constructor conversions" begin
+    # Test basic conversion: PiecewiseLinearData -> PiecewiseStepData
+    linear_data = IS.PiecewiseLinearData([(0.0, 0.0), (1.0, 2.0), (3.0, 5.0)])
+    step_data = IS.PiecewiseStepData(linear_data)
+    @test IS.get_x_coords(step_data) == [0.0, 1.0, 3.0]
+    @test IS.get_y_coords(step_data) ≈ [2.0, 1.5]  # slopes
+
+    # Test basic conversion: PiecewiseStepData -> PiecewiseLinearData with default initial_y
+    step_data = IS.PiecewiseStepData([0.0, 1.0, 3.0], [2.0, 1.5])
+    linear_data = IS.PiecewiseLinearData(step_data)
+    expected_points = [(x = 0.0, y = 0.0), (x = 1.0, y = 2.0), (x = 3.0, y = 5.0)]
+    @test isapprox(collect.(IS.get_points(linear_data)), collect.(expected_points))
+
+    # Test conversion with custom initial_y
+    step_data = IS.PiecewiseStepData([0.0, 1.0, 3.0], [2.0, 1.5])
+    linear_data = IS.PiecewiseLinearData(step_data, 10.0)
+    expected_points = [(x = 0.0, y = 10.0), (x = 1.0, y = 12.0), (x = 3.0, y = 15.0)]
+    @test isapprox(collect.(IS.get_points(linear_data)), collect.(expected_points))
+
+    # Test Base.convert methods
+    linear_data = IS.PiecewiseLinearData([(1.0, 1.0), (2.0, 3.0), (4.0, 7.0)])
+    step_data = convert(IS.PiecewiseStepData, linear_data)
+    @test step_data isa IS.PiecewiseStepData
+    @test IS.get_x_coords(step_data) == [1.0, 2.0, 4.0]
+    @test IS.get_y_coords(step_data) ≈ [2.0, 2.0]
+
+    step_data = IS.PiecewiseStepData([1.0, 2.0, 4.0], [2.0, 2.0])
+    linear_data = convert(IS.PiecewiseLinearData, step_data)
+    @test linear_data isa IS.PiecewiseLinearData
+    expected_points = [(x = 1.0, y = 0.0), (x = 2.0, y = 2.0), (x = 4.0, y = 6.0)]
+    @test isapprox(collect.(IS.get_points(linear_data)), collect.(expected_points))
+
+    # Test round-trip conversion preserves data (with initial_y)
+    rng = Random.Xoshiro(48)
+    n_tests = 100
+    n_points = 10
+    for _ in 1:n_tests
+        rand_x = sort(rand(rng, n_points))
+        rand_y = rand(rng, n_points)
+        original = IS.PiecewiseLinearData(collect(zip(rand_x, rand_y)))
+        initial_y = first(IS.get_points(original)).y
+
+        # Convert to step and back
+        step_data = IS.PiecewiseStepData(original)
+        recovered = IS.PiecewiseLinearData(step_data, initial_y)
+
+        @test isapprox(
+            collect.(IS.get_points(recovered)), collect.(IS.get_points(original)))
+    end
+
+    # Test that slopes are correctly computed for non-trivial case
+    linear_data = IS.PiecewiseLinearData([
+        (0.0, 0.0), (1.0, 1.0), (2.0, 4.0), (3.0, 6.0), (5.0, 10.0)
+    ])
+    step_data = IS.PiecewiseStepData(linear_data)
+    expected_slopes = [1.0, 3.0, 2.0, 2.0]
+    @test IS.get_y_coords(step_data) ≈ expected_slopes
+
+    # Test conversion preserves domain
+    linear_data = IS.PiecewiseLinearData([(2.0, 5.0), (4.0, 10.0), (8.0, 18.0)])
+    step_data = IS.PiecewiseStepData(linear_data)
+    @test IS.get_domain(linear_data) == IS.get_domain(step_data)
+end
+
 @testset "Test FunctionData serialization round trip" begin
     for fd in get_test_function_data()
         for do_jsonify in (false, true)
