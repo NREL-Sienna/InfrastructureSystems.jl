@@ -399,6 +399,48 @@ QuadraticFunctionData(data::LinearFunctionData) =
 Base.convert(::Type{QuadraticFunctionData}, data::LinearFunctionData) =
     QuadraticFunctionData(data)
 
+"""
+Convert `PiecewiseLinearData` to `PiecewiseStepData` by computing the slopes of the line
+segments. The resulting `PiecewiseStepData` represents the derivative of the original
+piecewise linear function.
+
+Note: This conversion loses the initial y-value information. To recover it when converting
+back, use `PiecewiseLinearData(step_data, initial_y)`.
+"""
+PiecewiseStepData(data::PiecewiseLinearData) =
+    PiecewiseStepData(get_x_coords(data), get_slopes(data))
+
+"Convert `PiecewiseLinearData` to `PiecewiseStepData`"
+Base.convert(::Type{PiecewiseStepData}, data::PiecewiseLinearData) =
+    PiecewiseStepData(data)
+
+"""
+Convert `PiecewiseStepData` to `PiecewiseLinearData` by computing the running sum
+(integral) of the step function. The resulting `PiecewiseLinearData` has y-values that
+represent the cumulative sum of the step function values multiplied by their segment widths.
+
+# Arguments
+- `data::PiecewiseStepData`: the step data to convert
+- `initial_y::Real=0.0`: the initial y-value at the first x-coordinate
+"""
+function PiecewiseLinearData(data::PiecewiseStepData, initial_y::Real = 0.0)
+    slopes = get_y_coords(data)
+    x_coords = get_x_coords(data)
+    points = Vector{XY_COORDS}(undef, length(x_coords))
+    running_y = Float64(initial_y)
+    points[1] = (x = x_coords[1], y = running_y)
+    for (i, (prev_slope, this_x, dx)) in
+        enumerate(zip(slopes, x_coords[2:end], get_x_lengths(data)))
+        running_y += prev_slope * dx
+        points[i + 1] = (x = this_x, y = running_y)
+    end
+    return PiecewiseLinearData(points)
+end
+
+"Convert `PiecewiseStepData` to `PiecewiseLinearData` with initial y-value of 0.0"
+Base.convert(::Type{PiecewiseLinearData}, data::PiecewiseStepData) =
+    PiecewiseLinearData(data)
+
 # GET_DOMAIN
 "Get the domain of the function represented by the `LinearFunctionData` or `QuadraticFunctionData` (always `(-Inf, Inf)` for these types)."
 get_domain(::Union{LinearFunctionData, QuadraticFunctionData}) = (-Inf, Inf)
