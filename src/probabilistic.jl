@@ -273,57 +273,57 @@ convert_data(
 """
 Get [`Probabilistic`](@ref) `name`.
 """
-get_name(value::Probabilistic) = value.name
+@inline get_name(value::Probabilistic) = value.name
 """
 Get [`Probabilistic`](@ref) `resolution`.
 """
-get_resolution(value::Probabilistic) = value.resolution
+@inline get_resolution(value::Probabilistic) = value.resolution
 """
 Get [`Probabilistic`](@ref) `interval`.
 """
-get_interval(value::Probabilistic) = value.interval
+@inline get_interval(value::Probabilistic) = value.interval
 """
 Get [`Probabilistic`](@ref) `percentiles`.
 """
-get_percentiles(value::Probabilistic) = value.percentiles
+@inline get_percentiles(value::Probabilistic) = value.percentiles
 """
 Get [`Probabilistic`](@ref) `data`.
 """
-get_data(value::Probabilistic) = value.data
+@inline get_data(value::Probabilistic) = value.data
 """
 Get [`Probabilistic`](@ref) `scaling_factor_multiplier`.
 """
-get_scaling_factor_multiplier(value::Probabilistic) = value.scaling_factor_multiplier
+@inline get_scaling_factor_multiplier(value::Probabilistic) = value.scaling_factor_multiplier
 """
 Get [`Probabilistic`](@ref) `internal`.
 """
-get_internal(value::Probabilistic) = value.internal
+@inline get_internal(value::Probabilistic) = value.internal
 
 """
 Set [`Probabilistic`](@ref) `name`.
 """
-set_name!(value::Probabilistic, val) = value.name = val
+@inline set_name!(value::Probabilistic, val) = value.name = val
 """
 Set [`Probabilistic`](@ref) `resolution`.
 """
-set_resolution!(value::Probabilistic, val) = value.resolution = val
+@inline set_resolution!(value::Probabilistic, val) = value.resolution = val
 """
 Set [`Probabilistic`](@ref) `percentiles`.
 """
-set_percentiles!(value::Probabilistic, val) = value.percentiles = val
+@inline set_percentiles!(value::Probabilistic, val) = value.percentiles = val
 """
 Set [`Probabilistic`](@ref) `data`.
 """
-set_data!(value::Probabilistic, val) = value.data = val
+@inline set_data!(value::Probabilistic, val) = value.data = val
 """
 Set [`Probabilistic`](@ref) `scaling_factor_multiplier`.
 """
-set_scaling_factor_multiplier!(value::Probabilistic, val) =
+@inline set_scaling_factor_multiplier!(value::Probabilistic, val) =
     value.scaling_factor_multiplier = val
 """
 Set [`Probabilistic`](@ref) `internal`.
 """
-set_internal!(value::Probabilistic, val) = value.internal = val
+@inline set_internal!(value::Probabilistic, val) = value.internal = val
 
 function get_array_for_hdf(forecast::Probabilistic)
     interval_count = get_count(forecast)

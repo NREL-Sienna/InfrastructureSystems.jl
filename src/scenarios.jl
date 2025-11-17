@@ -240,56 +240,56 @@ end
 """
 Get [`Scenarios`](@ref) `name`.
 """
-get_name(value::Scenarios) = value.name
+@inline get_name(value::Scenarios) = value.name
 """
 Get [`Scenarios`](@ref) `resolution`.
 """
-get_resolution(value::Scenarios) = value.resolution
+@inline get_resolution(value::Scenarios) = value.resolution
 """
 Get [`Scenarios`](@ref) `interval`.
 """
-get_interval(value::Scenarios) = value.interval
+@inline get_interval(value::Scenarios) = value.interval
 """
 Get [`Scenarios`](@ref) `scenario_count`.
 """
-get_scenario_count(value::Scenarios) = value.scenario_count
+@inline get_scenario_count(value::Scenarios) = value.scenario_count
 """
 Get [`Scenarios`](@ref) `data`.
 """
-get_data(value::Scenarios) = value.data
+@inline get_data(value::Scenarios) = value.data
 """
 Get [`Scenarios`](@ref) `scaling_factor_multiplier`.
 """
-get_scaling_factor_multiplier(value::Scenarios) = value.scaling_factor_multiplier
+@inline get_scaling_factor_multiplier(value::Scenarios) = value.scaling_factor_multiplier
 """
 Get [`Scenarios`](@ref) `internal`.
 """
-get_internal(value::Scenarios) = value.internal
+@inline get_internal(value::Scenarios) = value.internal
 """
 Set [`Scenarios`](@ref) `name`.
 """
-set_name!(value::Scenarios, val) = value.name = val
+@inline set_name!(value::Scenarios, val) = value.name = val
 """
 Set [`Scenarios`](@ref) `resolution`.
 """
-set_resolution!(value::Scenarios, val) = value.resolution = val
+@inline set_resolution!(value::Scenarios, val) = value.resolution = val
 """
 Set [`Scenarios`](@ref) `scenario_count`.
 """
-set_scenario_count!(value::Scenarios, val) = value.scenario_count = val
+@inline set_scenario_count!(value::Scenarios, val) = value.scenario_count = val
 """
 Set [`Scenarios`](@ref) `data`.
 """
-set_data!(value::Scenarios, val) = value.data = val
+@inline set_data!(value::Scenarios, val) = value.data = val
 """
 Set [`Scenarios`](@ref) `scaling_factor_multiplier`.
 """
-set_scaling_factor_multiplier!(value::Scenarios, val) =
+@inline set_scaling_factor_multiplier!(value::Scenarios, val) =
     value.scaling_factor_multiplier = val
 """
 Set [`Scenarios`](@ref) `internal`.
 """
-set_internal!(value::Scenarios, val) = value.internal = val
+@inline set_internal!(value::Scenarios, val) = value.internal = val
 
 # TODO see Deterministic
 eltype_data(forecast::Scenarios) = eltype_data_common(forecast)

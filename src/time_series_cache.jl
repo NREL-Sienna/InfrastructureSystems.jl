@@ -124,24 +124,24 @@ Reset parameters in order to start reading data from the beginning with
 """
 reset!(cache::TimeSeriesCache) = _reset!(cache.common)
 
-_get_component(c::TimeSeriesCache) = _get_component(c.common)
-_get_last_cached_time(c::TimeSeriesCache) = c.common.last_cached_time[]
-_get_length_available(c::TimeSeriesCache) = c.common.length_available[]
-_set_length_available!(c::TimeSeriesCache, len) = c.common.length_available[] = len
-_get_length_remaining(c::TimeSeriesCache) = c.common.length_remaining[]
-_get_last_timestamp_read(c::TimeSeriesCache) = c.common.last_read_time[]
-_set_last_timestamp_read!(c::TimeSeriesCache, val) = c.common.last_read_time[] = val
-_get_start_time(c::TimeSeriesCache) = c.common.start_time
-_decrement_length_remaining!(c::TimeSeriesCache, num) = c.common.length_remaining[] -= num
-_get_name(c::TimeSeriesCache) = c.common.name
-_get_num_iterations(c::TimeSeriesCache) = c.common.num_iterations
-_get_ignore_scaling_factors(c::TimeSeriesCache) = c.common.ignore_scaling_factors
-_get_type(c::TimeSeriesCache) = typeof(c.common.ts[])
-_get_time_series(c::TimeSeriesCache) = c.common.ts[]
-_set_time_series!(c::TimeSeriesCache, ts) = c.common.ts[] = ts
-_get_iterations_remaining(c::TimeSeriesCache) = c.common.iterations_remaining[]
-_decrement_iterations_remaining!(c::TimeSeriesCache) = c.common.iterations_remaining[] -= 1
-_get_resolution(cache::TimeSeriesCache) = get_resolution(_get_time_series(cache))
+@inline _get_component(c::TimeSeriesCache) = _get_component(c.common)
+@inline _get_last_cached_time(c::TimeSeriesCache) = c.common.last_cached_time[]
+@inline _get_length_available(c::TimeSeriesCache) = c.common.length_available[]
+@inline _set_length_available!(c::TimeSeriesCache, len) = c.common.length_available[] = len
+@inline _get_length_remaining(c::TimeSeriesCache) = c.common.length_remaining[]
+@inline _get_last_timestamp_read(c::TimeSeriesCache) = c.common.last_read_time[]
+@inline _set_last_timestamp_read!(c::TimeSeriesCache, val) = c.common.last_read_time[] = val
+@inline _get_start_time(c::TimeSeriesCache) = c.common.start_time
+@inline _decrement_length_remaining!(c::TimeSeriesCache, num) = c.common.length_remaining[] -= num
+@inline _get_name(c::TimeSeriesCache) = c.common.name
+@inline _get_num_iterations(c::TimeSeriesCache) = c.common.num_iterations
+@inline _get_ignore_scaling_factors(c::TimeSeriesCache) = c.common.ignore_scaling_factors
+@inline _get_type(c::TimeSeriesCache) = typeof(c.common.ts[])
+@inline _get_time_series(c::TimeSeriesCache) = c.common.ts[]
+@inline _set_time_series!(c::TimeSeriesCache, ts) = c.common.ts[] = ts
+@inline _get_iterations_remaining(c::TimeSeriesCache) = c.common.iterations_remaining[]
+@inline _decrement_iterations_remaining!(c::TimeSeriesCache) = c.common.iterations_remaining[] -= 1
+@inline _get_resolution(cache::TimeSeriesCache) = get_resolution(_get_time_series(cache))
 
 struct TimeSeriesCacheKey
     component_uuid::Base.UUID
@@ -195,7 +195,7 @@ struct TimeSeriesCacheCommon{T <: TimeSeriesData, U <: InfrastructureSystemsComp
     end
 end
 
-_get_component(c::TimeSeriesCacheCommon) = c.component
+@inline _get_component(c::TimeSeriesCacheCommon) = c.component
 
 function _reset!(common::TimeSeriesCacheCommon)
     common.next_time[] = common.start_time

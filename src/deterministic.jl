@@ -316,58 +316,58 @@ end
 """
 Get [`Deterministic`](@ref) `name`.
 """
-get_name(value::Deterministic) = value.name
+@inline get_name(value::Deterministic) = value.name
 
 """
 Get [`Deterministic`](@ref) `data`.
 """
-get_data(value::Deterministic) = value.data
+@inline get_data(value::Deterministic) = value.data
 
 """
 Get [`Deterministic`](@ref) `resolution`.
 """
-get_resolution(value::Deterministic) = value.resolution
+@inline get_resolution(value::Deterministic) = value.resolution
 
 """
 Get [`Deterministic`](@ref) `interval`.
 """
-get_interval(value::Deterministic) = value.interval
+@inline get_interval(value::Deterministic) = value.interval
 
 """
 Get [`Deterministic`](@ref) `scaling_factor_multiplier`.
 """
-get_scaling_factor_multiplier(value::Deterministic) = value.scaling_factor_multiplier
+@inline get_scaling_factor_multiplier(value::Deterministic) = value.scaling_factor_multiplier
 
 """
 Get [`Deterministic`](@ref) `internal`.
 """
-get_internal(value::Deterministic) = value.internal
+@inline get_internal(value::Deterministic) = value.internal
 
 """
 Set [`Deterministic`](@ref) `name`.
 """
-set_name!(value::Deterministic, val) = value.name = val
+@inline set_name!(value::Deterministic, val) = value.name = val
 
 """
 Set [`Deterministic`](@ref) `data`.
 """
-set_data!(value::Deterministic, val) = value.data = val
+@inline set_data!(value::Deterministic, val) = value.data = val
 
 """
 Set [`Deterministic`](@ref) `resolution`.
 """
-set_resolution!(value::Deterministic, val) = value.resolution = val
+@inline set_resolution!(value::Deterministic, val) = value.resolution = val
 
 """
 Set [`Deterministic`](@ref) `scaling_factor_multiplier`.
 """
-set_scaling_factor_multiplier!(value::Deterministic, val) =
+@inline set_scaling_factor_multiplier!(value::Deterministic, val) =
     value.scaling_factor_multiplier = val
 
 """
 Set [`Deterministic`](@ref) `internal`.
 """
-set_internal!(value::Deterministic, val) = value.internal = val
+@inline set_internal!(value::Deterministic, val) = value.internal = val
 
 # TODO handle typing here in a more principled fashion
 eltype_data(forecast::Deterministic) = eltype_data_common(forecast)

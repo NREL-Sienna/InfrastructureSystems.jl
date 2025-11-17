@@ -244,41 +244,41 @@ end
 """
 Get [`SingleTimeSeries`](@ref) `name`.
 """
-get_name(value::SingleTimeSeries) = value.name
+@inline get_name(value::SingleTimeSeries) = value.name
 """
 Get [`SingleTimeSeries`](@ref) `data`.
 """
-get_data(value::SingleTimeSeries) = value.data
+@inline get_data(value::SingleTimeSeries) = value.data
 """
 Get [`SingleTimeSeries`](@ref) `resolution`.
 """
-get_resolution(value::SingleTimeSeries) = value.resolution
+@inline get_resolution(value::SingleTimeSeries) = value.resolution
 """
 Get [`SingleTimeSeries`](@ref) `scaling_factor_multiplier`.
 """
-get_scaling_factor_multiplier(value::SingleTimeSeries) = value.scaling_factor_multiplier
+@inline get_scaling_factor_multiplier(value::SingleTimeSeries) = value.scaling_factor_multiplier
 """
 Get [`SingleTimeSeries`](@ref) `internal`.
 """
-get_internal(value::SingleTimeSeries) = value.internal
+@inline get_internal(value::SingleTimeSeries) = value.internal
 
 """
 Set [`SingleTimeSeries`](@ref) `name`.
 """
-set_name!(value::SingleTimeSeries, val) = value.name = val
+@inline set_name!(value::SingleTimeSeries, val) = value.name = val
 """
 Set [`SingleTimeSeries`](@ref) `data`.
 """
-set_data!(value::SingleTimeSeries, val) = value.data = val
+@inline set_data!(value::SingleTimeSeries, val) = value.data = val
 """
 Set [`SingleTimeSeries`](@ref) `scaling_factor_multiplier`.
 """
-set_scaling_factor_multiplier!(value::SingleTimeSeries, val) =
+@inline set_scaling_factor_multiplier!(value::SingleTimeSeries, val) =
     value.scaling_factor_multiplier = val
 """
 Set [`SingleTimeSeries`](@ref) `internal`.
 """
-set_internal!(value::SingleTimeSeries, val) = value.internal = val
+@inline set_internal!(value::SingleTimeSeries, val) = value.internal = val
 
 eltype_data(ts::SingleTimeSeries) = eltype(TimeSeries.values(ts.data))
 

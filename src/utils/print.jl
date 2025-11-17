@@ -305,7 +305,7 @@ function show_supplemental_attributes(component::InfrastructureSystemsComponent)
 end
 
 function show_supplemental_attributes(io::IO, component::InfrastructureSystemsComponent)
-    data_by_type = Dict{Any, Vector{OrderedDict{String, Any}}}()
+    data_by_type = Dict{DataType, Vector{OrderedDict{String, Any}}}()
     for attribute in get_supplemental_attributes(component)
         if !haskey(data_by_type, typeof(attribute))
             data_by_type[typeof(attribute)] = Vector{OrderedDict{String, Any}}()
@@ -331,7 +331,7 @@ function show_time_series(owner::TimeSeriesOwners)
 end
 
 function show_time_series(io::IO, owner::TimeSeriesOwners)
-    data_by_type = Dict{Any, Vector{OrderedDict{String, Any}}}()
+    data_by_type = Dict{DataType, Vector{OrderedDict{String, Any}}}()
     for key in get_time_series_keys(owner)
         ts_type = get_time_series_type(key)
         if !haskey(data_by_type, ts_type)

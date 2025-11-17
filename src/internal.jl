@@ -64,8 +64,8 @@ function clear_ext!(obj::InfrastructureSystemsInternal)
     return
 end
 
-get_uuid(internal::InfrastructureSystemsInternal) = internal.uuid
-set_uuid!(internal::InfrastructureSystemsInternal, uuid) = internal.uuid = uuid
+@inline get_uuid(internal::InfrastructureSystemsInternal) = internal.uuid
+@inline set_uuid!(internal::InfrastructureSystemsInternal, uuid) = internal.uuid = uuid
 
 function set_shared_system_references!(
     internal::InfrastructureSystemsInternal,
@@ -75,8 +75,8 @@ function set_shared_system_references!(
     return
 end
 
-get_units_info(internal::InfrastructureSystemsInternal) = internal.units_info
-set_units_info!(internal::InfrastructureSystemsInternal, val) = internal.units_info = val
+@inline get_units_info(internal::InfrastructureSystemsInternal) = internal.units_info
+@inline set_units_info!(internal::InfrastructureSystemsInternal, val) = internal.units_info = val
 
 """
 Gets the UUID for any InfrastructureSystemsType.

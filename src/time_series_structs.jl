@@ -15,9 +15,9 @@ The default methods rely on the field names `name` and `time_series_type`.
 """
 abstract type TimeSeriesKey <: InfrastructureSystemsType end
 
-get_name(key::TimeSeriesKey) = key.name
-get_resolution(key::TimeSeriesKey) = key.resolution
-get_time_series_type(key::TimeSeriesKey) = key.time_series_type
+@inline get_name(key::TimeSeriesKey) = key.name
+@inline get_resolution(key::TimeSeriesKey) = key.resolution
+@inline get_time_series_type(key::TimeSeriesKey) = key.time_series_type
 
 function deserialize_struct(T::Type{<:TimeSeriesKey}, data::Dict)
     vals = Dict{Symbol, Any}()

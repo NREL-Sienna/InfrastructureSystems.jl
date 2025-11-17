@@ -60,22 +60,24 @@ end
 Returns a summary of log event counts by level.
 """
 function report_log_summary(tracker::LogEventTracker)
-    text = "\nLog message summary:\n"
+    io = IOBuffer()
+    print(io, "\nLog message summary:")
     # Order by criticality.
     for level in sort!(collect(keys(tracker.events)); rev = true)
         num_events = length(tracker.events[level])
-        text *= "\n$num_events $level events:\n"
+        print(io, "\n\n", num_events, " ", level, " events:")
         for event in
             sort!(collect(get_log_events(tracker, level)); by = x -> x.count, rev = true)
-            text *= "  count=$(event.count) at $(event.file):$(event.line)\n"
-            text *= "    example message=\"$(event.message)\"\n"
+            print(io, "\n  count=", event.count, " at ", event.file, ":", event.line)
+            print(io, "\n    example message=\"", event.message, "\"")
             if event.suppressed > 0
-                text *= "    suppressed=$(event.suppressed)\n"
+                print(io, "\n    suppressed=", event.suppressed)
             end
         end
     end
+    print(io, "\n")
 
-    return text
+    return String(take!(io))
 end
 
 """

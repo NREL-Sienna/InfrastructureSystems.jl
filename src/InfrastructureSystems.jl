@@ -105,22 +105,22 @@ components attached to each attribute.
 abstract type SupplementalAttribute <: InfrastructureSystemsType end
 
 "Return true if the component is available."
-get_available(value::InfrastructureSystemsComponent) = true
+@inline get_available(value::InfrastructureSystemsComponent) = true
 
 "Set the availability of the component."
-set_available!(value::InfrastructureSystemsComponent) = true
+@inline set_available!(value::InfrastructureSystemsComponent) = true
 
 "Return the name of the component."
-get_name(value::InfrastructureSystemsComponent) = value.name
+@inline get_name(value::InfrastructureSystemsComponent) = value.name
 
 "Return true if the component supports supplemental attributes."
-supports_supplemental_attributes(::InfrastructureSystemsComponent) = true
+@inline supports_supplemental_attributes(::InfrastructureSystemsComponent) = true
 
 "Return true if the component supports time series."
-supports_time_series(::InfrastructureSystemsComponent) = false
+@inline supports_time_series(::InfrastructureSystemsComponent) = false
 
 "Return true if the supplemental attribute supports time series."
-supports_time_series(::SupplementalAttribute) = false
+@inline supports_time_series(::SupplementalAttribute) = false
 
 "Set the name of the component. Must only be called by InfrastructureSystems."
 function set_name_internal!(value::InfrastructureSystemsComponent, name)

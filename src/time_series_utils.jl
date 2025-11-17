@@ -11,6 +11,26 @@ const TIME_SERIES_STRING_TO_TYPE = Dict(
     "SingleTimeSeries" => SingleTimeSeries,
 )
 
+"""
+Parse time series type string to concrete type using static dispatch.
+This is more efficient for precompilation than dictionary lookup.
+"""
+@inline function parse_time_series_type(type_str::String)::Type{<:TimeSeriesData}
+    if type_str == "Deterministic"
+        return Deterministic
+    elseif type_str == "DeterministicSingleTimeSeries"
+        return DeterministicSingleTimeSeries
+    elseif type_str == "Probabilistic"
+        return Probabilistic
+    elseif type_str == "Scenarios"
+        return Scenarios
+    elseif type_str == "SingleTimeSeries"
+        return SingleTimeSeries
+    else
+        throw(ArgumentError("Unknown time series type: $type_str"))
+    end
+end
+
 time_series_metadata_to_data(::ProbabilisticMetadata) = Probabilistic
 time_series_metadata_to_data(::ScenariosMetadata) = Scenarios
 time_series_metadata_to_data(::SingleTimeSeriesMetadata) = SingleTimeSeries

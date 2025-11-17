@@ -91,7 +91,7 @@ function _load_metadata_into_memory!(store::TimeSeriesMetadataStore)
     )
     exclude_keys = Set((:metadata_uuid, :owner_uuid, :time_series_type))
     for row in Tables.rowtable(SQLite.DBInterface.execute(stmt))
-        time_series_type = TIME_SERIES_STRING_TO_TYPE[row.time_series_type]
+        time_series_type = parse_time_series_type(row.time_series_type)
         metadata_type = time_series_data_to_metadata(time_series_type)
         fields = Set(fieldnames(metadata_type))
         data = Dict{Symbol, Any}(
