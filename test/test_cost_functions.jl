@@ -337,3 +337,104 @@ end
     ) ==
           IS.LinearCurve(10.0, 7.0)
 end
+
+@testset "Test PiecewiseIncrementalCurve function evaluation" begin
+
+    # multiple equal slopes
+    fixed_slope = 2.5
+    x_breakpoints = [1.0, 2.0, 4.0, 6.0]
+    pwl = IS.PiecewiseIncrementalCurve(
+        0.0,
+        0.0,
+        x_breakpoints,
+        fixed_slope .* ones(length(x_breakpoints) - 1),
+    )
+    @test_throws ArgumentError pwl(first(x_breakpoints) - 0.1)
+    @test_throws ArgumentError pwl(last(x_breakpoints) + 0.1)
+    for x in x_breakpoints
+        @test pwl(x) ≈ fixed_slope * (x - first(x_breakpoints))
+    end
+    for i in 1:(length(x_breakpoints) - 1)
+        x = (x_breakpoints[i] + x_breakpoints[i + 1]) / 2
+        @test pwl(x) ≈ fixed_slope * (x - first(x_breakpoints))
+    end
+
+    # Test with 3 different slopes
+    x_coords_2 = x_breakpoints
+    slopes_2 = [1.0, 2.0, 3.0]
+    initial_2 = 10.0
+    pwl_2slopes = IS.PiecewiseIncrementalCurve(initial_2, x_coords_2, slopes_2)
+
+    # At breakpoints
+    @test pwl_2slopes(1.0) ≈ 10.0
+    @test pwl_2slopes(2.0) ≈ 10.0 + 1.0 * (2.0 - 1.0)
+    @test pwl_2slopes(4.0) ≈ 11.0 + 2.0 * (4.0 - 2.0)
+    @test pwl_2slopes(6.0) ≈ 15.0 + 3.0 * (6.0 - 4.0)
+
+    # Between breakpoints (and not just halfway in between)
+    @test pwl_2slopes(1.5) ≈ 10.0 + 1.0 * (1.5 - 1.0)
+    @test pwl_2slopes(2.5) ≈ 11.0 + 2.0 * (2.5 - 2.0)
+    @test pwl_2slopes(4.5) ≈ 15.0 + 3.0 * (4.5 - 4.0)
+
+    # Test with initial_input = nothing (should treat as 0.0)
+    pwl_no_initial = IS.PiecewiseIncrementalCurve(nothing, x_coords_2, slopes_2)
+    @test pwl_no_initial(1.0) ≈ 0.0
+    @test pwl_no_initial(2.0) ≈ 0.0 + 1.0 * (2.0 - 1.0)
+
+    # Verify input_at_zero is stored but doesn't affect evaluation
+    input_at_zero_val = 100.0
+    pwl_with_iaz = IS.PiecewiseIncrementalCurve(
+        input_at_zero_val,
+        initial_2,
+        x_coords_2,
+        slopes_2,
+    )
+
+    @test IS.get_input_at_zero(pwl_with_iaz) == input_at_zero_val
+    @test pwl_with_iaz(1.0) ≈ pwl_2slopes(1.0)
+    @test pwl_with_iaz(4.0) ≈ pwl_2slopes(4.0)
+end
+
+@testset "Test PiecewiseAverageCurve function evaluation" begin
+
+    # multiple equal average rates, through origin: just get a line.
+    fixed_rate = 4.0
+    x_breakpoints = [0.0, 3.0, 5.0]
+    pwl = IS.PiecewiseAverageCurve(
+        0.0,
+        x_breakpoints,
+        fixed_rate .* ones(length(x_breakpoints) - 1),
+    )
+    @test_throws ArgumentError pwl(first(x_breakpoints) - 0.1)
+    @test_throws ArgumentError pwl(last(x_breakpoints) + 0.1)
+    for x in x_breakpoints
+        @test pwl(x) ≈ fixed_rate * (x - first(x_breakpoints))
+    end
+    for i in 1:(length(x_breakpoints) - 1)
+        x = (x_breakpoints[i] + x_breakpoints[i + 1]) / 2
+        @test pwl(x) ≈ fixed_rate * (x - first(x_breakpoints))
+    end
+
+    # Test with different average rates, and not through origin.
+    x_coords_2 = [1.0, 3.0, 5.0]
+    rates_2 = [2.0, 4.0]
+    initial_2 = 5.0
+    pwl_2rates = IS.PiecewiseAverageCurve(initial_2, x_coords_2, rates_2)
+
+    # At breakpoints
+    @test pwl_2rates(x_coords_2[1]) ≈ initial_2
+    for (x, avg_slope) in zip(x_coords_2[2:end], rates_2)
+        @test pwl_2rates(x) ≈ avg_slope * x
+    end
+
+    # between breakpoints (and not just halfway in between)
+    t = 0.7
+    output_at_breakpoints = [pwl_2rates(x) for x in x_coords_2]
+    for i in 1:(length(x_coords_2) - 1)
+        x_before, x_after = x_coords_2[i], x_coords_2[i + 1]
+        x = x_before + t * (x_after - x_before)
+        y_before, y_after = output_at_breakpoints[i], output_at_breakpoints[i + 1]
+        expected = y_before + t * (y_after - y_before)
+        @test pwl_2rates(x) ≈ expected
+    end
+end

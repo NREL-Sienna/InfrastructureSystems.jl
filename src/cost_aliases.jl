@@ -162,6 +162,23 @@ Base.show(io::IO, vc::PiecewiseIncrementalCurve) =
             "$(typeof(vc))($(get_input_at_zero(vc)), $(get_initial_input(vc)), $(get_x_coords(vc)), $(get_slopes(vc)))"
         end,
     )
+"""
+Evaluate the `PiecewiseIncrementalCurve` at a given input `x`
+"""
+function (pwl::PiecewiseIncrementalCurve)(x::Real)
+    x = check_domain(get_function_data(pwl), x)
+    x_coords = get_x_coords(pwl)
+    slopes = get_slopes(pwl)
+    i_leq = searchsortedlast(x_coords, x)  # uses binary search!
+    total = isnothing(get_initial_input(pwl)) ? 0.0 : get_initial_input(pwl)
+    for ix in 1:(i_leq - 1)
+        total += slopes[ix] * (x_coords[ix + 1] - x_coords[ix])
+    end
+    if i_leq <= length(y_coords)
+        total += y_coords[i_leq] * (x - x_coords[i_leq])
+    end
+    return total
+end
 
 """
     PiecewiseAverageCurve(initial_input::Union{Float64, Nothing}, x_coords::Vector{Float64}, slopes::Vector{Float64})
@@ -197,3 +214,35 @@ Base.show(io::IO, vc::PiecewiseAverageCurve) =
     else
         Base.show_default(io, vc)
     end
+
+# Helper function to get the output at the i-th breakpoint
+function _output_at_ith_breakpoint(pac::PiecewiseAverageCurve, i::Int)
+    @assert 1 <= i <= length(get_x_coords(pac)) "i out of bounds"
+    init_input = get_initial_input(pac)
+    init_input_float = isnothing(init_input) ? 0.0 : init_input
+    x_coords = get_x_coords(pac)
+    avg_slopes = get_average_rates(pac)
+    return i == 1 ? init_input_float : x_coords[i] * avg_slopes[i - 1]
+end
+
+"""
+Evaluate the `PiecewiseAverageCurve` at a given input `x`
+"""
+function (pac::PiecewiseAverageCurve)(x::Real)
+    x = check_domain(get_function_data(pac), x)
+    x_coords = get_x_coords(pac)
+    i_leq = searchsortedlast(x_coords, x)
+    i_geq = searchsortedfirst(x_coords, x)
+    if i_leq == i_geq
+        # x is exactly at a breakpoint
+        return _output_at_ith_breakpoint(pac, i_leq)
+    end
+    x_leq = x_coords[i_leq]
+    x_geq = x_coords[i_geq]
+    # x_leq <= x <= x_geq; calculate output at x_leq, x_geq, then interpolate linearly.
+    y_leq = _output_at_ith_breakpoint(pac, i_leq)
+    y_geq = _output_at_ith_breakpoint(pac, i_geq)
+    weight_leq = (x_geq - x) / (x_geq - x_leq)
+    weight_geq = (x - x_leq) / (x_geq - x_leq)
+    return weight_leq * y_leq + weight_geq * y_geq
+end
