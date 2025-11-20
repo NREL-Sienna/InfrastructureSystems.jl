@@ -27,6 +27,7 @@ import TOML
 using DataStructures: OrderedDict, SortedDict
 import SQLite
 import Tables
+using LinearAlgebra: norm, dot
 
 using DocStringExtensions
 
