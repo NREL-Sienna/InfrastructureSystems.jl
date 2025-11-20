@@ -672,11 +672,14 @@ function approximation_error(
     diff = y_orig .- y_approx
 
     if metric === :L2
-        return sqrt(sum(w .* diff .^ 2) / sum(w))
+        # Weighted L2 norm (root mean square error)
+        return norm(sqrt.(w) .* diff) / sqrt(sum(w))
     elseif metric === :L1
-        return sum(w .* abs.(diff)) / sum(w)
+        # Weighted L1 norm (mean absolute error)
+        return dot(w, abs.(diff)) / sum(w)
     elseif metric === :Linf
-        return maximum(abs.(diff))
+        # L∞ norm (maximum absolute error)
+        return norm(diff, Inf)
     else
         throw(ArgumentError("metric must be :L2, :L1, or :Linf"))
     end
@@ -696,11 +699,14 @@ function approximation_error(
     diff = slopes_orig .- slopes_approx
 
     if metric === :L2
-        return sqrt(sum(w .* diff .^ 2) / sum(w))
+        # Weighted L2 norm (root mean square error)
+        return norm(sqrt.(w) .* diff) / sqrt(sum(w))
     elseif metric === :L1
-        return sum(w .* abs.(diff)) / sum(w)
+        # Weighted L1 norm (mean absolute error)
+        return dot(w, abs.(diff)) / sum(w)
     elseif metric === :Linf
-        return maximum(abs.(diff))
+        # L∞ norm (maximum absolute error)
+        return norm(diff, Inf)
     else
         throw(ArgumentError("metric must be :L2, :L1, or :Linf"))
     end
