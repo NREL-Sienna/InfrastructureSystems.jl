@@ -32,7 +32,7 @@ function Base.show(io::IO, ::MIME"text/plain", container::InfrastructureSystemsC
     println(io, "Num $member_str: $num_members")
     if num_members > 0
         println(io)
-        show_container_table(io, container; backend = Val(:auto))
+        show_container_table(io, container; backend = :auto)
     end
 end
 
@@ -42,7 +42,7 @@ function Base.show(io::IO, ::MIME"text/html", container::InfrastructureSystemsCo
     println(io, "<h2>Members</h2>")
     println(io, "<p><b>Num $member_str</b>: $num_members</p>")
     if num_members > 0
-        show_container_table(io, container; backend = Val(:html), standalone = false)
+        show_container_table(io, container; backend = :html, stand_alone = false)
     end
 end
 
@@ -64,8 +64,8 @@ function Base.show(io::IO, ::MIME"text/plain", data::SystemData)
     println(io, "\n")
     show(io, MIME"text/plain"(), data.supplemental_attribute_manager)
     println(io, "\n")
-    show_time_series_data(io, data; backend = Val(:auto))
-    show_supplemental_attributes_data(io, data; backend = Val(:auto))
+    show_time_series_data(io, data; backend = :auto)
+    show_supplemental_attributes_data(io, data; backend = :auto)
 end
 
 function Base.show(io::IO, ::MIME"text/html", data::SystemData)
@@ -73,8 +73,8 @@ function Base.show(io::IO, ::MIME"text/html", data::SystemData)
     println(io, "\n")
     show(io, MIME"text/html"(), data.supplemental_attribute_manager)
     println(io, "\n")
-    show_time_series_data(io, data; backend = Val(:html), standalone = false)
-    show_supplemental_attributes_data(io, data; backend = Val(:html), standalone = false)
+    show_time_series_data(io, data; backend = :html, stand_alone = false)
+    show_supplemental_attributes_data(io, data; backend = :html, stand_alone = false)
 end
 
 function show_time_series_data(io::IO, data::SystemData; kwargs...)
@@ -192,8 +192,8 @@ function _get_type_counts(it::FlattenIteratorWrapper)
 end
 
 function show_container_table(io::IO, container::InfrastructureSystemsContainer; kwargs...)
-    header = ["Type", "Count", "Has Static Time Series", "Has Forecasts"]
-    data = Array{Any, 2}(undef, length(container.data), length(header))
+    column_labels = ["Type", "Count", "Has Static Time Series", "Has Forecasts"]
+    data = Array{Any, 2}(undef, length(container.data), length(column_labels))
 
     type_names = [(strip_module_name(x), x) for x in keys(container.data)]
     sort!(type_names; by = x -> x[1])
@@ -218,7 +218,7 @@ function show_container_table(io::IO, container::InfrastructureSystemsContainer;
         data[i, 4] = has_forecasts
     end
 
-    PrettyTables.pretty_table(io, data; header = header, alignment = :l, kwargs...)
+    PrettyTables.pretty_table(io, data; column_labels = column_labels, alignment = :l, kwargs...)
     return
 end
 
@@ -234,10 +234,10 @@ function show_components(
     end
 
     title = strip_module_name(component_type)
-    header = ["name"]
+    column_labels = ["name"]
     has_available = false
     if :available in fieldnames(component_type)
-        push!(header, "available")
+        push!(column_labels, "available")
         has_available = true
     end
 
@@ -248,11 +248,11 @@ function show_components(
     end
 
     for column in columns
-        push!(header, string(column))
+        push!(column_labels, string(column))
     end
 
     comps = get_components(component_type, components)
-    data = Array{Any, 2}(undef, length(comps), length(header))
+    data = Array{Any, 2}(undef, length(comps), length(column_labels))
     for (i, component) in enumerate(comps)
         data[i, 1] = get_name(component)
         j = 2
@@ -289,7 +289,7 @@ function show_components(
     PrettyTables.pretty_table(
         io,
         data;
-        header = header,
+        column_labels = column_labels,
         title = title,
         alignment = :l,
         kwargs...,
