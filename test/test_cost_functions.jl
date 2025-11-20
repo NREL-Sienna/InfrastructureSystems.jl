@@ -351,6 +351,10 @@ end
     )
     @test_throws ArgumentError pwl(first(x_breakpoints) - 0.1)
     @test_throws ArgumentError pwl(last(x_breakpoints) + 0.1)
+    # cover the version of check_domain that accepts Real
+    @test_throws ArgumentError pwl(1 // 2)
+    @test_throws ArgumentError pwl(99 // 2)
+    pwl(5 // 2)
     for x in x_breakpoints
         @test pwl(x) ≈ fixed_slope * (x - first(x_breakpoints))
     end

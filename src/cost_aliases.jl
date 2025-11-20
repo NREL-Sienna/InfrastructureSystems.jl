@@ -174,8 +174,8 @@ function (pwl::PiecewiseIncrementalCurve)(x::Real)
     for ix in 1:(i_leq - 1)
         total += slopes[ix] * (x_coords[ix + 1] - x_coords[ix])
     end
-    if i_leq <= length(y_coords)
-        total += y_coords[i_leq] * (x - x_coords[i_leq])
+    if i_leq <= length(slopes)
+        total += slopes[i_leq] * (x - x_coords[i_leq])
     end
     return total
 end
