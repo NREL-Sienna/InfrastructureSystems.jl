@@ -45,6 +45,8 @@ Base.show(io::IO, vc::LinearCurve) =
         Base.show_default(io, vc)
     end
 
+(lc::LinearCurve)(x::Real) = get_function_data(lc)(x)
+
 """
     QuadraticCurve(quadratic_term::Float64, proportional_term::Float64, constant_term::Float64)
 
@@ -82,6 +84,8 @@ Base.show(io::IO, vc::QuadraticCurve) =
     else
         Base.show_default(io, vc)
     end
+
+(qd::QuadraticCurve)(x::Real) = get_function_data(qd)(x)
 
 """
     PiecewisePointCurve(points::Vector{Tuple{Float64, Float64}})

@@ -442,3 +442,18 @@ end
         @test pwl_2rates(x) ≈ expected
     end
 end
+
+@testset "Test LinearCurve evaluation" begin
+    lc = IS.LinearCurve(2.0, 3.0)
+    @test lc(0.0) == 3.0
+    @test lc(1.0) == 5.0
+    @test lc(2.5) == 8.0
+end
+
+@testset "Test QuadraticCurve evaluation" begin
+    qc = IS.QuadraticCurve(1.0, 2.0, 3.0) # quadratic, linear, constant.
+    @test qc(0.0) == 3.0
+    @test qc(1.0) == 1.0 + 2.0 + 3.0
+    @test qc(-1.0) == 1.0 - 2.0 + 3.0
+    @test qc(2.0) == 4.0 + 4.0 + 3.0
+end
