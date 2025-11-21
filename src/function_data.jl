@@ -649,24 +649,13 @@ _eval_fd_impl(
 ) =
     y_coords[i]
 
-function check_domain(fd::FunctionData, x::Real)
-    lb, ub = get_domain(fd)
-    (lb <= x <= ub) ||
-        throw(ArgumentError("x=$x is outside the domain [$lb, $ub]"))
-    return x
-end
-
-"Helper function to check domain with floating point tolerance."
-function check_domain(fd::FunctionData, x::AbstractFloat)
-    lb, ub = get_domain(fd)
-    ((lb <= x <= ub) || isapprox(x, lb) || isapprox(x, ub)) ||
-        throw(ArgumentError("x=$x is outside the domain [$lb, $ub]"))
-    return clamp(x, lb, ub)
-end
-
 "Evaluate the `PiecewiseLinearData` or `PiecewiseStepData` at a given x-coordinate"
 function (fd::Union{PiecewiseLinearData, PiecewiseStepData})(x::Real)
-    x = check_domain(fd, x)
+    lb, ub = get_domain(fd)
+    # defend against floating point precision issues at the boundaries.
+    ((lb <= x <= ub) || isapprox(x, lb) || isapprox(x, ub)) ||
+        throw(ArgumentError("x=$x is outside the domain [$lb, $ub]"))
+    x = clamp(x, lb, ub)
     x_coords = get_x_coords(fd)
     y_coords = get_y_coords(fd)
     i_leq = searchsortedlast(x_coords, x)  # uses binary search!
