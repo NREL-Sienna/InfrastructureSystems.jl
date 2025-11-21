@@ -1,3 +1,12 @@
+function _handle_kwargs(kwargs...)
+    kwargs = Dict{Symbol, Any}(kwargs...)
+    if haskey(kwargs, :stand_alone)
+        kwargs[:standalone] = kwargs[:stand_alone]
+        delete!(kwargs, :stand_alone)
+    end
+    return kwargs
+end
+
 function show_time_series_data(io::IO, data::SystemData; kwargs...)
     table = get_static_time_series_summary_table(data)
     if !isempty(table)
@@ -6,7 +15,7 @@ function show_time_series_data(io::IO, data::SystemData; kwargs...)
             table;
             title = "StaticTimeSeries Summary",
             alignment = :l,
-            kwargs...,
+            _handle_kwargs(kwargs)...,
         )
     end
     table = get_forecast_summary_table(data)
@@ -16,7 +25,7 @@ function show_time_series_data(io::IO, data::SystemData; kwargs...)
             table;
             title = "Forecast Summary",
             alignment = :l,
-            kwargs...,
+            _handle_kwargs(kwargs)...,
         )
     end
     return
@@ -30,7 +39,7 @@ function show_supplemental_attributes_data(io::IO, data::SystemData; kwargs...)
             table;
             title = "Supplemental Attribute Summary",
             alignment = :l,
-            kwargs...,
+            _handle_kwargs(kwargs)...,
         )
     end
     return
@@ -63,7 +72,13 @@ function show_container_table(io::IO, container::InfrastructureSystemsContainer;
         data[i, 4] = has_forecasts
     end
 
-    PrettyTables.pretty_table(io, data; header = header, alignment = :l, kwargs...)
+    PrettyTables.pretty_table(
+        io,
+        data;
+        header = header,
+        alignment = :l,
+        _handle_kwargs(kwargs)...,
+    )
     return
 end
 
@@ -137,7 +152,7 @@ function show_components(
         header = header,
         title = title,
         alignment = :l,
-        kwargs...,
+        _handle_kwargs(kwargs)...,
     )
     return
 end
@@ -220,6 +235,6 @@ function show_recorder_events(
         end
     end
 
-    PrettyTables.pretty_table(io, data; header = header, kwargs...)
+    PrettyTables.pretty_table(io, data; header = header, _handle_kwargs(kwargs)...)
     return
 end

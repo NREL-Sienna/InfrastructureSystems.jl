@@ -24,15 +24,12 @@ end
 
 function show_supplemental_attributes_data(io::IO, data::SystemData; kwargs...)
     table = get_supplemental_attribute_summary_table(data)
-    back_end_symbol = pop!(kwargs, :backend, :auto)
-    backend_val = Val(back_end_symbol),
     if !isempty(table)
         PrettyTables.pretty_table(
             io,
             table;
             title = "Supplemental Attribute Summary",
             alignment = :l,
-            backend = backend_val,
             kwargs...,
         )
     end
