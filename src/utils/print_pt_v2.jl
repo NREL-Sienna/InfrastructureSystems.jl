@@ -4,6 +4,7 @@ function _handle_kwargs(kwargs...)
         kwargs[:standalone] = kwargs[:stand_alone]
         delete!(kwargs, :stand_alone)
     end
+    kwargs[:backend] = Val(pop!(kwargs, :backend, :auto))
     return kwargs
 end
 

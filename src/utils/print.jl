@@ -32,7 +32,7 @@ function Base.show(io::IO, ::MIME"text/plain", container::InfrastructureSystemsC
     println(io, "Num $member_str: $num_members")
     if num_members > 0
         println(io)
-        show_container_table(io, container; backend = Val(:auto))
+        show_container_table(io, container; backend = :auto)
     end
 end
 
@@ -42,7 +42,7 @@ function Base.show(io::IO, ::MIME"text/html", container::InfrastructureSystemsCo
     println(io, "<h2>Members</h2>")
     println(io, "<p><b>Num $member_str</b>: $num_members</p>")
     if num_members > 0
-        show_container_table(io, container; backend = Val(:html), stand_alone = false)
+        show_container_table(io, container; backend = :html, stand_alone = false)
     end
 end
 
@@ -64,8 +64,8 @@ function Base.show(io::IO, ::MIME"text/plain", data::SystemData)
     println(io, "\n")
     show(io, MIME"text/plain"(), data.supplemental_attribute_manager)
     println(io, "\n")
-    show_time_series_data(io, data; backend = Val(:auto))
-    show_supplemental_attributes_data(io, data; backend = Val(:auto))
+    show_time_series_data(io, data; backend = :auto)
+    show_supplemental_attributes_data(io, data; backend = :auto)
 end
 
 function Base.show(io::IO, ::MIME"text/html", data::SystemData)
@@ -73,8 +73,8 @@ function Base.show(io::IO, ::MIME"text/html", data::SystemData)
     println(io, "\n")
     show(io, MIME"text/html"(), data.supplemental_attribute_manager)
     println(io, "\n")
-    show_time_series_data(io, data; backend = Val(:html), stand_alone = false)
-    show_supplemental_attributes_data(io, data; backend = Val(:html), stand_alone = false)
+    show_time_series_data(io, data; backend = :html, stand_alone = false)
+    show_supplemental_attributes_data(io, data; backend = :html, stand_alone = false)
 end
 
 function Base.show(io::IO, ::MIME"text/plain", system_units::SystemUnitsSettings)
