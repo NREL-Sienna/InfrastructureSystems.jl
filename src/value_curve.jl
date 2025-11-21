@@ -42,6 +42,11 @@ InputOutputCurve{T}(
     InputOutputCurve{T}(function_data, nothing)
 
 """
+Evaluate the `InputOutputCurve` at a given input value `x`.
+"""
+(ioc::InputOutputCurve)(x::Real) = get_function_data(ioc)(x)
+
+"""
 An incremental (or 'marginal') curve, relating the production quantity to the derivative of
 cost: `y = f'(x)`. Can be used, for instance, in the representation of a [`CostCurve`](@ref)
 where `x` is MW and `y` is currency/MWh, or in the representation of a [`FuelCurve`](@ref)
@@ -62,7 +67,7 @@ IncrementalCurve(function_data, initial_input) =
 IncrementalCurve{T}(
     function_data,
     initial_input,
-) where {(T <: Union{QuadraticFunctionData, LinearFunctionData, PiecewiseLinearData})} =
+) where {(T <: Union{LinearFunctionData, PiecewiseStepData})} =
     IncrementalCurve{T}(function_data, initial_input, nothing)
 
 """
@@ -87,7 +92,7 @@ AverageRateCurve(function_data, initial_input) =
 AverageRateCurve{T}(
     function_data,
     initial_input,
-) where {(T <: Union{QuadraticFunctionData, LinearFunctionData, PiecewiseLinearData})} =
+) where {(T <: Union{LinearFunctionData, PiecewiseStepData})} =
     AverageRateCurve{T}(function_data, initial_input, nothing)
 
 "Get the `initial_input` field of this `ValueCurve` (not defined for `InputOutputCurve`)"
