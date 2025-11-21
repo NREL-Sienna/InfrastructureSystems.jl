@@ -249,14 +249,14 @@ function show_recorder_events(
         return
     end
 
-    header = [x for x in ("timestamp", "name") if !(x in exclude_columns)]
+    column_labels = [x for x in ("timestamp", "name") if !(x in exclude_columns)]
     for (fieldname, fieldtype) in zip(fieldnames(T), fieldtypes(T))
         if !(fieldtype <: RecorderEventCommon)
-            push!(header, string(fieldname))
+            push!(column_labels, string(fieldname))
         end
     end
 
-    data = Array{Any, 2}(undef, length(events), length(header))
+    data = Array{Any, 2}(undef, length(events), length(column_labels))
     for (i, event) in enumerate(events)
         col_index = 1
         if !("timestamp" in exclude_columns)
@@ -275,6 +275,6 @@ function show_recorder_events(
         end
     end
 
-    PrettyTables.pretty_table(io, data; header = header, kwargs...)
+    PrettyTables.pretty_table(io, data; column_labels = column_labels, kwargs...)
     return
 end
