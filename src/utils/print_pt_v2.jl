@@ -1,10 +1,19 @@
+function _make_backend_entry(backend::Val{T}) where {T}
+    return backend
+end
+
+function _make_backend_entry(backend::Symbol)
+    return Val(backend)
+end
+
 function _handle_kwargs(kwargs...)
     kwargs = Dict{Symbol, Any}(kwargs...)
     if haskey(kwargs, :stand_alone)
         kwargs[:standalone] = kwargs[:stand_alone]
         delete!(kwargs, :stand_alone)
     end
-    kwargs[:backend] = Val(pop!(kwargs, :backend, :auto))
+    backend_entry = pop!(kwargs, :backend, Val(:auto))
+    kwargs[:backend] = _make_backend_entry(backend_entry)
     return kwargs
 end
 
