@@ -85,6 +85,10 @@ function _create_indexes!(associations::SupplementalAttributeAssociations)
         ];
         unique = false,
     )
+
+    # Run ANALYZE to gather statistics for query planner
+    SQLite.DBInterface.execute(associations.db, "ANALYZE")
+
     return
 end
 
@@ -203,6 +207,17 @@ Return the number of components with supplemental attributes.
 """
 function get_num_components_with_attributes(associations::SupplementalAttributeAssociations)
     return _execute_count(associations, _QUERY_GET_NUM_COMPONENTS_WITH_ATTRIBUTES)
+end
+
+"""
+Update database statistics for optimal query planning.
+Call this after bulk operations or significant data changes.
+"""
+function optimize_database!(associations::SupplementalAttributeAssociations)
+    # Run ANALYZE to update query planner statistics
+    SQLite.DBInterface.execute(associations.db, "ANALYZE")
+    @debug "Optimized database statistics" _group = LOG_GROUP_SUPPLEMENTAL_ATTRIBUTES
+    return
 end
 
 const _QUERY_HAS_ASSOCIATION_BY_ATTRIBUTE = """
@@ -716,15 +731,25 @@ function from_records(::Type{SupplementalAttributeAssociations}, records)
         end
     end
     placeholder = chop(repeat("?,", num_columns))
-    SQLite.DBInterface.executemany(
-        associations.db,
-        StringTemplates.render(
-            _QUERY_INSERT_ROWS_INTO_C_ATTR_TABLE;
-            table_name = SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME,
-            placeholder = placeholder,
-        ),
-        NamedTuple(Symbol(k) => v for (k, v) in data),
-    )
+
+    # Optimized: Wrap bulk insert in explicit transaction for better performance
+    SQLite.DBInterface.execute(associations.db, "BEGIN TRANSACTION")
+    try
+        SQLite.DBInterface.executemany(
+            associations.db,
+            StringTemplates.render(
+                _QUERY_INSERT_ROWS_INTO_C_ATTR_TABLE;
+                table_name = SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME,
+                placeholder = placeholder,
+            ),
+            NamedTuple(Symbol(k) => v for (k, v) in data),
+        )
+        SQLite.DBInterface.execute(associations.db, "COMMIT")
+    catch e
+        SQLite.DBInterface.execute(associations.db, "ROLLBACK")
+        rethrow(e)
+    end
+
     _create_indexes!(associations)
     return associations
 end
