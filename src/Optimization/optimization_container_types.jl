@@ -1,11 +1,12 @@
 abstract type AbstractOptimizationContainer end
 
-abstract type VariableType end
-abstract type ConstraintType end
-abstract type AuxVariableType end
-abstract type ParameterType end
-abstract type InitialConditionType end
-abstract type ExpressionType end
+abstract type OptimizationKeyType end
+abstract type VariableType <: OptimizationKeyType end
+abstract type ConstraintType <: OptimizationKeyType end
+abstract type AuxVariableType <: OptimizationKeyType end
+abstract type ParameterType <: OptimizationKeyType end
+abstract type InitialConditionType <: OptimizationKeyType end
+abstract type ExpressionType <: OptimizationKeyType end
 
 convert_result_to_natural_units(::Type{<:VariableType}) = false
 convert_result_to_natural_units(::Type{<:ConstraintType}) = false
