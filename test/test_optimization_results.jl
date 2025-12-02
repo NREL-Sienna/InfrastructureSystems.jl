@@ -152,7 +152,7 @@ const IS = InfrastructureSystems
 
     @test IS.Optimization.get_resolution(opt_res1) == Millisecond(3600000)
     @test IS.Optimization.get_resolution(opt_res2) == Millisecond(3600000)
-    @show IS.Optimization.get_resolution(opt_res3)
+    # @show IS.Optimization.get_resolution(opt_res3)
     @test isnothing(IS.Optimization.get_resolution(opt_res3))
 end
 
