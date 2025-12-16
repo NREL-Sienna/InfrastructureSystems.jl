@@ -273,7 +273,8 @@ const PERIOD_NAME_TO_TYPE = Dict(
 
 @assert keys(REGEX_PERIODS) == keys(PERIOD_NAME_TO_TYPE)
 
-function from_iso_8601(period::String)
+# this return type annotation saves significant inference time in PSI.
+function from_iso_8601(period::String)::Dates.Period
     for (name, regex) in REGEX_PERIODS
         m = match(regex, period)
         if !isnothing(m)
