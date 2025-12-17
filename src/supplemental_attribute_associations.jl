@@ -732,24 +732,17 @@ function from_records(::Type{SupplementalAttributeAssociations}, records)
     end
     placeholder = chop(repeat("?,", num_columns))
 
-    # Optimized: Wrap bulk insert in explicit transaction for better performance
-    SQLite.DBInterface.execute(associations.db, "BEGIN TRANSACTION")
-    try
-        SQLite.DBInterface.executemany(
-            associations.db,
-            StringTemplates.render(
-                _QUERY_INSERT_ROWS_INTO_C_ATTR_TABLE;
-                table_name = SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME,
-                placeholder = placeholder,
-            ),
-            NamedTuple(Symbol(k) => v for (k, v) in data),
-        )
-        SQLite.DBInterface.execute(associations.db, "COMMIT")
-    catch e
-        SQLite.DBInterface.execute(associations.db, "ROLLBACK")
-        rethrow(e)
-    end
-
+    # Note: executemany automatically wraps operations in a transaction for performance
+    # No need for explicit BEGIN/COMMIT as SQLite.jl handles this internally
+    SQLite.DBInterface.executemany(
+        associations.db,
+        StringTemplates.render(
+            _QUERY_INSERT_ROWS_INTO_C_ATTR_TABLE;
+            table_name = SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME,
+            placeholder = placeholder,
+        ),
+        NamedTuple(Symbol(k) => v for (k, v) in data),
+    )
     _create_indexes!(associations)
     return associations
 end

@@ -565,21 +565,13 @@ function _add_rows!(
 
     placeholder = chop(repeat("?,", num_columns))
 
-    # Optimized: Wrap bulk insert in explicit transaction for better performance
-    # This can provide 10-100x speedup for large batch operations
-    SQLite.DBInterface.execute(db, "BEGIN TRANSACTION")
-    try
-        SQLite.DBInterface.executemany(
-            db,
-            "INSERT INTO $table_name VALUES($placeholder)",
-            NamedTuple(Symbol(k) => v for (k, v) in data),
-        )
-        SQLite.DBInterface.execute(db, "COMMIT")
-    catch e
-        SQLite.DBInterface.execute(db, "ROLLBACK")
-        rethrow(e)
-    end
-
+    # Note: executemany automatically wraps operations in a transaction for performance
+    # No need for explicit BEGIN/COMMIT as SQLite.jl handles this internally
+    SQLite.DBInterface.executemany(
+        db,
+        "INSERT INTO $table_name VALUES($placeholder)",
+        NamedTuple(Symbol(k) => v for (k, v) in data),
+    )
     @debug "Added $num_rows rows to table = $table_name" _group = LOG_GROUP_TIME_SERIES
     return
 end
