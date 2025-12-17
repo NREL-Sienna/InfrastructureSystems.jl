@@ -1614,6 +1614,13 @@ function _make_category_clause(ts_type::Type{<:TimeSeriesData})
     return clause, subtypes
 end
 
+# Multiple dispatch helpers for feature pattern generation
+# More precise pattern for string values: match exact key-value pair structure
+_make_feature_pattern(key::String, val::AbstractString) = "%\"$(key)\":\"$(val)\"%"
+
+# More precise pattern for non-string values (Bool, Int)
+_make_feature_pattern(key::String, val::Union{Bool, Int}) = "%\"$(key)\":$(val),%"
+
 function _make_feature_filter!(params; features...)
     data = _make_sorted_feature_array(; features...)
     strings = []
@@ -1623,13 +1630,7 @@ function _make_feature_filter!(params; features...)
         # Note: json_extract requires features column to be valid JSON
         # For now, keeping LIKE but with more precise patterns to reduce false positives
         push!(strings, "features LIKE ?")
-        if val isa AbstractString
-            # More precise pattern: match the exact key-value pair structure
-            push!(params, "%\"$(key)\":\"$(val)\"%")
-        else
-            # More precise pattern for non-string values
-            push!(params, "%\"$(key)\":$(val),%")
-        end
+        push!(params, _make_feature_pattern(key, val))
     end
     return join(strings, " AND ")
 end

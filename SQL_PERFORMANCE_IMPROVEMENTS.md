@@ -183,20 +183,31 @@ if row.exists_flag == 0
 
 **Problem:** Feature LIKE patterns were too permissive, potentially matching false positives.
 
-**Solution:** Made LIKE patterns more precise with exact key-value structure matching.
+**Solution:**
+- Made LIKE patterns more precise with exact key-value structure matching
+- Refactored to use multiple dispatch instead of runtime type checking for better performance
 
-**Impact:** Reduces false positives, more accurate query results.
+**Impact:** Reduces false positives, more accurate query results, type-stable code.
 
-**Location:** `src/time_series_metadata_store.jl:1599-1617`
+**Location:** `src/time_series_metadata_store.jl:1617-1636`
 
 **Before:**
 ```julia
-push!(params, "%$(key)\":\"%$(val)%")  # Could match partial values
+if val isa AbstractString
+    push!(params, "%$(key)\":\"%$(val)%")  # Could match partial values
+else
+    push!(params, "%$(key)\":$(val)%")
+end
 ```
 
-**After:**
+**After (using multiple dispatch):**
 ```julia
-push!(params, "%\"$(key)\":\"$(val)\"%")  # Exact key-value match
+# Multiple dispatch helpers
+_make_feature_pattern(key::String, val::AbstractString) = "%\"$(key)\":\"$(val)\"%"
+_make_feature_pattern(key::String, val::Union{Bool, Int}) = "%\"$(key)\":$(val),%"
+
+# In the loop
+push!(params, _make_feature_pattern(key, val))  # Exact key-value match, type-stable
 ```
 
 **Note:** Added comment about future optimization using SQLite's json_extract() for even better performance when available.
