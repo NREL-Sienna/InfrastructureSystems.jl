@@ -1615,11 +1615,11 @@ function _make_category_clause(ts_type::Type{<:TimeSeriesData})
 end
 
 # Multiple dispatch helpers for feature pattern generation
-# More precise pattern for string values: match exact key-value pair structure
+# Pattern for string values: match key-value pair in JSON structure
 _make_feature_pattern(key::String, val::AbstractString) = "%\"$(key)\":\"$(val)\"%"
 
-# More precise pattern for non-string values (Bool, Int)
-_make_feature_pattern(key::String, val::Union{Bool, Int}) = "%\"$(key)\":$(val),%"
+# Pattern for non-string values (Bool, Int): match key-value pair in JSON structure
+_make_feature_pattern(key::String, val::Union{Bool, Int}) = "%\"$(key)\":$(val)%"
 
 function _make_feature_filter!(params; features...)
     data = _make_sorted_feature_array(; features...)

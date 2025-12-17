@@ -204,10 +204,10 @@ end
 ```julia
 # Multiple dispatch helpers
 _make_feature_pattern(key::String, val::AbstractString) = "%\"$(key)\":\"$(val)\"%"
-_make_feature_pattern(key::String, val::Union{Bool, Int}) = "%\"$(key)\":$(val),%"
+_make_feature_pattern(key::String, val::Union{Bool, Int}) = "%\"$(key)\":$(val)%"
 
 # In the loop
-push!(params, _make_feature_pattern(key, val))  # Exact key-value match, type-stable
+push!(params, _make_feature_pattern(key, val))  # Key-value match, type-stable
 ```
 
 **Note:** Added comment about future optimization using SQLite's json_extract() for even better performance when available.
