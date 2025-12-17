@@ -85,6 +85,10 @@ function _create_indexes!(associations::SupplementalAttributeAssociations)
         ];
         unique = false,
     )
+
+    # Run ANALYZE to gather statistics for query planner
+    SQLite.DBInterface.execute(associations.db, "ANALYZE")
+
     return
 end
 
@@ -203,6 +207,17 @@ Return the number of components with supplemental attributes.
 """
 function get_num_components_with_attributes(associations::SupplementalAttributeAssociations)
     return _execute_count(associations, _QUERY_GET_NUM_COMPONENTS_WITH_ATTRIBUTES)
+end
+
+"""
+Update database statistics for optimal query planning.
+Call this after bulk operations or significant data changes.
+"""
+function optimize_database!(associations::SupplementalAttributeAssociations)
+    # Run ANALYZE to update query planner statistics
+    SQLite.DBInterface.execute(associations.db, "ANALYZE")
+    @debug "Optimized database statistics" _group = LOG_GROUP_SUPPLEMENTAL_ATTRIBUTES
+    return
 end
 
 const _QUERY_HAS_ASSOCIATION_BY_ATTRIBUTE = """
@@ -716,6 +731,9 @@ function from_records(::Type{SupplementalAttributeAssociations}, records)
         end
     end
     placeholder = chop(repeat("?,", num_columns))
+
+    # Note: executemany automatically wraps operations in a transaction for performance
+    # No need for explicit BEGIN/COMMIT as SQLite.jl handles this internally
     SQLite.DBInterface.executemany(
         associations.db,
         StringTemplates.render(
