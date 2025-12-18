@@ -71,7 +71,7 @@ function (M::Type{S} where {S <: OptimizationContainerKey})(
     ::Type{U},
     meta::String,
 ) where {T <: OptimizationKeyType, U <: InfrastructureSystemsType}
-    maybe_throw_if_abstract(S, U)
+    maybe_throw_if_abstract(T, U)
     return M{T, U}(meta)
 end
 
