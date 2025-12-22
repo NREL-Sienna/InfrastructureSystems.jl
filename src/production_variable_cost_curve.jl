@@ -27,7 +27,7 @@ Base.:(==)(a::T, b::T) where {T <: ProductionVariableCostCurve} =
 Base.isequal(a::T, b::T) where {T <: ProductionVariableCostCurve} =
     isequal_from_fields(a, b)
 
-Base.hash(a::ProductionVariableCostCurve) = hash_from_fields(a)
+Base.hash(a::ProductionVariableCostCurve, h::UInt) = hash_from_fields(a, h)
 
 """
 $(TYPEDEF)
