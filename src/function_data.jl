@@ -325,7 +325,7 @@ Base.:(==)(a::T, b::T) where {T <: FunctionData} = double_equals_from_fields(a, 
 
 Base.isequal(a::T, b::T) where {T <: FunctionData} = isequal_from_fields(a, b)
 
-Base.hash(a::FunctionData) = hash_from_fields(a)
+Base.hash(a::FunctionData, h::UInt) = hash_from_fields(a, h)
 
 function _slope_convexity_check(slopes::Vector{Float64})
     for ix in 1:(length(slopes) - 1)

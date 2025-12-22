@@ -103,7 +103,7 @@ Base.:(==)(a::T, b::T) where {T <: ValueCurve} = double_equals_from_fields(a, b)
 
 Base.isequal(a::T, b::T) where {T <: ValueCurve} = isequal_from_fields(a, b)
 
-Base.hash(a::ValueCurve) = hash_from_fields(a)
+Base.hash(a::ValueCurve, h::UInt) = hash_from_fields(a, h)
 
 "Get an `InputOutputCurve` representing `f(x) = 0`"
 Base.zero(::Union{InputOutputCurve, Type{InputOutputCurve}}) =
