@@ -90,14 +90,20 @@ end
 
 ### Encoding keys ###
 
-function encode_symbol(
+@generated function encode_symbol(
     ::Type{T},
     ::Type{U},
     meta::String = CONTAINER_KEY_EMPTY_META,
 ) where {T <: OptimizationKeyType, U <: InfrastructureSystemsType}
-    meta_ = isempty(meta) ? meta : COMPONENT_NAME_DELIMITER * meta
-    U_ = replace(replace(strip_module_name(U), "{" => COMPONENT_NAME_DELIMITER), "}" => "")
-    return Symbol("$(strip_module_name(string(T)))$(COMPONENT_NAME_DELIMITER)$(U_)" * meta_)
+    meta_str = :meta
+    U_str =
+        replace(replace(strip_module_name(U), "{" => COMPONENT_NAME_DELIMITER), "}" => "")
+    T_str = strip_module_name(string(T))
+
+    :(Symbol(
+        $T_str * COMPONENT_NAME_DELIMITER * $U_str *
+        (isempty($meta_str) ? "" : COMPONENT_NAME_DELIMITER * $meta_str),
+    ))
 end
 
 function encode_key(

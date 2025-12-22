@@ -171,6 +171,7 @@ function strip_module_name(name::String)
     return basename
 end
 
+# PERF: this could be @generated (but if types are inferred, might already be inlined).
 function strip_module_name(::Type{T}) where {T}
     return strip_module_name(string(T))
 end
