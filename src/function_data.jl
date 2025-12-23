@@ -329,7 +329,7 @@ Base.hash(a::FunctionData) = hash_from_fields(a)
 
 function _slope_convexity_check(slopes::Vector{Float64})
     for ix in 1:(length(slopes) - 1)
-        if slopes[ix] > slopes[ix + 1]
+        if slopes[ix] >= slopes[ix + 1]
             @debug slopes
             return false
         end
@@ -339,7 +339,7 @@ end
 
 function _slope_concavity_check(slopes::Vector{Float64})
     for ix in 1:(length(slopes) - 1)
-        if slopes[ix] < slopes[ix + 1]
+        if slopes[ix] <= slopes[ix + 1]
             @debug slopes
             return false
         end
@@ -357,9 +357,39 @@ is_convex(pwl::PiecewiseStepData) =
     _slope_convexity_check(get_y_coords(pwl))
 
 """
-Returns True/False depending on the concavity of the underlying data.
-For piecewise linear data, it checks if the sequence of slopes is non-increasing.
+    is_nonconvex(data::FunctionData) -> Bool
+
+Returns `true` if the function data is non-convex (not convex), `false` otherwise.
+
+- `LinearFunctionData`: Always returns `false` (linear functions are convex)
+- `QuadraticFunctionData`: Returns `true` if quadratic_term < 0
+- `PiecewiseLinearData`: Returns `true` if slopes are not strictly increasing
+- `PiecewiseStepData`: Returns `true` if y-coordinates are decreasing
 """
+is_nonconvex(::LinearFunctionData) = false
+
+is_nonconvex(fd::QuadraticFunctionData) = get_quadratic_term(fd) < 0
+
+is_nonconvex(pwl::PiecewiseLinearData) =
+    !_slope_convexity_check(get_slopes(pwl))
+
+is_nonconvex(pwl::PiecewiseStepData) =
+    !_slope_convexity_check(get_y_coords(pwl))
+
+"""
+    is_concave(data::FunctionData) -> Bool
+
+Returns `true` if the function data represents a concave function, `false` otherwise.
+
+- `LinearFunctionData`: Always returns `true` (linear functions are both convex and concave)
+- `QuadraticFunctionData`: Returns `true` if quadratic_term ≤ 0
+- `PiecewiseLinearData`: Returns `true` if slopes are non-increasing
+- `PiecewiseStepData`: Returns `true` if y-coordinates are non-increasing
+"""
+is_concave(::LinearFunctionData) = true
+
+is_concave(fd::QuadraticFunctionData) = get_quadratic_term(fd) <= 0
+
 is_concave(pwl::PiecewiseLinearData) =
     _slope_concavity_check(get_slopes(pwl))
 
