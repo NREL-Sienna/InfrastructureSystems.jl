@@ -29,7 +29,7 @@ using InfrastructureSystems
 include("src/function_data.jl")
 
 # Load system with non-convex generators
-sys_path = "../generators2convexify.json"
+sys_path = "/path/to/nonconvex_generators.json"
 sys = System(sys_path)
 
 # Initialize results DataFrame
