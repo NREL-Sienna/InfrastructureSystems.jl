@@ -329,7 +329,7 @@ Base.hash(a::FunctionData) = hash_from_fields(a)
 
 function _slope_convexity_check(slopes::Vector{Float64})
     for ix in 1:(length(slopes) - 1)
-        if slopes[ix] > slopes[ix + 1]
+        if slopes[ix] >= slopes[ix + 1]
             @debug slopes
             return false
         end
@@ -339,7 +339,7 @@ end
 
 function _slope_concavity_check(slopes::Vector{Float64})
     for ix in 1:(length(slopes) - 1)
-        if slopes[ix] < slopes[ix + 1]
+        if slopes[ix] <= slopes[ix + 1]
             @debug slopes
             return false
         end
