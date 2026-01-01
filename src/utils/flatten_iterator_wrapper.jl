@@ -16,7 +16,7 @@ Base.@propagate_inbounds function Base.iterate(
     iter::FlattenIteratorWrapper{T, I},
     state = (),
 ) where {T, I}
-    Base.iterate(iter.iter, state)
+    state === () ? Base.iterate(iter.iter) : Base.iterate(iter.iter, state)
 end
 
 Base.eltype(::FlattenIteratorWrapper{T, I}) where {T, I} = T
