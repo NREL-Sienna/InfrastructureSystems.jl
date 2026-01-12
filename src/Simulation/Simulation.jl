@@ -3,8 +3,7 @@
 """
 module Simulation
 
-import ..InfrastructureSystems
-const IS = InfrastructureSystems
+import ..InfrastructureSystems as IS
 
 import ..InfrastructureSystems:
     @scoped_enum

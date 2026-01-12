@@ -16,6 +16,7 @@ using ProgressLogging
 import SQLite
 
 import InfrastructureSystems
+import InfrastructureSystems as IS
 
 import Aqua
 Aqua.test_unbound_args(InfrastructureSystems)
@@ -24,7 +25,6 @@ Aqua.test_ambiguities(InfrastructureSystems)
 Aqua.test_stale_deps(InfrastructureSystems)
 Aqua.test_deps_compat(InfrastructureSystems)
 
-const IS = InfrastructureSystems
 const BASE_DIR =
     abspath(joinpath(dirname(Base.find_package("InfrastructureSystems")), ".."))
 const DATA_DIR = joinpath(BASE_DIR, "test", "data")
@@ -56,9 +56,9 @@ function run_tests(args...; kwargs...)
             config = IS.LoggingConfiguration(logging_config_filename)
         else
             config = IS.LoggingConfiguration(;
-                filename = LOG_FILE,
-                file_level = get_logging_level_from_env("SIENNA_FILE_LOG_LEVEL", "Info"),
-                console_level = get_logging_level_from_env(
+                filename=LOG_FILE,
+                file_level=get_logging_level_from_env("SIENNA_FILE_LOG_LEVEL", "Info"),
+                console_level=get_logging_level_from_env(
                     "SIENNA_CONSOLE_LOG_LEVEL",
                     "Error",
                 ),

@@ -1,5 +1,5 @@
 import InfrastructureSystems.Optimization: ModelInternal
-const IS = InfrastructureSystems
+import InfrastructureSystems as IS
 @testset "Test Model Internal" begin
     internal = ModelInternal(
         MockContainer(),
