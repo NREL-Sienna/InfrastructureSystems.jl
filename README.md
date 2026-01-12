@@ -15,4 +15,4 @@ Contributions to the development and enahancement of InfrastructureSystems is we
 
 ## License
 
-InfrastructureSystems is released under a BSD [license](https://github.com/NREL-Sienna/InfrastructureSystems.jl/blob/main/LICENSE). InfrastructureSystems has been developed as part of the Scalable Integrated Infrastructure Planning (SIIP) initiative at the U.S. Department of Energy's National Renewable Energy Laboratory ([NREL](https://www.nrel.gov/)) Software Record SWR-20-52
+InfrastructureSystems is released under a BSD [license](https://github.com/NREL-Sienna/InfrastructureSystems.jl/blob/main/LICENSE). InfrastructureSystems has been developed as part of the Scalable Integrated Infrastructure Planning (SIIP) initiative at the U.S. Department of Energy's National Laboratory of the Rockies ([NLR](https://www.nlr.gov/), formerly NREL) Software Record SWR-20-52
