@@ -14,7 +14,13 @@ end
 
 Base.@propagate_inbounds function Base.iterate(
     iter::FlattenIteratorWrapper{T, I},
-    state = (),
+) where {T, I}
+    Base.iterate(iter.iter)
+end
+
+Base.@propagate_inbounds function Base.iterate(
+    iter::FlattenIteratorWrapper{T, I},
+    state,
 ) where {T, I}
     Base.iterate(iter.iter, state)
 end
