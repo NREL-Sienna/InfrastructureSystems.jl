@@ -53,7 +53,7 @@ get_component_type(
 maybe_throw_if_abstract(::Type{T}, ::Type{U}) where {T <: OptimizationKeyType, U} =
     isabstracttype(U) && throw(ArgumentError("Type $U can't be abstract"))
 
-maybe_throw_if_abstract(::Type{AuxVariableType}, ::Type{U}) where {U} = nothing
+maybe_throw_if_abstract(::Type{<:ConstraintType}, ::Type{U}) where {U} = nothing
 
 const CONTAINER_KEY_EMPTY_META = ""
 
@@ -61,9 +61,11 @@ const CONTAINER_KEY_EMPTY_META = ""
 function (M::Type{S} where {S <: OptimizationContainerKey})(
     ::Type{T},
     ::Type{U},
+    meta = CONTAINER_KEY_EMPTY_META,
 ) where {T <: OptimizationKeyType, U <: InfrastructureSystemsType}
+    check_meta_chars(meta)
     maybe_throw_if_abstract(T, U)
-    M{T, U}(CONTAINER_KEY_EMPTY_META)
+    return M{T, U}(meta)
 end
 
 function (M::Type{S} where {S <: OptimizationContainerKey})(
@@ -101,7 +103,7 @@ end
     T_str = strip_module_name(string(T))
 
     :(Symbol(
-        $T_str * COMPONENT_NAME_DELIMITER * $U_str *
+        $U_str * COMPONENT_NAME_DELIMITER * $T_str *
         (isempty($meta_str) ? "" : COMPONENT_NAME_DELIMITER * $meta_str),
     ))
 end
