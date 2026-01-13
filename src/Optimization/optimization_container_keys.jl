@@ -103,7 +103,7 @@ end
     T_str = strip_module_name(string(T))
 
     :(Symbol(
-        $U_str * COMPONENT_NAME_DELIMITER * $T_str *
+        $T_str * COMPONENT_NAME_DELIMITER * $U_str *
         (isempty($meta_str) ? "" : COMPONENT_NAME_DELIMITER * $meta_str),
     ))
 end
