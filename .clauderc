@@ -1,0 +1,238 @@
+package_role: utility_foundation
+julia_compat: "^1.10"
+
+design_objectives:
+  primary: performance
+  description: >
+    This package is a foundational library consumed by performance-critical
+    simulation packages. All code must be written with performance in mind.
+
+performance_requirements:
+  priority: critical
+  reference: https://docs.julialang.org/en/v1/manual/performance-tips/
+
+  anti_patterns_to_avoid:
+    type_instability:
+      description: Functions must return consistent concrete types
+      bad: "f(x) = x > 0 ? 1 : 1.0"
+      good: "f(x) = x > 0 ? 1.0 : 1.0"
+      check: use @code_warntype to verify type stability
+
+    abstract_field_types:
+      description: Struct fields must have concrete types or be parameterized
+      bad: "struct Foo; data::AbstractVector; end"
+      good: "struct Foo{T<:AbstractVector}; data::T; end"
+
+    untyped_containers:
+      description: Avoid containers with abstract element types
+      bad: "Vector{Any}(), Vector{Real}()"
+      good: "Vector{Float64}(), Vector{Int}()"
+
+    non_const_globals:
+      description: Global variables must be const or avoided entirely
+      bad: "THRESHOLD = 0.5"
+      good: "const THRESHOLD = 0.5"
+
+    unnecessary_allocations:
+      description: Avoid allocations in hot paths
+      patterns:
+        - use views instead of copies (view, @view, @views)
+        - pre-allocate arrays instead of push! in loops
+        - use in-place operations (functions ending with !)
+        - avoid string interpolation in hot paths
+
+    captured_variables:
+      description: Avoid closures that capture variables causing boxing
+      solution: pass variables as function arguments instead
+
+    splatting_penalty:
+      description: Avoid splatting (...) in performance-critical code
+      reason: splatting can cause allocations and type instability
+
+    abstract_return_types:
+      description: Avoid returning Union types or abstract types
+      check: ensure functions have inferrable concrete return types
+
+  best_practices:
+    - use @inbounds when bounds are verified
+    - use broadcasting (dot syntax) for element-wise operations
+    - avoid try-catch in hot paths
+    - use function barriers to isolate type instability
+    - annotate types in function signatures for clarity
+    - prefer iteration over indexing when possible
+
+  profiling_tools:
+    - "@time for quick timing and allocation checks"
+    - "@btime from BenchmarkTools.jl for accurate benchmarks"
+    - "@code_warntype to check type stability"
+    - "@allocated to check allocations"
+
+file_structure:
+  src/:
+    description: Main source code
+    key_files:
+      - InfrastructureSystems.jl: main module and exports
+      - system_data.jl: SystemData implementation
+      - time_series_interface.jl: time series public API
+      - time_series_metadata_store.jl: metadata storage
+      - component.jl: base component types
+      - components.jl: component management
+      - supplemental_attribute_associations.jl: attribute associations
+    subdirectories:
+      - utils/: utility functions
+      - generated/: auto-generated code
+      - descriptors/: descriptor files
+      - Optimization/: optimization utilities
+      - Simulation/: simulation utilities
+  test/: test suite
+  docs/: documentation source
+  scripts/: utility scripts
+  .github/: CI workflows and formatter
+
+dependencies:
+  julia_standard_library:
+    - Dates
+    - UUIDs
+    - Logging
+  external:
+    - DataStructures.jl
+    - TimeSeries.jl
+consumed_by:
+  - PowerSystems.jl
+  - PowerSimulations.jl
+  - PowerSimulationsDynamics.jl
+  - PowerNetworkMatrices.jl
+
+key_modules:
+  - InfrastructureSystems
+
+core_abstractions:
+  - InfrastructureSystemsComponent
+  - InfrastructureSystemsType
+  - TimeSeriesData
+  - SystemData
+  - InfrastructureSystemsContainer
+
+test_patterns:
+  location: test/
+  runner: julia --project=test test/runtests.jl
+  coverage_minimum: 70%
+
+code_conventions:
+  style_guide: InfrastructureSystems
+  style_guide_url: https://nrel-sienna.github.io/InfrastructureSystems.jl/stable/style/
+  base_guides:
+    - Julia Style Guide: https://docs.julialang.org/en/v1/manual/style-guide/
+    - Julia Contribution Guidelines: https://github.com/JuliaLang/julia/blob/main/CONTRIBUTING.md
+    - Julia Docstring Guidelines: https://docs.julialang.org/en/v1/manual/documentation/
+    - JuMP Coding Standards: http://www.juliaopt.org/JuMP.jl/dev/style
+  formatter:
+    tool: JuliaFormatter
+    command: julia -e 'using JuliaFormatter; include(".github/workflows/formatter_code.jl")'
+  import_order:
+    - standard_library
+    - third_party
+    - local_modules
+  key_rules:
+    constructors: use function Foo() not Foo() = ...
+    asserts: prefer InfrastructureSystems.@assert_op over @assert
+    globals: UPPER_CASE for constants, prefix g_ for variables
+    exports: all exports in main module file
+    comments: complete sentences, describe why not how
+    logging_groups: use _group parameter for debug statements
+    whitespace: one arg per line when exceeding line length
+
+documentation_practices:
+  framework: Diataxis
+  framework_url: https://diataxis.fr/
+  sienna_guide: https://nrel-sienna.github.io/InfrastructureSystems.jl/stable/docs_best_practices/explanation/
+
+  documentation_types:
+    tutorials:
+      purpose: learning by doing for beginners
+      location: docs/src/tutorials/
+      characteristics:
+        - step-by-step instructions
+        - learning-oriented
+        - assume no prior knowledge
+        - provide complete working examples
+        - guide through a meaningful experience
+    how_to_guides:
+      purpose: solve specific real-world problems
+      location: docs/src/how_to/
+      characteristics:
+        - goal-oriented
+        - assume user competence
+        - provide practical directions
+        - focus on work not study
+        - titles start with "How to..."
+    reference:
+      purpose: technical description and facts
+      location: docs/src/api/
+      characteristics:
+        - information-oriented
+        - structure mirrors code structure
+        - austere and authoritative
+        - no instruction or explanation
+        - use @autodocs for automation
+    explanation:
+      purpose: clarify and illuminate topics
+      location: docs/src/explanation/
+      characteristics:
+        - understanding-oriented
+        - provide context and background
+        - answer "why" questions
+        - discuss design decisions
+        - connect concepts
+
+  docstring_requirements:
+    all_exported_symbols: must have docstrings
+    function_signatures: always include in docstring
+    arguments_list: required for all functions
+    automation: use DocStringExtensions.TYPEDFIELDS
+    see_also_links: add for functions with same name (multiple dispatch)
+    hyperlinks: link to other Sienna types in arguments
+
+  tools:
+    - Documenter.jl: build documentation
+    - DocStringExtensions.jl: automate docstring generation
+
+  api_organization:
+    public_api:
+      file: docs/src/api/public.md
+      method: use @autodocs blocks organized by file
+      exports_only: Public = true, Private = false
+      example: |
+```@autodocs
+        Modules = [InfrastructureSystems]
+        Pages = ["time_series.jl"]
+        Public = true
+        Private = false
+```
+    internals_api:
+      file: docs/src/api/internals.md
+      method: use @autodocs for private functions
+
+  cross_package_docstrings:
+    pattern: filter exported symbols from InfrastructureSystems
+    example: Filter = t -> nameof(t) in names(PackageName)
+    avoid: adding InfrastructureSystems to makedocs modules parameter
+
+common_tasks:
+  run_tests: julia --project=test test/runtests.jl
+  build_docs: julia --project=docs docs/make.jl
+  format_code: julia -e 'using JuliaFormatter; include(".github/workflows/formatter_code.jl")'
+  instantiate: julia --project -e 'using Pkg; Pkg.instantiate()'
+  instantiate_test: julia --project=test -e 'using Pkg; Pkg.instantiate()'
+  instantiate_docs: julia --project=docs -e 'using Pkg; Pkg.instantiate()'
+
+contribution_workflow:
+  pr_process:
+    - Fork the repository
+    - Create a feature branch
+    - Make changes following the style guide
+    - Run formatter before committing
+    - Ensure tests pass
+    - Submit pull request
+  branch_naming: feature/description or fix/description
+  main_branch: main
