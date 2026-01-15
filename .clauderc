@@ -1,5 +1,6 @@
 package_role: utility_foundation
-julia_compat: "^1.10"
+julia_compat: "^1.6"
+note: Project.toml specifies julia = "^1.6", consider updating to 1.10+ for better performance
 
 design_objectives:
   primary: performance
