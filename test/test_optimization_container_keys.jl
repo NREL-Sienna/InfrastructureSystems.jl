@@ -5,7 +5,7 @@ import InfrastructureSystems.Optimization:
     ExpressionKey,
     ParameterKey,
     InitialConditionKey
-const IS = InfrastructureSystems
+import InfrastructureSystems as IS
 @testset "Test optimization container keys" begin
     var_key = VariableKey(MockVariable, IS.TestComponent)
     @test IS.Optimization.encode_key(var_key) ==

@@ -72,7 +72,7 @@ Optional interface functions:
   - get_available()
   The default function is a no-op.
   - set_available!()
-  
+
 Subtypes may contain time series and be associated with supplemental attributes.
 Those behaviors can be modified with these methods:
   - supports_supplemental_attributes()
@@ -185,6 +185,14 @@ include("validation.jl")
 include("component_selector.jl")
 include("results.jl")
 include("utils/print.jl")
+@static if pkgversion(PrettyTables).major == 2
+    # When PrettyTables v2 is more widely adopted in the ecosystem, we can remove this file.
+    # In this case, we should also update the compat bounds in Project.toml to list only
+    # PrettyTables v3.
+    include("utils/print_pt_v2.jl")
+else
+    include("utils/print_pt_v3.jl")
+end
 include("utils/test.jl")
 include("units.jl")
 include("value_curve.jl")

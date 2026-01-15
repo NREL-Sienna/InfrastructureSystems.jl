@@ -1010,4 +1010,22 @@ end
         convex_step = IS.make_convex(stepwise)
         @test IS.is_convex(convex_step)
     end
+@testset "Test piecewise domain checking" begin
+    pwl = IS.PiecewiseStepData([1, 3, 5], [8, 10])
+
+    # floating point inputs
+    @test_throws ArgumentError pwl(0.5)
+    @test_throws ArgumentError pwl(5.5)
+    pwl(2.5)
+
+    # non floating point inputs
+    @test_throws ArgumentError pwl(1 // 2)
+    @test_throws ArgumentError pwl(5 + 1 // 2)
+    pwl(5 // 2)
+
+    # floating point precision edge cases (should not error)
+    @assert isapprox(1 - eps() / 2, 1)
+    @assert isapprox(5 + eps() / 2, 5)
+    pwl(1 - eps() / 2)
+    pwl(5 + eps() / 2)
 end

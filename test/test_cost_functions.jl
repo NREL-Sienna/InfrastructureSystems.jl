@@ -337,3 +337,32 @@ end
     ) ==
           IS.LinearCurve(10.0, 7.0)
 end
+
+@testset "Test prohibited FunctionData types" begin
+    # Incremental and Average Rate curves only support
+    # linear and piecewise step function data.
+    q_fd = IS.QuadraticFunctionData(1, 2, 3)
+    pwl_fd = IS.PiecewiseLinearData([(x = 0.0, y = 1.0), (x = 1.0, y = 2.0)])
+    @test_throws MethodError IS.IncrementalCurve(q_fd, 0.0)
+    @test_throws MethodError IS.AverageRateCurve(q_fd, 0.0)
+    @test_throws MethodError IS.IncrementalCurve(pwl_fd, 0.0)
+    @test_throws MethodError IS.AverageRateCurve(pwl_fd, 0.0)
+end
+
+@testset "Test InputOutputCurve evaluation" begin
+    io_quadratic = IS.InputOutputCurve(IS.QuadraticFunctionData(1, 2, 3))
+    @test io_quadratic(0.0) == 3.0
+    @test io_quadratic(1.0) == 6.0
+    @test io_quadratic(2.0) == 11.0
+
+    io_linear = IS.InputOutputCurve(IS.LinearFunctionData(3, 2))
+    @test io_linear(0.0) == 2.0
+    @test io_linear(1.0) == 5.0
+    @test io_linear(2.0) == 8.0
+
+    pwl = IS.PiecewiseLinearData([(x = 1, y = 3), (x = 3, y = 7), (x = 5, y = 11)])
+    io_piecewise = IS.InputOutputCurve(pwl)
+    @test io_piecewise(1.0) == 3.0
+    @test io_piecewise(3.0) == 7.0
+    @test io_piecewise(5.0) == 11.0
+end

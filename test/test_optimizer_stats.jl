@@ -1,5 +1,5 @@
 import InfrastructureSystems.Optimization: OptimizerStats
-const IS = InfrastructureSystems
+import InfrastructureSystems as IS
 @testset "Test OptimizerStats" begin
     empty_stats = OptimizerStats()
     @test isa(IS.Optimization.get_column_names(OptimizerStats), Tuple{Vector{String}})

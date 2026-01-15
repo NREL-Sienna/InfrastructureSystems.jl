@@ -8,7 +8,7 @@ CurrentModule = InfrastructureSystems
 
 `InfrastructureSystems.jl` is a [`Julia`](http://www.julialang.org) package that provides
 data management services and common utility software for the packages in
-NREL's [Sienna Initiative](https://github.com/NREL-Sienna). This package is meant
+NLR's [Sienna Initiative](https://github.com/NREL-Sienna). This package is meant
 for module development. It is used primarily by
 [PowerSystems.jl](https://github.com/NREL-Sienna/PowerSystems.jl) and
 [PowerSimulations.jl](https://github.com/NREL-Sienna/PowerSimulations.jl) but is
@@ -54,5 +54,5 @@ Depth = 1
 * * *
 
 InfrastructureSystems has been developed as part of the Scalable Integrated Infrastructure Planning
-(SIIP) initiative at the U.S. Department of Energy's National Renewable Energy Laboratory
-([NREL](https://www.nrel.gov/))
+(SIIP) initiative at the U.S. Department of Energy's National Laboratory of the Rockies
+([NLR](https://www.nlr.gov/), formerly NREL)

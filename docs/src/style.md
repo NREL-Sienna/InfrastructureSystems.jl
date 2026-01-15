@@ -33,6 +33,12 @@
   - When writing a module locate all the exports in the main module file.
   - Please include a copy of [this .gitignore file](https://github.com/NREL-Sienna/InfrastructureSystems.jl/blob/main/.gitignore)
 
+## Module Aliases
+
+Use the `import X as Y` syntax instead of `const Y = X` when creating module aliases.
+
+Since Julia 1.6, language servers will recognize `import X as Y` where they fail to recognize `const` aliases.
+
 ## Comments
 
   - Use comments to describe non-obvious or non-trivial aspects of code.

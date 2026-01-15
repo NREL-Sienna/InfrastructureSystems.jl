@@ -110,6 +110,10 @@ function SingleTimeSeries(
     else
         error("fatal: $(typeof(data))")
     end
+    # TimeArray's table integration (correctly) returns a Matrix as values, even if size in column dimension is 1 (julia +1.13)
+    # As the rest expects a single valued timeseries, we slice to the only columns available to obtain the appropriate Vector value
+    length(TimeSeries.colnames(ta)) == 1 || throw(ArgumentError("The input data should have a single column other than $(timestamp)"))
+    ta = ta[first(TimeSeries.colnames(ta))] 
 
     return SingleTimeSeries(;
         name = name,

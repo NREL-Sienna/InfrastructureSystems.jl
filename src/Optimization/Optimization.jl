@@ -12,8 +12,7 @@ import DataFrames
 import DataFrames: DataFrame, innerjoin, select, select!
 import DataFramesMeta: @chain, @combine, @subset, @transform
 
-import ..InfrastructureSystems
-const IS = InfrastructureSystems
+import ..InfrastructureSystems as IS
 
 import ..InfrastructureSystems:
     @scoped_enum,

@@ -325,7 +325,7 @@ Base.:(==)(a::T, b::T) where {T <: FunctionData} = double_equals_from_fields(a, 
 
 Base.isequal(a::T, b::T) where {T <: FunctionData} = isequal_from_fields(a, b)
 
-Base.hash(a::FunctionData) = hash_from_fields(a)
+Base.hash(a::FunctionData, h::UInt) = hash_from_fields(a, h)
 
 function _slope_convexity_check(slopes::Vector{Float64})
     for ix in 1:(length(slopes) - 1)
@@ -1028,8 +1028,10 @@ _eval_fd_impl(
 "Evaluate the `PiecewiseLinearData` or `PiecewiseStepData` at a given x-coordinate"
 function (fd::Union{PiecewiseLinearData, PiecewiseStepData})(x::Real)
     lb, ub = get_domain(fd)
-    (x < lb || x > ub) &&
+    # defend against floating point precision issues at the boundaries.
+    ((lb <= x <= ub) || isapprox(x, lb) || isapprox(x, ub)) ||
         throw(ArgumentError("x=$x is outside the domain [$lb, $ub]"))
+    x = clamp(x, lb, ub)
     x_coords = get_x_coords(fd)
     y_coords = get_y_coords(fd)
     i_leq = searchsortedlast(x_coords, x)  # uses binary search!
