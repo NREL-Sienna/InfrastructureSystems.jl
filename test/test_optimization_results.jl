@@ -124,8 +124,8 @@ import InfrastructureSystems as IS
     var_res2 = read_variable(
         opt_res1,
         var_key1;
-        start_time=DateTime("2024-01-01T01:00:00"),
-        len=2,
+        start_time = DateTime("2024-01-01T01:00:00"),
+        len = 2,
     )
     @test @rsubset(var_res2, :name == "c1")[!, :value] == [2.0, 3.0]
     @test @rsubset(var_res2, :name == "c2")[!, :value] == [6.0, 7.0]
@@ -133,13 +133,13 @@ import InfrastructureSystems as IS
     var_res2 = read_variable(
         opt_res1,
         var_key2;
-        start_time=DateTime("2024-01-01T01:00:00"),
-        len=2,
+        start_time = DateTime("2024-01-01T01:00:00"),
+        len = 2,
     )
     @test @rsubset(var_res2, :name == "c1")[!, :value] == [20.0, 30.0]
     @test @rsubset(var_res2, :name == "c2")[!, :value] == [60.0, 70.0]
 
-    var_res = read_variable(opt_res1, var_key2; table_format=IS.TableFormat.WIDE)
+    var_res = read_variable(opt_res1, var_key2; table_format = IS.TableFormat.WIDE)
     @test var_res[!, :c1] == [10.0, 20.0, 30.0, 40.0]
     @test var_res[!, :c2] == [50.0, 60.0, 70.0, 80.0]
 
