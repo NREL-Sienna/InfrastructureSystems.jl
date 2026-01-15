@@ -690,6 +690,326 @@ end
     end
 end
 
+@testset "Test isotonic regression" begin
+    # Test basic isotonic regression
+    values = [3.0, 1.0, 4.0, 1.0, 5.0]
+    weights = ones(5)
+    result = IS.isotonic_regression(values, weights)
+    @test issorted(result)  # Result should be non-decreasing
+
+    # Test with uniform weights - first two should pool
+    values = [10.0, 5.0, 15.0]
+    weights = [1.0, 1.0, 1.0]
+    result = IS.isotonic_regression(values, weights)
+    @test result[1] ≈ 7.5  # (10 + 5) / 2
+    @test result[2] ≈ 7.5
+    @test result[3] ≈ 15.0
+    @test issorted(result)
+
+    # Test with different weights
+    values = [10.0, 5.0, 15.0]
+    weights = [2.0, 1.0, 1.0]  # First element has twice the weight
+    result = IS.isotonic_regression(values, weights)
+    expected_pooled = (10.0 * 2.0 + 5.0 * 1.0) / (2.0 + 1.0)  # 25/3 ≈ 8.33
+    @test result[1] ≈ expected_pooled
+    @test result[2] ≈ expected_pooled
+    @test result[3] ≈ 15.0
+
+    # Test already monotone sequence
+    values = [1.0, 2.0, 3.0, 4.0]
+    weights = ones(4)
+    result = IS.isotonic_regression(values, weights)
+    @test result ≈ values
+
+    # Test constant sequence
+    values = [5.0, 5.0, 5.0]
+    weights = ones(3)
+    result = IS.isotonic_regression(values, weights)
+    @test result ≈ values
+
+    # Test empty input
+    @test IS.isotonic_regression(Float64[], Float64[]) == Float64[]
+
+    # Test mismatched lengths
+    @test_throws ArgumentError IS.isotonic_regression([1.0, 2.0], [1.0])
+end
+
+@testset "Test make_convex for PiecewiseStepData" begin
+    # Test basic non-convex case
+    # Slopes: [10, 5, 15] - violation at index 1 (10 > 5)
+    step_data = IS.PiecewiseStepData([0.0, 1.0, 2.0, 3.0], [10.0, 5.0, 15.0])
+    @test !IS.is_convex(step_data)
+
+    convex_step = IS.make_convex(step_data; weights = :uniform)
+    @test IS.is_convex(convex_step)
+    @test IS.get_x_coords(convex_step) == IS.get_x_coords(step_data)
+
+    # Check that the first two slopes are pooled
+    new_y = IS.get_y_coords(convex_step)
+    @test new_y[1] ≈ new_y[2] ≈ 7.5  # (10 + 5) / 2
+    @test new_y[3] ≈ 15.0
+
+    # Test with length weighting
+    step_data = IS.PiecewiseStepData([0.0, 2.0, 3.0, 6.0], [10.0, 5.0, 15.0])
+    # Segment lengths: [2, 1, 3]
+    convex_step = IS.make_convex(step_data; weights = :length)
+    @test IS.is_convex(convex_step)
+    new_y = IS.get_y_coords(convex_step)
+    # Pooled value = (10*2 + 5*1) / (2+1) = 25/3 ≈ 8.33
+    @test new_y[1] ≈ new_y[2] ≈ 25.0 / 3.0
+
+    # Test already convex data (should return same)
+    convex_data = IS.PiecewiseStepData([0.0, 1.0, 2.0], [1.0, 2.0])
+    @test IS.is_convex(convex_data)
+    result = IS.make_convex(convex_data)
+    @test result === convex_data  # Should be exactly the same object
+
+    # Test multiple violations
+    step_data = IS.PiecewiseStepData([0.0, 1.0, 2.0, 3.0, 4.0], [5.0, 3.0, 1.0, 10.0])
+    convex_step = IS.make_convex(step_data; weights = :uniform)
+    @test IS.is_convex(convex_step)
+
+    # Test custom weights
+    step_data = IS.PiecewiseStepData([0.0, 1.0, 2.0, 3.0], [10.0, 5.0, 15.0])
+    custom_weights = [1.0, 1.0, 1.0]
+    convex_step = IS.make_convex(step_data; weights = custom_weights)
+    @test IS.is_convex(convex_step)
+
+    # Test invalid weights
+    @test_throws ArgumentError IS.make_convex(step_data; weights = [1.0, 2.0])  # Wrong length
+    @test_throws ArgumentError IS.make_convex(step_data; weights = :invalid)
+end
+
+@testset "Test make_convex for PiecewiseLinearData" begin
+    # Test basic non-convex case
+    linear_data = IS.PiecewiseLinearData([
+        (x = 0.0, y = 0.0),
+        (x = 1.0, y = 10.0),   # slope = 10
+        (x = 2.0, y = 15.0),   # slope = 5  <- violation!
+        (x = 3.0, y = 30.0),   # slope = 15
+    ])
+    @test !IS.is_convex(linear_data)
+
+    # Test with anchor=:first
+    convex_linear = IS.make_convex(linear_data; weights = :uniform, anchor = :first)
+    @test IS.is_convex(convex_linear)
+    @test IS.get_x_coords(convex_linear) == IS.get_x_coords(linear_data)
+    # First point should be preserved
+    @test IS.get_points(convex_linear)[1] == IS.get_points(linear_data)[1]
+
+    # Test with anchor=:last
+    convex_linear = IS.make_convex(linear_data; weights = :uniform, anchor = :last)
+    @test IS.is_convex(convex_linear)
+    # Last point should be preserved
+    @test IS.get_points(convex_linear)[end] == IS.get_points(linear_data)[end]
+
+    # Test with anchor=:centroid
+    convex_linear = IS.make_convex(linear_data; weights = :uniform, anchor = :centroid)
+    @test IS.is_convex(convex_linear)
+
+    # Test already convex data
+    convex_data = IS.PiecewiseLinearData([(0, 0), (1, 1), (1.1, 2), (1.2, 3)])
+    @test IS.is_convex(convex_data)
+    result = IS.make_convex(convex_data)
+    @test result === convex_data
+
+    # Test with length weighting
+    linear_data = IS.PiecewiseLinearData([
+        (x = 0.0, y = 0.0),
+        (x = 2.0, y = 20.0),  # slope = 10, length = 2
+        (x = 3.0, y = 25.0),  # slope = 5, length = 1
+        (x = 6.0, y = 70.0),  # slope = 15, length = 3
+    ])
+    convex_linear = IS.make_convex(linear_data; weights = :length, anchor = :first)
+    @test IS.is_convex(convex_linear)
+
+    # Check the pooled slope value
+    new_slopes = IS.get_slopes(convex_linear)
+    expected_pooled = (10.0 * 2.0 + 5.0 * 1.0) / 3.0  # 25/3
+    @test new_slopes[1] ≈ expected_pooled
+    @test new_slopes[2] ≈ expected_pooled
+
+    # Test invalid anchor
+    @test_throws ArgumentError IS.make_convex(linear_data; anchor = :invalid)
+end
+
+@testset "Test convexity_violations" begin
+    # Test PiecewiseLinearData violations
+    linear_data = IS.PiecewiseLinearData([
+        (x = 0.0, y = 0.0),
+        (x = 1.0, y = 10.0),   # slope = 10
+        (x = 2.0, y = 15.0),   # slope = 5  <- violation at index 1
+        (x = 3.0, y = 30.0),   # slope = 15
+    ])
+    violations = IS.convexity_violations(linear_data)
+    @test violations == [1]
+
+    # Test multiple violations
+    linear_data = IS.PiecewiseLinearData([
+        (x = 0.0, y = 0.0),
+        (x = 1.0, y = 10.0),   # slope = 10
+        (x = 2.0, y = 15.0),   # slope = 5  <- violation at index 1
+        (x = 3.0, y = 25.0),   # slope = 10
+        (x = 4.0, y = 28.0),   # slope = 3  <- violation at index 3
+    ])
+    violations = IS.convexity_violations(linear_data)
+    @test violations == [1, 3]
+
+    # Test no violations
+    convex_data = IS.PiecewiseLinearData([(0, 0), (1, 1), (2, 3), (3, 6)])
+    violations = IS.convexity_violations(convex_data)
+    @test isempty(violations)
+
+    # Test PiecewiseStepData violations
+    step_data = IS.PiecewiseStepData([0.0, 1.0, 2.0, 3.0], [10.0, 5.0, 15.0])
+    violations = IS.convexity_violations(step_data)
+    @test violations == [1]
+end
+
+@testset "Test convexity_gap" begin
+    # Test PiecewiseLinearData gap
+    linear_data = IS.PiecewiseLinearData([
+        (x = 0.0, y = 0.0),
+        (x = 1.0, y = 10.0),   # slope = 10
+        (x = 2.0, y = 15.0),   # slope = 5, gap = 10 - 5 = 5
+        (x = 3.0, y = 30.0),   # slope = 15
+    ])
+    @test IS.convexity_gap(linear_data) ≈ 5.0
+
+    # Test multiple violations - should return max gap
+    linear_data = IS.PiecewiseLinearData([
+        (x = 0.0, y = 0.0),
+        (x = 1.0, y = 20.0),   # slope = 20
+        (x = 2.0, y = 25.0),   # slope = 5, gap = 15
+        (x = 3.0, y = 35.0),   # slope = 10
+        (x = 4.0, y = 37.0),   # slope = 2, gap = 8
+    ])
+    @test IS.convexity_gap(linear_data) ≈ 15.0
+
+    # Test no violations
+    convex_data = IS.PiecewiseLinearData([(0, 0), (1, 1), (2, 3), (3, 6)])
+    @test IS.convexity_gap(convex_data) ≈ 0.0
+
+    # Test PiecewiseStepData gap
+    step_data = IS.PiecewiseStepData([0.0, 1.0, 2.0, 3.0], [10.0, 5.0, 15.0])
+    @test IS.convexity_gap(step_data) ≈ 5.0
+end
+
+@testset "Test approximation_error" begin
+    # Test PiecewiseStepData error
+    original = IS.PiecewiseStepData([0.0, 1.0, 2.0, 3.0], [10.0, 5.0, 15.0])
+    approximated = IS.PiecewiseStepData([0.0, 1.0, 2.0, 3.0], [7.5, 7.5, 15.0])
+
+    # L2 error with uniform weights
+    err_l2 = IS.approximation_error(original, approximated; metric = :L2, weights = :uniform)
+    diff = [10.0 - 7.5, 5.0 - 7.5, 15.0 - 15.0]
+    expected_l2 = sqrt(sum(diff .^ 2) / 3)
+    @test err_l2 ≈ expected_l2
+
+    # L1 error
+    err_l1 = IS.approximation_error(original, approximated; metric = :L1, weights = :uniform)
+    expected_l1 = sum(abs.(diff)) / 3
+    @test err_l1 ≈ expected_l1
+
+    # Linf error
+    err_linf = IS.approximation_error(original, approximated; metric = :Linf, weights = :uniform)
+    @test err_linf ≈ 2.5  # max(|2.5|, |-2.5|, |0|)
+
+    # Test with length weighting
+    original = IS.PiecewiseStepData([0.0, 2.0, 3.0, 6.0], [10.0, 5.0, 15.0])
+    approximated = IS.PiecewiseStepData([0.0, 2.0, 3.0, 6.0], [8.0, 8.0, 15.0])
+    err = IS.approximation_error(original, approximated; metric = :L2, weights = :length)
+    # Weights: [2, 1, 3]
+    diff = [10.0 - 8.0, 5.0 - 8.0, 15.0 - 15.0]
+    expected = sqrt((4.0 * 2 + 9.0 * 1 + 0.0 * 3) / 6)
+    @test err ≈ expected
+
+    # Test invalid metric
+    @test_throws ArgumentError IS.approximation_error(original, approximated; metric = :invalid)
+
+    # Test PiecewiseLinearData error (based on slopes)
+    original = IS.PiecewiseLinearData([
+        (x = 0.0, y = 0.0),
+        (x = 1.0, y = 10.0),
+        (x = 2.0, y = 15.0),
+        (x = 3.0, y = 30.0),
+    ])
+    convex = IS.make_convex(original; weights = :uniform, anchor = :first)
+    err = IS.approximation_error(original, convex; weights = :uniform)
+    @test err >= 0.0  # Error should be non-negative
+end
+
+@testset "Test convex approximation edge cases" begin
+    # Test with two points (single segment)
+    linear_data = IS.PiecewiseLinearData([(0.0, 0.0), (1.0, 10.0)])
+    @test IS.is_convex(linear_data)
+    @test IS.make_convex(linear_data) === linear_data
+    @test isempty(IS.convexity_violations(linear_data))
+    @test IS.convexity_gap(linear_data) ≈ 0.0
+
+    step_data = IS.PiecewiseStepData([0.0, 1.0], [5.0])
+    @test IS.is_convex(step_data)
+    @test IS.make_convex(step_data) === step_data
+
+    # Test with equal slopes (should remain unchanged)
+    linear_data = IS.PiecewiseLinearData([(0.0, 0.0), (1.0, 5.0), (2.0, 10.0), (3.0, 15.0)])
+    @test IS.is_convex(linear_data)
+    result = IS.make_convex(linear_data)
+    @test result === linear_data
+
+    # Test severe violation (all slopes need to pool)
+    step_data = IS.PiecewiseStepData([0.0, 1.0, 2.0, 3.0], [10.0, 5.0, 1.0])
+    convex_step = IS.make_convex(step_data; weights = :uniform)
+    @test IS.is_convex(convex_step)
+    # All should pool to average: (10 + 5 + 1) / 3 ≈ 5.33
+    new_y = IS.get_y_coords(convex_step)
+    @test all(y ≈ 16.0 / 3.0 for y in new_y)
+end
+
+@testset "Test convex approximation consistency" begin
+    # Test that make_convex is idempotent
+    linear_data = IS.PiecewiseLinearData([
+        (x = 0.0, y = 0.0),
+        (x = 1.0, y = 10.0),
+        (x = 2.0, y = 15.0),
+        (x = 3.0, y = 30.0),
+    ])
+    convex1 = IS.make_convex(linear_data)
+    convex2 = IS.make_convex(convex1)
+    @test convex2 === convex1  # Second call should return same object
+
+    # Test with step data
+    step_data = IS.PiecewiseStepData([0.0, 1.0, 2.0, 3.0], [10.0, 5.0, 15.0])
+    convex1 = IS.make_convex(step_data)
+    convex2 = IS.make_convex(convex1)
+    @test convex2 === convex1
+end
+
+@testset "Test convex approximation with random data" begin
+    rng = Random.Xoshiro(42)
+    n_tests = 20
+    n_points = 10
+
+    for _ in 1:n_tests
+        # Generate random piecewise linear data
+        rand_x = sort(rand(rng, n_points))
+        rand_y = rand(rng, n_points) * 100
+        pointwise = IS.PiecewiseLinearData(collect(zip(rand_x, rand_y)))
+
+        # Make convex
+        convex = IS.make_convex(pointwise)
+        @test IS.is_convex(convex)
+        @test IS.get_x_coords(convex) == IS.get_x_coords(pointwise)
+
+        # Generate random step data
+        rand_x_step = sort(rand(rng, n_points))
+        rand_y_step = rand(rng, n_points - 1) * 100
+        stepwise = IS.PiecewiseStepData(rand_x_step, rand_y_step)
+
+        # Make convex
+        convex_step = IS.make_convex(stepwise)
+        @test IS.is_convex(convex_step)
+    end
 @testset "Test piecewise domain checking" begin
     pwl = IS.PiecewiseStepData([1, 3, 5], [8, 10])
 
