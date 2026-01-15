@@ -128,7 +128,8 @@ code_conventions:
     - JuMP Coding Standards: http://www.juliaopt.org/JuMP.jl/dev/style
   formatter:
     tool: JuliaFormatter
-    command: julia -e 'using JuliaFormatter; include(".github/workflows/formatter_code.jl")'
+    command: julia -e 'include("scripts/formatter/formatter_code.jl")'
+    note: Formatter activates its own environment and handles dependencies
   import_order:
     - standard_library
     - third_party
@@ -221,10 +222,13 @@ documentation_practices:
 common_tasks:
   run_tests: julia --project=test test/runtests.jl
   build_docs: julia --project=docs docs/make.jl
-  format_code: julia -e 'using JuliaFormatter; include(".github/workflows/formatter_code.jl")'
+  format_code: julia -e 'include("scripts/formatter/formatter_code.jl")'
+  check_format: git diff --exit-code  # Run after format_code to check for changes
   instantiate: julia --project -e 'using Pkg; Pkg.instantiate()'
   instantiate_test: julia --project=test -e 'using Pkg; Pkg.instantiate()'
   instantiate_docs: julia --project=docs -e 'using Pkg; Pkg.instantiate()'
+  coverage_local: julia --project=test --code-coverage=user test/runtests.jl
+  coverage_report: julia --project=test -e 'using Coverage; coverage = process_folder(); covered_lines, total_lines = get_summary(coverage); println("Coverage: $(round(100 * covered_lines / total_lines, digits=2))%")'
 
 contribution_workflow:
   pr_process:
@@ -236,3 +240,85 @@ contribution_workflow:
     - Submit pull request
   branch_naming: feature/description or fix/description
   main_branch: main
+
+session_start_hook:
+  description: Commands to run when starting a new Claude Code session
+  recommended_setup:
+    - Check Julia installation and version
+    - Instantiate test environment if running tests
+    - Verify formatter script is accessible
+  example_commands:
+    - julia --version
+    - julia --project=test -e 'using Pkg; Pkg.instantiate()'
+
+quick_start_examples:
+  adding_new_function:
+    description: When adding a new exported function
+    steps:
+      - Write function with docstring including TYPEDSIGNATURES
+      - Add function to appropriate source file
+      - Ensure function signature has type annotations
+      - Check type stability with @code_warntype
+      - Add tests in test/ directory
+      - Run formatter before committing
+    performance_check: julia -e '@code_warntype your_function(args)'
+
+  fixing_performance_issue:
+    description: When fixing a performance bottleneck
+    steps:
+      - Profile with @time or @btime to identify issue
+      - Check type stability with @code_warntype
+      - Review anti-patterns list in performance_requirements
+      - Implement fix using concrete types
+      - Benchmark before/after with BenchmarkTools
+      - Add regression test if applicable
+
+  adding_struct:
+    description: When adding a new struct type
+    steps:
+      - Use concrete or parameterized types for all fields
+      - Implement kwarg-only constructor for deserialization
+      - Add docstring with TYPEDFIELDS from DocStringExtensions
+      - Consider if it should be <: InfrastructureSystemsComponent
+      - Add validation if necessary
+      - Document in API reference
+
+troubleshooting:
+  type_instability:
+    symptom: Poor performance, many allocations
+    diagnosis: Run @code_warntype on suspect function
+    common_causes:
+      - Returning different types based on conditions
+      - Abstract field types in structs
+      - Non-const global variables
+    solution: See performance_requirements.anti_patterns_to_avoid
+
+  formatter_fails:
+    symptom: Formatter command returns error
+    diagnosis: Check Julia environment and script path
+    solution: Ensure Julia is installed and run 'julia -e \"include(\\\"scripts/formatter/formatter_code.jl\\\")\"'
+
+  test_failures:
+    symptom: Tests fail unexpectedly
+    diagnosis: Check if test environment is instantiated
+    solution: Run 'julia --project=test -e \"using Pkg; Pkg.instantiate()\"' first
+
+ai_agent_guidance:
+  code_generation_priorities:
+    - Performance is critical - always use concrete types
+    - Follow the anti-patterns list strictly
+    - Run formatter on all changes
+    - Add docstrings to all exported symbols
+    - Consider type stability in all functions
+
+  when_modifying_code:
+    - Read existing code patterns before making changes
+    - Maintain consistency with existing style
+    - Check @code_warntype after changes to hot paths
+    - Ensure backward compatibility unless explicitly breaking
+
+  documentation_requirements:
+    - All exported functions need complete docstrings
+    - Include TYPEDSIGNATURES in docstrings
+    - Add examples for complex functions
+    - Link to related functions with See also section
