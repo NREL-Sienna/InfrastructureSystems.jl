@@ -216,7 +216,7 @@ function validation_warning(valid_info::ValidationInfo, field_value)
     field_name = valid_info.field_descriptor["name"]
     # field_value is not displayed because it may conflict with PowerSystems unit
     # conversion in Base.show. Leaving in the call stack in case we need it later.
-    @warn "Invalid range" valid_info.struct_name field_name valid_range valid_info.ist_struct
+    @warn "Invalid range" _group = LOG_GROUP_PARSING valid_info.struct_name field_name valid_range valid_info.ist_struct
     return true
 end
 
@@ -225,7 +225,7 @@ function validation_error(valid_info::ValidationInfo, field_value)
     field_name = valid_info.field_descriptor["name"]
     # field_value is not displayed because it may conflict with PowerSystems unit
     # conversion in Base.show. Leaving in the call stack in case we need it later.
-    @error "Invalid range" valid_info.struct_name field_name valid_range valid_info.ist_struct
+    @error "Invalid range" _group = LOG_GROUP_PARSING valid_info.struct_name field_name valid_range valid_info.ist_struct
     return false
 end
 
