@@ -100,7 +100,7 @@ end
     meta_str = :meta
     U_str =
         replace(replace(strip_module_name(U), "{" => COMPONENT_NAME_DELIMITER), "}" => "")
-    T_str = strip_module_name(string(T))
+    T_str = strip_module_name(T)
 
     :(Symbol(
         $T_str * COMPONENT_NAME_DELIMITER * $U_str *

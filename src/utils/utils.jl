@@ -142,18 +142,19 @@ function supertypes(::Type{T}, types = []) where {T}
 end
 
 """
-Strips the module name off of a type. This can be useful to print types as strings and
-receive consistent results regardless of whether the user used `import` or `using` to
+Strips the module name off of a type string. This can be useful to print types as strings
+and receive consistent results regardless of whether the user used `import` or `using` to
 load a package.
 
-Unlike Base.nameof, this function preserves any parametric types.
+Note: This only strips the outermost module name. Module names inside parametric types
+(e.g., inside `{...}`) are preserved.
 
 # Examples
 ```julia-repl
-julia> strip_module_name(PowerSystems.RegulationDevice{ThermalStandard})
-"RegulationDevice{ThermalStandard}"
-julia> string(nameof(PowerSystems.RegulationDevice{ThermalStandard}))
-"RegulationDevice"
+julia> strip_module_name("PowerSystems.HydroDispatch")
+"HydroDispatch"
+julia> strip_module_name("SingleTimeSeries{PowerSystems.HydroDispatch}")
+"SingleTimeSeries{PowerSystems.HydroDispatch}"
 ```
 """
 function strip_module_name(name::String)
@@ -163,17 +164,36 @@ function strip_module_name(name::String)
 
     if isnothing(index) ||
        (!isnothing(parametric_index) && index.start > parametric_index.start)
-        basename = name
+        return name
     else
-        basename = name[(index.start + 1):end]
+        return name[(index.start + 1):end]
     end
-
-    return basename
 end
 
-# PERF: this could be @generated (but if types are inferred, might already be inlined).
-function strip_module_name(::Type{T}) where {T}
-    return strip_module_name(string(T))
+"""
+Strips the module name off of a type. Unlike the String method, this also strips module
+names from type parameters.
+
+# Examples
+```julia-repl
+julia> strip_module_name(PowerSystems.RegulationDevice{ThermalStandard})
+"RegulationDevice{ThermalStandard}"
+julia> strip_module_name(VariableReserve{PowerSystems.ReserveUp})
+"VariableReserve{ReserveUp}"
+```
+"""
+@generated function strip_module_name(::Type{T}) where {T}
+    if T isa Union
+        # Fall back to string method for Union types
+        return :(strip_module_name(string(T)))
+    end
+    name = string(nameof(T))
+    if isempty(T.parameters)
+        return name
+    else # I believe there's only 2 parameters, so slightly overkill.
+        param_names = join([string(nameof(p)) for p in T.parameters], ", ")
+        return name * "{" * param_names * "}"
+    end
 end
 
 """
