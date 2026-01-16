@@ -5,10 +5,17 @@
 This document details the performance optimizations implemented for SQL queries managing time series associations and supplemental attributes in InfrastructureSystems.jl.
 
 **Files Modified:**
-- `src/time_series_metadata_store.jl` (153 lines changed)
-- `src/supplemental_attribute_associations.jl` (43 lines changed)
 
-**Estimated Performance Gains:** 30-70% improvement in common query patterns, with up to 100x speedup for bulk operations.
+- `src/time_series_metadata_store.jl`
+- `src/supplemental_attribute_associations.jl`
+
+**Verified Performance Gains:**
+
+- Index-based query optimization: Confirmed via EXPLAIN QUERY PLAN
+- ANALYZE statement: ~18% improvement on complex queries
+- `by_interval` index simplified from composite to single-column (unused second column removed)
+
+**Note:** Query pattern optimizations (consolidated COUNT queries, EXISTS vs COUNT) were benchmarked and found to provide no measurable benefit. These have been reverted to the original patterns.
 
 ---
 
