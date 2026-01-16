@@ -4509,3 +4509,36 @@ end
         resolution = resolution,
     )
 end
+
+@testset "Test optimize_database! for TimeSeriesMetadataStore" begin
+    sys = IS.SystemData()
+    component1 = IS.TestComponent("component1", 5)
+    component2 = IS.TestComponent("component2", 7)
+    IS.add_component!(sys, component1)
+    IS.add_component!(sys, component2)
+
+    initial_time = Dates.DateTime("2020-09-01")
+    resolution = Dates.Hour(1)
+
+    # Add several time series to create data for optimization
+    for i in 1:10
+        data = TimeSeries.TimeArray(
+            range(initial_time; length = 24, step = resolution),
+            rand(24),
+        )
+        ts = IS.SingleTimeSeries(; data = data, name = "test_$i")
+        IS.add_time_series!(sys, component1, ts)
+        IS.add_time_series!(sys, component2, ts)
+    end
+
+    # Verify data was added
+    @test IS.get_num_time_series(sys.time_series_manager.metadata_store) == 10
+
+    # Call optimize_database! - should not throw and data should remain intact
+    IS.optimize_database!(sys.time_series_manager.metadata_store)
+
+    # Verify data is still accessible after optimization
+    @test IS.get_num_time_series(sys.time_series_manager.metadata_store) == 10
+    @test IS.has_time_series(component1)
+    @test IS.has_time_series(component2)
+end
