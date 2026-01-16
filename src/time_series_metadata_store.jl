@@ -823,24 +823,37 @@ end
 Return an instance of TimeSeriesCounts.
 """
 function get_time_series_counts(store::TimeSeriesMetadataStore)
-    # Optimized: Single query instead of 4 separate queries
-    # Uses CASE statements to compute all counts in one pass
-    query = """
-        SELECT
-            COUNT(DISTINCT CASE WHEN owner_category = 'Component' THEN owner_uuid END) AS count_components,
-            COUNT(DISTINCT CASE WHEN owner_category = 'SupplementalAttribute' THEN owner_uuid END) AS count_attributes,
-            COUNT(DISTINCT CASE WHEN interval IS NULL THEN time_series_uuid END) AS count_sts,
-            COUNT(DISTINCT CASE WHEN interval IS NOT NULL THEN time_series_uuid END) AS count_forecasts
+    query_components = """
+        SELECT COUNT(DISTINCT owner_uuid) AS count
         FROM $ASSOCIATIONS_TABLE_NAME
+        WHERE owner_category = 'Component'
+    """
+    query_attributes = """
+        SELECT COUNT(DISTINCT owner_uuid) AS count
+        FROM $ASSOCIATIONS_TABLE_NAME
+        WHERE owner_category = 'SupplementalAttribute'
+    """
+    query_sts = """
+        SELECT COUNT(DISTINCT time_series_uuid) AS count
+        FROM $ASSOCIATIONS_TABLE_NAME
+        WHERE interval IS NULL
+    """
+    query_forecasts = """
+        SELECT COUNT(DISTINCT time_series_uuid) AS count
+        FROM $ASSOCIATIONS_TABLE_NAME
+        WHERE interval IS NOT NULL
     """
 
-    row = Tables.rowtable(_execute(store, query))[1]
+    count_components = Tables.rowtable(_execute(store, query_components))[1].count
+    count_attributes = Tables.rowtable(_execute(store, query_attributes))[1].count
+    count_sts = Tables.rowtable(_execute(store, query_sts))[1].count
+    count_forecasts = Tables.rowtable(_execute(store, query_forecasts))[1].count
 
     return TimeSeriesCounts(;
-        components_with_time_series = row.count_components,
-        supplemental_attributes_with_time_series = row.count_attributes,
-        static_time_series_count = row.count_sts,
-        forecast_count = row.count_forecasts,
+        components_with_time_series = count_components,
+        supplemental_attributes_with_time_series = count_attributes,
+        static_time_series_count = count_sts,
+        forecast_count = count_forecasts,
     )
 end
 
@@ -1341,21 +1354,14 @@ end
 
 _check_remove_metadata(::TimeSeriesMetadataStore, ::TimeSeriesMetadata) = nothing
 
-# Optimized: Use EXISTS subquery instead of GROUP BY + HAVING for better performance
-# This allows SQLite to short-circuit as soon as it finds a matching row
 const _QUERY_CHECK_FOR_ATTACHED_DSTS = """
-SELECT 1
-FROM $ASSOCIATIONS_TABLE_NAME sts
-WHERE sts.time_series_uuid = ?
-  AND sts.time_series_type = 'SingleTimeSeries'
-  AND EXISTS (
-    SELECT 1
-    FROM $ASSOCIATIONS_TABLE_NAME dsts
-    WHERE dsts.time_series_uuid = sts.time_series_uuid
-      AND dsts.time_series_type = 'DeterministicSingleTimeSeries'
-    LIMIT 1
-  )
-LIMIT 1;
+SELECT time_series_uuid
+FROM $ASSOCIATIONS_TABLE_NAME
+WHERE time_series_uuid = ?
+GROUP BY time_series_uuid
+HAVING
+    SUM(CASE WHEN time_series_type = 'SingleTimeSeries' THEN 1 ELSE 0 END) = 1
+    AND SUM(CASE WHEN time_series_type = 'DeterministicSingleTimeSeries' THEN 1 ELSE 0 END) >= 1
 """
 
 function _check_remove_metadata(
@@ -1380,12 +1386,10 @@ function _check_remove_metadata(
 end
 
 function _handle_removed_metadata(store::TimeSeriesMetadataStore, metadata_uuid::String)
-    # Optimized: Use EXISTS instead of COUNT for faster check
-    # EXISTS short-circuits as soon as it finds one row
-    query = "SELECT EXISTS(SELECT 1 FROM $ASSOCIATIONS_TABLE_NAME WHERE metadata_uuid = ? LIMIT 1) AS exists_flag"
+    query = "SELECT COUNT(*) AS count FROM $ASSOCIATIONS_TABLE_NAME WHERE metadata_uuid = ?"
     params = (metadata_uuid,)
-    row = Tables.rowtable(_execute(store, query, params))[1]
-    if row.exists_flag == 0
+    count = Tables.rowtable(_execute(store, query, params))[1].count
+    if count == 0
         pop!(store.metadata_uuids, Base.UUID(metadata_uuid))
     end
 end
