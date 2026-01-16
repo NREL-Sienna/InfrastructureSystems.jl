@@ -811,12 +811,10 @@ end
 Return the number of unique time series arrays.
 """
 function get_num_time_series(store::TimeSeriesMetadataStore)
-    return Tables.rowtable(
-        _execute(
-            store,
-            "SELECT COUNT(DISTINCT time_series_uuid) AS count FROM $ASSOCIATIONS_TABLE_NAME",
-        ),
-    )[1].count
+    return _execute_count_direct(
+        store,
+        "SELECT COUNT(DISTINCT time_series_uuid) AS count FROM $ASSOCIATIONS_TABLE_NAME",
+    )
 end
 
 """
@@ -844,10 +842,10 @@ function get_time_series_counts(store::TimeSeriesMetadataStore)
         WHERE interval IS NOT NULL
     """
 
-    count_components = Tables.rowtable(_execute(store, query_components))[1].count
-    count_attributes = Tables.rowtable(_execute(store, query_attributes))[1].count
-    count_sts = Tables.rowtable(_execute(store, query_sts))[1].count
-    count_forecasts = Tables.rowtable(_execute(store, query_forecasts))[1].count
+    count_components = _execute_count_direct(store, query_components)
+    count_attributes = _execute_count_direct(store, query_attributes)
+    count_sts = _execute_count_direct(store, query_sts)
+    count_forecasts = _execute_count_direct(store, query_forecasts)
 
     return TimeSeriesCounts(;
         components_with_time_series = count_components,
@@ -1388,7 +1386,7 @@ end
 function _handle_removed_metadata(store::TimeSeriesMetadataStore, metadata_uuid::String)
     query = "SELECT COUNT(*) AS count FROM $ASSOCIATIONS_TABLE_NAME WHERE metadata_uuid = ?"
     params = (metadata_uuid,)
-    count = Tables.rowtable(_execute(store, query, params))[1].count
+    count = _execute_count_direct(store, query, params)
     if count == 0
         pop!(store.metadata_uuids, Base.UUID(metadata_uuid))
     end
@@ -1518,6 +1516,18 @@ _execute(s::TimeSeriesMetadataStore, q, p = nothing) =
     execute(s.db, q, p, LOG_GROUP_TIME_SERIES)
 _execute_count(s::TimeSeriesMetadataStore, q, p = nothing) =
     execute_count(s.db, q, p, LOG_GROUP_TIME_SERIES)
+
+function _execute_count_direct(
+    store::TimeSeriesMetadataStore,
+    query::String,
+    params::Union{Nothing, Tuple{String}} = nothing,
+)
+    rows = Tables.rowtable(_execute(store, query, params))
+    if isempty(rows)
+        error("$query. Did not return any rows.")
+    end
+    return rows[1].count
+end
 
 function _remove_metadata!(
     store::TimeSeriesMetadataStore,
