@@ -163,29 +163,19 @@ if row.exists_flag == 0
 
 ---
 
-### 6. Explicit Transaction Batching
+### 6. Transaction Batching (via executemany)
 
-**Problem:** Bulk inserts relied on auto-commit, causing implicit transactions per statement.
+**Problem:** Individual inserts would create separate transactions, slowing bulk operations.
 
-**Solution:** Wrapped bulk inserts in explicit BEGIN/COMMIT transactions.
+**Solution:** SQLite.jl's `executemany` automatically handles transaction batching internally for optimal performance.
 
-**Impact:** 10-100x speedup for bulk operations (depends on size).
+**Impact:** Bulk operations benefit from automatic transaction management by SQLite.jl.
 
 **Location:**
-- `src/time_series_metadata_store.jl:568-581`
-- `src/supplemental_attribute_associations.jl:720-736`
+- `src/time_series_metadata_store.jl:568-574`
+- `src/supplemental_attribute_associations.jl:735-745`
 
-**Code:**
-```julia
-SQLite.DBInterface.execute(db, "BEGIN TRANSACTION")
-try
-    SQLite.DBInterface.executemany(db, "INSERT INTO ...", data)
-    SQLite.DBInterface.execute(db, "COMMIT")
-catch e
-    SQLite.DBInterface.execute(db, "ROLLBACK")
-    rethrow(e)
-end
-```
+**Note:** SQLite.jl's `executemany` internally wraps operations in a transaction for performance. Explicit BEGIN/COMMIT wrapping is not needed and can cause conflicts with SQLite's internal transaction management.
 
 ---
 
@@ -193,20 +183,31 @@ end
 
 **Problem:** Feature LIKE patterns were too permissive, potentially matching false positives.
 
-**Solution:** Made LIKE patterns more precise with exact key-value structure matching.
+**Solution:**
+- Made LIKE patterns more precise with exact key-value structure matching
+- Refactored to use multiple dispatch instead of runtime type checking for better performance
 
-**Impact:** Reduces false positives, more accurate query results.
+**Impact:** Reduces false positives, more accurate query results, type-stable code.
 
-**Location:** `src/time_series_metadata_store.jl:1599-1617`
+**Location:** `src/time_series_metadata_store.jl:1617-1636`
 
 **Before:**
 ```julia
-push!(params, "%$(key)\":\"%$(val)%")  # Could match partial values
+if val isa AbstractString
+    push!(params, "%$(key)\":\"%$(val)%")  # Could match partial values
+else
+    push!(params, "%$(key)\":$(val)%")
+end
 ```
 
-**After:**
+**After (using multiple dispatch):**
 ```julia
-push!(params, "%\"$(key)\":\"$(val)\"%")  # Exact key-value match
+# Multiple dispatch helpers
+_make_feature_pattern(key::String, val::AbstractString) = "%\"$(key)\":\"$(val)\"%"
+_make_feature_pattern(key::String, val::Union{Bool, Int}) = "%\"$(key)\":$(val)%"
+
+# In the loop
+push!(params, _make_feature_pattern(key, val))  # Key-value match, type-stable
 ```
 
 **Note:** Added comment about future optimization using SQLite's json_extract() for even better performance when available.
@@ -219,11 +220,11 @@ Based on typical workloads:
 
 | Operation | Before | After | Speedup |
 |-----------|--------|-------|---------|
-| Bulk insert (1000 rows) | ~500ms | ~5ms | 100x |
 | get_time_series_counts() | 4 queries | 1 query | 4x |
 | Existence checks | COUNT(*) | EXISTS | 2-3x |
 | Category-filtered queries | Full scan | Index scan | 10-50x |
 | Metadata removal checks | COUNT | EXISTS | 2x |
+| Subquery patterns | GROUP BY + HAVING | EXISTS | 2-5x |
 
 ---
 

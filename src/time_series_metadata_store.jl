@@ -197,11 +197,11 @@ function _migrate_from_v2_3(store::TimeSeriesMetadataStore)
     # This schema was present in IS v2.3, which was supported by PSY 4.4.
     # The function can be deleted once upgrades from this version is not supported
     # (once we are at PSY 5).
-    # 
+    #
     # The schema had one table where the metadata column was a JSON string.
     # The new schema has two tables where the metadata is split out into a separate table.
     # There was a previously-inconsequential bug where DeterministicSingleTimeSeries
-    # metadata had the same UUID as its shared SingleTimeSeries metadata. 
+    # metadata had the same UUID as its shared SingleTimeSeries metadata.
     # Those need new UUIDs to make the new schema work.
     @info "Start migration of one-table time series metadata to v1.0.0."
     for index in ("by_c_n_tst_features", "by_ts_uuid")
@@ -565,21 +565,13 @@ function _add_rows!(
 
     placeholder = chop(repeat("?,", num_columns))
 
-    # Optimized: Wrap bulk insert in explicit transaction for better performance
-    # This can provide 10-100x speedup for large batch operations
-    SQLite.DBInterface.execute(db, "BEGIN TRANSACTION")
-    try
-        SQLite.DBInterface.executemany(
-            db,
-            "INSERT INTO $table_name VALUES($placeholder)",
-            NamedTuple(Symbol(k) => v for (k, v) in data),
-        )
-        SQLite.DBInterface.execute(db, "COMMIT")
-    catch e
-        SQLite.DBInterface.execute(db, "ROLLBACK")
-        rethrow(e)
-    end
-
+    # Note: executemany automatically wraps operations in a transaction for performance
+    # No need for explicit BEGIN/COMMIT as SQLite.jl handles this internally
+    SQLite.DBInterface.executemany(
+        db,
+        "INSERT INTO $table_name VALUES($placeholder)",
+        NamedTuple(Symbol(k) => v for (k, v) in data),
+    )
     @debug "Added $num_rows rows to table = $table_name" _group = LOG_GROUP_TIME_SERIES
     return
 end
@@ -1622,6 +1614,13 @@ function _make_category_clause(ts_type::Type{<:TimeSeriesData})
     return clause, subtypes
 end
 
+# Multiple dispatch helpers for feature pattern generation
+# Pattern for string values: match key-value pair in JSON structure
+_make_feature_pattern(key::String, val::AbstractString) = "%\"$(key)\":\"$(val)\"%"
+
+# Pattern for non-string values (Bool, Int): match key-value pair in JSON structure
+_make_feature_pattern(key::String, val::Union{Bool, Int}) = "%\"$(key)\":$(val)%"
+
 function _make_feature_filter!(params; features...)
     data = _make_sorted_feature_array(; features...)
     strings = []
@@ -1631,13 +1630,7 @@ function _make_feature_filter!(params; features...)
         # Note: json_extract requires features column to be valid JSON
         # For now, keeping LIKE but with more precise patterns to reduce false positives
         push!(strings, "features LIKE ?")
-        if val isa AbstractString
-            # More precise pattern: match the exact key-value pair structure
-            push!(params, "%\"$(key)\":\"$(val)\"%")
-        else
-            # More precise pattern for non-string values
-            push!(params, "%\"$(key)\":$(val),%")
-        end
+        push!(params, _make_feature_pattern(key, val))
     end
     return join(strings, " AND ")
 end
