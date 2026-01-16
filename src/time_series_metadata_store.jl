@@ -15,7 +15,7 @@ const TS_DB_INDEXES = Dict(
     "by_ts_uuid" => ["time_series_uuid"],
     # Additional indexes for common query patterns
     "by_owner_category" => ["owner_category", "owner_uuid"],
-    "by_interval" => ["interval", "time_series_uuid"],
+    "by_interval" => ["interval"],
     "by_metadata_uuid" => ["metadata_uuid"],
 )
 
