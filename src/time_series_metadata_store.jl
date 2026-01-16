@@ -13,6 +13,10 @@ const TS_DB_INDEXES = Dict(
         "features",
     ],
     "by_ts_uuid" => ["time_series_uuid"],
+    # Additional indexes for common query patterns
+    "by_owner_category" => ["owner_category", "owner_uuid"],
+    "by_interval" => ["interval"],
+    "by_metadata_uuid" => ["metadata_uuid"],
 )
 
 @kwdef struct HasMetadataQueryKey
@@ -193,11 +197,11 @@ function _migrate_from_v2_3(store::TimeSeriesMetadataStore)
     # This schema was present in IS v2.3, which was supported by PSY 4.4.
     # The function can be deleted once upgrades from this version is not supported
     # (once we are at PSY 5).
-    # 
+    #
     # The schema had one table where the metadata column was a JSON string.
     # The new schema has two tables where the metadata is split out into a separate table.
     # There was a previously-inconsequential bug where DeterministicSingleTimeSeries
-    # metadata had the same UUID as its shared SingleTimeSeries metadata. 
+    # metadata had the same UUID as its shared SingleTimeSeries metadata.
     # Those need new UUIDs to make the new schema work.
     @info "Start migration of one-table time series metadata to v1.0.0."
     for index in ("by_c_n_tst_features", "by_ts_uuid")
@@ -424,6 +428,9 @@ function _create_indexes!(store::TimeSeriesMetadataStore)
     #    1c. time series for one component/attribute with all features
     # 2. Optimize for checks at system.add_time_series. Use all fields and features.
     # 3. Optimize for returning all metadata for a time series UUID.
+    # 4. Optimize for category-based queries (owner_category filtering)
+    # 5. Optimize for interval-based queries (forecast vs static time series)
+    # 6. Optimize for metadata UUID lookups and cascade operations
 
     _drop_all_indexes!(store.db)
     SQLite.createindex!(
@@ -442,6 +449,35 @@ function _create_indexes!(store::TimeSeriesMetadataStore)
         unique = false,
         ifnotexists = true,
     )
+    # New indexes for improved query performance
+    SQLite.createindex!(
+        store.db,
+        ASSOCIATIONS_TABLE_NAME,
+        "by_owner_category",
+        TS_DB_INDEXES["by_owner_category"];
+        unique = false,
+        ifnotexists = true,
+    )
+    SQLite.createindex!(
+        store.db,
+        ASSOCIATIONS_TABLE_NAME,
+        "by_interval",
+        TS_DB_INDEXES["by_interval"];
+        unique = false,
+        ifnotexists = true,
+    )
+    SQLite.createindex!(
+        store.db,
+        ASSOCIATIONS_TABLE_NAME,
+        "by_metadata_uuid",
+        TS_DB_INDEXES["by_metadata_uuid"];
+        unique = false,
+        ifnotexists = true,
+    )
+
+    # Run ANALYZE to gather statistics for query planner
+    SQLite.DBInterface.execute(store.db, "ANALYZE")
+
     return
 end
 
@@ -528,6 +564,9 @@ function _add_rows!(
     end
 
     placeholder = chop(repeat("?,", num_columns))
+
+    # Note: executemany automatically wraps operations in a transaction for performance
+    # No need for explicit BEGIN/COMMIT as SQLite.jl handles this internally
     SQLite.DBInterface.executemany(
         db,
         "INSERT INTO $table_name VALUES($placeholder)",
@@ -559,6 +598,19 @@ Clear all time series metadata from the store.
 """
 function clear_metadata!(store::TimeSeriesMetadataStore)
     _execute(store, "DELETE FROM $ASSOCIATIONS_TABLE_NAME")
+end
+
+"""
+Update database statistics for optimal query planning.
+Call this after bulk operations or significant data changes.
+"""
+function optimize_database!(store::TimeSeriesMetadataStore)
+    # Run ANALYZE to update query planner statistics
+    SQLite.DBInterface.execute(store.db, "ANALYZE")
+    # Run VACUUM to reclaim space and defragment (optional, can be slow)
+    # SQLite.DBInterface.execute(store.db, "VACUUM")
+    @debug "Optimized database statistics" _group = LOG_GROUP_TIME_SERIES
+    return
 end
 
 function check_params_compatibility(
@@ -772,34 +824,30 @@ Return an instance of TimeSeriesCounts.
 """
 function get_time_series_counts(store::TimeSeriesMetadataStore)
     query_components = """
-        SELECT
-            COUNT(DISTINCT owner_uuid) AS count
+        SELECT COUNT(DISTINCT owner_uuid) AS count
         FROM $ASSOCIATIONS_TABLE_NAME
         WHERE owner_category = 'Component'
     """
     query_attributes = """
-        SELECT
-            COUNT(DISTINCT owner_uuid) AS count
+        SELECT COUNT(DISTINCT owner_uuid) AS count
         FROM $ASSOCIATIONS_TABLE_NAME
         WHERE owner_category = 'SupplementalAttribute'
     """
     query_sts = """
-        SELECT
-            COUNT(DISTINCT time_series_uuid) AS count
+        SELECT COUNT(DISTINCT time_series_uuid) AS count
         FROM $ASSOCIATIONS_TABLE_NAME
         WHERE interval IS NULL
     """
     query_forecasts = """
-        SELECT
-            COUNT(DISTINCT time_series_uuid) AS count
+        SELECT COUNT(DISTINCT time_series_uuid) AS count
         FROM $ASSOCIATIONS_TABLE_NAME
         WHERE interval IS NOT NULL
     """
 
-    count_components = _execute_count(store, query_components)
-    count_attributes = _execute_count(store, query_attributes)
-    count_sts = _execute_count(store, query_sts)
-    count_forecasts = _execute_count(store, query_forecasts)
+    count_components = Tables.rowtable(_execute(store, query_components))[1].count
+    count_attributes = Tables.rowtable(_execute(store, query_attributes))[1].count
+    count_sts = Tables.rowtable(_execute(store, query_sts))[1].count
+    count_forecasts = Tables.rowtable(_execute(store, query_forecasts))[1].count
 
     return TimeSeriesCounts(;
         components_with_time_series = count_components,
@@ -1306,17 +1354,14 @@ end
 
 _check_remove_metadata(::TimeSeriesMetadataStore, ::TimeSeriesMetadata) = nothing
 
-# if first SUM = 1 condition is met, then the 2nd SUM should be 0, else we error.
-# optimize for non-error case, so stick with SUM >= 1 instead of a WHERE EXISTS.
 const _QUERY_CHECK_FOR_ATTACHED_DSTS = """
 SELECT time_series_uuid
 FROM $ASSOCIATIONS_TABLE_NAME
 WHERE time_series_uuid = ?
 GROUP BY time_series_uuid
 HAVING
-    SUM(time_series_type = 'SingleTimeSeries') = 1
-    AND
-    SUM(time_series_type = 'DeterministicSingleTimeSeries') >= 1;
+    SUM(CASE WHEN time_series_type = 'SingleTimeSeries' THEN 1 ELSE 0 END) = 1
+    AND SUM(CASE WHEN time_series_type = 'DeterministicSingleTimeSeries' THEN 1 ELSE 0 END) >= 1
 """
 
 function _check_remove_metadata(
@@ -1341,9 +1386,9 @@ function _check_remove_metadata(
 end
 
 function _handle_removed_metadata(store::TimeSeriesMetadataStore, metadata_uuid::String)
-    query = "SELECT count(*) AS count FROM $ASSOCIATIONS_TABLE_NAME WHERE metadata_uuid = ? LIMIT 1"
+    query = "SELECT COUNT(*) AS count FROM $ASSOCIATIONS_TABLE_NAME WHERE metadata_uuid = ?"
     params = (metadata_uuid,)
-    count = _execute_count(store, query, params)
+    count = Tables.rowtable(_execute(store, query, params))[1].count
     if count == 0
         pop!(store.metadata_uuids, Base.UUID(metadata_uuid))
     end
@@ -1573,16 +1618,23 @@ function _make_category_clause(ts_type::Type{<:TimeSeriesData})
     return clause, subtypes
 end
 
+# Multiple dispatch helpers for feature pattern generation
+# Pattern for string values: match key-value pair in JSON structure
+_make_feature_pattern(key::String, val::AbstractString) = "%\"$(key)\":\"$(val)\"%"
+
+# Pattern for non-string values (Bool, Int): match key-value pair in JSON structure
+_make_feature_pattern(key::String, val::Union{Bool, Int}) = "%\"$(key)\":$(val)%"
+
 function _make_feature_filter!(params; features...)
     data = _make_sorted_feature_array(; features...)
     strings = []
     for (key, val) in data
+        # Optimized: Use json_extract when available (SQLite 3.38.0+) for better performance
+        # Fall back to LIKE for compatibility with older SQLite versions
+        # Note: json_extract requires features column to be valid JSON
+        # For now, keeping LIKE but with more precise patterns to reduce false positives
         push!(strings, "features LIKE ?")
-        if val isa AbstractString
-            push!(params, "%$(key)\":\"%$(val)%")
-        else
-            push!(params, "%$(key)\":$(val)%")
-        end
+        push!(params, _make_feature_pattern(key, val))
     end
     return join(strings, " AND ")
 end
