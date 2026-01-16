@@ -56,9 +56,9 @@ function run_tests(args...; kwargs...)
             config = IS.LoggingConfiguration(logging_config_filename)
         else
             config = IS.LoggingConfiguration(;
-                filename=LOG_FILE,
-                file_level=get_logging_level_from_env("SIENNA_FILE_LOG_LEVEL", "Info"),
-                console_level=get_logging_level_from_env(
+                filename = LOG_FILE,
+                file_level = get_logging_level_from_env("SIENNA_FILE_LOG_LEVEL", "Info"),
+                console_level = get_logging_level_from_env(
                     "SIENNA_CONSOLE_LOG_LEVEL",
                     "Error",
                 ),
