@@ -1,12 +1,17 @@
 package_role: utility_foundation
 julia_compat: "^1.6"
-note: Project.toml specifies julia = "^1.6", consider updating to 1.10+ for better performance
 
 design_objectives:
   primary: performance
   description: >
-    This package is a foundational library consumed by performance-critical
-    simulation packages. All code must be written with performance in mind.
+    Foundational library for performance-critical simulation packages.
+    All code must be written with performance in mind.
+
+  principles:
+    - Elegance and concision in both interface and implementation
+    - Fail fast with actionable error messages rather than hiding problems
+    - Validate invariants explicitly in subtle cases
+    - Avoid over-adherence to backwards compatibility for internal helpers
 
 performance_requirements:
   priority: critical
@@ -17,7 +22,7 @@ performance_requirements:
       description: Functions must return consistent concrete types
       bad: "f(x) = x > 0 ? 1 : 1.0"
       good: "f(x) = x > 0 ? 1.0 : 1.0"
-      check: use @code_warntype to verify type stability
+      check: "@code_warntype"
 
     abstract_field_types:
       description: Struct fields must have concrete types or be parameterized
@@ -25,22 +30,18 @@ performance_requirements:
       good: "struct Foo{T<:AbstractVector}; data::T; end"
 
     untyped_containers:
-      description: Avoid containers with abstract element types
       bad: "Vector{Any}(), Vector{Real}()"
       good: "Vector{Float64}(), Vector{Int}()"
 
     non_const_globals:
-      description: Global variables must be const or avoided entirely
       bad: "THRESHOLD = 0.5"
       good: "const THRESHOLD = 0.5"
 
     unnecessary_allocations:
-      description: Avoid allocations in hot paths
       patterns:
-        - use views instead of copies (view, @view, @views)
+        - use views instead of copies (@view, @views)
         - pre-allocate arrays instead of push! in loops
         - use in-place operations (functions ending with !)
-        - avoid string interpolation in hot paths
 
     captured_variables:
       description: Avoid closures that capture variables causing boxing
@@ -48,278 +49,138 @@ performance_requirements:
 
     splatting_penalty:
       description: Avoid splatting (...) in performance-critical code
-      reason: splatting can cause allocations and type instability
 
     abstract_return_types:
       description: Avoid returning Union types or abstract types
-      check: ensure functions have inferrable concrete return types
 
   best_practices:
     - use @inbounds when bounds are verified
     - use broadcasting (dot syntax) for element-wise operations
     - avoid try-catch in hot paths
     - use function barriers to isolate type instability
-    - annotate types in function signatures for clarity
-    - prefer iteration over indexing when possible
 
-  profiling_tools:
-    - "@time for quick timing and allocation checks"
-    - "@btime from BenchmarkTools.jl for accurate benchmarks"
-    - "@code_warntype to check type stability"
-    - "@allocated to check allocations"
+  note: >
+    Apply these guidelines with judgment. Not every function is performance-critical.
+    Focus optimization efforts on hot paths and frequently called code.
 
 file_structure:
   src/:
-    description: Main source code
     key_files:
       - InfrastructureSystems.jl: main module and exports
       - system_data.jl: SystemData implementation
       - time_series_interface.jl: time series public API
-      - time_series_metadata_store.jl: metadata storage
       - component.jl: base component types
-      - components.jl: component management
-      - supplemental_attribute_associations.jl: attribute associations
     subdirectories:
-      - utils/: utility functions
-      - generated/: auto-generated code
-      - descriptors/: descriptor files
-      - Optimization/: optimization utilities
+      - utils/: utility functions including generate_structs.jl
+      - generated/: auto-generated struct files (DO NOT EDIT directly)
+      - descriptors/: JSON descriptors for struct generation (structs.json)
+      - Optimization/: optimization container types and results
       - Simulation/: simulation utilities
   test/: test suite
   docs/: documentation source
-  scripts/: utility scripts
-  .github/: CI workflows and formatter
+  scripts/: utility scripts (formatter)
+  bin/: executable scripts (struct generation)
 
-dependencies:
-  julia_standard_library:
-    - Dates
-    - UUIDs
-    - Logging
-  external:
-    - DataStructures.jl
-    - TimeSeries.jl
+auto_generation:
+  description: >
+    Structs can be auto-generated from JSON descriptors using Mustache templates.
+    Generated files are in src/generated/ and should NOT be edited directly.
+  descriptor_file: src/descriptors/structs.json
+  generator: src/utils/generate_structs.jl
+  command: julia bin/generate_structs.jl src/descriptors/structs.json src/generated/
+  workflow:
+    - Edit the JSON descriptor file to define/modify struct fields
+    - Run the generation command
+    - Generated files include docstrings and constructors automatically
+
 consumed_by:
   - PowerSystems.jl
   - PowerSimulations.jl
   - PowerSimulationsDynamics.jl
   - PowerNetworkMatrices.jl
 
-key_modules:
-  - InfrastructureSystems
-
 core_abstractions:
   - InfrastructureSystemsComponent
   - InfrastructureSystemsType
-  - TimeSeriesData
-  - SystemData
   - InfrastructureSystemsContainer
+  - SystemData
+  - TimeSeriesData
+  - ValueCurve
+  - ProductionVariableCostCurve (CostCurve, FuelCurve)
+  - FunctionData
+  - ComponentSelector
 
 test_patterns:
   location: test/
   runner: julia --project=test test/runtests.jl
-  coverage_minimum: 70%
 
 code_conventions:
-  style_guide: InfrastructureSystems
   style_guide_url: https://nrel-sienna.github.io/InfrastructureSystems.jl/stable/style/
-  base_guides:
-    - Julia Style Guide: https://docs.julialang.org/en/v1/manual/style-guide/
-    - Julia Contribution Guidelines: https://github.com/JuliaLang/julia/blob/main/CONTRIBUTING.md
-    - Julia Docstring Guidelines: https://docs.julialang.org/en/v1/manual/documentation/
-    - JuMP Coding Standards: http://www.juliaopt.org/JuMP.jl/dev/style
   formatter:
     tool: JuliaFormatter
     command: julia -e 'include("scripts/formatter/formatter_code.jl")'
-    note: Formatter activates its own environment and handles dependencies
-  import_order:
-    - standard_library
-    - third_party
-    - local_modules
   key_rules:
     constructors: use function Foo() not Foo() = ...
     asserts: prefer InfrastructureSystems.@assert_op over @assert
-    globals: UPPER_CASE for constants, prefix g_ for variables
+    globals: UPPER_CASE for constants
     exports: all exports in main module file
     comments: complete sentences, describe why not how
-    logging_groups: use _group parameter for debug statements
-    whitespace: one arg per line when exceeding line length
 
 documentation_practices:
-  framework: Diataxis
-  framework_url: https://diataxis.fr/
+  framework: Diataxis (https://diataxis.fr/)
   sienna_guide: https://nrel-sienna.github.io/InfrastructureSystems.jl/stable/docs_best_practices/explanation/
 
-  documentation_types:
-    tutorials:
-      purpose: learning by doing for beginners
-      location: docs/src/tutorials/
-      characteristics:
-        - step-by-step instructions
-        - learning-oriented
-        - assume no prior knowledge
-        - provide complete working examples
-        - guide through a meaningful experience
-    how_to_guides:
-      purpose: solve specific real-world problems
-      location: docs/src/how_to/
-      characteristics:
-        - goal-oriented
-        - assume user competence
-        - provide practical directions
-        - focus on work not study
-        - titles start with "How to..."
-    reference:
-      purpose: technical description and facts
-      location: docs/src/api/
-      characteristics:
-        - information-oriented
-        - structure mirrors code structure
-        - austere and authoritative
-        - no instruction or explanation
-        - use @autodocs for automation
-    explanation:
-      purpose: clarify and illuminate topics
-      location: docs/src/explanation/
-      characteristics:
-        - understanding-oriented
-        - provide context and background
-        - answer "why" questions
-        - discuss design decisions
-        - connect concepts
-
   docstring_requirements:
-    all_exported_symbols: must have docstrings
-    function_signatures: always include in docstring
-    arguments_list: required for all functions
-    automation: use DocStringExtensions.TYPEDFIELDS
-    see_also_links: add for functions with same name (multiple dispatch)
-    hyperlinks: link to other Sienna types in arguments
+    scope: all elements of public interface (note IS is selective about exports)
+    include: function signatures and arguments list
+    automation: DocStringExtensions.TYPEDSIGNATURES (TYPEDFIELDS used sparingly in IS)
+    see_also: add links for functions with same name (multiple dispatch)
 
-  tools:
-    - Documenter.jl: build documentation
-    - DocStringExtensions.jl: automate docstring generation
-
-  api_organization:
-    public_api:
-      file: docs/src/api/public.md
-      method: use @autodocs blocks organized by file
-      exports_only: Public = true, Private = false
-      example: |
-```@autodocs
-        Modules = [InfrastructureSystems]
-        Pages = ["time_series.jl"]
-        Public = true
-        Private = false
-```
-    internals_api:
-      file: docs/src/api/internals.md
-      method: use @autodocs for private functions
-
-  cross_package_docstrings:
-    pattern: filter exported symbols from InfrastructureSystems
-    example: Filter = t -> nameof(t) in names(PackageName)
-    avoid: adding InfrastructureSystems to makedocs modules parameter
+  api_docs:
+    public: docs/src/api/public.md using @autodocs with Public=true, Private=false
+    internals: docs/src/api/internals.md
 
 common_tasks:
   run_tests: julia --project=test test/runtests.jl
   build_docs: julia --project=docs docs/make.jl
   format_code: julia -e 'include("scripts/formatter/formatter_code.jl")'
-  check_format: git diff --exit-code  # Run after format_code to check for changes
-  instantiate: julia --project -e 'using Pkg; Pkg.instantiate()'
+  check_format: git diff --exit-code
   instantiate_test: julia --project=test -e 'using Pkg; Pkg.instantiate()'
-  instantiate_docs: julia --project=docs -e 'using Pkg; Pkg.instantiate()'
-  coverage_local: julia --project=test --code-coverage=user test/runtests.jl
-  coverage_report: julia --project=test -e 'using Coverage; coverage = process_folder(); covered_lines, total_lines = get_summary(coverage); println("Coverage: $(round(100 * covered_lines / total_lines, digits=2))%")'
+  generate_structs: julia bin/generate_structs.jl src/descriptors/structs.json src/generated/
 
 contribution_workflow:
+  branch_naming: feature/description or fix/description (branches in main repo)
+  main_branch: master
   pr_process:
-    - Fork the repository
-    - Create a feature branch
+    - Create a feature branch in the main repo
     - Make changes following the style guide
     - Run formatter before committing
     - Ensure tests pass
     - Submit pull request
-  branch_naming: feature/description or fix/description
-  main_branch: main
-
-session_start_hook:
-  description: Commands to run when starting a new Claude Code session
-  recommended_setup:
-    - Check Julia installation and version
-    - Instantiate test environment if running tests
-    - Verify formatter script is accessible
-  example_commands:
-    - julia --version
-    - julia --project=test -e 'using Pkg; Pkg.instantiate()'
-
-quick_start_examples:
-  adding_new_function:
-    description: When adding a new exported function
-    steps:
-      - Write function with docstring including TYPEDSIGNATURES
-      - Add function to appropriate source file
-      - Ensure function signature has type annotations
-      - Check type stability with @code_warntype
-      - Add tests in test/ directory
-      - Run formatter before committing
-    performance_check: julia -e '@code_warntype your_function(args)'
-
-  fixing_performance_issue:
-    description: When fixing a performance bottleneck
-    steps:
-      - Profile with @time or @btime to identify issue
-      - Check type stability with @code_warntype
-      - Review anti-patterns list in performance_requirements
-      - Implement fix using concrete types
-      - Benchmark before/after with BenchmarkTools
-      - Add regression test if applicable
-
-  adding_struct:
-    description: When adding a new struct type
-    steps:
-      - Use concrete or parameterized types for all fields
-      - Implement kwarg-only constructor for deserialization
-      - Add docstring with TYPEDFIELDS from DocStringExtensions
-      - Consider if it should be <: InfrastructureSystemsComponent
-      - Add validation if necessary
-      - Document in API reference
 
 troubleshooting:
   type_instability:
     symptom: Poor performance, many allocations
-    diagnosis: Run @code_warntype on suspect function
-    common_causes:
-      - Returning different types based on conditions
-      - Abstract field types in structs
-      - Non-const global variables
+    diagnosis: "@code_warntype on suspect function"
     solution: See performance_requirements.anti_patterns_to_avoid
 
   formatter_fails:
     symptom: Formatter command returns error
-    diagnosis: Check Julia environment and script path
-    solution: Ensure Julia is installed and run 'julia -e \"include(\\\"scripts/formatter/formatter_code.jl\\\")\"'
+    solution: julia -e 'include("scripts/formatter/formatter_code.jl")'
 
   test_failures:
     symptom: Tests fail unexpectedly
-    diagnosis: Check if test environment is instantiated
-    solution: Run 'julia --project=test -e \"using Pkg; Pkg.instantiate()\"' first
+    solution: julia --project=test -e 'using Pkg; Pkg.instantiate()'
 
 ai_agent_guidance:
   code_generation_priorities:
-    - Performance is critical - always use concrete types
-    - Follow the anti-patterns list strictly
+    - Performance matters - use concrete types in hot paths
+    - Apply anti-patterns list with judgment (not exhaustively everywhere)
     - Run formatter on all changes
-    - Add docstrings to all exported symbols
-    - Consider type stability in all functions
+    - Add docstrings to public interface elements
+    - Consider type stability in performance-critical functions
 
   when_modifying_code:
     - Read existing code patterns before making changes
     - Maintain consistency with existing style
-    - Check @code_warntype after changes to hot paths
-    - Ensure backward compatibility unless explicitly breaking
-
-  documentation_requirements:
-    - All exported functions need complete docstrings
-    - Include TYPEDSIGNATURES in docstrings
-    - Add examples for complex functions
-    - Link to related functions with See also section
+    - Prefer failing fast with clear errors over silent failures
