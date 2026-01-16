@@ -8,23 +8,21 @@ import InfrastructureSystems.Optimization:
 import InfrastructureSystems as IS
 @testset "Test optimization container keys" begin
     var_key = VariableKey(MockVariable, IS.TestComponent)
-    @test IS.Optimization.encode_key(var_key) ==
-          Symbol("InfrastructureSystemsTests.MockVariable__TestComponent")
+    @test IS.Optimization.encode_key(var_key) == Symbol("MockVariable__TestComponent")
     constraint_key = ConstraintKey(MockConstraint, IS.TestComponent)
     @test IS.Optimization.encode_key(constraint_key) ==
-          Symbol("InfrastructureSystemsTests.MockConstraint__TestComponent")
+          Symbol("MockConstraint__TestComponent")
     auxvar_key = AuxVarKey(MockAuxVariable, IS.TestComponent)
-    @test IS.Optimization.encode_key(auxvar_key) ==
-          Symbol("InfrastructureSystemsTests.MockAuxVariable__TestComponent")
+    @test IS.Optimization.encode_key(auxvar_key) == Symbol("MockAuxVariable__TestComponent")
     expression_key = ExpressionKey(MockExpression, IS.TestComponent)
     @test IS.Optimization.encode_key(expression_key) ==
-          Symbol("InfrastructureSystemsTests.MockExpression__TestComponent")
+          Symbol("MockExpression__TestComponent")
     parameter_key = ParameterKey(MockParameter, IS.TestComponent)
     @test IS.Optimization.encode_key(parameter_key) ==
-          Symbol("InfrastructureSystemsTests.MockParameter__TestComponent")
+          Symbol("MockParameter__TestComponent")
     ic_key = InitialConditionKey(MockInitialCondition, IS.TestComponent)
     @test IS.Optimization.encode_key(ic_key) ==
-          Symbol("InfrastructureSystemsTests.MockInitialCondition__TestComponent")
+          Symbol("MockInitialCondition__TestComponent")
 
     @test_throws ArgumentError ExpressionKey(
         MockExpression,
