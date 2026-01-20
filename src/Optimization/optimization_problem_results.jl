@@ -1,4 +1,32 @@
 # This needs renaming to avoid collision with the DecisionModelResults/EmulationModelResults
+"""
+    mutable struct OptimizationProblemResults <: Results
+
+Container for the results of an optimization problem, including variable values, dual values,
+parameter values, expression values, and optimizer statistics.
+
+This type stores all output data from solving an optimization problem and provides methods
+to read, export, and serialize the results. Use [`read_variable`](@ref), [`read_dual`](@ref),
+[`read_parameter`](@ref), and [`read_expression`](@ref) to access specific result values.
+
+# Fields
+- `base_power::Float64`: Base power used for per-unit conversion
+- `timestamps::Vector{Dates.DateTime}`: Time stamps for each step in the results
+- `source_data::Union{Nothing, InfrastructureSystemsType}`: Reference to the source data (e.g., system)
+- `source_data_uuid::Base.UUID`: UUID of the source data for validation
+- `aux_variable_values::Dict{AuxVarKey, DataFrame}`: Auxiliary variable results
+- `variable_values::Dict{VariableKey, DataFrame}`: Decision variable results
+- `dual_values::Dict{ConstraintKey, DataFrame}`: Dual/shadow price results
+- `parameter_values::Dict{ParameterKey, DataFrame}`: Parameter values used
+- `expression_values::Dict{ExpressionKey, DataFrame}`: Expression results
+- `optimizer_stats::DataFrame`: Optimizer statistics for each solve
+- `optimization_container_metadata::OptimizationContainerMetadata`: Metadata about the optimization container
+- `model_type::String`: Type of optimization model
+- `results_dir::String`: Directory where results are stored
+- `output_dir::String`: Directory for exported output
+
+See also: [`Results`](@ref), [`OptimizerStats`](@ref), [`OptimizationProblemResultsExport`](@ref)
+"""
 mutable struct OptimizationProblemResults <: Results
     base_power::Float64
     timestamps::Vector{Dates.DateTime}
