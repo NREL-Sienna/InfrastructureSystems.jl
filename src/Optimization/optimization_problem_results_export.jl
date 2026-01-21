@@ -15,7 +15,10 @@ should be exported when calling [`export_results`](@ref) on an
 - `variables::Set{VariableKey}`: Specific variable values to export
 - `aux_variables::Set{AuxVarKey}`: Specific auxiliary variable values to export
 - `optimizer_stats::Bool`: Whether to export optimizer statistics
-- `store_all_flags::Dict{Symbol, Bool}`: Flags to export all values of each type
+- `store_all_flags::Dict{Symbol, Bool}`: Flags indicating whether to export all values
+  of each type (e.g., all variables, all duals). Set via constructor keyword arguments
+  like `store_all_variables = true`. When a flag is true, all values of that type are
+  exported regardless of what specific keys are passed in the corresponding set.
 
 # Example
 ```julia
