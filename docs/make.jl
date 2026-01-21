@@ -8,6 +8,7 @@ links = InterLinks(
     "Julia" => "https://docs.julialang.org/en/v1/",
     "JuliaFormatter" => "https://domluna.github.io/JuliaFormatter.jl/stable/",
     "PowerSystems" => "https://nrel-sienna.github.io/PowerSystems.jl/stable/",
+    "PowerSystemCaseBuilder" => "https://nrel-sienna.github.io/PowerSystemCaseBuilder.jl/stable/",
     "DocumenterInterLinks" => "http://juliadocs.org/DocumenterInterLinks.jl/stable/",
 )
 
@@ -24,7 +25,9 @@ pages = OrderedDict(
             "dev_guide/associations_database.md",
             "dev_guide/recorder.md",
             "dev_guide/tests.md",
+            "dev_guide/retest_migration.md",
             "dev_guide/logging.md",
+            "dev_guide/test_data_artifacts.md",
         ],
         "Style Guide" => "style.md",
         "Documentation Best Practices" => Any[
