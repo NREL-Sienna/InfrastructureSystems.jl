@@ -901,18 +901,21 @@ end
     approximated = IS.PiecewiseStepData([0.0, 1.0, 2.0, 3.0], [7.5, 7.5, 15.0])
 
     # L2 error with uniform weights
-    err_l2 = IS.approximation_error(original, approximated; metric = :L2, weights = :uniform)
+    err_l2 =
+        IS.approximation_error(original, approximated; metric = :L2, weights = :uniform)
     diff = [10.0 - 7.5, 5.0 - 7.5, 15.0 - 15.0]
     expected_l2 = sqrt(sum(diff .^ 2) / 3)
     @test err_l2 ≈ expected_l2
 
     # L1 error
-    err_l1 = IS.approximation_error(original, approximated; metric = :L1, weights = :uniform)
+    err_l1 =
+        IS.approximation_error(original, approximated; metric = :L1, weights = :uniform)
     expected_l1 = sum(abs.(diff)) / 3
     @test err_l1 ≈ expected_l1
 
     # Linf error
-    err_linf = IS.approximation_error(original, approximated; metric = :Linf, weights = :uniform)
+    err_linf =
+        IS.approximation_error(original, approximated; metric = :Linf, weights = :uniform)
     @test err_linf ≈ 2.5  # max(|2.5|, |-2.5|, |0|)
 
     # Test with length weighting
@@ -925,7 +928,11 @@ end
     @test err ≈ expected
 
     # Test invalid metric
-    @test_throws ArgumentError IS.approximation_error(original, approximated; metric = :invalid)
+    @test_throws ArgumentError IS.approximation_error(
+        original,
+        approximated;
+        metric = :invalid,
+    )
 
     # Test PiecewiseLinearData error (based on slopes)
     original = IS.PiecewiseLinearData([
@@ -1010,6 +1017,8 @@ end
         convex_step = IS.make_convex(stepwise)
         @test IS.is_convex(convex_step)
     end
+end
+
 @testset "Test piecewise domain checking" begin
     pwl = IS.PiecewiseStepData([1, 3, 5], [8, 10])
 
