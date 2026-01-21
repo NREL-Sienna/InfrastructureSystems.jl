@@ -141,6 +141,19 @@ end
         IS.PiecewiseStepData(; x_coords = [0.0, 1.0, 2.0], y_coords = [0.9, 1.0]),
     )
 
+    # Test is_nonconvex
+    @test !IS.is_nonconvex(IS.LinearFunctionData(5.0, 1.0))
+    @test !IS.is_nonconvex(IS.QuadraticFunctionData(2.0, 3.0, 4.0))  # a > 0
+    @test IS.is_nonconvex(IS.QuadraticFunctionData(-2.0, 3.0, 4.0))  # a < 0
+    @test !IS.is_nonconvex(convex_pld)
+    @test IS.is_nonconvex(non_convex_pld)
+    @test !IS.is_nonconvex(
+        IS.PiecewiseStepData(; x_coords = [0.0, 1.0, 2.0], y_coords = [1.0, 2.0]),
+    )
+    @test IS.is_nonconvex(
+        IS.PiecewiseStepData(; x_coords = [0.0, 1.0, 2.0], y_coords = [2.0, 1.0]),
+    )
+
     @test IS.QuadraticFunctionData(IS.LinearFunctionData(1, 2)) ==
           convert(IS.QuadraticFunctionData, IS.LinearFunctionData(1, 2)) ==
           IS.QuadraticFunctionData(0, 1, 2)
@@ -971,6 +984,20 @@ end
     # All should pool to average: (10 + 5 + 1) / 3 ≈ 5.33
     new_y = IS.get_y_coords(convex_step)
     @test all(y ≈ 16.0 / 3.0 for y in new_y)
+
+    # Test with negative values
+    step_data_neg = IS.PiecewiseStepData([0.0, 1.0, 2.0, 3.0], [-5.0, -10.0, -3.0])
+    convex_neg = IS.make_convex(step_data_neg)
+    @test IS.is_convex(convex_neg)
+
+    # Test with large values
+    step_data_large = IS.PiecewiseStepData([0.0, 1.0, 2.0], [1e10, 1e5])
+    convex_large = IS.make_convex(step_data_large)
+    @test IS.is_convex(convex_large)
+
+    # Test approximation_error returns zero for identical data
+    original = IS.PiecewiseStepData([0.0, 1.0, 2.0], [5.0, 10.0])
+    @test IS.approximation_error(original, original) ≈ 0.0
 end
 
 @testset "Test convex approximation consistency" begin

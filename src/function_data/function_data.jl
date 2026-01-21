@@ -262,7 +262,7 @@ function running_sum(data::PiecewiseStepData)
     slopes = get_y_coords(data)
     x_coords = get_x_coords(data)
     points = Vector{XY_COORDS}(undef, length(x_coords))
-    running_y = 0
+    running_y = 0.0
     points[1] = (x = x_coords[1], y = running_y)
     for (i, (prev_slope, this_x, dx)) in
         enumerate(zip(slopes, x_coords[2:end], get_x_lengths(data)))
@@ -327,9 +327,11 @@ Base.isequal(a::T, b::T) where {T <: FunctionData} = isequal_from_fields(a, b)
 
 Base.hash(a::FunctionData, h::UInt) = hash_from_fields(a, h)
 
+const _SLOPE_COMPARISON_ATOL = 1e-10
+
 function _slope_convexity_check(slopes::Vector{Float64})
     for ix in 1:(length(slopes) - 1)
-        if slopes[ix] >= slopes[ix + 1]
+        if slopes[ix] > slopes[ix + 1] + _SLOPE_COMPARISON_ATOL
             @debug slopes
             return false
         end
@@ -339,7 +341,7 @@ end
 
 function _slope_concavity_check(slopes::Vector{Float64})
     for ix in 1:(length(slopes) - 1)
-        if slopes[ix] <= slopes[ix + 1]
+        if slopes[ix] < slopes[ix + 1] - _SLOPE_COMPARISON_ATOL
             @debug slopes
             return false
         end
@@ -415,9 +417,9 @@ function isotonic_regression(values::Vector{Float64}, weights::Vector{Float64})
 
     # Initialize: each element is its own block
     # Store tuples of (start_index, end_index, weighted_sum, total_weight)
-    blocks = Vector{NTuple{4, Float64}}(undef, n)
+    blocks = Vector{Tuple{Int, Int, Float64, Float64}}(undef, n)
     for i in 1:n
-        blocks[i] = (Float64(i), Float64(i), values[i] * weights[i], weights[i])
+        blocks[i] = (i, i, values[i] * weights[i], weights[i])
     end
 
     # Merge blocks that violate monotonicity
@@ -454,8 +456,8 @@ function isotonic_regression(values::Vector{Float64}, weights::Vector{Float64})
     # Expand blocks back to full result
     result = Vector{Float64}(undef, n)
     for block_idx in 1:num_blocks
-        start_idx = Int(blocks[block_idx][1])
-        end_idx = Int(blocks[block_idx][2])
+        start_idx = blocks[block_idx][1]
+        end_idx = blocks[block_idx][2]
         avg = blocks[block_idx][3] / blocks[block_idx][4]
         for j in start_idx:end_idx
             result[j] = avg
@@ -475,7 +477,10 @@ Compute weights for isotonic regression based on the weighting scheme.
   - `:length` - segments weighted by their x-length (default)
   - `Vector{Float64}` - custom weights
 """
-function _compute_convex_weights(x_coords::Vector{Float64}, weights)
+function _compute_convex_weights(
+    x_coords::Vector{Float64},
+    weights::Union{Symbol, Vector{Float64}},
+)
     n_segments = length(x_coords) - 1
     if weights === :uniform
         return ones(n_segments)

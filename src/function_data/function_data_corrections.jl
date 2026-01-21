@@ -49,16 +49,15 @@ function _reconstruct_points(
     anchor::Symbol,
 )
     n = length(original_points)
-    x_coords = [p.x for p in original_points]
 
     if anchor === :first
         # Forward reconstruction from first point
         new_points = Vector{XY_COORDS}(undef, n)
         new_points[1] = original_points[1]
         for i in 2:n
-            dx = x_coords[i] - x_coords[i - 1]
+            dx = original_points[i].x - original_points[i - 1].x
             new_y = new_points[i - 1].y + new_slopes[i - 1] * dx
-            new_points[i] = (x = x_coords[i], y = new_y)
+            new_points[i] = (x = original_points[i].x, y = new_y)
         end
 
     elseif anchor === :last
@@ -66,9 +65,9 @@ function _reconstruct_points(
         new_points = Vector{XY_COORDS}(undef, n)
         new_points[n] = original_points[n]
         for i in (n - 1):-1:1
-            dx = x_coords[i + 1] - x_coords[i]
+            dx = original_points[i + 1].x - original_points[i].x
             new_y = new_points[i + 1].y - new_slopes[i] * dx
-            new_points[i] = (x = x_coords[i], y = new_y)
+            new_points[i] = (x = original_points[i].x, y = new_y)
         end
 
     elseif anchor === :centroid
@@ -77,9 +76,11 @@ function _reconstruct_points(
         forward_points = _reconstruct_points(original_points, new_slopes, :first)
 
         # Compute optimal vertical shift
-        original_y = [p.y for p in original_points]
-        forward_y = [p.y for p in forward_points]
-        shift = sum(original_y .- forward_y) / n
+        shift = 0.0
+        for i in 1:n
+            shift += original_points[i].y - forward_points[i].y
+        end
+        shift /= n
 
         new_points = XY_COORDS[(x = p.x, y = p.y + shift) for p in forward_points]
     else
