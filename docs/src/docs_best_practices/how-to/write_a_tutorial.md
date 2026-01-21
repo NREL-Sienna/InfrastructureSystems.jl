@@ -64,7 +64,6 @@ code blocks.
     [`@setup`](https://documenter.juliadocs.org/stable/man/syntax/#reference-at-setup)
     blocks.
 
-
 ### Give it a story
 
 The tutorial should have a logical flow, rather than be a series of disconnected code
