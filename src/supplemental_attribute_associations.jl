@@ -804,8 +804,17 @@ _execute_cached(s::SupplementalAttributeAssociations, q, p = nothing) =
     execute(_make_stmt(s, q), p, LOG_GROUP_TIME_SERIES)
 _execute(s::SupplementalAttributeAssociations, q, p = nothing) =
     execute(s.db, q, p, LOG_GROUP_SUPPLEMENTAL_ATTRIBUTES)
-_execute_count(s::SupplementalAttributeAssociations, q, p = nothing) =
-    execute_count(s.db, q, p, LOG_GROUP_SUPPLEMENTAL_ATTRIBUTES)
+function _execute_count(
+    associations::SupplementalAttributeAssociations,
+    query::String,
+    params = nothing,
+)
+    rows = Tables.rowtable(_execute(associations, query, params))
+    if isempty(rows)
+        error("$query did not return any rows.")
+    end
+    return rows[1].count
+end
 
 function _get_attribute_type_string!(
     params, attribute_type::Union{Nothing, Type{<:SupplementalAttribute}},

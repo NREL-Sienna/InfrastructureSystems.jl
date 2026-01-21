@@ -777,7 +777,7 @@ end
 Return the number of unique time series arrays.
 """
 function get_num_time_series(store::TimeSeriesMetadataStore)
-    return _execute_count_direct(
+    return _execute_count(
         store,
         "SELECT COUNT(DISTINCT time_series_uuid) AS count FROM $ASSOCIATIONS_TABLE_NAME",
     )
@@ -808,10 +808,10 @@ function get_time_series_counts(store::TimeSeriesMetadataStore)
         WHERE interval IS NOT NULL
     """
 
-    count_components = _execute_count_direct(store, query_components)
-    count_attributes = _execute_count_direct(store, query_attributes)
-    count_sts = _execute_count_direct(store, query_sts)
-    count_forecasts = _execute_count_direct(store, query_forecasts)
+    count_components = _execute_count(store, query_components)
+    count_attributes = _execute_count(store, query_attributes)
+    count_sts = _execute_count(store, query_sts)
+    count_forecasts = _execute_count(store, query_forecasts)
 
     return TimeSeriesCounts(;
         components_with_time_series = count_components,
@@ -1352,7 +1352,7 @@ end
 function _handle_removed_metadata(store::TimeSeriesMetadataStore, metadata_uuid::String)
     query = "SELECT COUNT(*) AS count FROM $ASSOCIATIONS_TABLE_NAME WHERE metadata_uuid = ?"
     params = (metadata_uuid,)
-    count = _execute_count_direct(store, query, params)
+    count = _execute_count(store, query, params)
     if count == 0
         pop!(store.metadata_uuids, Base.UUID(metadata_uuid))
     end
@@ -1480,10 +1480,8 @@ _execute_cached(s::TimeSeriesMetadataStore, q, p = nothing) =
     execute(make_stmt(s, q), p, LOG_GROUP_TIME_SERIES)
 _execute(s::TimeSeriesMetadataStore, q, p = nothing) =
     execute(s.db, q, p, LOG_GROUP_TIME_SERIES)
-_execute_count(s::TimeSeriesMetadataStore, q, p = nothing) =
-    execute_count(s.db, q, p, LOG_GROUP_TIME_SERIES)
 
-function _execute_count_direct(
+function _execute_count(
     store::TimeSeriesMetadataStore,
     query::String,
     params::Union{Nothing, Tuple{String}} = nothing,
@@ -1598,8 +1596,8 @@ end
 # Pattern for string values: match key-value pair in JSON structure
 _make_feature_pattern(key::String, val::AbstractString) = "%\"$(key)\":\"$(val)\"%"
 
-# Pattern for non-string values (Bool, Int): match key-value pair in JSON structure
-_make_feature_pattern(key::String, val::Union{Bool, Int}) = "%\"$(key)\":$(val)%"
+# Pattern for non-string values (Bool, Int, Float): match key-value pair in JSON structure
+_make_feature_pattern(key::String, val::Union{Bool, Int, Float64}) = "%\"$(key)\":$(val)%"
 
 function _make_feature_filter!(params; features...)
     data = _make_sorted_feature_array(; features...)
@@ -1615,7 +1613,7 @@ function _make_feature_filter!(params; features...)
     return join(strings, " AND ")
 end
 
-_make_val_str(val::Union{Bool, Int}) = string(val)
+_make_val_str(val::Union{Bool, Int, Float64}) = string(val)
 _make_val_str(val::String) = "'$val'"
 
 function _make_sorted_feature_array(; features...)
