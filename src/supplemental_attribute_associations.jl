@@ -86,9 +86,7 @@ function _create_indexes!(associations::SupplementalAttributeAssociations)
         unique = false,
     )
 
-    # Run ANALYZE to gather statistics for query planner
-    SQLite.DBInterface.execute(associations.db, "ANALYZE")
-
+    optimize_database!(associations)
     return
 end
 

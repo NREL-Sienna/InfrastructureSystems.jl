@@ -13,10 +13,6 @@ const TS_DB_INDEXES = Dict(
         "features",
     ],
     "by_ts_uuid" => ["time_series_uuid"],
-    # Additional indexes for common query patterns
-    "by_owner_category" => ["owner_category", "owner_uuid"],
-    "by_interval" => ["interval"],
-    "by_metadata_uuid" => ["metadata_uuid"],
 )
 
 @kwdef struct HasMetadataQueryKey
@@ -428,9 +424,6 @@ function _create_indexes!(store::TimeSeriesMetadataStore)
     #    1c. time series for one component/attribute with all features
     # 2. Optimize for checks at system.add_time_series. Use all fields and features.
     # 3. Optimize for returning all metadata for a time series UUID.
-    # 4. Optimize for category-based queries (owner_category filtering)
-    # 5. Optimize for interval-based queries (forecast vs static time series)
-    # 6. Optimize for metadata UUID lookups and cascade operations
 
     _drop_all_indexes!(store.db)
     SQLite.createindex!(
@@ -449,35 +442,8 @@ function _create_indexes!(store::TimeSeriesMetadataStore)
         unique = false,
         ifnotexists = true,
     )
-    # New indexes for improved query performance
-    SQLite.createindex!(
-        store.db,
-        ASSOCIATIONS_TABLE_NAME,
-        "by_owner_category",
-        TS_DB_INDEXES["by_owner_category"];
-        unique = false,
-        ifnotexists = true,
-    )
-    SQLite.createindex!(
-        store.db,
-        ASSOCIATIONS_TABLE_NAME,
-        "by_interval",
-        TS_DB_INDEXES["by_interval"];
-        unique = false,
-        ifnotexists = true,
-    )
-    SQLite.createindex!(
-        store.db,
-        ASSOCIATIONS_TABLE_NAME,
-        "by_metadata_uuid",
-        TS_DB_INDEXES["by_metadata_uuid"];
-        unique = false,
-        ifnotexists = true,
-    )
 
-    # Run ANALYZE to gather statistics for query planner
-    SQLite.DBInterface.execute(store.db, "ANALYZE")
-
+    optimize_database!(store)
     return
 end
 
