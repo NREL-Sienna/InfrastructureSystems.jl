@@ -2,8 +2,8 @@
 To implement a sub-type of this you need to implement the methods below.
 """
 abstract type Results end
-function get_base_power(r::T) where {T <: Results}
-    error("get_base_power must be implemented for $T")
+function get_results_base_power(r::T) where {T <: Results}
+    error("get_results_base_power must be implemented for $T")
 end
 
 function get_variables(r::T) where {T <: Results}
