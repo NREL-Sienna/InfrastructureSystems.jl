@@ -24,8 +24,14 @@ export AbstractOptimizationContainer
 export OptimizationKeyType
 export AbstractModelStoreParams
 
+# Export formulation abstract types
+export AbstractDeviceFormulation
+export AbstractPowerModel
+export AbstractHVDCNetworkModel
+
 include("enums.jl")
 include("optimization_container_types.jl")
 include("abstract_model_store_params.jl")
+include("abstract_formulations.jl")
 
 end
