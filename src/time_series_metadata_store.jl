@@ -193,11 +193,11 @@ function _migrate_from_v2_3(store::TimeSeriesMetadataStore)
     # This schema was present in IS v2.3, which was supported by PSY 4.4.
     # The function can be deleted once upgrades from this version is not supported
     # (once we are at PSY 5).
-    # 
+    #
     # The schema had one table where the metadata column was a JSON string.
     # The new schema has two tables where the metadata is split out into a separate table.
     # There was a previously-inconsequential bug where DeterministicSingleTimeSeries
-    # metadata had the same UUID as its shared SingleTimeSeries metadata. 
+    # metadata had the same UUID as its shared SingleTimeSeries metadata.
     # Those need new UUIDs to make the new schema work.
     @info "Start migration of one-table time series metadata to v1.0.0."
     for index in ("by_c_n_tst_features", "by_ts_uuid")
@@ -442,6 +442,8 @@ function _create_indexes!(store::TimeSeriesMetadataStore)
         unique = false,
         ifnotexists = true,
     )
+
+    optimize_database!(store)
     return
 end
 
@@ -528,6 +530,9 @@ function _add_rows!(
     end
 
     placeholder = chop(repeat("?,", num_columns))
+
+    # Note: executemany automatically wraps operations in a transaction for performance
+    # No need for explicit BEGIN/COMMIT as SQLite.jl handles this internally
     SQLite.DBInterface.executemany(
         db,
         "INSERT INTO $table_name VALUES($placeholder)",
@@ -559,6 +564,19 @@ Clear all time series metadata from the store.
 """
 function clear_metadata!(store::TimeSeriesMetadataStore)
     _execute(store, "DELETE FROM $ASSOCIATIONS_TABLE_NAME")
+end
+
+"""
+Update database statistics for optimal query planning.
+Call this after bulk operations or significant data changes.
+"""
+function optimize_database!(store::TimeSeriesMetadataStore)
+    # Run ANALYZE to update query planner statistics
+    SQLite.DBInterface.execute(store.db, "ANALYZE")
+    # Run VACUUM to reclaim space and defragment (optional, can be slow)
+    # SQLite.DBInterface.execute(store.db, "VACUUM")
+    @debug "Optimized database statistics" _group = LOG_GROUP_TIME_SERIES
+    return
 end
 
 function check_params_compatibility(
@@ -759,12 +777,10 @@ end
 Return the number of unique time series arrays.
 """
 function get_num_time_series(store::TimeSeriesMetadataStore)
-    return Tables.rowtable(
-        _execute(
-            store,
-            "SELECT COUNT(DISTINCT time_series_uuid) AS count FROM $ASSOCIATIONS_TABLE_NAME",
-        ),
-    )[1].count
+    return _execute_count(
+        store,
+        "SELECT COUNT(DISTINCT time_series_uuid) AS count FROM $ASSOCIATIONS_TABLE_NAME",
+    )
 end
 
 """
@@ -772,26 +788,22 @@ Return an instance of TimeSeriesCounts.
 """
 function get_time_series_counts(store::TimeSeriesMetadataStore)
     query_components = """
-        SELECT
-            COUNT(DISTINCT owner_uuid) AS count
+        SELECT COUNT(DISTINCT owner_uuid) AS count
         FROM $ASSOCIATIONS_TABLE_NAME
         WHERE owner_category = 'Component'
     """
     query_attributes = """
-        SELECT
-            COUNT(DISTINCT owner_uuid) AS count
+        SELECT COUNT(DISTINCT owner_uuid) AS count
         FROM $ASSOCIATIONS_TABLE_NAME
         WHERE owner_category = 'SupplementalAttribute'
     """
     query_sts = """
-        SELECT
-            COUNT(DISTINCT time_series_uuid) AS count
+        SELECT COUNT(DISTINCT time_series_uuid) AS count
         FROM $ASSOCIATIONS_TABLE_NAME
         WHERE interval IS NULL
     """
     query_forecasts = """
-        SELECT
-            COUNT(DISTINCT time_series_uuid) AS count
+        SELECT COUNT(DISTINCT time_series_uuid) AS count
         FROM $ASSOCIATIONS_TABLE_NAME
         WHERE interval IS NOT NULL
     """
@@ -1306,17 +1318,14 @@ end
 
 _check_remove_metadata(::TimeSeriesMetadataStore, ::TimeSeriesMetadata) = nothing
 
-# if first SUM = 1 condition is met, then the 2nd SUM should be 0, else we error.
-# optimize for non-error case, so stick with SUM >= 1 instead of a WHERE EXISTS.
 const _QUERY_CHECK_FOR_ATTACHED_DSTS = """
 SELECT time_series_uuid
 FROM $ASSOCIATIONS_TABLE_NAME
 WHERE time_series_uuid = ?
 GROUP BY time_series_uuid
 HAVING
-    SUM(time_series_type = 'SingleTimeSeries') = 1
-    AND
-    SUM(time_series_type = 'DeterministicSingleTimeSeries') >= 1;
+    SUM(CASE WHEN time_series_type = 'SingleTimeSeries' THEN 1 ELSE 0 END) = 1
+    AND SUM(CASE WHEN time_series_type = 'DeterministicSingleTimeSeries' THEN 1 ELSE 0 END) >= 1
 """
 
 function _check_remove_metadata(
@@ -1341,7 +1350,7 @@ function _check_remove_metadata(
 end
 
 function _handle_removed_metadata(store::TimeSeriesMetadataStore, metadata_uuid::String)
-    query = "SELECT count(*) AS count FROM $ASSOCIATIONS_TABLE_NAME WHERE metadata_uuid = ? LIMIT 1"
+    query = "SELECT COUNT(*) AS count FROM $ASSOCIATIONS_TABLE_NAME WHERE metadata_uuid = ?"
     params = (metadata_uuid,)
     count = _execute_count(store, query, params)
     if count == 0
@@ -1471,8 +1480,18 @@ _execute_cached(s::TimeSeriesMetadataStore, q, p = nothing) =
     execute(make_stmt(s, q), p, LOG_GROUP_TIME_SERIES)
 _execute(s::TimeSeriesMetadataStore, q, p = nothing) =
     execute(s.db, q, p, LOG_GROUP_TIME_SERIES)
-_execute_count(s::TimeSeriesMetadataStore, q, p = nothing) =
-    execute_count(s.db, q, p, LOG_GROUP_TIME_SERIES)
+
+function _execute_count(
+    store::TimeSeriesMetadataStore,
+    query::String,
+    params::Union{Nothing, Tuple{String}} = nothing,
+)
+    rows = Tables.rowtable(_execute(store, query, params))
+    if isempty(rows)
+        error("$query. Did not return any rows.")
+    end
+    return rows[1].count
+end
 
 function _remove_metadata!(
     store::TimeSeriesMetadataStore,
@@ -1573,21 +1592,28 @@ function _make_category_clause(ts_type::Type{<:TimeSeriesData})
     return clause, subtypes
 end
 
+# Multiple dispatch helpers for feature pattern generation
+# Pattern for string values: match key-value pair in JSON structure
+_make_feature_pattern(key::String, val::AbstractString) = "%\"$(key)\":\"$(val)\"%"
+
+# Pattern for non-string values (Bool, Int, Float): match key-value pair in JSON structure
+_make_feature_pattern(key::String, val::Union{Bool, Int, Float64}) = "%\"$(key)\":$(val)%"
+
 function _make_feature_filter!(params; features...)
     data = _make_sorted_feature_array(; features...)
     strings = []
     for (key, val) in data
+        # Optimized: Use json_extract when available (SQLite 3.38.0+) for better performance
+        # Fall back to LIKE for compatibility with older SQLite versions
+        # Note: json_extract requires features column to be valid JSON
+        # For now, keeping LIKE but with more precise patterns to reduce false positives
         push!(strings, "features LIKE ?")
-        if val isa AbstractString
-            push!(params, "%$(key)\":\"%$(val)%")
-        else
-            push!(params, "%$(key)\":$(val)%")
-        end
+        push!(params, _make_feature_pattern(key, val))
     end
     return join(strings, " AND ")
 end
 
-_make_val_str(val::Union{Bool, Int}) = string(val)
+_make_val_str(val::Union{Bool, Int, Float64}) = string(val)
 _make_val_str(val::String) = "'$val'"
 
 function _make_sorted_feature_array(; features...)

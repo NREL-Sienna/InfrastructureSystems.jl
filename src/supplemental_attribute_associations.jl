@@ -18,7 +18,7 @@ const SUPPLEMENTAL_ATTRIBUTE_TABLE_NAME = "supplemental_attributes"
 # and set a requirement that those associations must be written to the system JSON file.
 #
 # Rather than try to manage the complexities of temporarily sharing a database across
-# serialization and deepcopy operations, this design keeps them separate in order to 
+# serialization and deepcopy operations, this design keeps them separate in order to
 # simplifiy the code. The supplemental attribute database is always ephemeral.
 
 mutable struct SupplementalAttributeAssociations
@@ -85,6 +85,8 @@ function _create_indexes!(associations::SupplementalAttributeAssociations)
         ];
         unique = false,
     )
+
+    optimize_database!(associations)
     return
 end
 
@@ -203,6 +205,17 @@ Return the number of components with supplemental attributes.
 """
 function get_num_components_with_attributes(associations::SupplementalAttributeAssociations)
     return _execute_count(associations, _QUERY_GET_NUM_COMPONENTS_WITH_ATTRIBUTES)
+end
+
+"""
+Update database statistics for optimal query planning.
+Call this after bulk operations or significant data changes.
+"""
+function optimize_database!(associations::SupplementalAttributeAssociations)
+    # Run ANALYZE to update query planner statistics
+    SQLite.DBInterface.execute(associations.db, "ANALYZE")
+    @debug "Optimized database statistics" _group = LOG_GROUP_SUPPLEMENTAL_ATTRIBUTES
+    return
 end
 
 const _QUERY_HAS_ASSOCIATION_BY_ATTRIBUTE = """
@@ -716,6 +729,9 @@ function from_records(::Type{SupplementalAttributeAssociations}, records)
         end
     end
     placeholder = chop(repeat("?,", num_columns))
+
+    # Note: executemany automatically wraps operations in a transaction for performance
+    # No need for explicit BEGIN/COMMIT as SQLite.jl handles this internally
     SQLite.DBInterface.executemany(
         associations.db,
         StringTemplates.render(
@@ -788,8 +804,17 @@ _execute_cached(s::SupplementalAttributeAssociations, q, p = nothing) =
     execute(_make_stmt(s, q), p, LOG_GROUP_TIME_SERIES)
 _execute(s::SupplementalAttributeAssociations, q, p = nothing) =
     execute(s.db, q, p, LOG_GROUP_SUPPLEMENTAL_ATTRIBUTES)
-_execute_count(s::SupplementalAttributeAssociations, q, p = nothing) =
-    execute_count(s.db, q, p, LOG_GROUP_SUPPLEMENTAL_ATTRIBUTES)
+function _execute_count(
+    associations::SupplementalAttributeAssociations,
+    query::String,
+    params = nothing,
+)
+    rows = Tables.rowtable(_execute(associations, query, params))
+    if isempty(rows)
+        error("$query did not return any rows.")
+    end
+    return rows[1].count
+end
 
 function _get_attribute_type_string!(
     params, attribute_type::Union{Nothing, Type{<:SupplementalAttribute}},

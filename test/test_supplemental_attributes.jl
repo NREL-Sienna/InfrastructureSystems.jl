@@ -310,3 +310,27 @@ end
     )
     @test length(table) == 4
 end
+
+@testset "Test optimize_database!" begin
+    mgr = IS.SupplementalAttributeManager()
+    component1 = IS.TestComponent("component1", 5)
+    component2 = IS.TestComponent("component2", 7)
+
+    # Add several associations to create data for optimization
+    for i in 1:10
+        attr = IS.TestSupplemental(; value = Float64(i))
+        IS.add_supplemental_attribute!(mgr, component1, attr)
+        IS.add_supplemental_attribute!(mgr, component2, attr)
+    end
+
+    # Verify data was added
+    @test IS.get_num_attributes(mgr.associations) == 10
+
+    # Call optimize_database! - should not throw and data should remain intact
+    IS.optimize_database!(mgr.associations)
+
+    # Verify data is still accessible after optimization
+    @test IS.get_num_attributes(mgr.associations) == 10
+    @test IS.has_association(mgr.associations, component1)
+    @test IS.has_association(mgr.associations, component2)
+end
