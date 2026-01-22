@@ -16,22 +16,53 @@ using DocStringExtensions
                                     $(DOCSTRING)
                                     """
 
-# Export enums
-export ModelBuildStatus
-
-# Export base abstract types
-export AbstractOptimizationContainer
-export OptimizationKeyType
-export AbstractModelStoreParams
-
-# Export formulation abstract types
-export AbstractDeviceFormulation
-export AbstractPowerModel
-export AbstractHVDCNetworkModel
-
 include("enums.jl")
 include("optimization_container_types.jl")
 include("abstract_model_store_params.jl")
 include("abstract_formulations.jl")
+
+# Exports (after includes so types are defined)
+
+# Enums
+export ModelBuildStatus
+
+# Abstract types from optimization_container_types.jl
+export AbstractOptimizationContainer
+export OptimizationKeyType
+export VariableType
+export ConstraintType
+export AuxVariableType
+export ParameterType
+export InitialConditionType
+export ExpressionType
+export RightHandSideParameter
+export ObjectiveFunctionParameter
+export TimeSeriesParameter
+export ConstructStage
+export ArgumentConstructStage
+export ModelConstructStage
+
+# Abstract types from abstract_model_store_params.jl
+export AbstractModelStoreParams
+
+# Formulation abstract types from abstract_formulations.jl
+export AbstractDeviceFormulation
+export AbstractServiceFormulation
+export AbstractReservesFormulation
+export AbstractThermalFormulation
+export AbstractRenewableFormulation
+export AbstractStorageFormulation
+export AbstractLoadFormulation
+export AbstractPowerModel
+export AbstractPTDFModel
+export AbstractSecurityConstrainedPTDFModel
+export AbstractActivePowerModel
+export AbstractACPowerModel
+export AbstractACPModel
+export ACPPowerModel
+export AbstractPowerFormulation
+export AbstractHVDCNetworkModel
+export AbstractPowerFlowEvaluationModel
+export AbstractPowerFlowEvaluationData
 
 end
