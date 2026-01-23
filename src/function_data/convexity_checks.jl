@@ -117,3 +117,72 @@ function approximation_error(
         throw(ArgumentError("metric must be :L2, :L1, or :Linf"))
     end
 end
+
+const _SLOPE_COMPARISON_ATOL = 1e-10
+
+function _slope_convexity_check(slopes::Vector{Float64})
+    for ix in 1:(length(slopes) - 1)
+        if slopes[ix] > slopes[ix + 1] + _SLOPE_COMPARISON_ATOL
+            @debug slopes
+            return false
+        end
+    end
+    return true
+end
+
+function _slope_concavity_check(slopes::Vector{Float64})
+    has_concavity = false
+    for ix in 1:(length(slopes) - 1)
+        if slopes[ix] < slopes[ix + 1] - _SLOPE_COMPARISON_ATOL
+            @debug slopes
+            return false
+        end
+        if slopes[ix] > slopes[ix + 1] + _SLOPE_COMPARISON_ATOL
+            has_concavity = true
+        end
+    end
+    return has_concavity
+end
+
+"""
+    is_convex(data::FunctionData) -> Bool
+
+Returns `true` if the function data is convex, `false` otherwise.
+Linear functions (straight lines) are considered convex.
+
+- `LinearFunctionData`: Always returns `true`
+- `QuadraticFunctionData`: Returns `true` if quadratic_term ≥ 0
+- `PiecewiseLinearData`: Returns `true` if slopes are non-decreasing
+- `PiecewiseStepData`: Returns `true` if y-coordinates are non-decreasing
+"""
+is_convex(::LinearFunctionData) = true
+
+is_convex(fd::QuadraticFunctionData) = get_quadratic_term(fd) >= -_SLOPE_COMPARISON_ATOL
+
+is_convex(pwl::PiecewiseLinearData) =
+    _slope_convexity_check(get_slopes(pwl))
+
+is_convex(pwl::PiecewiseStepData) =
+    _slope_convexity_check(get_y_coords(pwl))
+
+
+"""
+    is_concave(data::FunctionData) -> Bool
+
+Returns `true` if the function data represents a concave function, `false` otherwise.
+Linear functions are NOT considered concave in this context (strict concavity or non-linear concavity).
+
+- `LinearFunctionData`: Always returns `false`
+- `QuadraticFunctionData`: Returns `true` if quadratic_term < 0
+- `PiecewiseLinearData`: Returns `true` if slopes are non-increasing AND not all equal
+- `PiecewiseStepData`: Returns `true` if y-coordinates are non-increasing AND not all equal
+"""
+is_concave(::LinearFunctionData) = false
+
+is_concave(fd::QuadraticFunctionData) = get_quadratic_term(fd) < -_SLOPE_COMPARISON_ATOL
+
+is_concave(pwl::PiecewiseLinearData) =
+    _slope_concavity_check(get_slopes(pwl))
+
+is_concave(pwl::PiecewiseStepData) =
+    _slope_concavity_check(get_y_coords(pwl))
