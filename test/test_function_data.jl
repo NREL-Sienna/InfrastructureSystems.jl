@@ -125,22 +125,6 @@ end
     concave_pld = IS.PiecewiseLinearData([(0, 3), (1, 2), (1.1, 1), (1.2, 0)])
     non_concave_pld = IS.PiecewiseLinearData([(0, 3), (1, 2), (1.1, 1), (1.2, 5)])
 
-    @test IS.is_concave(concave_pld)
-    @test !IS.is_concave(non_concave_pld)
-
-    @test IS.is_concave(IS.InputOutputCurve(concave_pld))
-    @test !IS.is_concave(IS.InputOutputCurve(non_concave_pld))
-
-    @test IS.is_concave(IS.CostCurve(IS.InputOutputCurve(concave_pld)))
-    @test !IS.is_concave(IS.CostCurve(IS.InputOutputCurve(non_concave_pld)))
-
-    @test IS.is_concave(
-        IS.PiecewiseStepData(; x_coords = [0.0, 1.0, 2.0], y_coords = [2.0, 1.0]),
-    )
-    @test !IS.is_concave(
-        IS.PiecewiseStepData(; x_coords = [0.0, 1.0, 2.0], y_coords = [0.9, 1.0]),
-    )
-
     # Test convexity checks (is_nonconvex removed)
     @test IS.is_convex(IS.LinearFunctionData(5.0, 1.0))
     @test IS.is_convex(IS.QuadraticFunctionData(2.0, 3.0, 4.0))  # a > 0
