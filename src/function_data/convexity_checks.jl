@@ -130,16 +130,21 @@ function _slope_convexity_check(slopes::Vector{Float64})
     return true
 end
 
+
 """
     is_convex(data::FunctionData) -> Bool
 
 Returns `true` if the function data is convex, `false` otherwise.
 Linear functions (straight lines) are considered convex.
 
-- `LinearFunctionData`: Always returns `true`
-- `QuadraticFunctionData`: Returns `true` if quadratic_term ≥ 0
-- `PiecewiseLinearData`: Returns `true` if slopes are non-decreasing
-- `PiecewiseStepData`: Returns `true` if y-coordinates are non-decreasing
+- `LinearFunctionData`: Always returns `true`.
+- `QuadraticFunctionData`: Returns `true` if quadratic_term ≥ 0.
+- `PiecewiseLinearData`: Returns `true` if slopes are non-decreasing.
+- `PiecewiseStepData`: Returns `true` if y-coordinates are non-decreasing.
+- `PiecewisePointCurve`" Returns `true` if the underlying function data (`get_function_data()`) is convex.
+- `InputOutputCurve`: Returns `true` if the underlying function data (`get_function_data()`) is convex.
+- `IncrementalCurve` (heat rate curves): Returns `true` if the corresponding input-output curve (`InputOutputCurve(f)`) is convex.  
+  The input-output curve integrates the incremental curve to a `PiecewisePointCurve`, which is already supported.
 """
 is_convex(::LinearFunctionData) = true
 
@@ -150,6 +155,18 @@ is_convex(pwl::PiecewiseLinearData) =
 
 is_convex(pwl::PiecewiseStepData) =
     _slope_convexity_check(get_y_coords(pwl))
+
+is_convex(f::IncrementalCurve) =
+    _slope_convexity_check(get_slopes(get_function_data(InputOutputCurve(f)) ))
+
+is_convex(f::PiecewisePointCurve) =
+    _slope_convexity_check(get_slopes(get_function_data(f)))
+
+is_convex(f::InputOutputCurve) =
+    _slope_convexity_check(get_slopes(get_function_data(f))) 
+
+#is_convex(f::PiecewiseStepData) =
+#    _slope_convexity_check(get_slopes(get_function_data(InputOutputCurve(f)) )) # Now I don't think we need this because PiecewiseStepData is already numeric y-values, no need to wrap in InputOutputCurve
 
 @deprecate is_concave(data::FunctionData) !is_convex(data)
 
