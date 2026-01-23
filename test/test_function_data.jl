@@ -141,16 +141,16 @@ end
         IS.PiecewiseStepData(; x_coords = [0.0, 1.0, 2.0], y_coords = [0.9, 1.0]),
     )
 
-    # Test is_nonconvex
-    @test !IS.is_nonconvex(IS.LinearFunctionData(5.0, 1.0))
-    @test !IS.is_nonconvex(IS.QuadraticFunctionData(2.0, 3.0, 4.0))  # a > 0
-    @test IS.is_nonconvex(IS.QuadraticFunctionData(-2.0, 3.0, 4.0))  # a < 0
-    @test !IS.is_nonconvex(convex_pld)
-    @test IS.is_nonconvex(non_convex_pld)
-    @test !IS.is_nonconvex(
+    # Test convexity checks (is_nonconvex removed)
+    @test IS.is_convex(IS.LinearFunctionData(5.0, 1.0))
+    @test IS.is_convex(IS.QuadraticFunctionData(2.0, 3.0, 4.0))  # a > 0
+    @test !IS.is_convex(IS.QuadraticFunctionData(-2.0, 3.0, 4.0))  # a < 0
+    @test IS.is_convex(convex_pld)
+    @test !IS.is_convex(non_convex_pld)
+    @test IS.is_convex(
         IS.PiecewiseStepData(; x_coords = [0.0, 1.0, 2.0], y_coords = [1.0, 2.0]),
     )
-    @test IS.is_nonconvex(
+    @test !IS.is_convex(
         IS.PiecewiseStepData(; x_coords = [0.0, 1.0, 2.0], y_coords = [2.0, 1.0]),
     )
 
