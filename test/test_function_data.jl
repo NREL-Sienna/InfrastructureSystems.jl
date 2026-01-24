@@ -1003,6 +1003,62 @@ end
     @test convex2 === convex1
 end
 
+@testset "Test make_convex for LinearFunctionData" begin
+    # LinearFunctionData is always convex, so make_convex should return the same object
+    lfd = IS.LinearFunctionData(5.0, 1.0)
+    @test IS.is_convex(lfd)
+    result = IS.make_convex(lfd)
+    @test result === lfd  # Same object returned
+
+    # Test with negative slope (still convex - linear is both convex and concave)
+    lfd_neg = IS.LinearFunctionData(-3.0, 10.0)
+    @test IS.is_convex(lfd_neg)
+    result_neg = IS.make_convex(lfd_neg)
+    @test result_neg === lfd_neg
+
+    # Test with zero slope
+    lfd_zero = IS.LinearFunctionData(0.0, 5.0)
+    @test IS.is_convex(lfd_zero)
+    result_zero = IS.make_convex(lfd_zero)
+    @test result_zero === lfd_zero
+end
+
+@testset "Test make_convex for QuadraticFunctionData" begin
+    # Test convex quadratic (a > 0) - should return same object
+    qfd_convex = IS.QuadraticFunctionData(2.0, 3.0, 4.0)
+    @test IS.is_convex(qfd_convex)
+    result = IS.make_convex(qfd_convex)
+    @test result === qfd_convex
+
+    # Test linear quadratic (a = 0) - should return same object
+    qfd_linear = IS.QuadraticFunctionData(0.0, 3.0, 4.0)
+    @test IS.is_convex(qfd_linear)
+    result_linear = IS.make_convex(qfd_linear)
+    @test result_linear === qfd_linear
+
+    # Test concave quadratic (a < 0) - should return LinearFunctionData
+    qfd_concave = IS.QuadraticFunctionData(-2.0, 3.0, 4.0)
+    @test !IS.is_convex(qfd_concave)
+    result_concave = IS.make_convex(qfd_concave)
+    @test result_concave isa IS.LinearFunctionData
+    @test IS.is_convex(result_concave)
+    @test IS.get_proportional_term(result_concave) == 3.0
+    @test IS.get_constant_term(result_concave) == 4.0
+
+    # Test make_convex is idempotent via type conversion
+    qfd_concave2 = IS.QuadraticFunctionData(-5.0, 10.0, 20.0)
+    convex1 = IS.make_convex(qfd_concave2)
+    convex2 = IS.make_convex(convex1)
+    @test convex2 === convex1  # LinearFunctionData is always convex
+
+    # Test with small negative quadratic term (edge case)
+    qfd_small_neg = IS.QuadraticFunctionData(-1e-12, 5.0, 10.0)
+    # Due to tolerance in is_convex, this might be considered convex
+    # If not convex, should convert to linear
+    result_small = IS.make_convex(qfd_small_neg)
+    @test IS.is_convex(result_small)
+end
+
 @testset "Test convex approximation with random data" begin
     rng = Random.Xoshiro(42)
     n_tests = 20
@@ -1049,3 +1105,270 @@ end
     pwl(1 - eps() / 2)
     pwl(5 + eps() / 2)
 end
+
+# =============================================================================
+# MAKE_CONVEX TESTS FOR VALUE CURVES
+# =============================================================================
+
+@testset "Test make_convex for LinearCurve" begin
+    # LinearCurve is always convex
+    lc = IS.LinearCurve(5.0, 10.0)
+    @test IS.is_convex(lc)
+    result = IS.make_convex(lc)
+    @test result === lc  # Same object returned
+
+    # With negative slope (still convex - linear is affine)
+    lc_neg = IS.LinearCurve(-3.0, 10.0)
+    @test IS.is_convex(lc_neg)
+    result_neg = IS.make_convex(lc_neg)
+    @test result_neg === lc_neg
+
+    # With input_at_zero
+    lc_iaz = IS.InputOutputCurve(IS.LinearFunctionData(5.0, 10.0), 100.0)
+    result_iaz = IS.make_convex(lc_iaz)
+    @test result_iaz === lc_iaz
+    @test IS.get_input_at_zero(result_iaz) == 100.0
+end
+
+@testset "Test make_convex for QuadraticCurve" begin
+    # Convex quadratic (a > 0) - should return same object
+    qc_convex = IS.QuadraticCurve(2.0, 3.0, 4.0)
+    @test IS.is_convex(qc_convex)
+    result = IS.make_convex(qc_convex)
+    @test result === qc_convex
+
+    # Linear quadratic (a = 0) - should return same object
+    qc_linear = IS.QuadraticCurve(0.0, 3.0, 4.0)
+    @test IS.is_convex(qc_linear)
+    result_linear = IS.make_convex(qc_linear)
+    @test result_linear === qc_linear
+
+    # Concave quadratic (a < 0) - should return LinearCurve
+    qc_concave = IS.QuadraticCurve(-2.0, 3.0, 4.0)
+    @test !IS.is_convex(qc_concave)
+    result_concave = IS.make_convex(qc_concave)
+    @test result_concave isa IS.LinearCurve
+    @test IS.is_convex(result_concave)
+    @test IS.get_proportional_term(result_concave) == 3.0
+    @test IS.get_constant_term(result_concave) == 4.0
+
+    # With input_at_zero - should be preserved
+    qc_iaz = IS.InputOutputCurve(IS.QuadraticFunctionData(-1.0, 5.0, 10.0), 50.0)
+    result_iaz = IS.make_convex(qc_iaz)
+    @test result_iaz isa IS.LinearCurve
+    @test IS.get_input_at_zero(result_iaz) == 50.0
+
+    # Test idempotency via type conversion
+    qc_concave2 = IS.QuadraticCurve(-5.0, 10.0, 20.0)
+    convex1 = IS.make_convex(qc_concave2)
+    convex2 = IS.make_convex(convex1)
+    @test convex2 === convex1
+end
+
+@testset "Test make_convex for PiecewisePointCurve" begin
+    # Non-convex piecewise curve (slopes decrease then increase)
+    ppc = IS.PiecewisePointCurve([
+        (0.0, 0.0),
+        (1.0, 10.0),   # slope = 10
+        (2.0, 15.0),   # slope = 5 <- violation
+        (3.0, 30.0),   # slope = 15
+    ])
+    @test !IS.is_convex(ppc)
+
+    convex_ppc = IS.make_convex(ppc)
+    @test IS.is_convex(convex_ppc)
+    @test convex_ppc isa IS.PiecewisePointCurve
+    @test IS.get_x_coords(convex_ppc) == IS.get_x_coords(ppc)
+
+    # Already convex - should return same object
+    ppc_convex = IS.PiecewisePointCurve([(0.0, 0.0), (1.0, 1.0), (2.0, 3.0)])
+    @test IS.is_convex(ppc_convex)
+    result = IS.make_convex(ppc_convex)
+    @test result === ppc_convex
+
+    # With input_at_zero - should be preserved
+    ppc_iaz = IS.InputOutputCurve(
+        IS.PiecewiseLinearData([(0.0, 0.0), (1.0, 10.0), (2.0, 15.0)]),
+        100.0,
+    )
+    result_iaz = IS.make_convex(ppc_iaz)
+    @test IS.get_input_at_zero(result_iaz) == 100.0
+
+    # Test with different anchor options
+    convex_last = IS.make_convex(ppc; anchor = :last)
+    @test IS.is_convex(convex_last)
+    @test IS.get_points(convex_last)[end] == IS.get_points(ppc)[end]
+
+    convex_centroid = IS.make_convex(ppc; anchor = :centroid)
+    @test IS.is_convex(convex_centroid)
+
+    # Test with different weight options
+    convex_uniform = IS.make_convex(ppc; weights = :uniform)
+    @test IS.is_convex(convex_uniform)
+
+    convex_length = IS.make_convex(ppc; weights = :length)
+    @test IS.is_convex(convex_length)
+end
+
+@testset "Test make_convex for PiecewiseIncrementalCurve" begin
+    # Non-convex: slopes decrease then increase [10, 5, 15]
+    pic = IS.PiecewiseIncrementalCurve(0.0, [0.0, 1.0, 2.0, 3.0], [10.0, 5.0, 15.0])
+    @test !IS.is_convex(pic)
+
+    convex_pic = IS.make_convex(pic)
+    @test IS.is_convex(convex_pic)
+    @test convex_pic isa IS.PiecewiseIncrementalCurve
+    @test IS.get_x_coords(convex_pic) == IS.get_x_coords(pic)
+
+    # Already convex - should return same object
+    pic_convex = IS.PiecewiseIncrementalCurve(0.0, [0.0, 1.0, 2.0], [5.0, 10.0])
+    @test IS.is_convex(pic_convex)
+    result = IS.make_convex(pic_convex)
+    @test result === pic_convex
+
+    # With input_at_zero - should be preserved
+    pic_iaz = IS.IncrementalCurve(
+        IS.PiecewiseStepData([0.0, 1.0, 2.0, 3.0], [10.0, 5.0, 15.0]),
+        0.0,
+        200.0,
+    )
+    result_iaz = IS.make_convex(pic_iaz)
+    @test IS.is_convex(result_iaz)
+    @test IS.get_input_at_zero(result_iaz) == 200.0
+
+    # Test with different weight options
+    convex_uniform = IS.make_convex(pic; weights = :uniform)
+    @test IS.is_convex(convex_uniform)
+
+    convex_length = IS.make_convex(pic; weights = :length)
+    @test IS.is_convex(convex_length)
+end
+
+@testset "Test make_convex for IncrementalCurve{LinearFunctionData}" begin
+    # IncrementalCurve{LinearFunctionData} represents derivative of quadratic
+    # Convex if proportional_term >= 0 (i.e., quadratic term of IO curve >= 0)
+
+    # Convex case - proportional_term >= 0
+    inc_convex = IS.IncrementalCurve(IS.LinearFunctionData(2.0, 5.0), 10.0)
+    @test IS.is_convex(inc_convex)
+    result = IS.make_convex(inc_convex)
+    @test result === inc_convex
+
+    # Concave case - proportional_term < 0
+    inc_concave = IS.IncrementalCurve(IS.LinearFunctionData(-4.0, 5.0), 10.0)
+    @test !IS.is_convex(inc_concave)
+    result_concave = IS.make_convex(inc_concave)
+    @test IS.is_convex(result_concave)
+    # The resulting IncrementalCurve should have constant derivative (from LinearCurve)
+    @test IS.get_proportional_term(IS.get_function_data(result_concave)) == 0.0
+
+    # With input_at_zero
+    inc_iaz = IS.IncrementalCurve(IS.LinearFunctionData(-2.0, 3.0), 5.0, 100.0)
+    result_iaz = IS.make_convex(inc_iaz)
+    @test IS.is_convex(result_iaz)
+    @test IS.get_input_at_zero(result_iaz) == 100.0
+end
+
+@testset "Test make_convex for PiecewiseAverageCurve" begin
+    # Non-convex average rate curve
+    pac = IS.PiecewiseAverageCurve(6.0, [1.0, 2.0, 3.0, 4.0], [10.0, 5.0, 15.0])
+    @test !IS.is_convex(pac)
+
+    convex_pac = IS.make_convex(pac)
+    @test IS.is_convex(convex_pac)
+    @test convex_pac isa IS.PiecewiseAverageCurve
+
+    # Already convex - should return same object
+    pac_convex = IS.PiecewiseAverageCurve(6.0, [1.0, 2.0, 3.0], [5.0, 10.0])
+    @test IS.is_convex(pac_convex)
+    result = IS.make_convex(pac_convex)
+    @test result === pac_convex
+
+    # Test with different options
+    convex_uniform = IS.make_convex(pac; weights = :uniform)
+    @test IS.is_convex(convex_uniform)
+
+    convex_last = IS.make_convex(pac; anchor = :last)
+    @test IS.is_convex(convex_last)
+end
+
+@testset "Test make_convex for AverageRateCurve{LinearFunctionData}" begin
+    # AverageRateCurve{LinearFunctionData} represents f(x)/x where f is quadratic
+    # Convex if proportional_term >= 0
+
+    # Convex case
+    ar_convex = IS.AverageRateCurve(IS.LinearFunctionData(2.0, 5.0), 10.0)
+    @test IS.is_convex(ar_convex)
+    result = IS.make_convex(ar_convex)
+    @test result === ar_convex
+
+    # Concave case
+    ar_concave = IS.AverageRateCurve(IS.LinearFunctionData(-2.0, 5.0), 10.0)
+    @test !IS.is_convex(ar_concave)
+    result_concave = IS.make_convex(ar_concave)
+    @test IS.is_convex(result_concave)
+    @test IS.get_proportional_term(IS.get_function_data(result_concave)) == 0.0
+
+    # With input_at_zero
+    ar_iaz = IS.AverageRateCurve(IS.LinearFunctionData(-1.0, 3.0), 5.0, 50.0)
+    result_iaz = IS.make_convex(ar_iaz)
+    @test IS.is_convex(result_iaz)
+    @test IS.get_input_at_zero(result_iaz) == 50.0
+end
+
+@testset "Test make_convex idempotency for ValueCurves" begin
+    # Test that applying make_convex twice returns the same object on second call
+    curves = [
+        IS.QuadraticCurve(-2.0, 3.0, 4.0),
+        IS.PiecewisePointCurve([(0.0, 0.0), (1.0, 10.0), (2.0, 15.0), (3.0, 30.0)]),
+        IS.PiecewiseIncrementalCurve(0.0, [0.0, 1.0, 2.0, 3.0], [10.0, 5.0, 15.0]),
+        IS.IncrementalCurve(IS.LinearFunctionData(-4.0, 5.0), 10.0),
+        IS.PiecewiseAverageCurve(6.0, [1.0, 2.0, 3.0, 4.0], [10.0, 5.0, 15.0]),
+        IS.AverageRateCurve(IS.LinearFunctionData(-2.0, 5.0), 10.0),
+    ]
+
+    for curve in curves
+        convex1 = IS.make_convex(curve)
+        @test IS.is_convex(convex1)
+        convex2 = IS.make_convex(convex1)
+        @test convex2 === convex1  # Second call should return same object
+    end
+end
+
+@testset "Test make_convex consistency across curve representations" begin
+    # Create equivalent curves in different representations and verify
+    # that make_convex produces consistent results
+
+    # Non-convex PiecewisePointCurve
+    ppc = IS.PiecewisePointCurve([
+        (1.0, 6.0),
+        (3.0, 16.0),   # slope = 5
+        (5.0, 21.0),   # slope = 2.5 <- violation
+    ])
+
+    # Equivalent IncrementalCurve
+    pic = IS.IncrementalCurve(ppc)
+
+    # Equivalent AverageRateCurve
+    pac = IS.AverageRateCurve(ppc)
+
+    # All should be non-convex
+    @test !IS.is_convex(ppc)
+    @test !IS.is_convex(pic)
+    @test !IS.is_convex(pac)
+
+    # Make convex
+    convex_ppc = IS.make_convex(ppc)
+    convex_pic = IS.make_convex(pic)
+    convex_pac = IS.make_convex(pac)
+
+    # All should now be convex
+    @test IS.is_convex(convex_ppc)
+    @test IS.is_convex(convex_pic)
+    @test IS.is_convex(convex_pac)
+
+    # Convert all to InputOutputCurve and verify they're all convex
+    @test IS.is_convex(IS.InputOutputCurve(convex_pic))
+    @test IS.is_convex(IS.InputOutputCurve(convex_pac))
+end
+

@@ -143,7 +143,7 @@ Linear functions (straight lines) are considered convex.
 """
 is_convex(::LinearFunctionData) = true
 
-is_convex(fd::QuadraticFunctionData) = get_quadratic_term(fd) >= -_SLOPE_COMPARISON_ATOL
+is_convex(f::QuadraticFunctionData) = get_quadratic_term(f) >= -_SLOPE_COMPARISON_ATOL
 
 is_convex(pwl::PiecewiseLinearData) =
     _slope_convexity_check(get_slopes(pwl))
@@ -152,6 +152,3 @@ is_convex(pwl::PiecewiseStepData) =
     _slope_convexity_check(get_y_coords(pwl))
 
 @deprecate is_concave(data::FunctionData) !is_convex(data)
-
-
-
