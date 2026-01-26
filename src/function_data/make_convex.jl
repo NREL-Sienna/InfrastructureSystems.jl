@@ -309,8 +309,7 @@ For `InputOutputCurve`: delegates to underlying `FunctionData`
 For `IncrementalCurve`: converts to `InputOutputCurve` (integrating via `running_sum`), then checks
 For `AverageRateCurve`: converts to `InputOutputCurve`, then checks
 
-Note: These methods must be defined here (after value_curve.jl is loaded) rather than in
-convexity_checks.jl due to the include order.
+Note: These methods must be defined here after value_curve.jl is loaded due to the include order.
 """
 is_convex(curve::InputOutputCurve) = is_convex(get_function_data(curve))
 is_convex(curve::IncrementalCurve) = is_convex(InputOutputCurve(curve))
