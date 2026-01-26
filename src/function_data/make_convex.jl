@@ -154,6 +154,25 @@ is_convex(pwl::PiecewiseStepData) =
 @deprecate is_concave(data::FunctionData) !is_convex(data)
 
 """
+    is_convex(curve::ValueCurve) -> Bool
+
+Check if a `ValueCurve` is convex.
+
+For `InputOutputCurve`: delegates to underlying `FunctionData`
+For `IncrementalCurve`: converts to `InputOutputCurve` (integrating via `running_sum`), then checks
+For `AverageRateCurve`: converts to `InputOutputCurve`, then checks
+
+Note: These methods must be defined here after value_curve.jl is loaded due to the include order.
+"""
+is_convex(curve::InputOutputCurve) = is_convex(get_function_data(curve))
+is_convex(curve::IncrementalCurve) = is_convex(InputOutputCurve(curve))
+is_convex(curve::AverageRateCurve) = is_convex(InputOutputCurve(curve))
+
+@deprecate is_concave(curve::InputOutputCurve) !is_convex(curve)
+@deprecate is_concave(curve::IncrementalCurve) !is_convex(curve)
+@deprecate is_concave(curve::AverageRateCurve) !is_convex(curve)
+
+"""
     make_convex(data::FunctionData; kwargs...) -> FunctionData
     make_convex(curve::ValueCurve; kwargs...) -> ValueCurve
 
@@ -299,22 +318,3 @@ function make_convex(
     convex_io = make_convex(io_curve; weights = weights, anchor = anchor)
     return AverageRateCurve(convex_io)
 end
-
-"""
-    is_convex(curve::ValueCurve) -> Bool
-
-Check if a `ValueCurve` is convex.
-
-For `InputOutputCurve`: delegates to underlying `FunctionData`
-For `IncrementalCurve`: converts to `InputOutputCurve` (integrating via `running_sum`), then checks
-For `AverageRateCurve`: converts to `InputOutputCurve`, then checks
-
-Note: These methods must be defined here after value_curve.jl is loaded due to the include order.
-"""
-is_convex(curve::InputOutputCurve) = is_convex(get_function_data(curve))
-is_convex(curve::IncrementalCurve) = is_convex(InputOutputCurve(curve))
-is_convex(curve::AverageRateCurve) = is_convex(InputOutputCurve(curve))
-
-@deprecate is_concave(curve::InputOutputCurve) !is_convex(curve)
-@deprecate is_concave(curve::IncrementalCurve) !is_convex(curve)
-@deprecate is_concave(curve::AverageRateCurve) !is_convex(curve)
