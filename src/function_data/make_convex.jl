@@ -165,61 +165,102 @@ is_convex(curve::IncrementalCurve) = is_convex(InputOutputCurve(curve))
 is_convex(curve::AverageRateCurve) = is_convex(InputOutputCurve(curve))
 
 """
-    make_convex(data::FunctionData; kwargs...) -> FunctionData
     make_convex(curve::ValueCurve; kwargs...) -> ValueCurve
 
-Return a convex approximation of the input data or curve.
+Transform a non-convex `ValueCurve` into a convex approximation using isotonic regression.
 
-For `FunctionData` types:
-- `LinearFunctionData`: Always convex, returns unchanged
-- `QuadraticFunctionData`: Projects concave quadratics (a < 0) to linear by setting a = 0
-- `PiecewiseStepData`: Uses isotonic regression (PAVA) on y-coordinates
-- `PiecewiseLinearData`: Uses isotonic regression on slopes, then reconstructs points
+Returns the original curve unchanged if already convex.
 
-For `ValueCurve` types:
-- `InputOutputCurve`: Delegates to underlying `FunctionData` make_convex
-- `IncrementalCurve`: Converts to `InputOutputCurve`, makes convex, converts back
-- `AverageRateCurve`: Converts to `InputOutputCurve`, makes convex, converts back
+# Supported curve types
+- `InputOutputCurve{LinearFunctionData}`: Always convex, returned unchanged
+- `InputOutputCurve{QuadraticFunctionData}`: Concave quadratics projected to linear (a=0)
+- `InputOutputCurve{PiecewiseLinearData}`: Isotonic regression on slopes
+- `IncrementalCurve{PiecewiseStepData}`: Converts to IO curve, makes convex, converts back
+- `AverageRateCurve{PiecewiseStepData}`: Converts to IO curve, makes convex, converts back
 
-All methods return the input unchanged if already convex.
+Note: `IncrementalCurve{LinearFunctionData}` and `AverageRateCurve{LinearFunctionData}` are
+intentionally NOT supported. These represent derivatives of quadratic functions and rarely
+appear in real data. The arbitrary projection approach used for quadratics is not appropriate.
 
 # Keyword Arguments
-- `weights`: Weighting scheme for regression (`:uniform`, `:length`, or custom `Vector{Float64}`)
-- `anchor`: Point preservation strategy for reconstruction (`:first`, `:last`, `:centroid`)
+- `weights`: Weighting scheme for isotonic regression (affects how violations are resolved)
+  - `:length` (default): weight segments by x-extent (wider segments have more influence)
+  - `:uniform`: all segments equally weighted
+  - `Vector{Float64}`: custom weights per segment
+- `anchor`: Point preservation strategy for reconstructing points from new slopes
+  - `:first` (default): preserve first point, propagate forward
+  - `:last`: preserve last point, propagate backward
+  - `:centroid`: minimize total vertical displacement
 """
 function make_convex end
 
-make_convex(data::LinearFunctionData) = data
+# InputOutputCurve methods
+make_convex(curve::InputOutputCurve{LinearFunctionData}) = curve
 
-function make_convex(data::QuadraticFunctionData)
-    is_convex(data) && return data
-    return LinearFunctionData(get_proportional_term(data), get_constant_term(data))
+function make_convex(curve::InputOutputCurve{QuadraticFunctionData})
+    is_convex(curve) && return curve
+    # For concave quadratic (a < 0), project to linear by removing quadratic term
+    # Not the best approximation but simple and effective, given the very limited use case. 
+    fd = get_function_data(curve)
+    new_fd = LinearFunctionData(get_proportional_term(fd), get_constant_term(fd))
+    return InputOutputCurve(new_fd, get_input_at_zero(curve))
 end
 
-function make_convex(data::PiecewiseStepData; weights = :length)
-    is_convex(data) && return data
+function make_convex(
+    curve::InputOutputCurve{PiecewiseLinearData};
+    weights = :length,
+    anchor = :first,
+)
+    is_convex(curve) && return curve
+    fd = get_function_data(curve)
+    points = get_points(fd)
+    x_coords = get_x_coords(fd)
+    slopes = get_slopes(fd)
 
-    y_coords = get_y_coords(data)
-    x_coords = get_x_coords(data)
-    w = _compute_convex_weights(x_coords, weights)
-    new_y_coords = isotonic_regression(y_coords, w)
-
-    return PiecewiseStepData(x_coords, new_y_coords)
-end
-
-function make_convex(data::PiecewiseLinearData; weights = :length, anchor = :first)
-    is_convex(data) && return data
-
-    points = get_points(data)
-    x_coords = get_x_coords(data)
-    slopes = get_slopes(data)
     w = _compute_convex_weights(x_coords, weights)
     new_slopes = isotonic_regression(slopes, w)
     new_points = _reconstruct_points(points, new_slopes, anchor)
 
-    return PiecewiseLinearData(new_points)
+    return InputOutputCurve(PiecewiseLinearData(new_points), get_input_at_zero(curve))
 end
 
+# IncrementalCurve methods
+# Note: make_convex is NOT defined for IncrementalCurve{LinearFunctionData}.
+# Such a curve represents the derivative of a quadratic IO curve: f'(x) = ax + b.
+# For concave quadratics (a < 0), we would project to linear by removing the quadratic term,
+# but this approach is arbitrary and not a proper convex approximation.
+# These curve types rarely appear in real data (most cost curves are piecewise from measured data).
+
+function make_convex(
+    curve::IncrementalCurve{PiecewiseStepData};
+    weights = :length,
+    anchor = :first,
+)
+    is_convex(curve) && return curve
+    io_curve = InputOutputCurve(curve)
+    convex_io = make_convex(io_curve; weights = weights, anchor = anchor)
+    return IncrementalCurve(convex_io)
+end
+
+# AverageRateCurve methods
+# Note: make_convex is NOT defined for AverageRateCurve{LinearFunctionData}.
+# Such a curve represents f(x)/x where f is quadratic. For concave cases,
+# the same concerns apply as for IncrementalCurve{LinearFunctionData} above.
+
+function make_convex(
+    curve::AverageRateCurve{PiecewiseStepData};
+    weights = :length,
+    anchor = :first,
+)
+    is_convex(curve) && return curve
+    io_curve = InputOutputCurve(curve)
+    convex_io = make_convex(io_curve; weights = weights, anchor = anchor)
+    return AverageRateCurve(convex_io)
+end
+
+"""
+Reconstruct points from new slopes, preserving the anchor point.
+"""
 function _reconstruct_points(
     original_points::Vector{XY_COORDS},
     new_slopes::Vector{Float64},
@@ -258,55 +299,4 @@ function _reconstruct_points(
     end
 
     return new_points
-end
-
-make_convex(curve::InputOutputCurve{LinearFunctionData}) = curve
-
-function make_convex(curve::InputOutputCurve{QuadraticFunctionData})
-    is_convex(curve) && return curve
-    fd = get_function_data(curve)
-    new_fd = LinearFunctionData(get_proportional_term(fd), get_constant_term(fd))
-    return InputOutputCurve(new_fd, get_input_at_zero(curve))
-end
-
-function make_convex(
-    curve::InputOutputCurve{PiecewiseLinearData};
-    weights = :length,
-    anchor = :first,
-)
-    is_convex(curve) && return curve
-    new_fd = make_convex(get_function_data(curve); weights = weights, anchor = anchor)
-    return InputOutputCurve(new_fd, get_input_at_zero(curve))
-end
-
-function make_convex(curve::IncrementalCurve{LinearFunctionData})
-    is_convex(curve) && return curve
-    io_curve = InputOutputCurve(curve)
-    convex_io = make_convex(io_curve)
-    return IncrementalCurve(convex_io)
-end
-
-function make_convex(curve::IncrementalCurve{PiecewiseStepData}; weights = :length)
-    is_convex(curve) && return curve
-    fd = get_function_data(curve)
-    new_fd = make_convex(fd; weights = weights)
-    return IncrementalCurve(new_fd, get_initial_input(curve), get_input_at_zero(curve))
-end
-
-function make_convex(curve::AverageRateCurve{LinearFunctionData})
-    is_convex(curve) && return curve
-    io_curve = InputOutputCurve(curve)
-    convex_io = make_convex(io_curve)
-    return AverageRateCurve(convex_io)
-end
-
-function make_convex(
-    curve::AverageRateCurve{PiecewiseStepData};
-    weights = :length,
-    anchor = :first,
-)
-    is_convex(curve) && return curve
-    io_curve = InputOutputCurve(curve)
-    convex_io = make_convex(io_curve; weights = weights, anchor = anchor)
-    return AverageRateCurve(convex_io)
 end
