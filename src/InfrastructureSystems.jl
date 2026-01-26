@@ -196,6 +196,7 @@ end
 include("utils/test.jl")
 include("units.jl")
 include("value_curve.jl")
+include("function_data/convexity_checks.jl")
 include("function_data/make_convex.jl")
 include("cost_aliases.jl")
 include("production_variable_cost_curve.jl")
