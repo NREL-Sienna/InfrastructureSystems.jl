@@ -39,13 +39,13 @@ is_convex(pwl::PiecewiseStepData) =
 
 Check if a `ValueCurve` is convex.
 
-For `InputOutputCurve`: gets the data of InpuOutput curve and checks
+For `InputOutputCurve`: delegates to underlying `FunctionData`
 For `IncrementalCurve`: converts to `InputOutputCurve` (integrating via `running_sum`), then checks
 For `AverageRateCurve`: converts to `InputOutputCurve`, then checks
 """
-is_convex(curve::InputOutputCurve) = _slope_convexity_check(get_slopes(get_function_data(curve)))
-is_convex(curve::IncrementalCurve) = _slope_convexity_check(get_slopes(get_function_data(InputOutputCurve(curve))))
-is_convex(curve::AverageRateCurve) = _slope_convexity_check(get_slopes(get_function_data(InputOutputCurve(curve))))
+is_convex(curve::InputOutputCurve) = is_convex(get_function_data(curve))
+is_convex(curve::IncrementalCurve) = is_convex(InputOutputCurve(curve))
+is_convex(curve::AverageRateCurve) = is_convex(InputOutputCurve(curve))
 
 """
     convexity_violations(data::PiecewiseLinearData) -> Vector{Int}
