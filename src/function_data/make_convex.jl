@@ -95,6 +95,37 @@ function make_convex(
     return AverageRateCurve(convex_io)
 end
 
+# ProductionVariableCostCurve methods (CostCurve, FuelCurve)
+# These delegate to the underlying ValueCurve and reconstruct the wrapper.
+
+"""
+    make_convex(cost::CostCurve; kwargs...) -> CostCurve
+
+Transform the underlying `ValueCurve` of a `CostCurve` into a convex approximation.
+Returns a new `CostCurve` with the convexified value curve, preserving `power_units` and `vom_cost`.
+"""
+function make_convex(cost::CostCurve; kwargs...)
+    convex_vc = make_convex(get_value_curve(cost); kwargs...)
+    return CostCurve(convex_vc, get_power_units(cost), get_vom_cost(cost))
+end
+
+"""
+    make_convex(cost::FuelCurve; kwargs...) -> FuelCurve
+
+Transform the underlying `ValueCurve` of a `FuelCurve` into a convex approximation.
+Returns a new `FuelCurve` with the convexified value curve, preserving all other fields.
+"""
+function make_convex(cost::FuelCurve; kwargs...)
+    convex_vc = make_convex(get_value_curve(cost); kwargs...)
+    return FuelCurve(;
+        value_curve = convex_vc,
+        power_units = get_power_units(cost),
+        fuel_cost = cost.fuel_cost,
+        startup_fuel_offtake = cost.startup_fuel_offtake,
+        vom_cost = get_vom_cost(cost),
+    )
+end
+
 """
     _reconstruct_points(original_points, new_slopes, anchor) -> Vector{XY_COORDS}
 
