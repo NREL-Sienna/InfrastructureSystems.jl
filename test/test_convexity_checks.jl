@@ -47,4 +47,58 @@
     # Non-convex and Non-concave (Zigzag): 1.0, 0.5, 1.5
     psd_zigzag = IS.PiecewiseStepData([0.0, 1.0, 2.0, 3.0], [1.0, 0.5, 1.5])
     @test !IS.is_convex(psd_zigzag)
+
+    # Test ValueCurve types
+
+    # LinearCurve (InputOutputCurve{LinearFunctionData})
+    linear_curve = IS.InputOutputCurve(IS.LinearFunctionData(5.0, 1.0))
+    @test IS.is_convex(linear_curve)
+
+    # QuadraticCurve (InputOutputCurve{QuadraticFunctionData})
+    quad_curve_convex = IS.InputOutputCurve(IS.QuadraticFunctionData(2.0, 3.0, 4.0))
+    @test IS.is_convex(quad_curve_convex)
+
+    quad_curve_concave = IS.InputOutputCurve(IS.QuadraticFunctionData(-2.0, 3.0, 4.0))
+    @test !IS.is_convex(quad_curve_concave)
+
+    # PiecewisePointCurve (InputOutputCurve{PiecewiseLinearData})
+    pwp_curve_convex = IS.InputOutputCurve(
+        IS.PiecewiseLinearData([(x=0.0, y=0.0), (x=1.0, y=1.0), (x=2.0, y=3.0)]),
+    )
+    @test IS.is_convex(pwp_curve_convex)
+
+    pwp_curve_concave = IS.InputOutputCurve(
+        IS.PiecewiseLinearData([(x=0.0, y=0.0), (x=1.0, y=2.0), (x=2.0, y=3.0)]),
+    )
+    @test !IS.is_convex(pwp_curve_concave)
+
+    # PiecewiseIncrementalCurve (IncrementalCurve{PiecewiseStepData})
+    pwi_curve_convex = IS.IncrementalCurve(
+        IS.PiecewiseStepData([0.0, 1.0, 2.0], [1.0, 2.0]),
+        0.0,
+        0.0,
+    )
+    @test IS.is_convex(pwi_curve_convex)
+
+    pwi_curve_concave = IS.IncrementalCurve(
+        IS.PiecewiseStepData([0.0, 1.0, 2.0], [2.0, 1.0]),
+        0.0,
+        0.0,
+    )
+    @test !IS.is_convex(pwi_curve_concave)
+
+    # PiecewiseAverageCurve (AverageRateCurve{PiecewiseStepData})
+    pwa_curve_convex = IS.AverageRateCurve(
+        IS.PiecewiseStepData([0.0, 1.0, 2.0], [1.0, 2.0]),
+        0.0,
+        0.0,
+    )
+    @test IS.is_convex(pwa_curve_convex)
+
+    pwa_curve_concave = IS.AverageRateCurve(
+        IS.PiecewiseStepData([0.0, 1.0, 2.0], [2.0, 1.0]),
+        0.0,
+        0.0,
+    )
+    @test !IS.is_convex(pwa_curve_concave)
 end

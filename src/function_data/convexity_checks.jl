@@ -39,13 +39,17 @@ is_convex(pwl::PiecewiseStepData) =
 
 Check if a `ValueCurve` is convex.
 
-For `InputOutputCurve`: delegates to underlying `FunctionData`
-For `IncrementalCurve`: converts to `InputOutputCurve` (integrating via `running_sum`), then checks
-For `AverageRateCurve`: converts to `InputOutputCurve`, then checks
+- `LinearCurve`: Always returns `true`
+- `QuadraticCurve`: Returns `true` if quadratic_term ≥ 0
+- `PiecewisePointCurve`: Returns `true` if slopes are non-decreasing
+- `PiecewiseIncrementalCurve`: Returns `true` if y-coordinates are non-decreasing
+- `PiecewiseAverageCurve`: Converts to `InputOutputCurve`, then checks
 """
-is_convex(curve::InputOutputCurve) = is_convex(get_function_data(curve))
-is_convex(curve::IncrementalCurve) = is_convex(InputOutputCurve(curve))
-is_convex(curve::AverageRateCurve) = is_convex(InputOutputCurve(curve))
+is_convex(curve::LinearCurve) = is_convex(get_function_data(curve))
+is_convex(curve::QuadraticCurve) = is_convex(get_function_data(curve))
+is_convex(curve::PiecewisePointCurve) = is_convex(get_function_data(curve))
+is_convex(curve::PiecewiseIncrementalCurve) = is_convex(get_function_data(curve))
+is_convex(curve::PiecewiseAverageCurve) = is_convex(InputOutputCurve(curve))
 
 """
     convexity_violations(data::PiecewiseLinearData) -> Vector{Int}
