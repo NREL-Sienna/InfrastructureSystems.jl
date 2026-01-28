@@ -1078,31 +1078,24 @@ end
     result_linear = IS.make_convex(curve_linear)
     @test result_linear === curve_linear
 
-    # Test concave quadratic (a < 0) - should return curve with LinearFunctionData
+    # Test concave quadratic (a < 0) with infinite domain throws error
+    # QuadraticFunctionData has infinite domain (-Inf, Inf) by default
     qfd_concave = IS.QuadraticFunctionData(-2.0, 3.0, 4.0)
     @test !IS.is_convex(qfd_concave)
     curve_concave = IS.InputOutputCurve(qfd_concave)
-    result_concave = IS.make_convex(curve_concave)
-    result_fd = IS.get_function_data(result_concave)
-    @test result_fd isa IS.LinearFunctionData
-    @test IS.is_convex(result_fd)
-    @test IS.get_proportional_term(result_fd) == 3.0
-    @test IS.get_constant_term(result_fd) == 4.0
-
-    # Test make_convex is idempotent via type conversion
-    qfd_concave2 = IS.QuadraticFunctionData(-5.0, 10.0, 20.0)
-    curve_concave2 = IS.InputOutputCurve(qfd_concave2)
-    convex1 = IS.make_convex(curve_concave2)
-    convex2 = IS.make_convex(convex1)
-    @test convex2 === convex1  # LinearFunctionData is always convex
+    @test_throws ArgumentError IS.make_convex(curve_concave)
 
     # Test with small negative quadratic term (edge case)
     qfd_small_neg = IS.QuadraticFunctionData(-1e-12, 5.0, 10.0)
     curve_small = IS.InputOutputCurve(qfd_small_neg)
     # Due to tolerance in is_convex, this might be considered convex
-    # If not convex, should convert to linear
-    result_small = IS.make_convex(curve_small)
-    @test IS.is_convex(IS.get_function_data(result_small))
+    # If convex, make_convex returns unchanged; if not, throws due to infinite domain
+    if IS.is_convex(curve_small)
+        result_small = IS.make_convex(curve_small)
+        @test IS.is_convex(IS.get_function_data(result_small))
+    else
+        @test_throws ArgumentError IS.make_convex(curve_small)
+    end
 end
 
 @testset "Test convex approximation with random data" begin
@@ -1193,26 +1186,11 @@ end
     result_linear = IS.make_convex(qc_linear)
     @test result_linear === qc_linear
 
-    # Concave quadratic (a < 0) - should return LinearCurve
+    # Concave quadratic (a < 0) with infinite domain throws error
+    # QuadraticCurve/QuadraticFunctionData has infinite domain (-Inf, Inf) by default
     qc_concave = IS.QuadraticCurve(-2.0, 3.0, 4.0)
     @test !IS.is_convex(qc_concave)
-    result_concave = IS.make_convex(qc_concave)
-    @test result_concave isa IS.LinearCurve
-    @test IS.is_convex(result_concave)
-    @test IS.get_proportional_term(result_concave) == 3.0
-    @test IS.get_constant_term(result_concave) == 4.0
-
-    # With input_at_zero - should be preserved
-    qc_iaz = IS.InputOutputCurve(IS.QuadraticFunctionData(-1.0, 5.0, 10.0), 50.0)
-    result_iaz = IS.make_convex(qc_iaz)
-    @test result_iaz isa IS.LinearCurve
-    @test IS.get_input_at_zero(result_iaz) == 50.0
-
-    # Test idempotency via type conversion
-    qc_concave2 = IS.QuadraticCurve(-5.0, 10.0, 20.0)
-    convex1 = IS.make_convex(qc_concave2)
-    convex2 = IS.make_convex(convex1)
-    @test convex2 === convex1
+    @test_throws ArgumentError IS.make_convex(qc_concave)
 end
 
 @testset "Test make_convex for PiecewisePointCurve" begin
@@ -1321,8 +1299,14 @@ end
     # Test that applying make_convex twice returns the same object on second call
     # Note: IncrementalCurve{LinearFunctionData} and AverageRateCurve{LinearFunctionData}
     # are intentionally not included - make_convex is not defined for these types.
+    # Note: QuadraticCurve with concave quadratics throws error due to infinite domain
+    
+    # Test convex QuadraticCurve (already convex, returns same object)
+    qc_convex = IS.QuadraticCurve(2.0, 3.0, 4.0)
+    result_qc = IS.make_convex(qc_convex)
+    @test result_qc === qc_convex
+    
     curves = [
-        IS.QuadraticCurve(-2.0, 3.0, 4.0),
         IS.PiecewisePointCurve([(0.0, 0.0), (1.0, 10.0), (2.0, 15.0), (3.0, 30.0)]),
         IS.PiecewiseIncrementalCurve(0.0, [0.0, 1.0, 2.0, 3.0], [10.0, 5.0, 15.0]),
         IS.PiecewiseAverageCurve(6.0, [1.0, 2.0, 3.0, 4.0], [10.0, 5.0, 15.0]),

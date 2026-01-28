@@ -237,14 +237,55 @@ appear in real data. The arbitrary projection approach used for quadratics is no
 function make_convex end
 
 # InputOutputCurve methods
-make_convex(curve::InputOutputCurve{LinearFunctionData}) = curve
+make_convex(curve::InputOutputCurve{LinearFunctionData}; kwargs...) = curve
 
+"""
+    make_convex(curve::InputOutputCurve{QuadraticFunctionData}) -> InputOutputCurve{LinearFunctionData}
+
+Transform a non-convex (concave) quadratic curve into a linear approximation
+by connecting the endpoints of the curve over its domain.
+
+# Algorithm
+1. Extract domain endpoints (Pmin, Pmax) from the curve
+2. Evaluate the quadratic curve at its domain endpoints:
+   - ymin = f(Pmin)
+   - ymax = f(Pmax)
+3. Build a `LinearCurve` connecting (Pmin, ymin) to (Pmax, ymax)
+4. Return this LinearCurve
+
+# Arguments
+- `curve`: A `QuadraticCurve` (`InputOutputCurve{QuadraticFunctionData}`)
+
+# Returns
+- If already convex: returns the original curve unchanged
+- If concave: returns an `InputOutputCurve{LinearFunctionData}` (LinearCurve)
+  that connects the endpoints of the original curve
+"""
 function make_convex(curve::InputOutputCurve{QuadraticFunctionData})
     is_convex(curve) && return curve
-    # For concave quadratic (a < 0), project to linear by removing quadratic term.
-    # Not the best approximation but simple and effective, given the very limited use case.
+
+    # Extract domain from the curve
     fd = get_function_data(curve)
-    new_fd = LinearFunctionData(get_proportional_term(fd), get_constant_term(fd))
+    Pmin, Pmax = get_domain(fd)
+
+    (isfinite(Pmin) && isfinite(Pmax)) || throw(
+        ArgumentError("operating cost curve range must be limited to finite Pmin and Pmax, got ($Pmin, $Pmax)")
+    )
+    Pmin < Pmax || throw(
+        ArgumentError("operating cost curve range must have Pmin < Pmax, got ($Pmin, $Pmax)")
+    )
+
+    # Evaluate the quadratic at domain endpoints
+    ymin = fd(Pmin)
+    ymax = fd(Pmax)
+
+    # Build linear function connecting (Pmin, ymin) to (Pmax, ymax)
+    # slope: m = (ymax - ymin) / (Pmax - Pmin)
+    # intercept: b = ymin - m * Pmin
+    m = (ymax - ymin) / (Pmax - Pmin)
+    b = ymin - m * Pmin
+
+    new_fd = LinearFunctionData(m, b)
     return InputOutputCurve(new_fd, get_input_at_zero(curve))
 end
 

@@ -23,15 +23,18 @@ const IS = InfrastructureSystems
         @test IS.is_convex(result)
         @test result === qc_convex
 
-        # Concave quadratic (a < 0) - projects to linear
+        # Linear quadratic (a = 0) - unchanged
+        qfd_linear = IS.QuadraticFunctionData(0.0, 3.0, 4.0)
+        qc_linear = IS.InputOutputCurve(qfd_linear)
+        result_linear = IS.make_convex(qc_linear)
+        @test IS.is_convex(result_linear)
+        @test result_linear === qc_linear
+
+        # Concave quadratic (a < 0) with default infinite domain throws error
+        # (QuadraticFunctionData has infinite domain by default)
         qfd_concave = IS.QuadraticFunctionData(-2.0, 3.0, 4.0)
         qc_concave = IS.InputOutputCurve(qfd_concave)
-        result = IS.make_convex(qc_concave)
-        @test IS.is_convex(result)
-        @test result isa IS.InputOutputCurve{IS.LinearFunctionData}
-        fd = IS.get_function_data(result)
-        @test IS.get_proportional_term(fd) == 3.0
-        @test IS.get_constant_term(fd) == 4.0
+        @test_throws ArgumentError IS.make_convex(qc_concave)
     end
 
     @testset "Test make_convex for InputOutputCurve{PiecewiseLinearData}" begin
