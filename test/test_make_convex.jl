@@ -4,6 +4,7 @@ const IS = InfrastructureSystems
 
 @testset "Convexity Checks and make_convex Tests" begin
     include("test_convexity_checks.jl")
+    include("test_merge_colinear.jl")
 
     @testset "Test make_convex for InputOutputCurve{LinearFunctionData}" begin
         # LinearCurve - always convex
@@ -46,7 +47,10 @@ const IS = InfrastructureSystems
         ppc_concave = IS.InputOutputCurve(pld_concave)
         result = IS.make_convex(ppc_concave)
         @test IS.is_convex(result)
-        slopes = IS.get_slopes(IS.get_function_data(result))
+        # With merge_colinear=true (default), equal slopes get merged into single segment
+        # With merge_colinear=false, slopes should be equal (both 1.5)
+        result_no_merge = IS.make_convex(ppc_concave; merge_colinear = false)
+        slopes = IS.get_slopes(IS.get_function_data(result_no_merge))
         @test slopes[1] ≤ slopes[2]
     end
 
@@ -63,7 +67,10 @@ const IS = InfrastructureSystems
         pic_concave = IS.IncrementalCurve(psd_concave, 0.0)
         result = IS.make_convex(pic_concave)
         @test IS.is_convex(result)
-        @test IS.get_y_coords(IS.get_function_data(result)) ≈ [2.0, 2.0, 2.0]
+        # With merge_colinear=true (default), equal y-values get merged
+        # With merge_colinear=false, y-coords should be equal (all 2.0)
+        result_no_merge = IS.make_convex(pic_concave; merge_colinear = false)
+        @test IS.get_y_coords(IS.get_function_data(result_no_merge)) ≈ [2.0, 2.0, 2.0]
     end
 
     @testset "Test make_convex for AverageRateCurve{PiecewiseStepData}" begin

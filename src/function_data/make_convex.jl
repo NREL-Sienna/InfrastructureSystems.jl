@@ -1,6 +1,208 @@
 # CONVEX APPROXIMATION UTILITIES
 # Functions for transforming non-convex curves into convex approximations.
 
+# ============================================================================
+# COLINEARITY CLEANUP UTILITIES
+# Functions for removing artificial segmentation from piecewise curves.
+# ============================================================================
+
+const _COLINEARITY_TOLERANCE = 1e-6
+
+"""
+    merge_colinear_segments(curve::ValueCurve; ε::Float64 = _COLINEARITY_TOLERANCE) -> ValueCurve
+
+Merge consecutive colinear segments in a piecewise curve.
+
+Colinear segments are those where consecutive slopes differ by less than the tolerance ε.
+This cleanup step removes artificial segmentation that can cause false non-convex detections,
+unnecessary curve complexity, and unstable numerical behavior.
+
+# Arguments
+- `curve`: A piecewise `ValueCurve` to clean up
+- `ε`: Tolerance for comparing slopes (default: `$(_COLINEARITY_TOLERANCE)`)
+
+# Returns
+A new curve with colinear segments merged. Endpoints are preserved exactly.
+Returns the original curve unchanged if no colinear segments are found.
+
+# Supported curve types
+- `PiecewisePointCurve` (InputOutputCurve{PiecewiseLinearData})
+- `PiecewiseIncrementalCurve` (IncrementalCurve{PiecewiseStepData})
+- `PiecewiseAverageCurve` (AverageRateCurve{PiecewiseStepData})
+"""
+function merge_colinear_segments end
+
+# For curves without piecewise structure, return unchanged
+merge_colinear_segments(curve::InputOutputCurve{LinearFunctionData}; ε = _COLINEARITY_TOLERANCE) = curve
+merge_colinear_segments(curve::InputOutputCurve{QuadraticFunctionData}; ε = _COLINEARITY_TOLERANCE) = curve
+merge_colinear_segments(curve::IncrementalCurve{LinearFunctionData}; ε = _COLINEARITY_TOLERANCE) = curve # Do these exist?
+merge_colinear_segments(curve::AverageRateCurve{LinearFunctionData}; ε = _COLINEARITY_TOLERANCE) = curve # Do these exist?
+
+"""
+    merge_colinear_segments(curve::PiecewisePointCurve; ε) -> PiecewisePointCurve
+
+Merge colinear segments in a `PiecewisePointCurve` (InputOutputCurve{PiecewiseLinearData}).
+
+Algorithm:
+1. Compute slopes between consecutive points
+2. Identify groups of consecutive segments with slopes within tolerance ε
+3. For each colinear group, keep only the first and last points
+4. Preserve first and last endpoints exactly
+"""
+function merge_colinear_segments(
+    curve::InputOutputCurve{PiecewiseLinearData};
+    ε::Float64 = _COLINEARITY_TOLERANCE,
+)
+    fd = get_function_data(curve)
+    points = get_points(fd)
+    n_points = length(points)
+
+    # Edge cases: 0, 1, or 2 points - no segments to merge
+    n_points <= 2 && return curve
+
+    slopes = get_slopes(fd)
+    n_slopes = length(slopes)
+
+    # Build list of point indices to keep
+    # Always keep first point
+    keep_indices = Int[1]
+
+    i = 1
+    while i < n_slopes
+        # Find the end of the current colinear group
+        current_slope = slopes[i]
+        j = i
+        while j < n_slopes && abs(slopes[j + 1] - current_slope) <= ε
+            j += 1
+        end
+
+        # Keep the endpoint of this group (which is also the start of the next)
+        push!(keep_indices, j + 1)
+        i = j + 1
+    end
+
+    # Always ensure last point is included
+    if keep_indices[end] != n_points
+        push!(keep_indices, n_points)
+    end
+
+    # If no reduction, return original
+    length(keep_indices) == n_points && return curve
+
+    # Build new points array
+    new_points = [points[i] for i in keep_indices]
+
+    return InputOutputCurve(PiecewiseLinearData(new_points), get_input_at_zero(curve))
+end
+
+"""
+    merge_colinear_segments(curve::PiecewiseIncrementalCurve; ε) -> PiecewiseIncrementalCurve
+
+Merge colinear segments in a `PiecewiseIncrementalCurve` (IncrementalCurve{PiecewiseStepData}).
+
+For step data, slopes are directly stored as y-coordinates.
+Consecutive steps with y-values within tolerance ε are merged.
+"""
+function merge_colinear_segments(
+    curve::IncrementalCurve{PiecewiseStepData};
+    ε::Float64 = _COLINEARITY_TOLERANCE,
+)
+    fd = get_function_data(curve)
+    x_coords = get_x_coords(fd)
+    y_coords = get_y_coords(fd)  # These are the slopes/marginal rates
+
+    n_segments = length(y_coords)
+
+    # Edge cases: 0 or 1 segment - nothing to merge
+    n_segments <= 1 && return curve
+
+    # Build merged x and y coordinates
+    new_x = Float64[x_coords[1]]
+    new_y = Float64[]
+
+    i = 1
+    while i <= n_segments
+        current_slope = y_coords[i]
+        j = i
+
+        # Find the end of the current colinear group
+        while j < n_segments && abs(y_coords[j + 1] - current_slope) <= ε
+            j += 1
+        end
+
+        # Add the merged segment
+        push!(new_x, x_coords[j + 1])  # End x-coordinate of the merged segment
+        push!(new_y, current_slope)    # Use the first slope of the group
+
+        i = j + 1
+    end
+
+    # If no reduction, return original
+    length(new_y) == n_segments && return curve
+
+    return IncrementalCurve(
+        PiecewiseStepData(new_x, new_y),
+        get_initial_input(curve),
+        get_input_at_zero(curve),
+    )
+end
+
+"""
+    merge_colinear_segments(curve::PiecewiseAverageCurve; ε) -> PiecewiseAverageCurve
+
+Merge colinear segments in a `PiecewiseAverageCurve` (AverageRateCurve{PiecewiseStepData}).
+
+For step data, average rates are directly stored as y-coordinates.
+Consecutive steps with y-values within tolerance ε are merged.
+"""
+function merge_colinear_segments(
+    curve::AverageRateCurve{PiecewiseStepData};
+    ε::Float64 = _COLINEARITY_TOLERANCE,
+)
+    fd = get_function_data(curve)
+    x_coords = get_x_coords(fd)
+    y_coords = get_y_coords(fd)  # These are the average rates
+
+    n_segments = length(y_coords)
+
+    # Edge cases: 0 or 1 segment - nothing to merge
+    n_segments <= 1 && return curve
+
+    # Build merged x and y coordinates
+    new_x = Float64[x_coords[1]]
+    new_y = Float64[]
+
+    i = 1
+    while i <= n_segments
+        current_rate = y_coords[i]
+        j = i
+
+        # Find the end of the current colinear group
+        while j < n_segments && abs(y_coords[j + 1] - current_rate) <= ε
+            j += 1
+        end
+
+        # Add the merged segment
+        push!(new_x, x_coords[j + 1])  # End x-coordinate of the merged segment
+        push!(new_y, current_rate)     # Use the first rate of the group
+
+        i = j + 1
+    end
+
+    # If no reduction, return original
+    length(new_y) == n_segments && return curve
+
+    return AverageRateCurve(
+        PiecewiseStepData(new_x, new_y),
+        get_initial_input(curve),
+        get_input_at_zero(curve),
+    )
+end
+
+# ============================================================================
+# CONVEXIFICATION UTILITIES
+# ============================================================================
+
 """
     make_convex(curve::ValueCurve; kwargs...) -> ValueCurve
 
@@ -28,6 +230,9 @@ appear in real data. The arbitrary projection approach used for quadratics is no
   - `:first` (default): preserve first point, propagate forward
   - `:last`: preserve last point, propagate backward
   - `:centroid`: minimize total vertical displacement
+- `merge_colinear`: Whether to merge colinear segments before convexification (default: `true`)
+  - Colinear segments are those where consecutive slopes differ by less than a tolerance
+  - This cleanup step removes artificial segmentation that can cause false non-convex detections
 """
 function make_convex end
 
@@ -47,8 +252,13 @@ function make_convex(
     curve::InputOutputCurve{PiecewiseLinearData};
     weights = :length,
     anchor = :first,
+    merge_colinear::Bool = true,
 )
-    is_convex(curve) && return curve
+    # If already convex, optionally clean up colinear segments and return
+    if is_convex(curve)
+        return merge_colinear ? merge_colinear_segments(curve) : curve
+    end
+
     fd = get_function_data(curve)
     points = get_points(fd)
     x_coords = get_x_coords(fd)
@@ -58,7 +268,10 @@ function make_convex(
     new_slopes = isotonic_regression(slopes, w)
     new_points = _reconstruct_points(points, new_slopes, anchor)
 
-    return InputOutputCurve(PiecewiseLinearData(new_points), get_input_at_zero(curve))
+    result = InputOutputCurve(PiecewiseLinearData(new_points), get_input_at_zero(curve))
+
+    # Clean up any colinear segments (from original data or produced by isotonic regression)
+    return merge_colinear ? merge_colinear_segments(result) : result
 end
 
 # IncrementalCurve methods
@@ -72,11 +285,19 @@ function make_convex(
     curve::IncrementalCurve{PiecewiseStepData};
     weights = :length,
     anchor = :first,
+    merge_colinear::Bool = true,
 )
-    is_convex(curve) && return curve
+    # If already convex, optionally clean up colinear segments and return
+    if is_convex(curve)
+        return merge_colinear ? merge_colinear_segments(curve) : curve
+    end
+
     io_curve = InputOutputCurve(curve)
-    convex_io = make_convex(io_curve; weights = weights, anchor = anchor)
-    return IncrementalCurve(convex_io)
+    convex_io = make_convex(io_curve; weights = weights, anchor = anchor, merge_colinear = false)
+    result = IncrementalCurve(convex_io)
+
+    # Clean up any colinear segments (from original data or produced by convexification)
+    return merge_colinear ? merge_colinear_segments(result) : result
 end
 
 # AverageRateCurve methods
@@ -88,11 +309,19 @@ function make_convex(
     curve::AverageRateCurve{PiecewiseStepData};
     weights = :length,
     anchor = :first,
+    merge_colinear::Bool = true,
 )
-    is_convex(curve) && return curve
+    # If already convex, optionally clean up colinear segments and return
+    if is_convex(curve)
+        return merge_colinear ? merge_colinear_segments(curve) : curve
+    end
+
     io_curve = InputOutputCurve(curve)
-    convex_io = make_convex(io_curve; weights = weights, anchor = anchor)
-    return AverageRateCurve(convex_io)
+    convex_io = make_convex(io_curve; weights = weights, anchor = anchor, merge_colinear = false)
+    result = AverageRateCurve(convex_io)
+
+    # Clean up any colinear segments (from original data or produced by convexification)
+    return merge_colinear ? merge_colinear_segments(result) : result
 end
 
 # ProductionVariableCostCurve methods (CostCurve, FuelCurve)

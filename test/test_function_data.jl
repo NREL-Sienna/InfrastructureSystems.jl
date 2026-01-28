@@ -738,7 +738,7 @@ end
     curve = IS.IncrementalCurve(step_data, 0.0)
     @test !IS.is_convex(curve)
 
-    convex_curve = IS.make_convex(curve; weights = :uniform)
+    convex_curve = IS.make_convex(curve; weights = :uniform, merge_colinear = false)
     @test IS.is_convex(convex_curve)
     convex_step = IS.get_function_data(convex_curve)
     @test IS.get_x_coords(convex_step) == IS.get_x_coords(step_data)
@@ -752,7 +752,7 @@ end
     step_data = IS.PiecewiseStepData([0.0, 2.0, 3.0, 6.0], [10.0, 5.0, 15.0])
     curve = IS.IncrementalCurve(step_data, 0.0)
     # Segment lengths: [2, 1, 3]
-    convex_curve = IS.make_convex(curve; weights = :length)
+    convex_curve = IS.make_convex(curve; weights = :length, merge_colinear = false)
     @test IS.is_convex(convex_curve)
     new_y = IS.get_y_coords(IS.get_function_data(convex_curve))
     # Pooled value = (10*2 + 5*1) / (2+1) = 25/3 ≈ 8.33
@@ -790,16 +790,16 @@ end
     curve = IS.InputOutputCurve(linear_data)
     @test !IS.is_convex(curve)
 
-    # Test with anchor=:first
-    convex_curve = IS.make_convex(curve; weights = :uniform, anchor = :first)
+    # Test with anchor=:first (with merge_colinear=false to preserve x-coords)
+    convex_curve = IS.make_convex(curve; weights = :uniform, anchor = :first, merge_colinear = false)
     @test IS.is_convex(convex_curve)
     convex_linear = IS.get_function_data(convex_curve)
     @test IS.get_x_coords(convex_linear) == IS.get_x_coords(linear_data)
     # First point should be preserved
     @test IS.get_points(convex_linear)[1] == IS.get_points(linear_data)[1]
 
-    # Test with anchor=:last
-    convex_curve = IS.make_convex(curve; weights = :uniform, anchor = :last)
+    # Test with anchor=:last (with merge_colinear=false to preserve x-coords)
+    convex_curve = IS.make_convex(curve; weights = :uniform, anchor = :last, merge_colinear = false)
     @test IS.is_convex(convex_curve)
     convex_linear = IS.get_function_data(convex_curve)
     # Last point should be preserved
@@ -809,14 +809,20 @@ end
     convex_curve = IS.make_convex(curve; weights = :uniform, anchor = :centroid)
     @test IS.is_convex(convex_curve)
 
-    # Test already convex data
+    # Test already convex data (with colinear segments)
     convex_data = IS.PiecewiseLinearData([(0, 0), (1, 1), (1.1, 2), (1.2, 3)])
     curve = IS.InputOutputCurve(convex_data)
     @test IS.is_convex(curve)
     result = IS.make_convex(curve)
-    @test result === curve
+    @test IS.is_convex(result)
+    # With merge_colinear=true (default), colinear segments may be merged
+    # The last two segments have slope 10, so they're merged
+    @test length(IS.get_points(IS.get_function_data(result))) == 3
+    # With merge_colinear=false, convex curve should be returned unchanged
+    result_no_merge = IS.make_convex(curve; merge_colinear = false)
+    @test result_no_merge === curve
 
-    # Test with length weighting
+    # Test with length weighting (merge_colinear=false to verify pooled slopes)
     linear_data = IS.PiecewiseLinearData([
         (x = 0.0, y = 0.0),
         (x = 2.0, y = 20.0),  # slope = 10, length = 2
@@ -824,7 +830,7 @@ end
         (x = 6.0, y = 70.0),  # slope = 15, length = 3
     ])
     curve = IS.InputOutputCurve(linear_data)
-    convex_curve = IS.make_convex(curve; weights = :length, anchor = :first)
+    convex_curve = IS.make_convex(curve; weights = :length, anchor = :first, merge_colinear = false)
     @test IS.is_convex(convex_curve)
 
     # Check the pooled slope value
@@ -939,6 +945,7 @@ end
     )
 
     # Test PiecewiseLinearData error (based on slopes)
+    # Use merge_colinear=false so dimensions match for error computation
     original = IS.PiecewiseLinearData([
         (x = 0.0, y = 0.0),
         (x = 1.0, y = 10.0),
@@ -946,7 +953,7 @@ end
         (x = 3.0, y = 30.0),
     ])
     curve = IS.InputOutputCurve(original)
-    convex_curve = IS.make_convex(curve; weights = :uniform, anchor = :first)
+    convex_curve = IS.make_convex(curve; weights = :uniform, anchor = :first, merge_colinear = false)
     convex = IS.get_function_data(convex_curve)
     err = IS.approximation_error(original, convex; weights = :uniform)
     @test err >= 0.0  # Error should be non-negative
@@ -966,12 +973,17 @@ end
     @test IS.is_convex(step_curve)
     @test IS.make_convex(step_curve) === step_curve
 
-    # Test with equal slopes (should remain unchanged)
+    # Test with equal slopes (colinear segments should be merged)
     linear_data = IS.PiecewiseLinearData([(0.0, 0.0), (1.0, 5.0), (2.0, 10.0), (3.0, 15.0)])
     curve = IS.InputOutputCurve(linear_data)
     @test IS.is_convex(curve)
     result = IS.make_convex(curve)
-    @test result === curve
+    @test IS.is_convex(result)
+    # Colinear segments are merged, so we get 2 points instead of 4
+    @test length(IS.get_points(IS.get_function_data(result))) == 2
+    # With merge_colinear=false, should return unchanged
+    result_no_merge = IS.make_convex(curve; merge_colinear = false)
+    @test result_no_merge === curve
 
     # Test severe violation (all slopes need to pool)
     step_data = IS.PiecewiseStepData([0.0, 1.0, 2.0, 3.0], [10.0, 5.0, 1.0])
@@ -1000,7 +1012,7 @@ end
 end
 
 @testset "Test convex approximation consistency" begin
-    # Test that make_convex is idempotent
+    # Test that make_convex is idempotent (second call returns same object)
     linear_data = IS.PiecewiseLinearData([
         (x = 0.0, y = 0.0),
         (x = 1.0, y = 10.0),
@@ -1010,14 +1022,22 @@ end
     curve = IS.InputOutputCurve(linear_data)
     convex1 = IS.make_convex(curve)
     convex2 = IS.make_convex(convex1)
-    @test convex2 === convex1  # Second call should return same object
+    # After colinearity cleanup + convexification, result is already clean
+    # So second call should produce equivalent result  
+    @test IS.is_convex(convex1)
+    @test IS.is_convex(convex2)
+    # Check structural equality (both should be convex and cleaned)
+    @test IS.get_function_data(convex2) == IS.get_function_data(convex1)
 
     # Test with step data
     step_data = IS.PiecewiseStepData([0.0, 1.0, 2.0, 3.0], [10.0, 5.0, 15.0])
     step_curve = IS.IncrementalCurve(step_data, 0.0)
     convex1 = IS.make_convex(step_curve)
     convex2 = IS.make_convex(convex1)
-    @test convex2 === convex1
+    @test IS.is_convex(convex1)
+    @test IS.is_convex(convex2)
+    # Check structural equality
+    @test IS.get_function_data(convex2) == IS.get_function_data(convex1)
 end
 
 @testset "Test make_convex for LinearFunctionData (via ValueCurve)" begin
@@ -1098,7 +1118,7 @@ end
 
         # Make convex via InputOutputCurve
         curve = IS.InputOutputCurve(pointwise)
-        convex_curve = IS.make_convex(curve)
+        convex_curve = IS.make_convex(curve; merge_colinear = false)
         convex = IS.get_function_data(convex_curve)
         @test IS.is_convex(convex)
         @test IS.get_x_coords(convex) == IS.get_x_coords(pointwise)
@@ -1205,7 +1225,7 @@ end
     ])
     @test !IS.is_convex(ppc)
 
-    convex_ppc = IS.make_convex(ppc)
+    convex_ppc = IS.make_convex(ppc; merge_colinear = false)
     @test IS.is_convex(convex_ppc)
     @test convex_ppc isa IS.PiecewisePointCurve
     @test IS.get_x_coords(convex_ppc) == IS.get_x_coords(ppc)
@@ -1245,7 +1265,7 @@ end
     pic = IS.PiecewiseIncrementalCurve(0.0, [0.0, 1.0, 2.0, 3.0], [10.0, 5.0, 15.0])
     @test !IS.is_convex(pic)
 
-    convex_pic = IS.make_convex(pic)
+    convex_pic = IS.make_convex(pic; merge_colinear = false)
     @test IS.is_convex(convex_pic)
     @test convex_pic isa IS.PiecewiseIncrementalCurve
     @test IS.get_x_coords(convex_pic) == IS.get_x_coords(pic)
