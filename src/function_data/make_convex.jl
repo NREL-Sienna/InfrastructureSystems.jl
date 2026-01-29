@@ -263,6 +263,7 @@ function make_convex(
     new_slopes = isotonic_regression(slopes, w)
     new_points = _reconstruct_points(points, new_slopes, anchor)
 
+    @info "Transformed non-convex InputOutputCurve to convex approximation"
     result = InputOutputCurve(PiecewiseLinearData(new_points), get_input_at_zero(curve))
 
     # Clean up any colinear segments (from original data or produced by isotonic regression)
@@ -286,6 +287,7 @@ function make_convex(
 
     io_curve = InputOutputCurve(curve)
     convex_io = make_convex(io_curve; weights = weights, anchor = anchor, merge_colinear = false)
+    @info "Transformed non-convex IncrementalCurve to convex approximation"
     result = IncrementalCurve(convex_io)
 
     # Clean up any colinear segments (from original data or produced by convexification)
@@ -308,6 +310,7 @@ function make_convex(
 
     io_curve = InputOutputCurve(curve)
     convex_io = make_convex(io_curve; weights = weights, anchor = anchor, merge_colinear = false)
+    @info "Transformed non-convex AverageRateCurve to convex approximation"
     result = AverageRateCurve(convex_io)
 
     # Clean up any colinear segments (from original data or produced by convexification)
