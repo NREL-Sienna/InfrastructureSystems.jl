@@ -32,12 +32,6 @@ Returns the original curve unchanged if no colinear segments are found.
 """
 function merge_colinear_segments end
 
-# For curves without piecewise structure, return unchanged
-merge_colinear_segments(curve::InputOutputCurve{LinearFunctionData}; ε = _COLINEARITY_TOLERANCE) = curve
-merge_colinear_segments(curve::InputOutputCurve{QuadraticFunctionData}; ε = _COLINEARITY_TOLERANCE) = curve
-merge_colinear_segments(curve::IncrementalCurve{LinearFunctionData}; ε = _COLINEARITY_TOLERANCE) = curve # Do these exist?
-merge_colinear_segments(curve::AverageRateCurve{LinearFunctionData}; ε = _COLINEARITY_TOLERANCE) = curve # Do these exist?
-
 """
     merge_colinear_segments(curve::PiecewisePointCurve; ε) -> PiecewisePointCurve
 
