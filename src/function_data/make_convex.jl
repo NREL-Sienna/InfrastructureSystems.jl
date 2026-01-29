@@ -211,17 +211,15 @@ Transform a non-convex `ValueCurve` into a convex approximation using isotonic r
 Returns the original curve unchanged if already convex.
 
 # Supported curve types
-- `InputOutputCurve{LinearFunctionData}`: Always convex, returned unchanged
-
 - `InputOutputCurve{PiecewiseLinearData}`: Isotonic regression on slopes
 - `IncrementalCurve{PiecewiseStepData}`: Converts to IO curve, makes convex, converts back
 - `AverageRateCurve{PiecewiseStepData}`: Converts to IO curve, makes convex, converts back
 
-Note: `IncrementalCurve{LinearFunctionData}` and `AverageRateCurve{LinearFunctionData}` are
+Note 1: `IncrementalCurve{LinearFunctionData}` and `AverageRateCurve{LinearFunctionData}` are
 intentionally NOT supported. These represent derivatives of quadratic functions and rarely
 appear in real data. The arbitrary projection approach used for quadratics is not appropriate.
-
-Note 2: `InputOutputCurve{QuadraticFunctionData}`is not supported given that it represents a significant change on the curve
+Note 2: `InputOutputCurve{LinearFunctionData}`is not supported because it never presents convexity issues. 
+Note 3: `InputOutputCurve{QuadraticFunctionData}`is not supported given that it represents a significant change on the curve
 
 # Keyword Arguments
 - `weights`: Weighting scheme for isotonic regression (affects how violations are resolved)
@@ -239,10 +237,9 @@ Note 2: `InputOutputCurve{QuadraticFunctionData}`is not supported given that it 
 function make_convex end
 
 # InputOutputCurve methods
-make_convex(curve::InputOutputCurve{LinearFunctionData}; kwargs...) = curve
 
-
-
+"""
+    make_convex(curve::InputOutputCurve{PiecewiseLinearData}; kwargs...) -> InputOutputCurve{PiecewiseLinearData}"""
 function make_convex(
     curve::InputOutputCurve{PiecewiseLinearData};
     weights = :length,
@@ -270,12 +267,9 @@ function make_convex(
 end
 
 # IncrementalCurve methods
-# Note: make_convex is NOT defined for IncrementalCurve{LinearFunctionData}.
-# Such a curve represents the derivative of a quadratic IO curve: f'(x) = ax + b.
-
-# but this approach is arbitrary and not a proper convex approximation.
-# These curve types rarely appear in real data (most cost curves are piecewise from measured data).
-
+"""
+    make_convex(curve::IncrementalCurve{PiecewiseStepData}; kwargs...) -> IncrementalCurve{PiecewiseStepData}
+"""
 function make_convex(
     curve::IncrementalCurve{PiecewiseStepData};
     weights = :length,
@@ -296,10 +290,8 @@ function make_convex(
 end
 
 # AverageRateCurve methods
-# Note: make_convex is NOT defined for AverageRateCurve{LinearFunctionData}.
-# Such a curve represents f(x)/x where f is quadratic. For concave cases,
-# the same concerns apply as for IncrementalCurve{LinearFunctionData} above.
-
+"""
+    make_convex(curve::AverageRateCurve{PiecewiseStepData}; kwargs...) -> AverageRateCurve{PiecewiseStepData}"""
 function make_convex(
     curve::AverageRateCurve{PiecewiseStepData};
     weights = :length,
