@@ -236,6 +236,9 @@ Note 3: `InputOutputCurve{QuadraticFunctionData}`is not supported given that it 
 """
 function make_convex end
 
+# Fallback method for unsupported types
+make_convex(curve; kwargs...) = throw(NotImplementedError("make_convex", typeof(curve)))
+
 # InputOutputCurve methods
 
 """
@@ -415,17 +418,13 @@ the convex approximation is closer to the original non-convex curve.
 
 # Returns
 The computed error as a `Float64`. Returns `0.0` if the curves are identical.
-
-# Example
-```julia
-curve = InputOutputCurve(piecewise_data)
-convex_curve = make_convex(curve)
-error = approximation_error(
-    get_function_data(curve),
-    get_function_data(convex_curve)
-)
-```
 """
+function approximation_error end
+
+# Fallback method for unsupported types
+approximation_error(original, convexified; kwargs...) =
+    throw(NotImplementedError("approximation_error", (typeof(original), typeof(convexified))))
+
 function approximation_error(
     original::PiecewiseStepData,
     convexified::PiecewiseStepData;

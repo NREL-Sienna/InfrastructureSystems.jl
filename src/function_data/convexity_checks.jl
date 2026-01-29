@@ -51,6 +51,9 @@ is_convex(curve::PiecewisePointCurve) = is_convex(get_function_data(curve))
 is_convex(curve::PiecewiseIncrementalCurve) = is_convex(get_function_data(curve))
 is_convex(curve::PiecewiseAverageCurve) = is_convex(InputOutputCurve(curve))
 
+# Fallback method for unsupported types
+is_convex(data) = throw(NotImplementedError("is_convex", typeof(data)))
+
 """
     convexity_violations(data::PiecewiseLinearData) -> Vector{Int}
     convexity_violations(data::PiecewiseStepData) -> Vector{Int}
