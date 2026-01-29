@@ -182,26 +182,6 @@
         @test IS.get_initial_input(result_iaz) == 10.0
     end
 
-    @testset "merge_colinear_segments for non-piecewise curves" begin
-        # LinearFunctionData curves should be returned unchanged
-        lfd = IS.LinearFunctionData(5.0, 1.0)
-        lc = IS.InputOutputCurve(lfd)
-        @test IS.merge_colinear_segments(lc) === lc
-
-        # QuadraticFunctionData curves should be returned unchanged
-        qfd = IS.QuadraticFunctionData(2.0, 3.0, 4.0)
-        qc = IS.InputOutputCurve(qfd)
-        @test IS.merge_colinear_segments(qc) === qc
-
-        # IncrementalCurve{LinearFunctionData} should be returned unchanged
-        ic_linear = IS.IncrementalCurve(lfd, 0.0)
-        @test IS.merge_colinear_segments(ic_linear) === ic_linear
-
-        # AverageRateCurve{LinearFunctionData} should be returned unchanged
-        ac_linear = IS.AverageRateCurve(lfd, 0.0)
-        @test IS.merge_colinear_segments(ac_linear) === ac_linear
-    end
-
     @testset "Edge cases and numerical stability" begin
         # Test with very small segment lengths
         pld_small = IS.PiecewiseLinearData([

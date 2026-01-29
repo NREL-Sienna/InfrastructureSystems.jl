@@ -6,37 +6,6 @@ const IS = InfrastructureSystems
     include("test_convexity_checks.jl")
     include("test_merge_colinear.jl")
 
-    @testset "Test make_convex for InputOutputCurve{LinearFunctionData}" begin
-        # LinearCurve - always convex
-        lfd = IS.LinearFunctionData(5.0, 1.0)
-        lc = IS.InputOutputCurve(lfd)
-        result = IS.make_convex(lc)
-        @test IS.is_convex(result)
-        @test result === lc  # Should return same object
-    end
-
-    @testset "Test make_convex for InputOutputCurve{QuadraticFunctionData}" begin
-        # Convex quadratic (a > 0) - unchanged
-        qfd_convex = IS.QuadraticFunctionData(2.0, 3.0, 4.0)
-        qc_convex = IS.InputOutputCurve(qfd_convex)
-        result = IS.make_convex(qc_convex)
-        @test IS.is_convex(result)
-        @test result === qc_convex
-
-        # Linear quadratic (a = 0) - unchanged
-        qfd_linear = IS.QuadraticFunctionData(0.0, 3.0, 4.0)
-        qc_linear = IS.InputOutputCurve(qfd_linear)
-        result_linear = IS.make_convex(qc_linear)
-        @test IS.is_convex(result_linear)
-        @test result_linear === qc_linear
-
-        # Concave quadratic (a < 0) with default infinite domain throws error
-        # (QuadraticFunctionData has infinite domain by default)
-        qfd_concave = IS.QuadraticFunctionData(-2.0, 3.0, 4.0)
-        qc_concave = IS.InputOutputCurve(qfd_concave)
-        @test_throws ArgumentError IS.make_convex(qc_concave)
-    end
-
     @testset "Test make_convex for InputOutputCurve{PiecewiseLinearData}" begin
         # Convex (non-decreasing slopes) - unchanged
         pld_convex = IS.PiecewiseLinearData([(x=0.0, y=0.0), (x=1.0, y=1.0), (x=2.0, y=3.0)])

@@ -1040,64 +1040,6 @@ end
     @test IS.get_function_data(convex2) == IS.get_function_data(convex1)
 end
 
-@testset "Test make_convex for LinearFunctionData (via ValueCurve)" begin
-    # LinearFunctionData is always convex, test via InputOutputCurve
-    lfd = IS.LinearFunctionData(5.0, 1.0)
-    @test IS.is_convex(lfd)
-    curve = IS.InputOutputCurve(lfd)
-    result = IS.make_convex(curve)
-    @test result === curve  # Same object returned
-
-    # Test with negative slope (still convex - linear is both convex and concave)
-    lfd_neg = IS.LinearFunctionData(-3.0, 10.0)
-    @test IS.is_convex(lfd_neg)
-    curve_neg = IS.InputOutputCurve(lfd_neg)
-    result_neg = IS.make_convex(curve_neg)
-    @test result_neg === curve_neg
-
-    # Test with zero slope
-    lfd_zero = IS.LinearFunctionData(0.0, 5.0)
-    @test IS.is_convex(lfd_zero)
-    curve_zero = IS.InputOutputCurve(lfd_zero)
-    result_zero = IS.make_convex(curve_zero)
-    @test result_zero === curve_zero
-end
-
-@testset "Test make_convex for QuadraticFunctionData (via ValueCurve)" begin
-    # Test convex quadratic (a > 0) - should return same object
-    qfd_convex = IS.QuadraticFunctionData(2.0, 3.0, 4.0)
-    @test IS.is_convex(qfd_convex)
-    curve = IS.InputOutputCurve(qfd_convex)
-    result = IS.make_convex(curve)
-    @test result === curve
-
-    # Test linear quadratic (a = 0) - should return same object
-    qfd_linear = IS.QuadraticFunctionData(0.0, 3.0, 4.0)
-    @test IS.is_convex(qfd_linear)
-    curve_linear = IS.InputOutputCurve(qfd_linear)
-    result_linear = IS.make_convex(curve_linear)
-    @test result_linear === curve_linear
-
-    # Test concave quadratic (a < 0) with infinite domain throws error
-    # QuadraticFunctionData has infinite domain (-Inf, Inf) by default
-    qfd_concave = IS.QuadraticFunctionData(-2.0, 3.0, 4.0)
-    @test !IS.is_convex(qfd_concave)
-    curve_concave = IS.InputOutputCurve(qfd_concave)
-    @test_throws ArgumentError IS.make_convex(curve_concave)
-
-    # Test with small negative quadratic term (edge case)
-    qfd_small_neg = IS.QuadraticFunctionData(-1e-12, 5.0, 10.0)
-    curve_small = IS.InputOutputCurve(qfd_small_neg)
-    # Due to tolerance in is_convex, this might be considered convex
-    # If convex, make_convex returns unchanged; if not, throws due to infinite domain
-    if IS.is_convex(curve_small)
-        result_small = IS.make_convex(curve_small)
-        @test IS.is_convex(IS.get_function_data(result_small))
-    else
-        @test_throws ArgumentError IS.make_convex(curve_small)
-    end
-end
-
 @testset "Test convex approximation with random data" begin
     rng = Random.Xoshiro(42)
     n_tests = 20
@@ -1152,46 +1094,6 @@ end
 # =============================================================================
 # MAKE_CONVEX TESTS FOR VALUE CURVES
 # =============================================================================
-
-@testset "Test make_convex for LinearCurve" begin
-    # LinearCurve is always convex
-    lc = IS.LinearCurve(5.0, 10.0)
-    @test IS.is_convex(lc)
-    result = IS.make_convex(lc)
-    @test result === lc  # Same object returned
-
-    # With negative slope (still convex - linear is affine)
-    lc_neg = IS.LinearCurve(-3.0, 10.0)
-    @test IS.is_convex(lc_neg)
-    result_neg = IS.make_convex(lc_neg)
-    @test result_neg === lc_neg
-
-    # With input_at_zero
-    lc_iaz = IS.InputOutputCurve(IS.LinearFunctionData(5.0, 10.0), 100.0)
-    result_iaz = IS.make_convex(lc_iaz)
-    @test result_iaz === lc_iaz
-    @test IS.get_input_at_zero(result_iaz) == 100.0
-end
-
-@testset "Test make_convex for QuadraticCurve" begin
-    # Convex quadratic (a > 0) - should return same object
-    qc_convex = IS.QuadraticCurve(2.0, 3.0, 4.0)
-    @test IS.is_convex(qc_convex)
-    result = IS.make_convex(qc_convex)
-    @test result === qc_convex
-
-    # Linear quadratic (a = 0) - should return same object
-    qc_linear = IS.QuadraticCurve(0.0, 3.0, 4.0)
-    @test IS.is_convex(qc_linear)
-    result_linear = IS.make_convex(qc_linear)
-    @test result_linear === qc_linear
-
-    # Concave quadratic (a < 0) with infinite domain throws error
-    # QuadraticCurve/QuadraticFunctionData has infinite domain (-Inf, Inf) by default
-    qc_concave = IS.QuadraticCurve(-2.0, 3.0, 4.0)
-    @test !IS.is_convex(qc_concave)
-    @test_throws ArgumentError IS.make_convex(qc_concave)
-end
 
 @testset "Test make_convex for PiecewisePointCurve" begin
     # Non-convex piecewise curve (slopes decrease then increase)
@@ -1299,12 +1201,7 @@ end
     # Test that applying make_convex twice returns the same object on second call
     # Note: IncrementalCurve{LinearFunctionData} and AverageRateCurve{LinearFunctionData}
     # are intentionally not included - make_convex is not defined for these types.
-    # Note: QuadraticCurve with concave quadratics throws error due to infinite domain
-    
-    # Test convex QuadraticCurve (already convex, returns same object)
-    qc_convex = IS.QuadraticCurve(2.0, 3.0, 4.0)
-    result_qc = IS.make_convex(qc_convex)
-    @test result_qc === qc_convex
+    # Note: LinearCurve and QuadraticCurve are not supported by make_convex
     
     curves = [
         IS.PiecewisePointCurve([(0.0, 0.0), (1.0, 10.0), (2.0, 15.0), (3.0, 30.0)]),
