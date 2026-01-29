@@ -212,7 +212,7 @@ Returns the original curve unchanged if already convex.
 
 # Supported curve types
 - `InputOutputCurve{LinearFunctionData}`: Always convex, returned unchanged
-- `InputOutputCurve{QuadraticFunctionData}`: Concave quadratics projected to linear (a=0)
+
 - `InputOutputCurve{PiecewiseLinearData}`: Isotonic regression on slopes
 - `IncrementalCurve{PiecewiseStepData}`: Converts to IO curve, makes convex, converts back
 - `AverageRateCurve{PiecewiseStepData}`: Converts to IO curve, makes convex, converts back
@@ -220,6 +220,8 @@ Returns the original curve unchanged if already convex.
 Note: `IncrementalCurve{LinearFunctionData}` and `AverageRateCurve{LinearFunctionData}` are
 intentionally NOT supported. These represent derivatives of quadratic functions and rarely
 appear in real data. The arbitrary projection approach used for quadratics is not appropriate.
+
+Note 2: `InputOutputCurve{QuadraticFunctionData}`is not supported given that it represents a significant change on the curve
 
 # Keyword Arguments
 - `weights`: Weighting scheme for isotonic regression (affects how violations are resolved)
@@ -239,55 +241,7 @@ function make_convex end
 # InputOutputCurve methods
 make_convex(curve::InputOutputCurve{LinearFunctionData}; kwargs...) = curve
 
-"""
-    make_convex(curve::InputOutputCurve{QuadraticFunctionData}) -> InputOutputCurve{LinearFunctionData}
 
-Transform a non-convex (concave) quadratic curve into a linear approximation
-by connecting the endpoints of the curve over its domain.
-
-# Algorithm
-1. Extract domain endpoints (Pmin, Pmax) from the curve
-2. Evaluate the quadratic curve at its domain endpoints:
-   - ymin = f(Pmin)
-   - ymax = f(Pmax)
-3. Build a `LinearCurve` connecting (Pmin, ymin) to (Pmax, ymax)
-4. Return this LinearCurve
-
-# Arguments
-- `curve`: A `QuadraticCurve` (`InputOutputCurve{QuadraticFunctionData}`)
-
-# Returns
-- If already convex: returns the original curve unchanged
-- If concave: returns an `InputOutputCurve{LinearFunctionData}` (LinearCurve)
-  that connects the endpoints of the original curve
-"""
-function make_convex(curve::InputOutputCurve{QuadraticFunctionData})
-    is_convex(curve) && return curve
-
-    # Extract domain from the curve
-    fd = get_function_data(curve)
-    Pmin, Pmax = get_domain(fd)
-
-    (isfinite(Pmin) && isfinite(Pmax)) || throw(
-        ArgumentError("operating cost curve range must be limited to finite Pmin and Pmax, got ($Pmin, $Pmax)")
-    )
-    Pmin < Pmax || throw(
-        ArgumentError("operating cost curve range must have Pmin < Pmax, got ($Pmin, $Pmax)")
-    )
-
-    # Evaluate the quadratic at domain endpoints
-    ymin = fd(Pmin)
-    ymax = fd(Pmax)
-
-    # Build linear function connecting (Pmin, ymin) to (Pmax, ymax)
-    # slope: m = (ymax - ymin) / (Pmax - Pmin)
-    # intercept: b = ymin - m * Pmin
-    m = (ymax - ymin) / (Pmax - Pmin)
-    b = ymin - m * Pmin
-
-    new_fd = LinearFunctionData(m, b)
-    return InputOutputCurve(new_fd, get_input_at_zero(curve))
-end
 
 function make_convex(
     curve::InputOutputCurve{PiecewiseLinearData};
@@ -318,7 +272,7 @@ end
 # IncrementalCurve methods
 # Note: make_convex is NOT defined for IncrementalCurve{LinearFunctionData}.
 # Such a curve represents the derivative of a quadratic IO curve: f'(x) = ax + b.
-# For concave quadratics (a < 0), we would project to linear by removing the quadratic term,
+
 # but this approach is arbitrary and not a proper convex approximation.
 # These curve types rarely appear in real data (most cost curves are piecewise from measured data).
 
