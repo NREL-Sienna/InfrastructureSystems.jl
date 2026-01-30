@@ -117,4 +117,21 @@
         0.0,
     )
     @test !IS.is_convex(pwa_curve_concave)
+
+    # Test is_concave
+    # PiecewiseLinearData
+    concave_pld =
+        IS.PiecewiseLinearData([(x = 0.0, y = 0.0), (x = 1.0, y = 2.0), (x = 2.0, y = 3.0)])
+    non_concave_pld =
+        IS.PiecewiseLinearData([(x = 0.0, y = 0.0), (x = 1.0, y = 1.0), (x = 2.0, y = 3.0)])
+
+    @test IS.is_concave(concave_pld)
+    @test !IS.is_concave(non_concave_pld)
+
+    @test IS.is_concave(
+        IS.PiecewiseStepData(; x_coords = [0.0, 1.0, 2.0], y_coords = [2.0, 1.0]),
+    )
+    @test !IS.is_concave(
+        IS.PiecewiseStepData(; x_coords = [0.0, 1.0, 2.0], y_coords = [0.9, 1.0]),
+    )
 end

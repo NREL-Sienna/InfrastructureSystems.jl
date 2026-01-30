@@ -13,6 +13,15 @@ function _slope_convexity_check(slopes::Vector{Float64})
     return true
 end
 
+function _slope_concavity_check(slopes::Vector{Float64})
+    for ix in 1:(length(slopes) - 1)
+        if slopes[ix] < slopes[ix + 1] - _SLOPE_COMPARISON_ATOL
+            return false
+        end
+    end
+    return true
+end
+
 """
     is_convex(data::FunctionData) -> Bool
 
@@ -33,6 +42,27 @@ is_convex(pwl::PiecewiseLinearData) =
 
 is_convex(pwl::PiecewiseStepData) =
     _slope_convexity_check(get_y_coords(pwl))
+
+"""
+    is_concave(data::FunctionData) -> Bool
+
+Returns `true` if the function data is concave, `false` otherwise.
+Linear functions (straight lines) are considered concave.
+
+- `LinearFunctionData`: Always returns `true`
+- `QuadraticFunctionData`: Returns `true` if quadratic_term ≤ 0
+- `PiecewiseLinearData`: Returns `true` if slopes are non-increasing
+- `PiecewiseStepData`: Returns `true` if y-coordinates are non-increasing
+"""
+is_concave(::LinearFunctionData) = true
+
+is_concave(f::QuadraticFunctionData) = get_quadratic_term(f) <= 0.0
+
+is_concave(pwl::PiecewiseLinearData) =
+    _slope_concavity_check(get_slopes(pwl))
+
+is_concave(pwl::PiecewiseStepData) =
+    _slope_concavity_check(get_y_coords(pwl))
 
 """
     is_convex(curve::ValueCurve) -> Bool
