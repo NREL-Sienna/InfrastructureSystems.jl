@@ -13,9 +13,10 @@ const _COLINEARITY_TOLERANCE = 1e-6
 
 Merge consecutive colinear segments in a piecewise curve.
 
-Colinear segments are those where consecutive slopes differ by less than the tolerance ε.
-This cleanup step removes artificial segmentation that can cause false non-convex detections,
-unnecessary curve complexity, and unstable numerical behavior.
+Colinear segments are identified by grouping: starting from the first segment in a group,
+all subsequent segments whose slope differs from the group's first slope by less than ε
+are merged. This cleanup step removes artificial segmentation that can cause false
+non-convex detections, unnecessary curve complexity, and unstable numerical behavior.
 
 # Arguments
 - `curve`: A piecewise `ValueCurve` to clean up
@@ -216,10 +217,9 @@ Note 2: `InputOutputCurve{LinearFunctionData}`is not supported because it never 
 Note 3: `InputOutputCurve{QuadraticFunctionData}`is not supported given that it represents a significant change on the curve
 
 # Keyword Arguments
-- `weights`: Weighting scheme for isotonic regression (affects how violations are resolved)
+- `weights::Symbol`: Weighting scheme for isotonic regression (affects how violations are resolved)
   - `:length` (default): weight segments by x-extent (wider segments have more influence)
   - `:uniform`: all segments equally weighted
-  - `Vector{Float64}`: custom weights per segment
 - `anchor`: Point preservation strategy for reconstructing points from new slopes
   - `:first` (default): preserve first point, propagate forward
   - `:last`: preserve last point, propagate backward
@@ -230,8 +230,9 @@ Note 3: `InputOutputCurve{QuadraticFunctionData}`is not supported given that it 
 """
 function make_convex end
 
-# Fallback method for unsupported types
-make_convex(curve; kwargs...) = throw(NotImplementedError("make_convex", typeof(curve)))
+# Fallback method for unsupported ValueCurve types
+make_convex(curve::ValueCurve; kwargs...) =
+    throw(NotImplementedError("make_convex", typeof(curve)))
 
 # InputOutputCurve methods
 
@@ -239,8 +240,8 @@ make_convex(curve; kwargs...) = throw(NotImplementedError("make_convex", typeof(
     make_convex(curve::InputOutputCurve{PiecewiseLinearData}; kwargs...) -> InputOutputCurve{PiecewiseLinearData}"""
 function make_convex(
     curve::InputOutputCurve{PiecewiseLinearData};
-    weights = :length,
-    anchor = :first,
+    weights::Symbol = :length,
+    anchor::Symbol = :first,
     merge_colinear::Bool = true,
 )
     # If already convex, optionally clean up colinear segments and return
@@ -257,7 +258,7 @@ function make_convex(
     new_slopes = isotonic_regression(slopes, w)
     new_points = _reconstruct_points(points, new_slopes, anchor)
 
-    @info "Transformed non-convex InputOutputCurve to convex approximation"
+    @debug "Transformed non-convex InputOutputCurve to convex approximation"
     result = InputOutputCurve(PiecewiseLinearData(new_points), get_input_at_zero(curve))
 
     # Clean up any colinear segments (from original data or produced by isotonic regression)
@@ -270,8 +271,8 @@ end
 """
 function make_convex(
     curve::IncrementalCurve{PiecewiseStepData};
-    weights = :length,
-    anchor = :first,
+    weights::Symbol = :length,
+    anchor::Symbol = :first,
     merge_colinear::Bool = true,
 )
     # If already convex, optionally clean up colinear segments and return
@@ -282,7 +283,7 @@ function make_convex(
     io_curve = InputOutputCurve(curve)
     convex_io =
         make_convex(io_curve; weights = weights, anchor = anchor, merge_colinear = false)
-    @info "Transformed non-convex IncrementalCurve to convex approximation"
+    @debug "Transformed non-convex IncrementalCurve to convex approximation"
     result = IncrementalCurve(convex_io)
 
     # Clean up any colinear segments (from original data or produced by convexification)
@@ -294,8 +295,8 @@ end
     make_convex(curve::AverageRateCurve{PiecewiseStepData}; kwargs...) -> AverageRateCurve{PiecewiseStepData}"""
 function make_convex(
     curve::AverageRateCurve{PiecewiseStepData};
-    weights = :length,
-    anchor = :first,
+    weights::Symbol = :length,
+    anchor::Symbol = :first,
     merge_colinear::Bool = true,
 )
     # If already convex, optionally clean up colinear segments and return
@@ -306,7 +307,7 @@ function make_convex(
     io_curve = InputOutputCurve(curve)
     convex_io =
         make_convex(io_curve; weights = weights, anchor = anchor, merge_colinear = false)
-    @info "Transformed non-convex AverageRateCurve to convex approximation"
+    @debug "Transformed non-convex AverageRateCurve to convex approximation"
     result = AverageRateCurve(convex_io)
 
     # Clean up any colinear segments (from original data or produced by convexification)
@@ -403,17 +404,19 @@ Compute the error between original piecewise data and its convex approximation.
 This is useful for assessing the quality of a convexification: a lower error means
 the convex approximation is closer to the original non-convex curve.
 
+Both arguments must have the same number of segments (same x-coordinates). When using
+`make_convex`, pass `merge_colinear=false` to preserve segment count for error computation.
+
 # Arguments
 - `original`: original `PiecewiseStepData` or `PiecewiseLinearData`
-- `convexified`: the convex approximation (same type as original)
+- `convexified`: the convex approximation (same type and same x-coordinates as original)
 - `metric`: error metric to use
   - `:L2` (default): weighted root mean square error
-  - `:L1`: weighted mean absolute error  
+  - `:L1`: weighted mean absolute error
   - `:Linf`: maximum absolute error (unweighted)
-- `weights`: weighting scheme for the error computation
+- `weights::Symbol`: weighting scheme for the error computation
   - `:length` (default): weight by segment x-extent
   - `:uniform`: equal weights for all segments
-  - `Vector{Float64}`: custom weights
 
 # Returns
 The computed error as a `Float64`. Returns `0.0` if the curves are identical.
@@ -430,10 +433,17 @@ function approximation_error(
     original::PiecewiseStepData,
     convexified::PiecewiseStepData;
     metric::Symbol = :L2,
-    weights = :length,
+    weights::Symbol = :length,
 )
     y_orig = get_y_coords(original)
     y_convex = get_y_coords(convexified)
+    length(y_orig) == length(y_convex) || throw(
+        ArgumentError(
+            "original and convexified must have the same number of segments " *
+            "(got $(length(y_orig)) and $(length(y_convex))). " *
+            "Use make_convex with merge_colinear=false to preserve segment count.",
+        ),
+    )
     w = _compute_convex_weights(get_x_coords(original), weights)
 
     diff = y_orig .- y_convex
@@ -453,11 +463,18 @@ function approximation_error(
     original::PiecewiseLinearData,
     convexified::PiecewiseLinearData;
     metric::Symbol = :L2,
-    weights = :length,
+    weights::Symbol = :length,
 )
     # For PiecewiseLinearData, compare slopes since that's what convexification modifies
     slopes_orig = get_slopes(original)
     slopes_convex = get_slopes(convexified)
+    length(slopes_orig) == length(slopes_convex) || throw(
+        ArgumentError(
+            "original and convexified must have the same number of segments " *
+            "(got $(length(slopes_orig)) and $(length(slopes_convex))). " *
+            "Use make_convex with merge_colinear=false to preserve segment count.",
+        ),
+    )
     w = _compute_convex_weights(get_x_coords(original), weights)
 
     diff = slopes_orig .- slopes_convex

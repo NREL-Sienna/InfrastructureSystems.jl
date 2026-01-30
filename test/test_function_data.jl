@@ -771,11 +771,10 @@ end
     convex_curve = IS.make_convex(curve; weights = :uniform)
     @test IS.is_convex(convex_curve)
 
-    # Test custom weights
+    # Test uniform weights
     step_data = IS.PiecewiseStepData([0.0, 1.0, 2.0, 3.0], [10.0, 5.0, 15.0])
     curve = IS.IncrementalCurve(step_data, 0.0)
-    custom_weights = [1.0, 1.0, 1.0]
-    convex_curve = IS.make_convex(curve; weights = custom_weights)
+    convex_curve = IS.make_convex(curve; weights = :uniform)
     @test IS.is_convex(convex_curve)
 end
 
