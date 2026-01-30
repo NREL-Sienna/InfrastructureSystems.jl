@@ -844,7 +844,12 @@ end
     ])
     curve = IS.InputOutputCurve(linear_data)
     convex_curve =
-        IS.make_convex_approximation(curve; weights = :length, anchor = :first, merge_colinear = false)
+        IS.make_convex_approximation(
+            curve;
+            weights = :length,
+            anchor = :first,
+            merge_colinear = false,
+        )
     @test IS.is_convex(convex_curve)
 
     # Check the pooled slope value
