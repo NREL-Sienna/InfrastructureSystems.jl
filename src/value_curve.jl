@@ -237,13 +237,11 @@ end
 IncrementalCurve(data::AverageRateCurve) = IncrementalCurve(InputOutputCurve(data))
 
 # CALCULATIONS
-is_convex(curve::InputOutputCurve) = is_convex(get_function_data(curve))
-"Calculate the convexity of the underlying data"
-is_convex(curve::ValueCurve) = is_convex(InputOutputCurve(curve))
+# is_convex methods for ValueCurves are defined in function_data/make_convex.jl
+# (included after this file)
 
-is_concave(curve::InputOutputCurve) = is_concave(get_function_data(curve))
-"Calculate the concavity of the underlying data"
-is_concave(curve::ValueCurve) = is_concave(InputOutputCurve(curve))
+@deprecate is_concave(curve::InputOutputCurve) !is_convex(curve)
+@deprecate is_concave(curve::ValueCurve) !is_convex(curve)
 
 # PRINTING
 # For cost aliases, return the alias name; otherwise, return the type name without the parameter
