@@ -199,7 +199,7 @@ end
 # ============================================================================
 
 """
-    make_convex(curve::ValueCurve; kwargs...) -> ValueCurve
+    make_convex_approximation(curve::ValueCurve; kwargs...) -> ValueCurve
 
 Transform a non-convex `ValueCurve` into a convex approximation using isotonic regression.
 
@@ -228,17 +228,17 @@ Note 3: `InputOutputCurve{QuadraticFunctionData}`is not supported given that it 
   - Colinear segments are those where consecutive slopes differ by less than a tolerance
   - This cleanup step removes artificial segmentation that can cause false non-convex detections
 """
-function make_convex end
+function make_convex_approximation end
 
 # Fallback method for unsupported ValueCurve types
-make_convex(curve::ValueCurve; kwargs...) =
-    throw(NotImplementedError("make_convex", typeof(curve)))
+make_convex_approximation(curve::ValueCurve; kwargs...) =
+    throw(NotImplementedError("make_convex_approximation", typeof(curve)))
 
 # InputOutputCurve methods
 
 """
-    make_convex(curve::InputOutputCurve{PiecewiseLinearData}; kwargs...) -> InputOutputCurve{PiecewiseLinearData}"""
-function make_convex(
+    make_convex_approximation(curve::InputOutputCurve{PiecewiseLinearData}; kwargs...) -> InputOutputCurve{PiecewiseLinearData}"""
+function make_convex_approximation(
     curve::InputOutputCurve{PiecewiseLinearData};
     weights::Symbol = :length,
     anchor::Symbol = :first,
@@ -267,9 +267,9 @@ end
 
 # IncrementalCurve methods
 """
-    make_convex(curve::IncrementalCurve{PiecewiseStepData}; kwargs...) -> IncrementalCurve{PiecewiseStepData}
+    make_convex_approximation(curve::IncrementalCurve{PiecewiseStepData}; kwargs...) -> IncrementalCurve{PiecewiseStepData}
 """
-function make_convex(
+function make_convex_approximation(
     curve::IncrementalCurve{PiecewiseStepData};
     weights::Symbol = :length,
     anchor::Symbol = :first,
@@ -282,7 +282,7 @@ function make_convex(
 
     io_curve = InputOutputCurve(curve)
     convex_io =
-        make_convex(io_curve; weights = weights, anchor = anchor, merge_colinear = false)
+        make_convex_approximation(io_curve; weights = weights, anchor = anchor, merge_colinear = false)
     @debug "Transformed non-convex IncrementalCurve to convex approximation"
     result = IncrementalCurve(convex_io)
 
@@ -292,8 +292,8 @@ end
 
 # AverageRateCurve methods
 """
-    make_convex(curve::AverageRateCurve{PiecewiseStepData}; kwargs...) -> AverageRateCurve{PiecewiseStepData}"""
-function make_convex(
+    make_convex_approximation(curve::AverageRateCurve{PiecewiseStepData}; kwargs...) -> AverageRateCurve{PiecewiseStepData}"""
+function make_convex_approximation(
     curve::AverageRateCurve{PiecewiseStepData};
     weights::Symbol = :length,
     anchor::Symbol = :first,
@@ -306,7 +306,7 @@ function make_convex(
 
     io_curve = InputOutputCurve(curve)
     convex_io =
-        make_convex(io_curve; weights = weights, anchor = anchor, merge_colinear = false)
+        make_convex_approximation(io_curve; weights = weights, anchor = anchor, merge_colinear = false)
     @debug "Transformed non-convex AverageRateCurve to convex approximation"
     result = AverageRateCurve(convex_io)
 
@@ -318,24 +318,24 @@ end
 # These delegate to the underlying ValueCurve and reconstruct the wrapper.
 
 """
-    make_convex(cost::CostCurve; kwargs...) -> CostCurve
+    make_convex_approximation(cost::CostCurve; kwargs...) -> CostCurve
 
 Transform the underlying `ValueCurve` of a `CostCurve` into a convex approximation.
 Returns a new `CostCurve` with the convexified value curve, preserving `power_units` and `vom_cost`.
 """
-function make_convex(cost::CostCurve; kwargs...)
-    convex_vc = make_convex(get_value_curve(cost); kwargs...)
+function make_convex_approximation(cost::CostCurve; kwargs...)
+    convex_vc = make_convex_approximation(get_value_curve(cost); kwargs...)
     return CostCurve(convex_vc, get_power_units(cost), get_vom_cost(cost))
 end
 
 """
-    make_convex(cost::FuelCurve; kwargs...) -> FuelCurve
+    make_convex_approximation(cost::FuelCurve; kwargs...) -> FuelCurve
 
 Transform the underlying `ValueCurve` of a `FuelCurve` into a convex approximation.
 Returns a new `FuelCurve` with the convexified value curve, preserving all other fields.
 """
-function make_convex(cost::FuelCurve; kwargs...)
-    convex_vc = make_convex(get_value_curve(cost); kwargs...)
+function make_convex_approximation(cost::FuelCurve; kwargs...)
+    convex_vc = make_convex_approximation(get_value_curve(cost); kwargs...)
     return FuelCurve(;
         value_curve = convex_vc,
         power_units = get_power_units(cost),
@@ -405,7 +405,7 @@ This is useful for assessing the quality of a convexification: a lower error mea
 the convex approximation is closer to the original non-convex curve.
 
 Both arguments must have the same number of segments (same x-coordinates). When using
-`make_convex`, pass `merge_colinear=false` to preserve segment count for error computation.
+`make_convex_approximation`, pass `merge_colinear=false` to preserve segment count for error computation.
 
 # Arguments
 - `original`: original `PiecewiseStepData` or `PiecewiseLinearData`
@@ -441,7 +441,7 @@ function approximation_error(
         ArgumentError(
             "original and convexified must have the same number of segments " *
             "(got $(length(y_orig)) and $(length(y_convex))). " *
-            "Use make_convex with merge_colinear=false to preserve segment count.",
+            "Use make_convex_approximation with merge_colinear=false to preserve segment count.",
         ),
     )
     w = _compute_convex_weights(get_x_coords(original), weights)
@@ -472,7 +472,7 @@ function approximation_error(
         ArgumentError(
             "original and convexified must have the same number of segments " *
             "(got $(length(slopes_orig)) and $(length(slopes_convex))). " *
-            "Use make_convex with merge_colinear=false to preserve segment count.",
+            "Use make_convex_approximation with merge_colinear=false to preserve segment count.",
         ),
     )
     w = _compute_convex_weights(get_x_coords(original), weights)
