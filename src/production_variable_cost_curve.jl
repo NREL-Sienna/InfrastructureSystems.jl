@@ -19,8 +19,6 @@ get_initial_input(cost::ProductionVariableCostCurve) =
 "Calculate the convexity of the underlying data"
 is_convex(cost::ProductionVariableCostCurve) = is_convex(get_value_curve(cost))
 
-@deprecate is_concave(cost::ProductionVariableCostCurve) !is_convex(cost)
-
 Base.:(==)(a::T, b::T) where {T <: ProductionVariableCostCurve} =
     double_equals_from_fields(a, b)
 
