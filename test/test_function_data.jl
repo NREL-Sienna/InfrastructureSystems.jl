@@ -968,7 +968,12 @@ end
     ])
     curve = IS.InputOutputCurve(original)
     convex_curve =
-        IS.make_convex_approximation(curve; weights = :uniform, anchor = :first, merge_colinear = false)
+        IS.make_convex_approximation(
+            curve;
+            weights = :uniform,
+            anchor = :first,
+            merge_colinear = false,
+        )
     convex = IS.get_function_data(convex_curve)
     err = IS.approximation_error(original, convex; weights = :uniform)
     @test err >= 0.0  # Error should be non-negative
