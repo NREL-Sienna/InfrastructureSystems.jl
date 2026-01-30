@@ -311,7 +311,12 @@ function make_convex_approximation(
 
     io_curve = InputOutputCurve(curve)
     convex_io =
-        make_convex_approximation(io_curve; weights = weights, anchor = anchor, merge_colinear = false)
+        make_convex_approximation(
+            io_curve;
+            weights = weights,
+            anchor = anchor,
+            merge_colinear = false,
+        )
     @debug "Transformed non-convex AverageRateCurve to convex approximation"
     result = AverageRateCurve(convex_io)
 
