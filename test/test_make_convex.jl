@@ -1,11 +1,4 @@
-using Test
-using InfrastructureSystems
-const IS = InfrastructureSystems
-
-@testset "Convexity Checks and make_convex Tests" begin
-    include("test_convexity_checks.jl")
-    include("test_merge_colinear.jl")
-
+@testset "make_convex Tests" begin
     @testset "Test make_convex for InputOutputCurve{PiecewiseLinearData}" begin
         # Convex (non-decreasing slopes) - unchanged
         pld_convex = IS.PiecewiseLinearData([
