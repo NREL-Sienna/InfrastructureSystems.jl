@@ -511,11 +511,14 @@ Base.:*(c::Real, fd::PiecewiseLinearData) =
     )
 
 "Multiply the `PiecewiseStepData` by a scalar: (c * f)(x) = c * f(x)"
-Base.:*(c::Real, fd::PiecewiseStepData) =
-    PiecewiseStepData(
-        get_x_coords(fd),
-        c * get_y_coords(fd),
-    )
+function Base.:*(c::Real, fd::PiecewiseStepData)
+    y_coords = get_y_coords(fd)
+    new_y = Vector{Float64}(undef, length(y_coords))
+    for i in eachindex(y_coords, new_y)
+        new_y[i] = c * y_coords[i]
+    end
+    return PiecewiseStepData(get_x_coords(fd), new_y)
+end
 
 # commutativity
 "Multiply the `FunctionData` by a scalar: (f * c)(x) = (c * f)(x) = c * f(x)"
@@ -544,11 +547,14 @@ Base.:+(fd::PiecewiseLinearData, c::Real) =
     )
 
 "Add a scalar to the `PiecewiseStepData`: (f + c)(x) = f(x) + c"
-Base.:+(fd::PiecewiseStepData, c::Real) =
-    PiecewiseStepData(
-        get_x_coords(fd),
-        get_y_coords(fd) .+ c,
-    )
+function Base.:+(fd::PiecewiseStepData, c::Real)
+    y_coords = get_y_coords(fd)
+    new_y = Vector{Float64}(undef, length(y_coords))
+    for i in eachindex(y_coords, new_y)
+        new_y[i] = y_coords[i] + c
+    end
+    return PiecewiseStepData(get_x_coords(fd), new_y)
+end
 
 # commutativity
 "Add a scalar to the `FunctionData`: (c + f)(x) = (f + c)(x) = f(x) + c"
@@ -578,11 +584,14 @@ Base.:>>(fd::PiecewiseLinearData, c::Real) =
     )
 
 "Right shift the `PiecewiseStepData` by a scalar: (f >> c)(x) = f(x - c)"
-Base.:>>(fd::PiecewiseStepData, c::Real) =
-    PiecewiseStepData(
-        get_x_coords(fd) .+ c,
-        get_y_coords(fd),
-    )
+function Base.:>>(fd::PiecewiseStepData, c::Real)
+    x_coords = get_x_coords(fd)
+    new_x = Vector{Float64}(undef, length(x_coords))
+    for i in eachindex(x_coords, new_x)
+        new_x[i] = x_coords[i] + c
+    end
+    return PiecewiseStepData(new_x, get_y_coords(fd))
+end
 
 "Left shift the `FunctionData` by a scalar: (f << c)(x) = (f >> -c)(x) = f(x + c)"
 Base.:<<(fd::FunctionData, c::Real) = fd >> -c
@@ -665,8 +674,13 @@ function Base.:+(f::PiecewiseStepData, g::PiecewiseStepData)
                 "f x-coords = $f_x_coords, g x-coords = $g_x_coords",
             ),
         )
-    new_y_coords = get_y_coords(f) .+ get_y_coords(g)
-    return PiecewiseStepData(f_x_coords, new_y_coords)
+    f_y = get_y_coords(f)
+    g_y = get_y_coords(g)
+    new_y = Vector{Float64}(undef, length(f_y))
+    for i in eachindex(f_y, g_y, new_y)
+        new_y[i] = f_y[i] + g_y[i]
+    end
+    return PiecewiseStepData(f_x_coords, new_y)
 end
 
 # FUNCTION EVALUATION
@@ -700,15 +714,31 @@ _eval_fd_impl(
     y_coords[i]
 
 "Evaluate the `PiecewiseLinearData` or `PiecewiseStepData` at a given x-coordinate"
-function (fd::Union{PiecewiseLinearData, PiecewiseStepData})(x::Real)
-    lb, ub = get_domain(fd)
+function (fd::PiecewiseLinearData)(x::Real)
+    points = get_points(fd)
+    lb, ub = points[1].x, points[end].x
     # defend against floating point precision issues at the boundaries.
     ((lb <= x <= ub) || isapprox(x, lb) || isapprox(x, ub)) ||
         throw(ArgumentError("x=$x is outside the domain [$lb, $ub]"))
     x = clamp(x, lb, ub)
+    i_leq = searchsortedlast(points, x; by = p -> p isa Real ? p : p.x)  # uses binary search!
+    (i_leq == length(points)) && return points[end].y
+    begin
+        p1 = points[i_leq]
+        p2 = points[i_leq + 1]
+        return p1.y + (p2.y - p1.y) * (x - p1.x) / (p2.x - p1.x)
+    end
+end
+
+function (fd::PiecewiseStepData)(x::Real)
     x_coords = get_x_coords(fd)
+    lb, ub = x_coords[1], x_coords[end]
+    # defend against floating point precision issues at the boundaries.
+    ((lb <= x <= ub) || isapprox(x, lb) || isapprox(x, ub)) ||
+        throw(ArgumentError("x=$x is outside the domain [$lb, $ub]"))
+    x = clamp(x, lb, ub)
     y_coords = get_y_coords(fd)
     i_leq = searchsortedlast(x_coords, x)  # uses binary search!
-    (i_leq == length(x_coords)) && return last(y_coords)
-    return _eval_fd_impl(i_leq, x, x_coords, y_coords, fd)
+    (i_leq == length(x_coords)) && return y_coords[end]
+    return y_coords[i_leq]
 end
