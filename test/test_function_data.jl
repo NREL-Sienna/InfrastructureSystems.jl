@@ -738,7 +738,8 @@ end
     curve = IS.IncrementalCurve(step_data, 0.0)
     @test !IS.is_convex(curve)
 
-    convex_curve = IS.make_convex_approximation(curve; weights = :uniform, merge_colinear = false)
+    convex_curve =
+        IS.make_convex_approximation(curve; weights = :uniform, merge_colinear = false)
     @test IS.is_convex(convex_curve)
     convex_step = IS.get_function_data(convex_curve)
     @test IS.get_x_coords(convex_step) == IS.get_x_coords(step_data)
