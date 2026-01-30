@@ -401,30 +401,18 @@ Compute weights for isotonic regression based on the weighting scheme.
 
 # Arguments
 - `x_coords::Vector{Float64}`: x-coordinates of the piecewise data
-- `weights`: weighting scheme
+- `weights::Symbol`: weighting scheme
   - `:uniform` - all segments weighted equally
   - `:length` - segments weighted by their x-length (default)
-  - `Vector{Float64}` - custom weights
 """
-function _compute_convex_weights(
-    x_coords::Vector{Float64},
-    weights::Union{Symbol, Vector{Float64}},
-)
+function _compute_convex_weights(x_coords::Vector{Float64}, weights::Symbol)
     n_segments = length(x_coords) - 1
     if weights === :uniform
         return ones(n_segments)
     elseif weights === :length
         return _get_x_lengths(x_coords)
-    elseif weights isa Vector{Float64}
-        length(weights) == n_segments ||
-            throw(
-                ArgumentError(
-                    "Custom weights must have length $n_segments, got $(length(weights))",
-                ),
-            )
-        return weights
     else
-        throw(ArgumentError("weights must be :uniform, :length, or Vector{Float64}"))
+        throw(ArgumentError("weights must be :uniform or :length"))
     end
 end
 
