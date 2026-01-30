@@ -753,7 +753,8 @@ end
     step_data = IS.PiecewiseStepData([0.0, 2.0, 3.0, 6.0], [10.0, 5.0, 15.0])
     curve = IS.IncrementalCurve(step_data, 0.0)
     # Segment lengths: [2, 1, 3]
-    convex_curve = IS.make_convex_approximation(curve; weights = :length, merge_colinear = false)
+    convex_curve =
+        IS.make_convex_approximation(curve; weights = :length, merge_colinear = false)
     @test IS.is_convex(convex_curve)
     new_y = IS.get_y_coords(IS.get_function_data(convex_curve))
     # Pooled value = (10*2 + 5*1) / (2+1) = 25/3 ≈ 8.33
