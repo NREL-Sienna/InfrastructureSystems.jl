@@ -793,7 +793,12 @@ end
 
     # Test with anchor=:first (with merge_colinear=false to preserve x-coords)
     convex_curve =
-        IS.make_convex_approximation(curve; weights = :uniform, anchor = :first, merge_colinear = false)
+        IS.make_convex_approximation(
+            curve;
+            weights = :uniform,
+            anchor = :first,
+            merge_colinear = false,
+        )
     @test IS.is_convex(convex_curve)
     convex_linear = IS.get_function_data(convex_curve)
     @test IS.get_x_coords(convex_linear) == IS.get_x_coords(linear_data)
