@@ -807,7 +807,12 @@ end
 
     # Test with anchor=:last (with merge_colinear=false to preserve x-coords)
     convex_curve =
-        IS.make_convex_approximation(curve; weights = :uniform, anchor = :last, merge_colinear = false)
+        IS.make_convex_approximation(
+            curve;
+            weights = :uniform,
+            anchor = :last,
+            merge_colinear = false,
+        )
     @test IS.is_convex(convex_curve)
     convex_linear = IS.get_function_data(convex_curve)
     # Last point should be preserved
