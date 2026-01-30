@@ -280,7 +280,8 @@ function make_convex(
     end
 
     io_curve = InputOutputCurve(curve)
-    convex_io = make_convex(io_curve; weights = weights, anchor = anchor, merge_colinear = false)
+    convex_io =
+        make_convex(io_curve; weights = weights, anchor = anchor, merge_colinear = false)
     @info "Transformed non-convex IncrementalCurve to convex approximation"
     result = IncrementalCurve(convex_io)
 
@@ -303,7 +304,8 @@ function make_convex(
     end
 
     io_curve = InputOutputCurve(curve)
-    convex_io = make_convex(io_curve; weights = weights, anchor = anchor, merge_colinear = false)
+    convex_io =
+        make_convex(io_curve; weights = weights, anchor = anchor, merge_colinear = false)
     @info "Transformed non-convex AverageRateCurve to convex approximation"
     result = AverageRateCurve(convex_io)
 
@@ -420,7 +422,9 @@ function approximation_error end
 
 # Fallback method for unsupported types
 approximation_error(original, convexified; kwargs...) =
-    throw(NotImplementedError("approximation_error", (typeof(original), typeof(convexified))))
+    throw(
+        NotImplementedError("approximation_error", (typeof(original), typeof(convexified))),
+    )
 
 function approximation_error(
     original::PiecewiseStepData,

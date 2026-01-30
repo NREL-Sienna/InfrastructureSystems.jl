@@ -80,6 +80,7 @@ function begin_time_series_update(
             SQLite.transaction(mgr.metadata_store.db) do
                 func()
             end
+            optimize_database!(mgr.metadata_store)
         catch
             # If an error occurs, we can easily remove new time series data to ensure
             # that the metadata database is consistent with the data.

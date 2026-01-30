@@ -8,14 +8,22 @@ const IS = InfrastructureSystems
 
     @testset "Test make_convex for InputOutputCurve{PiecewiseLinearData}" begin
         # Convex (non-decreasing slopes) - unchanged
-        pld_convex = IS.PiecewiseLinearData([(x=0.0, y=0.0), (x=1.0, y=1.0), (x=2.0, y=3.0)])
+        pld_convex = IS.PiecewiseLinearData([
+            (x = 0.0, y = 0.0),
+            (x = 1.0, y = 1.0),
+            (x = 2.0, y = 3.0),
+        ])
         ppc_convex = IS.InputOutputCurve(pld_convex)
         result = IS.make_convex(ppc_convex)
         @test IS.is_convex(result)
         @test result === ppc_convex
 
         # Concave (decreasing slopes) - apply isotonic regression
-        pld_concave = IS.PiecewiseLinearData([(x=0.0, y=0.0), (x=1.0, y=2.0), (x=2.0, y=3.0)])
+        pld_concave = IS.PiecewiseLinearData([
+            (x = 0.0, y = 0.0),
+            (x = 1.0, y = 2.0),
+            (x = 2.0, y = 3.0),
+        ])
         ppc_concave = IS.InputOutputCurve(pld_concave)
         result = IS.make_convex(ppc_concave)
         @test IS.is_convex(result)
@@ -89,17 +97,21 @@ const IS = InfrastructureSystems
 
     @testset "Test make_convex anchor options for PiecewiseLinearData" begin
         # Concave curve with slopes [2.0, 1.0]
-        pld = IS.PiecewiseLinearData([(x=0.0, y=0.0), (x=1.0, y=2.0), (x=2.0, y=3.0)])
+        pld = IS.PiecewiseLinearData([
+            (x = 0.0, y = 0.0),
+            (x = 1.0, y = 2.0),
+            (x = 2.0, y = 3.0),
+        ])
         ioc = IS.InputOutputCurve(pld)
 
         # Test anchor=:first (default) - preserves first point
-        result_first = IS.make_convex(ioc; anchor=:first)
+        result_first = IS.make_convex(ioc; anchor = :first)
         points_first = IS.get_points(IS.get_function_data(result_first))
-        @test points_first[1] == (x=0.0, y=0.0)  # First point preserved
+        @test points_first[1] == (x = 0.0, y = 0.0)  # First point preserved
 
         # Test anchor=:last - preserves last point
-        result_last = IS.make_convex(ioc; anchor=:last)
+        result_last = IS.make_convex(ioc; anchor = :last)
         points_last = IS.get_points(IS.get_function_data(result_last))
-        @test points_last[end] == (x=2.0, y=3.0)  # Last point preserved
+        @test points_last[end] == (x = 2.0, y = 3.0)  # Last point preserved
     end
 end

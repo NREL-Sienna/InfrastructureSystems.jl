@@ -15,20 +15,28 @@
 
     # PiecewiseLinearData
     # Convex: slopes increasing (1.0, 2.0)
-    pld_convex = IS.PiecewiseLinearData([(x=0.0, y=0.0), (x=1.0, y=1.0), (x=2.0, y=3.0)])
+    pld_convex =
+        IS.PiecewiseLinearData([(x = 0.0, y = 0.0), (x = 1.0, y = 1.0), (x = 2.0, y = 3.0)])
     @test IS.is_convex(pld_convex)
 
     # Concave: slopes decreasing (2.0, 1.0)
-    pld_concave = IS.PiecewiseLinearData([(x=0.0, y=0.0), (x=1.0, y=2.0), (x=2.0, y=3.0)])
+    pld_concave =
+        IS.PiecewiseLinearData([(x = 0.0, y = 0.0), (x = 1.0, y = 2.0), (x = 2.0, y = 3.0)])
     @test !IS.is_convex(pld_concave)
 
     # Linear (Colinear): slopes equal (1.0, 1.0)
-    pld_linear = IS.PiecewiseLinearData([(x=0.0, y=0.0), (x=1.0, y=1.0), (x=2.0, y=2.0)])
+    pld_linear =
+        IS.PiecewiseLinearData([(x = 0.0, y = 0.0), (x = 1.0, y = 1.0), (x = 2.0, y = 2.0)])
     @test IS.is_convex(pld_linear)
 
     # Non-convex and Non-concave (Zigzag): slopes (1.0, 0.5, 1.5) -> decrease then increase
     # 0->1 (slope 1), 1->2 (slope 0.5), 2->3 (slope 1.5)
-    pld_zigzag = IS.PiecewiseLinearData([(x=0.0, y=0.0), (x=1.0, y=1.0), (x=2.0, y=1.5), (x=3.0, y=3.0)])
+    pld_zigzag = IS.PiecewiseLinearData([
+        (x = 0.0, y = 0.0),
+        (x = 1.0, y = 1.0),
+        (x = 2.0, y = 1.5),
+        (x = 3.0, y = 3.0),
+    ])
     @test !IS.is_convex(pld_zigzag)
 
     # PiecewiseStepData
@@ -63,12 +71,20 @@
 
     # PiecewisePointCurve (InputOutputCurve{PiecewiseLinearData})
     pwp_curve_convex = IS.InputOutputCurve(
-        IS.PiecewiseLinearData([(x=0.0, y=0.0), (x=1.0, y=1.0), (x=2.0, y=3.0)]),
+        IS.PiecewiseLinearData([
+            (x = 0.0, y = 0.0),
+            (x = 1.0, y = 1.0),
+            (x = 2.0, y = 3.0),
+        ]),
     )
     @test IS.is_convex(pwp_curve_convex)
 
     pwp_curve_concave = IS.InputOutputCurve(
-        IS.PiecewiseLinearData([(x=0.0, y=0.0), (x=1.0, y=2.0), (x=2.0, y=3.0)]),
+        IS.PiecewiseLinearData([
+            (x = 0.0, y = 0.0),
+            (x = 1.0, y = 2.0),
+            (x = 2.0, y = 3.0),
+        ]),
     )
     @test !IS.is_convex(pwp_curve_concave)
 

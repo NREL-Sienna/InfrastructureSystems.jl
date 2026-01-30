@@ -791,7 +791,8 @@ end
     @test !IS.is_convex(curve)
 
     # Test with anchor=:first (with merge_colinear=false to preserve x-coords)
-    convex_curve = IS.make_convex(curve; weights = :uniform, anchor = :first, merge_colinear = false)
+    convex_curve =
+        IS.make_convex(curve; weights = :uniform, anchor = :first, merge_colinear = false)
     @test IS.is_convex(convex_curve)
     convex_linear = IS.get_function_data(convex_curve)
     @test IS.get_x_coords(convex_linear) == IS.get_x_coords(linear_data)
@@ -799,7 +800,8 @@ end
     @test IS.get_points(convex_linear)[1] == IS.get_points(linear_data)[1]
 
     # Test with anchor=:last (with merge_colinear=false to preserve x-coords)
-    convex_curve = IS.make_convex(curve; weights = :uniform, anchor = :last, merge_colinear = false)
+    convex_curve =
+        IS.make_convex(curve; weights = :uniform, anchor = :last, merge_colinear = false)
     @test IS.is_convex(convex_curve)
     convex_linear = IS.get_function_data(convex_curve)
     # Last point should be preserved
@@ -830,7 +832,8 @@ end
         (x = 6.0, y = 70.0),  # slope = 15, length = 3
     ])
     curve = IS.InputOutputCurve(linear_data)
-    convex_curve = IS.make_convex(curve; weights = :length, anchor = :first, merge_colinear = false)
+    convex_curve =
+        IS.make_convex(curve; weights = :length, anchor = :first, merge_colinear = false)
     @test IS.is_convex(convex_curve)
 
     # Check the pooled slope value
@@ -953,7 +956,8 @@ end
         (x = 3.0, y = 30.0),
     ])
     curve = IS.InputOutputCurve(original)
-    convex_curve = IS.make_convex(curve; weights = :uniform, anchor = :first, merge_colinear = false)
+    convex_curve =
+        IS.make_convex(curve; weights = :uniform, anchor = :first, merge_colinear = false)
     convex = IS.get_function_data(convex_curve)
     err = IS.approximation_error(original, convex; weights = :uniform)
     @test err >= 0.0  # Error should be non-negative
@@ -1202,7 +1206,7 @@ end
     # Note: IncrementalCurve{LinearFunctionData} and AverageRateCurve{LinearFunctionData}
     # are intentionally not included - make_convex is not defined for these types.
     # Note: LinearCurve and QuadraticCurve are not supported by make_convex
-    
+
     curves = [
         IS.PiecewisePointCurve([(0.0, 0.0), (1.0, 10.0), (2.0, 15.0), (3.0, 30.0)]),
         IS.PiecewiseIncrementalCurve(0.0, [0.0, 1.0, 2.0, 3.0], [10.0, 5.0, 15.0]),
@@ -1253,4 +1257,3 @@ end
     @test IS.is_convex(IS.InputOutputCurve(convex_pic))
     @test IS.is_convex(IS.InputOutputCurve(convex_pac))
 end
-
