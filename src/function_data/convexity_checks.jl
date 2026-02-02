@@ -85,6 +85,26 @@ is_convex(curve::PiecewiseAverageCurve) = is_convex(InputOutputCurve(curve))
 is_convex(data) = throw(NotImplementedError("is_convex", typeof(data)))
 
 """
+    is_concave(curve::ValueCurve) -> Bool
+
+Check if a `ValueCurve` is concave.
+
+- `LinearCurve`: Always returns `true`
+- `QuadraticCurve`: Returns `true` if quadratic_term ≤ 0
+- `PiecewisePointCurve`: Returns `true` if slopes are non-increasing
+- `PiecewiseIncrementalCurve`: Returns `true` if y-coordinates are non-increasing
+- `PiecewiseAverageCurve`: Converts to `InputOutputCurve`, then checks
+"""
+is_concave(curve::LinearCurve) = is_concave(get_function_data(curve))
+is_concave(curve::QuadraticCurve) = is_concave(get_function_data(curve))
+is_concave(curve::PiecewisePointCurve) = is_concave(get_function_data(curve))
+is_concave(curve::PiecewiseIncrementalCurve) = is_concave(get_function_data(curve))
+is_concave(curve::PiecewiseAverageCurve) = is_concave(InputOutputCurve(curve))
+
+# Fallback method for unsupported types
+is_concave(data) = throw(NotImplementedError("is_concave", typeof(data)))
+
+"""
     convexity_violations(data::PiecewiseLinearData) -> Vector{Int}
     convexity_violations(data::PiecewiseStepData) -> Vector{Int}
 
