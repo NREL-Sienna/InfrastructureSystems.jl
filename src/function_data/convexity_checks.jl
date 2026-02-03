@@ -69,17 +69,19 @@ is_concave(pwl::PiecewiseStepData) =
 
 Check if a `ValueCurve` is convex.
 
-- `LinearCurve`: Always returns `true`
-- `QuadraticCurve`: Returns `true` if quadratic_term ≥ 0
-- `PiecewisePointCurve`: Returns `true` if slopes are non-decreasing
-- `PiecewiseIncrementalCurve`: Returns `true` if y-coordinates are non-decreasing
-- `PiecewiseAverageCurve`: Converts to `InputOutputCurve`, then checks
+- `InputOutputCurve` (including `LinearCurve`, `QuadraticCurve`, `PiecewisePointCurve`): 
+  Delegates to convexity check of the underlying `FunctionData`.
+- `IncrementalCurve` (including `PiecewiseIncrementalCurve`): Delegates to convexity check 
+  of the underlying `FunctionData`. This works because for `IncrementalCurve`, the 
+  `FunctionData` y-coordinates represent marginal rates (slopes), so checking if they are 
+  non-decreasing is equivalent to checking convexity of the original curve.
+- `AverageRateCurve` (including `PiecewiseAverageCurve`): Converts to `InputOutputCurve` 
+  first, then checks. This is necessary because average rates are NOT the same as slopes; 
+  non-decreasing average rates do not imply convexity.
 """
-is_convex(curve::LinearCurve) = is_convex(get_function_data(curve))
-is_convex(curve::QuadraticCurve) = is_convex(get_function_data(curve))
-is_convex(curve::PiecewisePointCurve) = is_convex(get_function_data(curve))
-is_convex(curve::PiecewiseIncrementalCurve) = is_convex(get_function_data(curve))
-is_convex(curve::PiecewiseAverageCurve) = is_convex(InputOutputCurve(curve))
+is_convex(curve::InputOutputCurve) = is_convex(get_function_data(curve))
+is_convex(curve::IncrementalCurve) = is_convex(get_function_data(curve))
+is_convex(curve::AverageRateCurve) = is_convex(InputOutputCurve(curve))
 
 # Fallback method for unsupported types
 is_convex(data) = throw(NotImplementedError("is_convex", typeof(data)))
@@ -89,17 +91,19 @@ is_convex(data) = throw(NotImplementedError("is_convex", typeof(data)))
 
 Check if a `ValueCurve` is concave.
 
-- `LinearCurve`: Always returns `true`
-- `QuadraticCurve`: Returns `true` if quadratic_term ≤ 0
-- `PiecewisePointCurve`: Returns `true` if slopes are non-increasing
-- `PiecewiseIncrementalCurve`: Returns `true` if y-coordinates are non-increasing
-- `PiecewiseAverageCurve`: Converts to `InputOutputCurve`, then checks
+- `InputOutputCurve` (including `LinearCurve`, `QuadraticCurve`, `PiecewisePointCurve`): 
+  Delegates to concavity check of the underlying `FunctionData`.
+- `IncrementalCurve` (including `PiecewiseIncrementalCurve`): Delegates to concavity check 
+  of the underlying `FunctionData`. This works because for `IncrementalCurve`, the 
+  `FunctionData` y-coordinates represent marginal rates (slopes), so checking if they are 
+  non-increasing is equivalent to checking concavity of the original curve.
+- `AverageRateCurve` (including `PiecewiseAverageCurve`): Converts to `InputOutputCurve` 
+  first, then checks. This is necessary because average rates are NOT the same as slopes; 
+  non-increasing average rates do not imply concavity.
 """
-is_concave(curve::LinearCurve) = is_concave(get_function_data(curve))
-is_concave(curve::QuadraticCurve) = is_concave(get_function_data(curve))
-is_concave(curve::PiecewisePointCurve) = is_concave(get_function_data(curve))
-is_concave(curve::PiecewiseIncrementalCurve) = is_concave(get_function_data(curve))
-is_concave(curve::PiecewiseAverageCurve) = is_concave(InputOutputCurve(curve))
+is_concave(curve::InputOutputCurve) = is_concave(get_function_data(curve))
+is_concave(curve::IncrementalCurve) = is_concave(get_function_data(curve))
+is_concave(curve::AverageRateCurve) = is_concave(InputOutputCurve(curve))
 
 # Fallback method for unsupported types
 is_concave(data) = throw(NotImplementedError("is_concave", typeof(data)))
