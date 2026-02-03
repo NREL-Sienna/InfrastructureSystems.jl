@@ -184,7 +184,8 @@ function is_valid_data(fd::PiecewiseStepData)
     for (i, slope) in enumerate(y_coords)
         if abs(slope) > _MAX_REASONABLE_SLOPE
             @error "Data quality issue: unreasonably large marginal rate in segment $i" rate =
-                slope max_allowed = _MAX_REASONABLE_SLOPE segment = i curve_type = typeof(fd)
+                slope max_allowed = _MAX_REASONABLE_SLOPE segment = i curve_type =
+                typeof(fd)
             return false
         end
     end
