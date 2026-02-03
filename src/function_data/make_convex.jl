@@ -243,11 +243,6 @@ Note 3: `InputOutputCurve{QuadraticFunctionData}` is not supported given that it
 """
 function make_convex_approximation end
 
-# Fallback method for unsupported ValueCurve types
-make_convex_approximation(curve::ValueCurve; kwargs...) =
-    throw(NotImplementedError("make_convex_approximation", typeof(curve)))
-
-# InputOutputCurve methods
 
 """
     make_convex_approximation(curve::InputOutputCurve{PiecewiseLinearData}; kwargs...) -> Union{InputOutputCurve{PiecewiseLinearData}, Nothing}"""
@@ -286,7 +281,7 @@ function make_convex_approximation(
     return merge_colinear ? merge_colinear_segments(result) : result
 end
 
-# IncrementalCurve methods
+
 """
     make_convex_approximation(curve::IncrementalCurve{PiecewiseStepData}; kwargs...) -> Union{IncrementalCurve{PiecewiseStepData}, Nothing}
 """
@@ -325,7 +320,7 @@ function make_convex_approximation(
     return merge_colinear ? merge_colinear_segments(result) : result
 end
 
-# AverageRateCurve methods
+
 """
     make_convex_approximation(curve::AverageRateCurve{PiecewiseStepData}; kwargs...) -> Union{AverageRateCurve{PiecewiseStepData}, Nothing}"""
 function make_convex_approximation(
@@ -392,7 +387,6 @@ end
 
 # ProductionVariableCostCurve methods (CostCurve, FuelCurve)
 # These delegate to the underlying ValueCurve and reconstruct the wrapper.
-
 """
     make_convex_approximation(cost::CostCurve; kwargs...) -> Union{CostCurve, Nothing}
 
@@ -502,12 +496,6 @@ Both arguments must have the same number of segments (same x-coordinates). When 
 The computed error as a `Float64`. Returns `0.0` if the curves are identical.
 """
 function approximation_error end
-
-# Fallback method for unsupported types
-approximation_error(original, convexified; kwargs...) =
-    throw(
-        NotImplementedError("approximation_error", (typeof(original), typeof(convexified))),
-    )
 
 function approximation_error(
     original::PiecewiseStepData,

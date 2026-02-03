@@ -212,9 +212,6 @@ function is_valid_data(curve::AverageRateCurve)
     return is_valid_data(io_curve)
 end
 
-# Fallback
-is_valid_data(data) = throw(NotImplementedError("is_valid_data", typeof(data)))
-
 # ============================================================================
 # CONVEXITY CHECKING
 # ============================================================================
@@ -299,8 +296,6 @@ is_convex(curve::InputOutputCurve) = is_convex(get_function_data(curve))
 is_convex(curve::IncrementalCurve) = is_convex(get_function_data(curve))
 is_convex(curve::AverageRateCurve) = is_convex(InputOutputCurve(curve))
 
-# Fallback method for unsupported types
-is_convex(data) = throw(NotImplementedError("is_convex", typeof(data)))
 
 """
     is_concave(curve::ValueCurve) -> Bool
@@ -321,8 +316,6 @@ is_concave(curve::InputOutputCurve) = is_concave(get_function_data(curve))
 is_concave(curve::IncrementalCurve) = is_concave(get_function_data(curve))
 is_concave(curve::AverageRateCurve) = is_concave(InputOutputCurve(curve))
 
-# Fallback method for unsupported types
-is_concave(data) = throw(NotImplementedError("is_concave", typeof(data)))
 
 """
     convexity_violations(data::PiecewiseLinearData) -> Vector{Int}
