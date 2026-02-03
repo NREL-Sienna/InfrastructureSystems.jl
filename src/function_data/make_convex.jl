@@ -259,7 +259,7 @@ function make_convex_approximation(
 )
     # Data quality validation - check for fundamentally invalid data
     if !is_valid_data(curve)
-        @error "Cannot create convex curve: data quality validation failed" curve_type =
+        @error "Invalid data: curve data quality validation failed" curve_type =
             typeof(curve)
         return nothing
     end
@@ -278,7 +278,7 @@ function make_convex_approximation(
     new_slopes = isotonic_regression(slopes, w)
     new_points = _reconstruct_points(points, new_slopes, anchor)
 
-    @debug "Transformed non-convex InputOutputCurve to convex approximation"
+    @warn "Transformed non-convex InputOutputCurve to convex approximation" curve_type = typeof(curve)
     result = InputOutputCurve(PiecewiseLinearData(new_points), get_input_at_zero(curve))
 
     # Clean up any colinear segments (from original data or produced by isotonic regression)
@@ -297,7 +297,7 @@ function make_convex_approximation(
 )
     # Data quality validation - check for fundamentally invalid data
     if !is_valid_data(curve)
-        @error "Cannot create convex curve: data quality validation failed" curve_type =
+        @error "Invalid data: curve data quality validation failed" curve_type =
             typeof(curve)
         return nothing
     end
@@ -316,7 +316,7 @@ function make_convex_approximation(
             merge_colinear = false,
         )
     isnothing(convex_io) && return nothing
-    @debug "Transformed non-convex IncrementalCurve to convex approximation"
+    @warn "Transformed non-convex IncrementalCurve to convex approximation" curve_type = typeof(curve)
     result = IncrementalCurve(convex_io)
 
     # Clean up any colinear segments (from original data or produced by convexification)
@@ -334,7 +334,7 @@ function make_convex_approximation(
 )
     # Data quality validation - check for fundamentally invalid data
     if !is_valid_data(curve)
-        @error "Cannot create convex curve: data quality validation failed" curve_type =
+        @error "Invalid data: curve data quality validation failed" curve_type =
             typeof(curve)
         return nothing
     end
@@ -353,7 +353,7 @@ function make_convex_approximation(
             merge_colinear = false,
         )
     isnothing(convex_io) && return nothing
-    @debug "Transformed non-convex AverageRateCurve to convex approximation"
+    @warn "Transformed non-convex AverageRateCurve to convex approximation" curve_type = typeof(curve)
     result = AverageRateCurve(convex_io)
 
     # Clean up any colinear segments (from original data or produced by convexification)
