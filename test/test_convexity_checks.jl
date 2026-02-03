@@ -151,3 +151,86 @@
     @test IS.is_concave(IS.CostCurve(concave_pic))
     @test !IS.is_concave(IS.CostCurve(non_concave_pic))
 end
+
+@testset "Test Data Quality Checks" begin
+    # Test valid data returns true
+    valid_pld = IS.PiecewiseLinearData([
+        (x = 0.0, y = 0.0),
+        (x = 1.0, y = 10.0),
+        (x = 2.0, y = 25.0),
+    ])
+    @test IS.is_valid_data(valid_pld) == true
+
+    # Use NullLogger to suppress expected error logs from validation tests
+    Logging.with_logger(Logging.NullLogger()) do
+        # Test negative slopes returns false
+        negative_slope_pld = IS.PiecewiseLinearData([
+            (x = 0.0, y = 10.0),
+            (x = 1.0, y = 5.0),   # slope = -5
+            (x = 2.0, y = 15.0),
+        ])
+        @test IS.is_valid_data(negative_slope_pld) == false
+
+        # Test negative costs (y-values) returns false
+        negative_cost_pld = IS.PiecewiseLinearData([
+            (x = 0.0, y = -1e7),  # Very negative cost
+            (x = 1.0, y = 10.0),
+            (x = 2.0, y = 25.0),
+        ])
+        @test IS.is_valid_data(negative_cost_pld) == false
+
+        # Test excessive slopes returns false
+        excessive_slope_pld = IS.PiecewiseLinearData([
+            (x = 0.0, y = 0.0),
+            (x = 1.0, y = 1e9),   # slope = 1e9 > 1e8
+            (x = 2.0, y = 2e9),
+        ])
+        @test IS.is_valid_data(excessive_slope_pld) == false
+
+        # Test excessive magnitudes returns false
+        excessive_magnitude_pld = IS.PiecewiseLinearData([
+            (x = 0.0, y = 0.0),
+            (x = 1.0, y = 1e11),  # > 1e10
+            (x = 2.0, y = 1.1e11),
+        ])
+        @test IS.is_valid_data(excessive_magnitude_pld) == false
+
+        # Test PiecewiseStepData with negative rates returns false
+        negative_rate_psd = IS.PiecewiseStepData([0.0, 1.0, 2.0], [-5.0, 10.0])
+        @test IS.is_valid_data(negative_rate_psd) == false
+
+        # Test LinearFunctionData with negative slope
+        negative_slope_lfd = IS.LinearFunctionData(-5.0, 10.0)
+        @test IS.is_valid_data(negative_slope_lfd) == false
+
+        # Test QuadraticFunctionData with negative proportional term
+        negative_proportional_qfd = IS.QuadraticFunctionData(0.1, -5.0, 10.0)
+        @test IS.is_valid_data(negative_proportional_qfd) == false
+
+        # Test ValueCurve wrapper with invalid data
+        invalid_ioc = IS.InputOutputCurve(IS.PiecewiseLinearData([
+            (x = 0.0, y = 10.0),
+            (x = 1.0, y = 5.0),
+            (x = 2.0, y = 15.0),
+        ]))
+        @test IS.is_valid_data(invalid_ioc) == false
+    end
+
+    # Test valid LinearFunctionData
+    valid_lfd = IS.LinearFunctionData(5.0, 10.0)
+    @test IS.is_valid_data(valid_lfd) == true
+
+    # Test valid QuadraticFunctionData
+    valid_qfd = IS.QuadraticFunctionData(0.1, 5.0, 10.0)
+    @test IS.is_valid_data(valid_qfd) == true
+
+    # Test ValueCurve wrappers
+    valid_ioc = IS.InputOutputCurve(valid_pld)
+    @test IS.is_valid_data(valid_ioc) == true
+
+    # Test AverageRateCurve validates via InputOutputCurve conversion
+    # This ensures the actual slopes are checked, not just the average rates
+    valid_arc_psd = IS.PiecewiseStepData([0.0, 1.0, 2.0], [1.0, 2.0])  # Valid average rates
+    valid_arc = IS.AverageRateCurve(valid_arc_psd, 0.0)
+    @test IS.is_valid_data(valid_arc) == true
+end

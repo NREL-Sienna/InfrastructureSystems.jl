@@ -3,6 +3,221 @@
 
 const _SLOPE_COMPARISON_ATOL = 1e-10
 
+# ============================================================================
+# DATA QUALITY VALIDATION
+# Functions for detecting fundamentally invalid curve data.
+# ============================================================================
+
+# Configurable thresholds for data quality checks
+const _MAX_REASONABLE_SLOPE = 1e8      # Maximum reasonable slope ($/MWh or similar units)
+const _MAX_REASONABLE_COST = 1e10      # Maximum reasonable cost value
+const _MIN_REASONABLE_COST = -1e6      # Allow small negative costs for edge cases, but flag large negatives
+
+"""
+    is_valid_data(data::FunctionData) -> Bool
+    is_valid_data(curve::ValueCurve) -> Bool
+
+Check if the function data or curve is valid and suitable for convexification.
+Returns `true` if data is valid, `false` otherwise.
+
+This validation should be called before attempting to convexify curves, as some data
+is not just non-convex but fundamentally wrong (e.g., unrealistic or inconsistent values).
+
+When validation fails, an error is logged with details about the specific issue.
+
+# Quality Checks
+- **X-coordinates ordering**: Must be strictly ascending
+- **Negative slopes**: Cost curves should have non-negative marginal costs
+- **Excessive slopes**: Unreasonably large slopes may indicate unit conversion errors
+- **Negative costs**: Production costs should generally be non-negative
+- **Excessive magnitudes**: Very large values may indicate wrong units or data errors
+"""
+function is_valid_data end
+
+# LinearFunctionData - check proportional term (slope) and constant term
+function is_valid_data(fd::LinearFunctionData)
+    slope = get_proportional_term(fd)
+    constant = get_constant_term(fd)
+
+    if slope < -_SLOPE_COMPARISON_ATOL
+        @error "Data quality issue: negative slope detected" slope curve_type = typeof(fd)
+        return false
+    end
+
+    if abs(slope) > _MAX_REASONABLE_SLOPE
+        @error "Data quality issue: unreasonably large slope detected" slope max_allowed =
+            _MAX_REASONABLE_SLOPE curve_type = typeof(fd)
+        return false
+    end
+
+    if constant < _MIN_REASONABLE_COST
+        @error "Data quality issue: negative cost detected" constant curve_type = typeof(fd)
+        return false
+    end
+
+    if abs(constant) > _MAX_REASONABLE_COST
+        @error "Data quality issue: unreasonable cost magnitude detected" constant max_allowed =
+            _MAX_REASONABLE_COST curve_type = typeof(fd)
+        return false
+    end
+
+    return true
+end
+
+# QuadraticFunctionData - check quadratic term, proportional term, and constant
+function is_valid_data(fd::QuadraticFunctionData)
+    quadratic = get_quadratic_term(fd)
+    proportional = get_proportional_term(fd)
+    constant = get_constant_term(fd)
+
+    # For quadratic cost functions, we primarily care about the initial slope (proportional term)
+    if proportional < -_SLOPE_COMPARISON_ATOL
+        @error "Data quality issue: negative initial slope detected" proportional_term =
+            proportional curve_type = typeof(fd)
+        return false
+    end
+
+    # Check for excessive quadratic term (translates to very steep curves)
+    if abs(quadratic) > _MAX_REASONABLE_SLOPE
+        @error "Data quality issue: unreasonably large quadratic term detected" quadratic max_allowed =
+            _MAX_REASONABLE_SLOPE curve_type = typeof(fd)
+        return false
+    end
+
+    if constant < _MIN_REASONABLE_COST
+        @error "Data quality issue: negative constant cost detected" constant curve_type =
+            typeof(fd)
+        return false
+    end
+
+    if abs(constant) > _MAX_REASONABLE_COST
+        @error "Data quality issue: unreasonable cost magnitude detected" constant max_allowed =
+            _MAX_REASONABLE_COST curve_type = typeof(fd)
+        return false
+    end
+
+    return true
+end
+
+# Helper to check x-coordinates are strictly ascending
+function _check_x_coords_ascending(x_coords::Vector{Float64}, curve_type::Type)
+    for i in 1:(length(x_coords) - 1)
+        if x_coords[i] >= x_coords[i + 1]
+            @error "Data quality issue: x-coordinates not in ascending order" x_i =
+                x_coords[i] x_next = x_coords[i + 1] index = i curve_type
+            return false
+        end
+    end
+    return true
+end
+
+# PiecewiseLinearData - check x-coords ordering, slopes, and y-values
+function is_valid_data(fd::PiecewiseLinearData)
+    x_coords = get_x_coords(fd)
+    slopes = get_slopes(fd)
+    y_coords = get_y_coords(fd)
+
+    # Check x-coordinates are ascending
+    if !_check_x_coords_ascending(x_coords, typeof(fd))
+        return false
+    end
+
+    # Check for negative slopes
+    for (i, slope) in enumerate(slopes)
+        if slope < -_SLOPE_COMPARISON_ATOL
+            @error "Data quality issue: negative slope detected in segment $i" slope segment =
+                i curve_type = typeof(fd)
+            return false
+        end
+    end
+
+    # Check for excessive slopes
+    for (i, slope) in enumerate(slopes)
+        if abs(slope) > _MAX_REASONABLE_SLOPE
+            @error "Data quality issue: unreasonably large slope detected in segment $i" slope max_allowed =
+                _MAX_REASONABLE_SLOPE segment = i curve_type = typeof(fd)
+            return false
+        end
+    end
+
+    # Check for negative costs (y-values)
+    for (i, y) in enumerate(y_coords)
+        if y < _MIN_REASONABLE_COST
+            @error "Data quality issue: negative cost detected at point $i" cost = y point =
+                i curve_type = typeof(fd)
+            return false
+        end
+    end
+
+    # Check for excessive cost magnitudes
+    for (i, y) in enumerate(y_coords)
+        if abs(y) > _MAX_REASONABLE_COST
+            @error "Data quality issue: unreasonable cost magnitude at point $i" cost =
+                y max_allowed = _MAX_REASONABLE_COST point = i curve_type = typeof(fd)
+            return false
+        end
+    end
+
+    return true
+end
+
+# PiecewiseStepData - y-coords are slopes/rates
+function is_valid_data(fd::PiecewiseStepData)
+    x_coords = get_x_coords(fd)
+    y_coords = get_y_coords(fd)  # These are marginal rates/slopes
+
+    # Check x-coordinates are ascending
+    if !_check_x_coords_ascending(x_coords, typeof(fd))
+        return false
+    end
+
+    # Check for negative slopes
+    for (i, slope) in enumerate(y_coords)
+        if slope < -_SLOPE_COMPARISON_ATOL
+            @error "Data quality issue: negative marginal rate detected in segment $i" rate =
+                slope segment = i curve_type = typeof(fd)
+            return false
+        end
+    end
+
+    # Check for excessive slopes
+    for (i, slope) in enumerate(y_coords)
+        if abs(slope) > _MAX_REASONABLE_SLOPE
+            @error "Data quality issue: unreasonably large marginal rate in segment $i" rate =
+                slope max_allowed = _MAX_REASONABLE_SLOPE segment = i curve_type = typeof(fd)
+            return false
+        end
+    end
+
+    return true
+end
+
+"""
+    is_valid_data(curve::ValueCurve) -> Bool
+
+Check if a ValueCurve has valid data suitable for convexification.
+
+For `InputOutputCurve` and `IncrementalCurve`, delegates to the underlying FunctionData check.
+For `AverageRateCurve`, converts to `InputOutputCurve` first since average rates are NOT 
+the same as slopes - the actual slopes must be validated.
+"""
+is_valid_data(curve::InputOutputCurve) = is_valid_data(get_function_data(curve))
+is_valid_data(curve::IncrementalCurve) = is_valid_data(get_function_data(curve))
+
+# AverageRateCurve: average rates != slopes, so convert to get actual slope information
+function is_valid_data(curve::AverageRateCurve)
+    # Convert to InputOutputCurve to get actual cost values and slopes
+    io_curve = InputOutputCurve(curve)
+    return is_valid_data(io_curve)
+end
+
+# Fallback
+is_valid_data(data) = throw(NotImplementedError("is_valid_data", typeof(data)))
+
+# ============================================================================
+# CONVEXITY CHECKING
+# ============================================================================
+
 function _slope_convexity_check(slopes::Vector{Float64})
     for ix in 1:(length(slopes) - 1)
         if slopes[ix] > slopes[ix + 1] + _SLOPE_COMPARISON_ATOL

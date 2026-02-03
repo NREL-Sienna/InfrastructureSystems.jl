@@ -199,11 +199,20 @@ end
 # ============================================================================
 
 """
-    make_convex_approximation(curve::ValueCurve; kwargs...) -> ValueCurve
+    make_convex_approximation(curve::ValueCurve; kwargs...) -> Union{ValueCurve, Nothing}
 
-Transform a non-convex `ValueCurve` into a convex approximation using isotonic regression.
+Transform a `ValueCurve` into a convex form, with data quality validation.
 
-Returns the original curve unchanged if already convex.
+This function first validates that the curve data is reasonable and physically meaningful
+using [`is_valid_data`](@ref). If the data has fundamental quality issues (negative slopes, 
+excessive values, unordered coordinates, etc.), the function logs an error and returns 
+`nothing` to trigger a fallback path.
+
+If the data passes validation and is already convex, returns the original curve 
+(optionally with colinear segments merged).
+
+If the data passes validation but is non-convex, applies isotonic regression to 
+produce a convex approximation.
 
 # Supported curve types
 - `InputOutputCurve{PiecewiseLinearData}`: Isotonic regression on slopes
@@ -213,8 +222,8 @@ Returns the original curve unchanged if already convex.
 Note 1: `IncrementalCurve{LinearFunctionData}` and `AverageRateCurve{LinearFunctionData}` are
 intentionally NOT supported. These represent derivatives of quadratic functions and rarely
 appear in real data. The arbitrary projection approach used for quadratics is not appropriate.
-Note 2: `InputOutputCurve{LinearFunctionData}`is not supported because it never presents convexity issues. 
-Note 3: `InputOutputCurve{QuadraticFunctionData}`is not supported given that it represents a significant change on the curve
+Note 2: `InputOutputCurve{LinearFunctionData}` is not supported because it never presents convexity issues. 
+Note 3: `InputOutputCurve{QuadraticFunctionData}` is not supported given that it represents a significant change on the curve
 
 # Keyword Arguments
 - `weights::Symbol`: Weighting scheme for isotonic regression (affects how violations are resolved)
@@ -227,6 +236,10 @@ Note 3: `InputOutputCurve{QuadraticFunctionData}`is not supported given that it 
 - `merge_colinear`: Whether to merge colinear segments before convexification (default: `true`)
   - Colinear segments are those where consecutive slopes differ by less than a tolerance
   - This cleanup step removes artificial segmentation that can cause false non-convex detections
+
+# Returns
+- The convex curve (original or approximation) if successful
+- `nothing` if data quality validation fails
 """
 function make_convex_approximation end
 
@@ -237,13 +250,20 @@ make_convex_approximation(curve::ValueCurve; kwargs...) =
 # InputOutputCurve methods
 
 """
-    make_convex_approximation(curve::InputOutputCurve{PiecewiseLinearData}; kwargs...) -> InputOutputCurve{PiecewiseLinearData}"""
+    make_convex_approximation(curve::InputOutputCurve{PiecewiseLinearData}; kwargs...) -> Union{InputOutputCurve{PiecewiseLinearData}, Nothing}"""
 function make_convex_approximation(
     curve::InputOutputCurve{PiecewiseLinearData};
     weights::Symbol = :length,
     anchor::Symbol = :first,
     merge_colinear::Bool = true,
 )
+    # Data quality validation - check for fundamentally invalid data
+    if !is_valid_data(curve)
+        @error "Cannot create convex curve: data quality validation failed" curve_type =
+            typeof(curve)
+        return nothing
+    end
+
     # If already convex, optionally clean up colinear segments and return
     if is_convex(curve)
         return merge_colinear ? merge_colinear_segments(curve) : curve
@@ -267,7 +287,7 @@ end
 
 # IncrementalCurve methods
 """
-    make_convex_approximation(curve::IncrementalCurve{PiecewiseStepData}; kwargs...) -> IncrementalCurve{PiecewiseStepData}
+    make_convex_approximation(curve::IncrementalCurve{PiecewiseStepData}; kwargs...) -> Union{IncrementalCurve{PiecewiseStepData}, Nothing}
 """
 function make_convex_approximation(
     curve::IncrementalCurve{PiecewiseStepData};
@@ -275,6 +295,13 @@ function make_convex_approximation(
     anchor::Symbol = :first,
     merge_colinear::Bool = true,
 )
+    # Data quality validation - check for fundamentally invalid data
+    if !is_valid_data(curve)
+        @error "Cannot create convex curve: data quality validation failed" curve_type =
+            typeof(curve)
+        return nothing
+    end
+
     # If already convex, optionally clean up colinear segments and return
     if is_convex(curve)
         return merge_colinear ? merge_colinear_segments(curve) : curve
@@ -282,12 +309,13 @@ function make_convex_approximation(
 
     io_curve = InputOutputCurve(curve)
     convex_io =
-        make_convex_approximation(
+        _make_convex_approximation_internal(
             io_curve;
             weights = weights,
             anchor = anchor,
             merge_colinear = false,
         )
+    isnothing(convex_io) && return nothing
     @debug "Transformed non-convex IncrementalCurve to convex approximation"
     result = IncrementalCurve(convex_io)
 
@@ -297,9 +325,44 @@ end
 
 # AverageRateCurve methods
 """
-    make_convex_approximation(curve::AverageRateCurve{PiecewiseStepData}; kwargs...) -> AverageRateCurve{PiecewiseStepData}"""
+    make_convex_approximation(curve::AverageRateCurve{PiecewiseStepData}; kwargs...) -> Union{AverageRateCurve{PiecewiseStepData}, Nothing}"""
 function make_convex_approximation(
     curve::AverageRateCurve{PiecewiseStepData};
+    weights::Symbol = :length,
+    anchor::Symbol = :first,
+    merge_colinear::Bool = true,
+)
+    # Data quality validation - check for fundamentally invalid data
+    if !is_valid_data(curve)
+        @error "Cannot create convex curve: data quality validation failed" curve_type =
+            typeof(curve)
+        return nothing
+    end
+
+    # If already convex, optionally clean up colinear segments and return
+    if is_convex(curve)
+        return merge_colinear ? merge_colinear_segments(curve) : curve
+    end
+
+    io_curve = InputOutputCurve(curve)
+    convex_io =
+        _make_convex_approximation_internal(
+            io_curve;
+            weights = weights,
+            anchor = anchor,
+            merge_colinear = false,
+        )
+    isnothing(convex_io) && return nothing
+    @debug "Transformed non-convex AverageRateCurve to convex approximation"
+    result = AverageRateCurve(convex_io)
+
+    # Clean up any colinear segments (from original data or produced by convexification)
+    return merge_colinear ? merge_colinear_segments(result) : result
+end
+
+# Internal version that skips validation (used when already validated)
+function _make_convex_approximation_internal(
+    curve::InputOutputCurve{PiecewiseLinearData};
     weights::Symbol = :length,
     anchor::Symbol = :first,
     merge_colinear::Bool = true,
@@ -309,18 +372,18 @@ function make_convex_approximation(
         return merge_colinear ? merge_colinear_segments(curve) : curve
     end
 
-    io_curve = InputOutputCurve(curve)
-    convex_io =
-        make_convex_approximation(
-            io_curve;
-            weights = weights,
-            anchor = anchor,
-            merge_colinear = false,
-        )
-    @debug "Transformed non-convex AverageRateCurve to convex approximation"
-    result = AverageRateCurve(convex_io)
+    fd = get_function_data(curve)
+    points = get_points(fd)
+    x_coords = get_x_coords(fd)
+    slopes = get_slopes(fd)
 
-    # Clean up any colinear segments (from original data or produced by convexification)
+    w = _compute_convex_weights(x_coords, weights)
+    new_slopes = isotonic_regression(slopes, w)
+    new_points = _reconstruct_points(points, new_slopes, anchor)
+
+    result = InputOutputCurve(PiecewiseLinearData(new_points), get_input_at_zero(curve))
+
+    # Clean up any colinear segments (from original data or produced by isotonic regression)
     return merge_colinear ? merge_colinear_segments(result) : result
 end
 
@@ -328,24 +391,28 @@ end
 # These delegate to the underlying ValueCurve and reconstruct the wrapper.
 
 """
-    make_convex_approximation(cost::CostCurve; kwargs...) -> CostCurve
+    make_convex_approximation(cost::CostCurve; kwargs...) -> Union{CostCurve, Nothing}
 
 Transform the underlying `ValueCurve` of a `CostCurve` into a convex approximation.
 Returns a new `CostCurve` with the convexified value curve, preserving `power_units` and `vom_cost`.
+Returns `nothing` if data quality validation fails.
 """
 function make_convex_approximation(cost::CostCurve; kwargs...)
     convex_vc = make_convex_approximation(get_value_curve(cost); kwargs...)
+    isnothing(convex_vc) && return nothing
     return CostCurve(convex_vc, get_power_units(cost), get_vom_cost(cost))
 end
 
 """
-    make_convex_approximation(cost::FuelCurve; kwargs...) -> FuelCurve
+    make_convex_approximation(cost::FuelCurve; kwargs...) -> Union{FuelCurve, Nothing}
 
 Transform the underlying `ValueCurve` of a `FuelCurve` into a convex approximation.
 Returns a new `FuelCurve` with the convexified value curve, preserving all other fields.
+Returns `nothing` if data quality validation fails.
 """
 function make_convex_approximation(cost::FuelCurve; kwargs...)
     convex_vc = make_convex_approximation(get_value_curve(cost); kwargs...)
+    isnothing(convex_vc) && return nothing
     return FuelCurve(;
         value_curve = convex_vc,
         power_units = get_power_units(cost),

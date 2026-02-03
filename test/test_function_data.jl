@@ -1020,17 +1020,20 @@ end
     new_y = IS.get_y_coords(IS.get_function_data(convex_curve))
     @test all(y ≈ 16.0 / 3.0 for y in new_y)
 
-    # Test with negative values
-    step_data_neg = IS.PiecewiseStepData([0.0, 1.0, 2.0, 3.0], [-5.0, -10.0, -3.0])
-    step_curve_neg = IS.IncrementalCurve(step_data_neg, 0.0)
-    convex_neg = IS.make_convex_approximation(step_curve_neg)
-    @test IS.is_convex(convex_neg)
+    # Test with negative values - now returns nothing due to data validation
+    # Use NullLogger to suppress expected error logs
+    Logging.with_logger(Logging.NullLogger()) do
+        step_data_neg = IS.PiecewiseStepData([0.0, 1.0, 2.0, 3.0], [-5.0, -10.0, -3.0])
+        step_curve_neg = IS.IncrementalCurve(step_data_neg, 0.0)
+        convex_neg = IS.make_convex_approximation(step_curve_neg)
+        @test convex_neg === nothing
 
-    # Test with large values
-    step_data_large = IS.PiecewiseStepData([0.0, 1.0, 2.0], [1e10, 1e5])
-    step_curve_large = IS.IncrementalCurve(step_data_large, 0.0)
-    convex_large = IS.make_convex_approximation(step_curve_large)
-    @test IS.is_convex(convex_large)
+        # Test with large values - now returns nothing due to data validation
+        step_data_large = IS.PiecewiseStepData([0.0, 1.0, 2.0], [1e10, 1e5])
+        step_curve_large = IS.IncrementalCurve(step_data_large, 0.0)
+        convex_large = IS.make_convex_approximation(step_curve_large)
+        @test convex_large === nothing
+    end
 
     # Test approximation_error returns zero for identical data
     original = IS.PiecewiseStepData([0.0, 1.0, 2.0], [5.0, 10.0])
@@ -1072,26 +1075,29 @@ end
     n_points = 10
 
     for _ in 1:n_tests
-        # Generate random piecewise linear data
+        # Generate random piecewise linear data with positive slopes (valid cost curve)
         rand_x = sort(rand(rng, n_points))
-        rand_y = rand(rng, n_points) * 100
+        # Cumsum of positive values ensures monotonically increasing y (non-negative slopes)
+        rand_y = cumsum(rand(rng, n_points) * 10)
         pointwise = IS.PiecewiseLinearData(collect(zip(rand_x, rand_y)))
 
         # Make convex via InputOutputCurve
         curve = IS.InputOutputCurve(pointwise)
         convex_curve = IS.make_convex_approximation(curve; merge_colinear = false)
+        @test convex_curve !== nothing
         convex = IS.get_function_data(convex_curve)
         @test IS.is_convex(convex)
         @test IS.get_x_coords(convex) == IS.get_x_coords(pointwise)
 
-        # Generate random step data
+        # Generate random step data with positive marginal rates (valid cost curve)
         rand_x_step = sort(rand(rng, n_points))
-        rand_y_step = rand(rng, n_points - 1) * 100
+        rand_y_step = rand(rng, n_points - 1) * 100  # Positive marginal rates
         stepwise = IS.PiecewiseStepData(rand_x_step, rand_y_step)
 
         # Make convex via IncrementalCurve
         step_curve = IS.IncrementalCurve(stepwise, 0.0)
         convex_step_curve = IS.make_convex_approximation(step_curve)
+        @test convex_step_curve !== nothing
         convex_step = IS.get_function_data(convex_step_curve)
         @test IS.is_convex(convex_step)
     end
@@ -1201,26 +1207,38 @@ end
 end
 
 @testset "Test make_convex_approximation for PiecewiseAverageCurve" begin
-    # Non-convex average rate curve
-    pac = IS.PiecewiseAverageCurve(6.0, [1.0, 2.0, 3.0, 4.0], [10.0, 5.0, 15.0])
+    # Non-convex average rate curve (but with valid positive slopes after conversion)
+    # Use average rates that produce non-convex but positive-slope curves
+    pac = IS.PiecewiseAverageCurve(0.0, [0.0, 1.0, 2.0, 3.0], [5.0, 3.0, 6.0])
     @test !IS.is_convex(pac)
 
     convex_pac = IS.make_convex_approximation(pac)
+    @test convex_pac !== nothing
     @test IS.is_convex(convex_pac)
     @test convex_pac isa IS.PiecewiseAverageCurve
 
     # Already convex - should return same object
-    pac_convex = IS.PiecewiseAverageCurve(6.0, [1.0, 2.0, 3.0], [5.0, 10.0])
+    pac_convex = IS.PiecewiseAverageCurve(0.0, [0.0, 1.0, 2.0], [5.0, 10.0])
     @test IS.is_convex(pac_convex)
     result = IS.make_convex_approximation(pac_convex)
     @test result === pac_convex
 
     # Test with different options
     convex_uniform = IS.make_convex_approximation(pac; weights = :uniform)
+    @test convex_uniform !== nothing
     @test IS.is_convex(convex_uniform)
 
     convex_last = IS.make_convex_approximation(pac; anchor = :last)
+    @test convex_last !== nothing
     @test IS.is_convex(convex_last)
+
+    # Test that data with negative slopes returns nothing
+    # Use NullLogger to suppress expected error logs
+    Logging.with_logger(Logging.NullLogger()) do
+        pac_invalid = IS.PiecewiseAverageCurve(6.0, [1.0, 2.0, 3.0, 4.0], [10.0, 5.0, 15.0])
+        result_invalid = IS.make_convex_approximation(pac_invalid)
+        @test result_invalid === nothing
+    end
 end
 
 @testset "Test make_convex_approximation idempotency for ValueCurves" begin
@@ -1229,14 +1247,16 @@ end
     # are intentionally not included - make_convex_approximation is not defined for these types.
     # Note: LinearCurve and QuadraticCurve are not supported by make_convex_approximation
 
+    # Use non-convex data with valid (positive, reasonable) costs that produce positive slopes
     curves = [
         IS.PiecewisePointCurve([(0.0, 0.0), (1.0, 10.0), (2.0, 15.0), (3.0, 30.0)]),
-        IS.PiecewiseIncrementalCurve(0.0, [0.0, 1.0, 2.0, 3.0], [10.0, 5.0, 15.0]),
-        IS.PiecewiseAverageCurve(6.0, [1.0, 2.0, 3.0, 4.0], [10.0, 5.0, 15.0]),
+        IS.PiecewiseIncrementalCurve(0.0, [0.0, 1.0, 2.0, 3.0], [10.0, 5.0, 8.0]),  # Non-convex (10 > 5) but all positive
+        IS.PiecewiseAverageCurve(6.0, [1.0, 2.0, 3.0, 4.0], [6.0, 5.0, 6.0]),  # Non-convex but produces positive slopes
     ]
 
     for curve in curves
         convex1 = IS.make_convex_approximation(curve)
+        @test convex1 !== nothing
         @test IS.is_convex(convex1)
         convex2 = IS.make_convex_approximation(convex1)
         @test convex2 === convex1  # Second call should return same object
