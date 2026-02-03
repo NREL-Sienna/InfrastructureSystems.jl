@@ -278,7 +278,8 @@ function make_convex_approximation(
     new_slopes = isotonic_regression(slopes, w)
     new_points = _reconstruct_points(points, new_slopes, anchor)
 
-    @warn "Transformed non-convex InputOutputCurve to convex approximation" curve_type = typeof(curve)
+    @warn "Transformed non-convex InputOutputCurve to convex approximation" curve_type =
+        typeof(curve)
     result = InputOutputCurve(PiecewiseLinearData(new_points), get_input_at_zero(curve))
 
     # Clean up any colinear segments (from original data or produced by isotonic regression)
