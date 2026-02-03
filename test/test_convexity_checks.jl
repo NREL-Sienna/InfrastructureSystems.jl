@@ -208,11 +208,13 @@ end
         @test IS.is_valid_data(negative_proportional_qfd) == false
 
         # Test ValueCurve wrapper with invalid data
-        invalid_ioc = IS.InputOutputCurve(IS.PiecewiseLinearData([
-            (x = 0.0, y = 10.0),
-            (x = 1.0, y = 5.0),
-            (x = 2.0, y = 15.0),
-        ]))
+        invalid_ioc = IS.InputOutputCurve(
+            IS.PiecewiseLinearData([
+                (x = 0.0, y = 10.0),
+                (x = 1.0, y = 5.0),
+                (x = 2.0, y = 15.0),
+            ]),
+        )
         @test IS.is_valid_data(invalid_ioc) == false
     end
 
