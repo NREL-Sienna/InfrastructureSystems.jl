@@ -355,7 +355,8 @@ function make_convex_approximation(
             merge_colinear = false,
         )
     isnothing(convex_io) && return nothing
-    @warn "Transformed non-convex AverageRateCurve to convex approximation" curve_type = typeof(curve)
+    @warn "Transformed non-convex AverageRateCurve to convex approximation" curve_type =
+        typeof(curve)
     result = AverageRateCurve(convex_io)
 
     # Clean up any colinear segments (from original data or produced by convexification)
