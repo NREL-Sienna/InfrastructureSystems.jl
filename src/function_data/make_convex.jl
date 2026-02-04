@@ -1,8 +1,8 @@
-# CONVEX APPROXIMATION UTILITIES
+# CONVEX APPROXIMATION UTILS
 # Functions for transforming non-convex curves into convex approximations.
 
 # ============================================================================
-# COLINEARITY CLEANUP UTILITIES
+# COLINEARITY CLEANUP UTILS
 # Functions for removing artificial segmentation from piecewise curves.
 # ============================================================================
 
@@ -199,14 +199,14 @@ end
 # ============================================================================
 
 """
-    make_convex_approximation(curve::ValueCurve; kwargs...) -> Union{ValueCurve, Nothing}
+    increasing_curve_convex_approximation(curve::ValueCurve; kwargs...) -> Union{ValueCurve, Nothing}
 
-Transform a `ValueCurve` into a convex form, with data quality validation.
+Transform a strictly increasing `ValueCurve` into a convex form, with data quality validation.
 
 This function first validates that the curve data is reasonable and physically meaningful
-using [`is_valid_data`](@ref). If the data has fundamental quality issues (negative slopes, 
-excessive values, unordered coordinates, etc.), the function logs an error and returns 
-`nothing` to trigger a fallback path.
+using [`is_valid_data`](@ref). It also checks that the curve is strictly increasing using
+[`is_strictly_increasing`](@ref). If either check fails, the function logs an error and 
+returns `nothing` to trigger a fallback path.
 
 If the data passes validation and is already convex, returns the original curve 
 (optionally with colinear segments merged).
@@ -239,13 +239,16 @@ Note 3: `InputOutputCurve{QuadraticFunctionData}` is not supported given that it
 
 # Returns
 - The convex curve (original or approximation) if successful
-- `nothing` if data quality validation fails
+- `nothing` if data quality validation fails or curve is not strictly increasing
+
+# See also
+- [`decreasing_curve_convex_approximation`](@ref): for strictly decreasing curves
 """
-function make_convex_approximation end
+function increasing_curve_convex_approximation end
 
 """
-    make_convex_approximation(curve::InputOutputCurve{PiecewiseLinearData}; kwargs...) -> Union{InputOutputCurve{PiecewiseLinearData}, Nothing}"""
-function make_convex_approximation(
+    increasing_curve_convex_approximation(curve::InputOutputCurve{PiecewiseLinearData}; kwargs...) -> Union{InputOutputCurve{PiecewiseLinearData}, Nothing}"""
+function increasing_curve_convex_approximation(
     curve::InputOutputCurve{PiecewiseLinearData};
     weights::Symbol = :length,
     anchor::Symbol = :first,
@@ -289,9 +292,9 @@ function make_convex_approximation(
 end
 
 """
-    make_convex_approximation(curve::IncrementalCurve{PiecewiseStepData}; kwargs...) -> Union{IncrementalCurve{PiecewiseStepData}, Nothing}
+    increasing_curve_convex_approximation(curve::IncrementalCurve{PiecewiseStepData}; kwargs...) -> Union{IncrementalCurve{PiecewiseStepData}, Nothing}
 """
-function make_convex_approximation(
+function increasing_curve_convex_approximation(
     curve::IncrementalCurve{PiecewiseStepData};
     weights::Symbol = :length,
     anchor::Symbol = :first,
@@ -319,7 +322,7 @@ function make_convex_approximation(
 
     # Convert to InputOutputCurve, make convex, convert back
     io_curve = InputOutputCurve(curve)
-    convex_io = make_convex_approximation(
+    convex_io = increasing_curve_convex_approximation(
         io_curve;
         weights = weights,
         anchor = anchor,
@@ -337,8 +340,8 @@ function make_convex_approximation(
 end
 
 """
-    make_convex_approximation(curve::AverageRateCurve{PiecewiseStepData}; kwargs...) -> Union{AverageRateCurve{PiecewiseStepData}, Nothing}"""
-function make_convex_approximation(
+    increasing_curve_convex_approximation(curve::AverageRateCurve{PiecewiseStepData}; kwargs...) -> Union{AverageRateCurve{PiecewiseStepData}, Nothing}"""
+function increasing_curve_convex_approximation(
     curve::AverageRateCurve{PiecewiseStepData};
     weights::Symbol = :length,
     anchor::Symbol = :first,
@@ -366,7 +369,7 @@ function make_convex_approximation(
 
     # Convert to InputOutputCurve, make convex, convert back
     io_curve = InputOutputCurve(curve)
-    convex_io = make_convex_approximation(
+    convex_io = increasing_curve_convex_approximation(
         io_curve;
         weights = weights,
         anchor = anchor,
@@ -386,27 +389,27 @@ end
 # ProductionVariableCostCurve methods (CostCurve, FuelCurve)
 # These delegate to the underlying ValueCurve and reconstruct the wrapper.
 """
-    make_convex_approximation(cost::CostCurve; kwargs...) -> Union{CostCurve, Nothing}
+    increasing_curve_convex_approximation(cost::CostCurve; kwargs...) -> Union{CostCurve, Nothing}
 
 Transform the underlying `ValueCurve` of a `CostCurve` into a convex approximation.
 Returns a new `CostCurve` with the convexified value curve, preserving `power_units` and `vom_cost`.
-Returns `nothing` if data quality validation fails.
+Returns `nothing` if data quality validation fails or curve is not strictly increasing.
 """
-function make_convex_approximation(cost::CostCurve; kwargs...)
-    convex_vc = make_convex_approximation(get_value_curve(cost); kwargs...)
+function increasing_curve_convex_approximation(cost::CostCurve; kwargs...)
+    convex_vc = increasing_curve_convex_approximation(get_value_curve(cost); kwargs...)
     isnothing(convex_vc) && return nothing
     return CostCurve(convex_vc, get_power_units(cost), get_vom_cost(cost))
 end
 
 """
-    make_convex_approximation(cost::FuelCurve; kwargs...) -> Union{FuelCurve, Nothing}
+    increasing_curve_convex_approximation(cost::FuelCurve; kwargs...) -> Union{FuelCurve, Nothing}
 
 Transform the underlying `ValueCurve` of a `FuelCurve` into a convex approximation.
 Returns a new `FuelCurve` with the convexified value curve, preserving all other fields.
-Returns `nothing` if data quality validation fails.
+Returns `nothing` if data quality validation fails or curve is not strictly increasing.
 """
-function make_convex_approximation(cost::FuelCurve; kwargs...)
-    convex_vc = make_convex_approximation(get_value_curve(cost); kwargs...)
+function increasing_curve_convex_approximation(cost::FuelCurve; kwargs...)
+    convex_vc = increasing_curve_convex_approximation(get_value_curve(cost); kwargs...)
     isnothing(convex_vc) && return nothing
     return FuelCurve(;
         value_curve = convex_vc,

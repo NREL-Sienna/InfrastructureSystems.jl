@@ -222,7 +222,7 @@
         @test length(IS.get_points(IS.get_function_data(result_alt))) == 4
     end
 
-    @testset "Integration with make_convex_approximation" begin
+    @testset "Integration with increasing_curve_convex_approximation" begin
         # Test that colinear segments are cleaned up before convexification
         # Create a curve with colinear segments that appears non-convex due to segmentation
         # but is actually convex after cleanup
@@ -238,14 +238,14 @@
         curve = IS.InputOutputCurve(pld_colinear_convex)
 
         # Make convex with merge_colinear=true (default)
-        result = IS.make_convex_approximation(curve)
+        result = IS.increasing_curve_convex_approximation(curve)
         @test IS.is_convex(result)
 
         # The result should have fewer points due to colinearity cleanup
         @test length(IS.get_points(IS.get_function_data(result))) == 3
 
         # Test with merge_colinear=false to verify the option works
-        result_no_merge = IS.make_convex_approximation(curve; merge_colinear = false)
+        result_no_merge = IS.increasing_curve_convex_approximation(curve; merge_colinear = false)
         @test IS.is_convex(result_no_merge)
         # Without merge, convexity check passes since slopes are non-decreasing
         # and original curve is returned
@@ -254,13 +254,13 @@
         # Test IncrementalCurve integration
         psd_colinear = IS.PiecewiseStepData([0.0, 1.0, 2.0, 3.0], [1.0, 1.0, 2.0])
         ic = IS.IncrementalCurve(psd_colinear, 0.0)
-        result_ic = IS.make_convex_approximation(ic)
+        result_ic = IS.increasing_curve_convex_approximation(ic)
         @test IS.is_convex(result_ic)
 
         # Test AverageRateCurve integration
         psd_avg = IS.PiecewiseStepData([0.0, 1.0, 2.0, 3.0], [1.0, 1.0, 2.0])
         ac = IS.AverageRateCurve(psd_avg, 0.0)
-        result_ac = IS.make_convex_approximation(ac)
+        result_ac = IS.increasing_curve_convex_approximation(ac)
         @test IS.is_convex(result_ac)
     end
 
