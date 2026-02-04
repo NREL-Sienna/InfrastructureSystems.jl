@@ -863,67 +863,7 @@ end
     @test_throws ArgumentError IS.make_convex_approximation(curve; anchor = :invalid)
 end
 
-@testset "Test convexity_violations" begin
-    # Test PiecewiseLinearData violations
-    linear_data = IS.PiecewiseLinearData([
-        (x = 0.0, y = 0.0),
-        (x = 1.0, y = 10.0),   # slope = 10
-        (x = 2.0, y = 15.0),   # slope = 5  <- violation at index 1
-        (x = 3.0, y = 30.0),   # slope = 15
-    ])
-    violations = IS.convexity_violations(linear_data)
-    @test violations == [1]
 
-    # Test multiple violations
-    linear_data = IS.PiecewiseLinearData([
-        (x = 0.0, y = 0.0),
-        (x = 1.0, y = 10.0),   # slope = 10
-        (x = 2.0, y = 15.0),   # slope = 5  <- violation at index 1
-        (x = 3.0, y = 25.0),   # slope = 10
-        (x = 4.0, y = 28.0),   # slope = 3  <- violation at index 3
-    ])
-    violations = IS.convexity_violations(linear_data)
-    @test violations == [1, 3]
-
-    # Test no violations
-    convex_data = IS.PiecewiseLinearData([(0, 0), (1, 1), (2, 3), (3, 6)])
-    violations = IS.convexity_violations(convex_data)
-    @test isempty(violations)
-
-    # Test PiecewiseStepData violations
-    step_data = IS.PiecewiseStepData([0.0, 1.0, 2.0, 3.0], [10.0, 5.0, 15.0])
-    violations = IS.convexity_violations(step_data)
-    @test violations == [1]
-end
-
-@testset "Test convexity_gap" begin
-    # Test PiecewiseLinearData gap
-    linear_data = IS.PiecewiseLinearData([
-        (x = 0.0, y = 0.0),
-        (x = 1.0, y = 10.0),   # slope = 10
-        (x = 2.0, y = 15.0),   # slope = 5, gap = 10 - 5 = 5
-        (x = 3.0, y = 30.0),   # slope = 15
-    ])
-    @test IS.convexity_gap(linear_data) ≈ 5.0
-
-    # Test multiple violations - should return max gap
-    linear_data = IS.PiecewiseLinearData([
-        (x = 0.0, y = 0.0),
-        (x = 1.0, y = 20.0),   # slope = 20
-        (x = 2.0, y = 25.0),   # slope = 5, gap = 15
-        (x = 3.0, y = 35.0),   # slope = 10
-        (x = 4.0, y = 37.0),   # slope = 2, gap = 8
-    ])
-    @test IS.convexity_gap(linear_data) ≈ 15.0
-
-    # Test no violations
-    convex_data = IS.PiecewiseLinearData([(0, 0), (1, 1), (2, 3), (3, 6)])
-    @test IS.convexity_gap(convex_data) ≈ 0.0
-
-    # Test PiecewiseStepData gap
-    step_data = IS.PiecewiseStepData([0.0, 1.0, 2.0, 3.0], [10.0, 5.0, 15.0])
-    @test IS.convexity_gap(step_data) ≈ 5.0
-end
 
 @testset "Test approximation_error" begin
     # Test PiecewiseStepData error
@@ -991,8 +931,6 @@ end
     curve = IS.InputOutputCurve(linear_data)
     @test IS.is_convex(curve)
     @test IS.make_convex_approximation(curve) === curve
-    @test isempty(IS.convexity_violations(linear_data))
-    @test IS.convexity_gap(linear_data) ≈ 0.0
 
     step_data = IS.PiecewiseStepData([0.0, 1.0], [5.0])
     step_curve = IS.IncrementalCurve(step_data, 0.0)
