@@ -150,15 +150,18 @@
         ])
         ioc = IS.InputOutputCurve(pld)
 
-        # Capture logs and verify generator name appears
-        Test.@test_logs(
+        # Capture logs and verify generator name appears in warning
+        # Note: @test_logs with min_level can capture expected logs without failing on additional ones
+        logs = Test.@test_logs(
             (:warn, r".*for generator TestGen123.*"),
+            min_level = Logging.Warn,
             IS.increasing_curve_convex_approximation(ioc; generator_name = "TestGen123"),
         )
 
         # Without generator_name, message should not include "for generator"
         Test.@test_logs(
             (:warn, r"^Transformed non-convex InputOutputCurve to convex approximation$"),
+            min_level = Logging.Warn,
             IS.increasing_curve_convex_approximation(ioc),
         )
     end

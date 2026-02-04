@@ -9,7 +9,7 @@
 const _COLINEARITY_TOLERANCE = 1e-6
 
 """
-    merge_colinear_segments(curve::ValueCurve; ε::Float64 = _COLINEARITY_TOLERANCE) -> ValueCurve
+    merge_colinear_segments(curve::ValueCurve; ε::Float64 = _COLINEARITY_TOLERANCE, generator_name::Union{String, Nothing} = nothing) -> ValueCurve
 
 Merge consecutive colinear segments in a piecewise curve.
 
@@ -21,10 +21,12 @@ non-convex detections, unnecessary curve complexity, and unstable numerical beha
 # Arguments
 - `curve`: A piecewise `ValueCurve` to clean up
 - `ε`: Tolerance for comparing slopes (default: `$(_COLINEARITY_TOLERANCE)`)
+- `generator_name`: Optional generator name for logging (default: `nothing`)
 
 # Returns
 A new curve with colinear segments merged. Endpoints are preserved exactly.
 Returns the original curve unchanged if no colinear segments are found.
+When segments are merged, an `@info` log is printed indicating the merge occurred.
 
 # Supported curve types
 - `PiecewisePointCurve` (InputOutputCurve{PiecewiseLinearData})
@@ -47,6 +49,7 @@ Algorithm:
 function merge_colinear_segments(
     curve::InputOutputCurve{PiecewiseLinearData};
     ε::Float64 = _COLINEARITY_TOLERANCE,
+    generator_name::Union{String, Nothing} = nothing,
 )
     fd = get_function_data(curve)
     points = get_points(fd)
@@ -84,6 +87,10 @@ function merge_colinear_segments(
     # If no reduction, return original
     length(keep_indices) == n_points && return curve
 
+    # Log the merge
+    gen_msg = isnothing(generator_name) ? "" : " for generator $(generator_name)"
+    @info "Merged colinear segments$(gen_msg)"
+
     # Build new points array
     new_points = [points[i] for i in keep_indices]
 
@@ -101,6 +108,7 @@ Consecutive steps with y-values within tolerance ε are merged.
 function merge_colinear_segments(
     curve::IncrementalCurve{PiecewiseStepData};
     ε::Float64 = _COLINEARITY_TOLERANCE,
+    generator_name::Union{String, Nothing} = nothing,
 )
     fd = get_function_data(curve)
     x_coords = get_x_coords(fd)
@@ -135,6 +143,10 @@ function merge_colinear_segments(
     # If no reduction, return original
     length(new_y) == n_segments && return curve
 
+    # Log the merge
+    gen_msg = isnothing(generator_name) ? "" : " for generator $(generator_name)"
+    @info "Merged colinear segments$(gen_msg)"
+
     return IncrementalCurve(
         PiecewiseStepData(new_x, new_y),
         get_initial_input(curve),
@@ -153,6 +165,7 @@ Consecutive steps with y-values within tolerance ε are merged.
 function merge_colinear_segments(
     curve::AverageRateCurve{PiecewiseStepData};
     ε::Float64 = _COLINEARITY_TOLERANCE,
+    generator_name::Union{String, Nothing} = nothing,
 )
     fd = get_function_data(curve)
     x_coords = get_x_coords(fd)
@@ -186,6 +199,10 @@ function merge_colinear_segments(
 
     # If no reduction, return original
     length(new_y) == n_segments && return curve
+
+    # Log the merge
+    gen_msg = isnothing(generator_name) ? "" : " for generator $(generator_name)"
+    @info "Merged colinear segments$(gen_msg)"
 
     return AverageRateCurve(
         PiecewiseStepData(new_x, new_y),
@@ -272,7 +289,7 @@ function increasing_curve_convex_approximation(
 
     # If already convex, optionally clean up colinear segments and return
     if is_convex(curve)
-        return merge_colinear ? merge_colinear_segments(curve) : curve
+        return merge_colinear ? merge_colinear_segments(curve; generator_name = generator_name) : curve
     end
 
     fd = get_function_data(curve)
@@ -288,7 +305,7 @@ function increasing_curve_convex_approximation(
     result = InputOutputCurve(PiecewiseLinearData(new_points), get_input_at_zero(curve))
 
     # Clean up any colinear segments (from original data or produced by isotonic regression)
-    return merge_colinear ? merge_colinear_segments(result) : result
+    return merge_colinear ? merge_colinear_segments(result; generator_name = generator_name) : result
 end
 
 """
@@ -317,7 +334,7 @@ function increasing_curve_convex_approximation(
 
     # If already convex, optionally clean up colinear segments and return
     if is_convex(curve)
-        return merge_colinear ? merge_colinear_segments(curve) : curve
+        return merge_colinear ? merge_colinear_segments(curve; generator_name = generator_name) : curve
     end
 
     # Convert to InputOutputCurve, make convex, convert back
@@ -336,7 +353,7 @@ function increasing_curve_convex_approximation(
     result = IncrementalCurve(convex_io)
 
     # Clean up any colinear segments (from original data or produced by convexification)
-    return merge_colinear ? merge_colinear_segments(result) : result
+    return merge_colinear ? merge_colinear_segments(result; generator_name = generator_name) : result
 end
 
 """
@@ -364,7 +381,7 @@ function increasing_curve_convex_approximation(
 
     # If already convex, optionally clean up colinear segments and return
     if is_convex(curve)
-        return merge_colinear ? merge_colinear_segments(curve) : curve
+        return merge_colinear ? merge_colinear_segments(curve; generator_name = generator_name) : curve
     end
 
     # Convert to InputOutputCurve, make convex, convert back
@@ -383,7 +400,7 @@ function increasing_curve_convex_approximation(
     result = AverageRateCurve(convex_io)
 
     # Clean up any colinear segments (from original data or produced by convexification)
-    return merge_colinear ? merge_colinear_segments(result) : result
+    return merge_colinear ? merge_colinear_segments(result; generator_name = generator_name) : result
 end
 
 # ProductionVariableCostCurve methods (CostCurve, FuelCurve)
@@ -480,7 +497,7 @@ This is useful for assessing the quality of a convexification: a lower error mea
 the convex approximation is closer to the original non-convex curve.
 
 Both arguments must have the same number of segments (same x-coordinates). When using
-`make_convex_approximation`, pass `merge_colinear=false` to preserve segment count for error computation.
+`increasing_curve_convex_approximation`, pass `merge_colinear=false` to preserve segment count for error computation.
 
 # Arguments
 - `original`: original `PiecewiseStepData` or `PiecewiseLinearData`
@@ -510,7 +527,7 @@ function approximation_error(
         ArgumentError(
             "original and convexified must have the same number of segments " *
             "(got $(length(y_orig)) and $(length(y_convex))). " *
-            "Use make_convex_approximation with merge_colinear=false to preserve segment count.",
+            "Use increasing_curve_convex_approximation with merge_colinear=false to preserve segment count.",
         ),
     )
     w = _compute_convex_weights(get_x_coords(original), weights)
@@ -541,7 +558,7 @@ function approximation_error(
         ArgumentError(
             "original and convexified must have the same number of segments " *
             "(got $(length(slopes_orig)) and $(length(slopes_convex))). " *
-            "Use make_convex_approximation with merge_colinear=false to preserve segment count.",
+            "Use increasing_curve_convex_approximation with merge_colinear=false to preserve segment count.",
         ),
     )
     w = _compute_convex_weights(get_x_coords(original), weights)
