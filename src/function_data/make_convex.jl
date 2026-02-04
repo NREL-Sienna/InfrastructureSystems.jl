@@ -243,7 +243,6 @@ Note 3: `InputOutputCurve{QuadraticFunctionData}` is not supported given that it
 """
 function make_convex_approximation end
 
-
 """
     make_convex_approximation(curve::InputOutputCurve{PiecewiseLinearData}; kwargs...) -> Union{InputOutputCurve{PiecewiseLinearData}, Nothing}"""
 function make_convex_approximation(
@@ -287,7 +286,6 @@ function make_convex_approximation(
     # Clean up any colinear segments (from original data or produced by isotonic regression)
     return merge_colinear ? merge_colinear_segments(result) : result
 end
-
 
 """
     make_convex_approximation(curve::IncrementalCurve{PiecewiseStepData}; kwargs...) -> Union{IncrementalCurve{PiecewiseStepData}, Nothing}
@@ -335,7 +333,6 @@ function make_convex_approximation(
     return merge_colinear ? merge_colinear_segments(result) : result
 end
 
-
 """
     make_convex_approximation(curve::AverageRateCurve{PiecewiseStepData}; kwargs...) -> Union{AverageRateCurve{PiecewiseStepData}, Nothing}"""
 function make_convex_approximation(
@@ -367,7 +364,7 @@ function make_convex_approximation(
             weights = weights,
             anchor = anchor,
             merge_colinear = false,
-            generator_name = generator_name
+            generator_name = generator_name,
         )
     isnothing(convex_io) && return nothing
     log_kwargs = ()

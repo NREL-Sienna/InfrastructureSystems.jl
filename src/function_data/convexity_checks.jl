@@ -42,12 +42,13 @@ function is_valid_data(fd::LinearFunctionData)
     constant = get_constant_term(fd)
 
     if abs(slope) > _MAX_REASONABLE_SLOPE
-        @error "Data quality issue: unreasonably large slope detected" 
+        @error "Data quality issue: unreasonably large slope detected" slope max_allowed =
+            _MAX_REASONABLE_SLOPE
         return false
     end
 
     if constant < _MIN_REASONABLE_COST
-        @error "Data quality issue: negative cost detected" 
+        @error "Data quality issue: negative cost detected" constant
         return false
     end
 
@@ -67,23 +68,26 @@ function is_valid_data(fd::QuadraticFunctionData)
 
     # Check for excessive quadratic term (translates to very steep curves)
     if abs(quadratic) > _MAX_REASONABLE_SLOPE
-        @error "Data quality issue: unreasonably large quadratic term detected"
+        @error "Data quality issue: unreasonably large quadratic term detected" quadratic max_allowed =
+            _MAX_REASONABLE_SLOPE
         return false
     end
 
     # Check for excessive proportional term
     if abs(proportional) > _MAX_REASONABLE_SLOPE
-        @error "Data quality issue: unreasonably large proportional term detected"
+        @error "Data quality issue: unreasonably large proportional term detected" proportional max_allowed =
+            _MAX_REASONABLE_SLOPE
         return false
     end
 
     if constant < _MIN_REASONABLE_COST
-        @error "Data quality issue: negative constant cost detected"
+        @error "Data quality issue: negative constant cost detected" constant
         return false
     end
 
     if abs(constant) > _MAX_REASONABLE_COST
-        @error "Data quality issue: unreasonable cost magnitude detected"
+        @error "Data quality issue: unreasonable cost magnitude detected" constant max_allowed =
+            _MAX_REASONABLE_COST
         return false
     end
 
@@ -94,7 +98,8 @@ end
 function _check_x_coords_ascending(x_coords::Vector{Float64})
     for i in 1:(length(x_coords) - 1)
         if x_coords[i] >= x_coords[i + 1]
-            @error "Data quality issue: x-coordinates not in ascending order" 
+            @error "Data quality issue: x-coordinates not in ascending order" x_i =
+                x_coords[i] x_next = x_coords[i + 1] index = i
             return false
         end
     end
@@ -115,7 +120,8 @@ function is_valid_data(fd::PiecewiseLinearData)
     # Check for excessive slopes (using abs to handle both positive and negative)
     for (i, slope) in enumerate(slopes)
         if abs(slope) > _MAX_REASONABLE_SLOPE
-            @error "Data quality issue: unreasonably large slope detected in segment $i"
+            @error "Data quality issue: unreasonably large slope detected in segment $i" slope max_allowed =
+                _MAX_REASONABLE_SLOPE segment = i
             return false
         end
     end
@@ -123,7 +129,8 @@ function is_valid_data(fd::PiecewiseLinearData)
     # Check for negative costs (y-values)
     for (i, y) in enumerate(y_coords)
         if y < _MIN_REASONABLE_COST
-            @error "Data quality issue: negative cost detected at point $i"
+            @error "Data quality issue: negative cost detected at point $i" cost = y point =
+                i
             return false
         end
     end
@@ -131,7 +138,8 @@ function is_valid_data(fd::PiecewiseLinearData)
     # Check for excessive cost magnitudes
     for (i, y) in enumerate(y_coords)
         if abs(y) > _MAX_REASONABLE_COST
-            @error "Data quality issue: unreasonable cost magnitude at point $i"
+            @error "Data quality issue: unreasonable cost magnitude at point $i" cost =
+                y max_allowed = _MAX_REASONABLE_COST point = i
             return false
         end
     end
@@ -152,7 +160,8 @@ function is_valid_data(fd::PiecewiseStepData)
     # Check for excessive slopes (using abs to handle both positive and negative)
     for (i, slope) in enumerate(y_coords)
         if abs(slope) > _MAX_REASONABLE_SLOPE
-            @error "Data quality issue: unreasonably large marginal rate in segment $i" 
+            @error "Data quality issue: unreasonably large marginal rate in segment $i" rate =
+                slope max_allowed = _MAX_REASONABLE_SLOPE segment = i
             return false
         end
     end
@@ -353,7 +362,6 @@ is_convex(curve::InputOutputCurve) = is_convex(get_function_data(curve))
 is_convex(curve::IncrementalCurve) = is_convex(get_function_data(curve))
 is_convex(curve::AverageRateCurve) = is_convex(InputOutputCurve(curve))
 
-
 """
     is_concave(curve::ValueCurve) -> Bool
 
@@ -372,7 +380,6 @@ Check if a `ValueCurve` is concave.
 is_concave(curve::InputOutputCurve) = is_concave(get_function_data(curve))
 is_concave(curve::IncrementalCurve) = is_concave(get_function_data(curve))
 is_concave(curve::AverageRateCurve) = is_concave(InputOutputCurve(curve))
-
 
 """
     convexity_violations(data::PiecewiseLinearData) -> Vector{Int}
