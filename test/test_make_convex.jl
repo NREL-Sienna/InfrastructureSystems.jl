@@ -107,4 +107,53 @@
         points_last = IS.get_points(IS.get_function_data(result_last))
         @test points_last[end] == (x = 2.0, y = 3.0)  # Last point preserved
     end
+
+    @testset "Test make_convex_approximation rejects non-strictly-increasing curves" begin
+        # Curve with a negative slope segment (not strictly increasing)
+        pld_neg = IS.PiecewiseLinearData([
+            (x = 0.0, y = 10.0),
+            (x = 1.0, y = 5.0),   # slope = -5 (decreasing)
+            (x = 2.0, y = 8.0),
+        ])
+        ioc_neg = IS.InputOutputCurve(pld_neg)
+        @test !IS.is_strictly_increasing(ioc_neg)
+
+        # Should return nothing and log error
+        Logging.with_logger(Logging.NullLogger()) do
+            result = IS.make_convex_approximation(ioc_neg)
+            @test result === nothing
+        end
+
+        # Same test with IncrementalCurve
+        psd_neg = IS.PiecewiseStepData([0.0, 1.0, 2.0], [-1.0, 2.0])
+        pic_neg = IS.IncrementalCurve(psd_neg, 0.0)
+        @test !IS.is_strictly_increasing(pic_neg)
+
+        Logging.with_logger(Logging.NullLogger()) do
+            result = IS.make_convex_approximation(pic_neg)
+            @test result === nothing
+        end
+    end
+
+    @testset "Test make_convex_approximation generator_name in logs" begin
+        # Non-convex curve that will produce a warning
+        pld = IS.PiecewiseLinearData([
+            (x = 0.0, y = 0.0),
+            (x = 1.0, y = 10.0),  # slope = 10
+            (x = 2.0, y = 15.0),  # slope = 5 (non-convex)
+        ])
+        ioc = IS.InputOutputCurve(pld)
+
+        # Capture logs and verify generator name appears
+        logs = Test.@test_logs(
+            (:warn, r".*for generator TestGen123.*"),
+            IS.make_convex_approximation(ioc; generator_name = "TestGen123"),
+        )
+
+        # Without generator_name, message should not include "for generator"
+        logs_no_gen = Test.@test_logs(
+            (:warn, r"^Transformed non-convex InputOutputCurve to convex approximation$"),
+            IS.make_convex_approximation(ioc),
+        )
+    end
 end

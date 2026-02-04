@@ -251,14 +251,19 @@ function make_convex_approximation(
     anchor::Symbol = :first,
     merge_colinear::Bool = true,
     generator_name::Union{String, Nothing} = nothing,
+    _skip_validation::Bool = false,
 )
+    gen_msg = isnothing(generator_name) ? "" : " for generator $(generator_name)"
+
     # Data quality validation - check for fundamentally invalid data
-    if !is_valid_data(curve)
-        log_kwargs = ()
-        if !isnothing(generator_name)
-            log_kwargs = (generator = generator_name,)
-        end
-        @error "Invalid data: curve data quality validation failed" log_kwargs...
+    if !_skip_validation && !is_valid_data(curve)
+        @error "Invalid curve data$(gen_msg): data quality validation failed"
+        return nothing
+    end
+
+    # Check that the curve is strictly increasing (cost should increase with output)
+    if !_skip_validation && !is_strictly_increasing(curve)
+        @error "Invalid curve data$(gen_msg): curve is not strictly increasing"
         return nothing
     end
 
@@ -276,11 +281,7 @@ function make_convex_approximation(
     new_slopes = isotonic_regression(slopes, w)
     new_points = _reconstruct_points(points, new_slopes, anchor)
 
-    log_kwargs = ()
-    if !isnothing(generator_name)
-        log_kwargs = (generator = generator_name,)
-    end
-    @warn "Transformed non-convex InputOutputCurve to convex approximation" log_kwargs...
+    @warn "Transformed non-convex InputOutputCurve to convex approximation$(gen_msg)"
     result = InputOutputCurve(PiecewiseLinearData(new_points), get_input_at_zero(curve))
 
     # Clean up any colinear segments (from original data or produced by isotonic regression)
@@ -297,13 +298,17 @@ function make_convex_approximation(
     merge_colinear::Bool = true,
     generator_name::Union{String, Nothing} = nothing,
 )
+    gen_msg = isnothing(generator_name) ? "" : " for generator $(generator_name)"
+
     # Data quality validation - check for fundamentally invalid data
     if !is_valid_data(curve)
-        log_kwargs = ()
-        if !isnothing(generator_name)
-            log_kwargs = (generator = generator_name,)
-        end
-        @error "Invalid data: curve data quality validation failed" log_kwargs...
+        @error "Invalid curve data$(gen_msg): data quality validation failed"
+        return nothing
+    end
+
+    # Check that the curve is strictly increasing (cost should increase with output)
+    if !is_strictly_increasing(curve)
+        @error "Invalid curve data$(gen_msg): curve is not strictly increasing"
         return nothing
     end
 
@@ -312,21 +317,19 @@ function make_convex_approximation(
         return merge_colinear ? merge_colinear_segments(curve) : curve
     end
 
+    # Convert to InputOutputCurve, make convex, convert back
     io_curve = InputOutputCurve(curve)
-    convex_io =
-        _make_convex_approximation_internal(
-            io_curve;
-            weights = weights,
-            anchor = anchor,
-            merge_colinear = false,
-            generator_name = generator_name,
-        )
+    convex_io = make_convex_approximation(
+        io_curve;
+        weights = weights,
+        anchor = anchor,
+        merge_colinear = false,
+        generator_name = generator_name,
+        _skip_validation = true,  # Already validated above
+    )
     isnothing(convex_io) && return nothing
-    log_kwargs = ()
-    if !isnothing(generator_name)
-        log_kwargs = (generator = generator_name,)
-    end
-    @warn "Transformed non-convex IncrementalCurve to convex approximation" log_kwargs...
+
+    @warn "Transformed non-convex IncrementalCurve to convex approximation$(gen_msg)"
     result = IncrementalCurve(convex_io)
 
     # Clean up any colinear segments (from original data or produced by convexification)
@@ -342,13 +345,17 @@ function make_convex_approximation(
     merge_colinear::Bool = true,
     generator_name::Union{String, Nothing} = nothing,
 )
+    gen_msg = isnothing(generator_name) ? "" : " for generator $(generator_name)"
+
     # Data quality validation - check for fundamentally invalid data
     if !is_valid_data(curve)
-        log_kwargs = ()
-        if !isnothing(generator_name)
-            log_kwargs = (generator = generator_name,)
-        end
-        @error "Invalid data: curve data quality validation failed" log_kwargs...
+        @error "Invalid curve data$(gen_msg): data quality validation failed"
+        return nothing
+    end
+
+    # Check that the curve is strictly increasing (cost should increase with output)
+    if !is_strictly_increasing(curve)
+        @error "Invalid curve data$(gen_msg): curve is not strictly increasing"
         return nothing
     end
 
@@ -357,52 +364,22 @@ function make_convex_approximation(
         return merge_colinear ? merge_colinear_segments(curve) : curve
     end
 
+    # Convert to InputOutputCurve, make convex, convert back
     io_curve = InputOutputCurve(curve)
-    convex_io =
-        _make_convex_approximation_internal(
-            io_curve;
-            weights = weights,
-            anchor = anchor,
-            merge_colinear = false,
-            generator_name = generator_name,
-        )
+    convex_io = make_convex_approximation(
+        io_curve;
+        weights = weights,
+        anchor = anchor,
+        merge_colinear = false,
+        generator_name = generator_name,
+        _skip_validation = true,  # Already validated above
+    )
     isnothing(convex_io) && return nothing
-    log_kwargs = ()
-    if !isnothing(generator_name)
-        log_kwargs = (generator = generator_name,)
-    end
-    @warn "Transformed non-convex AverageRateCurve to convex approximation" log_kwargs...
+
+    @warn "Transformed non-convex AverageRateCurve to convex approximation$(gen_msg)"
     result = AverageRateCurve(convex_io)
 
     # Clean up any colinear segments (from original data or produced by convexification)
-    return merge_colinear ? merge_colinear_segments(result) : result
-end
-
-# Internal version that skips validation (used when already validated)
-function _make_convex_approximation_internal(
-    curve::InputOutputCurve{PiecewiseLinearData};
-    weights::Symbol = :length,
-    anchor::Symbol = :first,
-    merge_colinear::Bool = true,
-    generator_name::Union{String, Nothing} = nothing,
-)
-    # If already convex, optionally clean up colinear segments and return
-    if is_convex(curve)
-        return merge_colinear ? merge_colinear_segments(curve) : curve
-    end
-
-    fd = get_function_data(curve)
-    points = get_points(fd)
-    x_coords = get_x_coords(fd)
-    slopes = get_slopes(fd)
-
-    w = _compute_convex_weights(x_coords, weights)
-    new_slopes = isotonic_regression(slopes, w)
-    new_points = _reconstruct_points(points, new_slopes, anchor)
-
-    result = InputOutputCurve(PiecewiseLinearData(new_points), get_input_at_zero(curve))
-
-    # Clean up any colinear segments (from original data or produced by isotonic regression)
     return merge_colinear ? merge_colinear_segments(result) : result
 end
 
