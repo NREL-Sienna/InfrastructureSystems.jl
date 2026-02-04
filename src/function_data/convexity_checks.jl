@@ -27,10 +27,12 @@ When validation fails, an error is logged with details about the specific issue.
 
 # Quality Checks
 - **X-coordinates ordering**: Must be strictly ascending
-- **Negative slopes**: Cost curves should have non-negative marginal costs
-- **Excessive slopes**: Unreasonably large slopes may indicate unit conversion errors
+- **Excessive slopes**: Unreasonably large slopes (in absolute value) may indicate unit conversion errors
 - **Negative costs**: Production costs should generally be non-negative
 - **Excessive magnitudes**: Very large values may indicate wrong units or data errors
+
+Note: Slope sign is NOT checked here. Use `is_strictly_increasing` or `is_strictly_decreasing`
+to validate slope direction when needed.
 """
 function is_valid_data end
 
@@ -39,25 +41,18 @@ function is_valid_data(fd::LinearFunctionData)
     slope = get_proportional_term(fd)
     constant = get_constant_term(fd)
 
-    if slope < -_SLOPE_COMPARISON_ATOL
-        @error "Data quality issue: negative slope detected" slope curve_type = typeof(fd)
-        return false
-    end
-
     if abs(slope) > _MAX_REASONABLE_SLOPE
-        @error "Data quality issue: unreasonably large slope detected" slope max_allowed =
-            _MAX_REASONABLE_SLOPE curve_type = typeof(fd)
+        @error "Data quality issue: unreasonably large slope detected" 
         return false
     end
 
     if constant < _MIN_REASONABLE_COST
-        @error "Data quality issue: negative cost detected" constant curve_type = typeof(fd)
+        @error "Data quality issue: negative cost detected" 
         return false
     end
 
     if abs(constant) > _MAX_REASONABLE_COST
-        @error "Data quality issue: unreasonable cost magnitude detected" constant max_allowed =
-            _MAX_REASONABLE_COST curve_type = typeof(fd)
+        @error "Data quality issue: unreasonable cost magnitude detected"
         return false
     end
 
@@ -70,29 +65,25 @@ function is_valid_data(fd::QuadraticFunctionData)
     proportional = get_proportional_term(fd)
     constant = get_constant_term(fd)
 
-    # For quadratic cost functions, we primarily care about the initial slope (proportional term)
-    if proportional < -_SLOPE_COMPARISON_ATOL
-        @error "Data quality issue: negative initial slope detected" proportional_term =
-            proportional curve_type = typeof(fd)
+    # Check for excessive quadratic term (translates to very steep curves)
+    if abs(quadratic) > _MAX_REASONABLE_SLOPE
+        @error "Data quality issue: unreasonably large quadratic term detected"
         return false
     end
 
-    # Check for excessive quadratic term (translates to very steep curves)
-    if abs(quadratic) > _MAX_REASONABLE_SLOPE
-        @error "Data quality issue: unreasonably large quadratic term detected" quadratic max_allowed =
-            _MAX_REASONABLE_SLOPE curve_type = typeof(fd)
+    # Check for excessive proportional term
+    if abs(proportional) > _MAX_REASONABLE_SLOPE
+        @error "Data quality issue: unreasonably large proportional term detected"
         return false
     end
 
     if constant < _MIN_REASONABLE_COST
-        @error "Data quality issue: negative constant cost detected" constant curve_type =
-            typeof(fd)
+        @error "Data quality issue: negative constant cost detected"
         return false
     end
 
     if abs(constant) > _MAX_REASONABLE_COST
-        @error "Data quality issue: unreasonable cost magnitude detected" constant max_allowed =
-            _MAX_REASONABLE_COST curve_type = typeof(fd)
+        @error "Data quality issue: unreasonable cost magnitude detected"
         return false
     end
 
@@ -100,11 +91,10 @@ function is_valid_data(fd::QuadraticFunctionData)
 end
 
 # Helper to check x-coordinates are strictly ascending
-function _check_x_coords_ascending(x_coords::Vector{Float64}, curve_type::Type)
+function _check_x_coords_ascending(x_coords::Vector{Float64})
     for i in 1:(length(x_coords) - 1)
         if x_coords[i] >= x_coords[i + 1]
-            @error "Data quality issue: x-coordinates not in ascending order" x_i =
-                x_coords[i] x_next = x_coords[i + 1] index = i curve_type
+            @error "Data quality issue: x-coordinates not in ascending order" 
             return false
         end
     end
@@ -118,24 +108,14 @@ function is_valid_data(fd::PiecewiseLinearData)
     y_coords = get_y_coords(fd)
 
     # Check x-coordinates are ascending
-    if !_check_x_coords_ascending(x_coords, typeof(fd))
+    if !_check_x_coords_ascending(x_coords)
         return false
     end
 
-    # Check for negative slopes
-    for (i, slope) in enumerate(slopes)
-        if slope < -_SLOPE_COMPARISON_ATOL
-            @error "Data quality issue: negative slope detected in segment $i" slope segment =
-                i curve_type = typeof(fd)
-            return false
-        end
-    end
-
-    # Check for excessive slopes
+    # Check for excessive slopes (using abs to handle both positive and negative)
     for (i, slope) in enumerate(slopes)
         if abs(slope) > _MAX_REASONABLE_SLOPE
-            @error "Data quality issue: unreasonably large slope detected in segment $i" slope max_allowed =
-                _MAX_REASONABLE_SLOPE segment = i curve_type = typeof(fd)
+            @error "Data quality issue: unreasonably large slope detected in segment $i"
             return false
         end
     end
@@ -143,8 +123,7 @@ function is_valid_data(fd::PiecewiseLinearData)
     # Check for negative costs (y-values)
     for (i, y) in enumerate(y_coords)
         if y < _MIN_REASONABLE_COST
-            @error "Data quality issue: negative cost detected at point $i" cost = y point =
-                i curve_type = typeof(fd)
+            @error "Data quality issue: negative cost detected at point $i"
             return false
         end
     end
@@ -152,8 +131,7 @@ function is_valid_data(fd::PiecewiseLinearData)
     # Check for excessive cost magnitudes
     for (i, y) in enumerate(y_coords)
         if abs(y) > _MAX_REASONABLE_COST
-            @error "Data quality issue: unreasonable cost magnitude at point $i" cost =
-                y max_allowed = _MAX_REASONABLE_COST point = i curve_type = typeof(fd)
+            @error "Data quality issue: unreasonable cost magnitude at point $i"
             return false
         end
     end
@@ -167,25 +145,14 @@ function is_valid_data(fd::PiecewiseStepData)
     y_coords = get_y_coords(fd)  # These are marginal rates/slopes
 
     # Check x-coordinates are ascending
-    if !_check_x_coords_ascending(x_coords, typeof(fd))
+    if !_check_x_coords_ascending(x_coords)
         return false
     end
 
-    # Check for negative slopes
-    for (i, slope) in enumerate(y_coords)
-        if slope < -_SLOPE_COMPARISON_ATOL
-            @error "Data quality issue: negative marginal rate detected in segment $i" rate =
-                slope segment = i curve_type = typeof(fd)
-            return false
-        end
-    end
-
-    # Check for excessive slopes
+    # Check for excessive slopes (using abs to handle both positive and negative)
     for (i, slope) in enumerate(y_coords)
         if abs(slope) > _MAX_REASONABLE_SLOPE
-            @error "Data quality issue: unreasonably large marginal rate in segment $i" rate =
-                slope max_allowed = _MAX_REASONABLE_SLOPE segment = i curve_type =
-                typeof(fd)
+            @error "Data quality issue: unreasonably large marginal rate in segment $i" 
             return false
         end
     end
@@ -211,6 +178,96 @@ function is_valid_data(curve::AverageRateCurve)
     io_curve = InputOutputCurve(curve)
     return is_valid_data(io_curve)
 end
+
+# ============================================================================
+# MONOTONICITY HELPER METHODS
+# Functions for checking if curves are strictly increasing or decreasing.
+# Note: QuadraticFunctionData is excluded as slope sign varies with x.
+# ============================================================================
+
+"""
+    is_strictly_increasing(data::FunctionData) -> Bool
+    is_strictly_increasing(curve::ValueCurve) -> Bool
+
+Returns `true` if all slopes are non-negative (>= 0 within tolerance), `false` otherwise.
+
+# FunctionData types
+Defined for:
+- `LinearFunctionData`: true iff proportional term >= 0
+- `PiecewiseLinearData`: true iff all segment slopes >= 0
+- `PiecewiseStepData`: true iff all marginal rates >= 0
+
+Not defined for `QuadraticFunctionData` (slope varies with x).
+
+# ValueCurve types
+Defined for:
+- `InputOutputCurve`: delegates to underlying `FunctionData`
+- `IncrementalCurve`: delegates to underlying `FunctionData` (y-coords are slopes)
+- `AverageRateCurve`: converts to `InputOutputCurve` first (average rates ≠ slopes)
+"""
+function is_strictly_increasing end
+
+# FunctionData implementations
+is_strictly_increasing(fd::LinearFunctionData) =
+    get_proportional_term(fd) >= -_SLOPE_COMPARISON_ATOL
+
+is_strictly_increasing(fd::PiecewiseLinearData) =
+    all(s -> s >= -_SLOPE_COMPARISON_ATOL, get_slopes(fd))
+
+is_strictly_increasing(fd::PiecewiseStepData) =
+    all(r -> r >= -_SLOPE_COMPARISON_ATOL, get_y_coords(fd))
+
+# ValueCurve implementations
+is_strictly_increasing(curve::InputOutputCurve) =
+    is_strictly_increasing(get_function_data(curve))
+
+is_strictly_increasing(curve::IncrementalCurve) =
+    is_strictly_increasing(get_function_data(curve))
+
+is_strictly_increasing(curve::AverageRateCurve) =
+    is_strictly_increasing(InputOutputCurve(curve))
+
+"""
+    is_strictly_decreasing(data::FunctionData) -> Bool
+    is_strictly_decreasing(curve::ValueCurve) -> Bool
+
+Returns `true` if all slopes are non-positive (<= 0 within tolerance), `false` otherwise.
+
+# FunctionData types
+Defined for:
+- `LinearFunctionData`: true iff proportional term <= 0
+- `PiecewiseLinearData`: true iff all segment slopes <= 0
+- `PiecewiseStepData`: true iff all marginal rates <= 0
+
+Not defined for `QuadraticFunctionData` (slope varies with x).
+
+# ValueCurve types
+Defined for:
+- `InputOutputCurve`: delegates to underlying `FunctionData`
+- `IncrementalCurve`: delegates to underlying `FunctionData` (y-coords are slopes)
+- `AverageRateCurve`: converts to `InputOutputCurve` first (average rates ≠ slopes)
+"""
+function is_strictly_decreasing end
+
+# FunctionData implementations
+is_strictly_decreasing(fd::LinearFunctionData) =
+    get_proportional_term(fd) <= _SLOPE_COMPARISON_ATOL
+
+is_strictly_decreasing(fd::PiecewiseLinearData) =
+    all(s -> s <= _SLOPE_COMPARISON_ATOL, get_slopes(fd))
+
+is_strictly_decreasing(fd::PiecewiseStepData) =
+    all(r -> r <= _SLOPE_COMPARISON_ATOL, get_y_coords(fd))
+
+# ValueCurve implementations
+is_strictly_decreasing(curve::InputOutputCurve) =
+    is_strictly_decreasing(get_function_data(curve))
+
+is_strictly_decreasing(curve::IncrementalCurve) =
+    is_strictly_decreasing(get_function_data(curve))
+
+is_strictly_decreasing(curve::AverageRateCurve) =
+    is_strictly_decreasing(InputOutputCurve(curve))
 
 # ============================================================================
 # CONVEXITY CHECKING

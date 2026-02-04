@@ -163,13 +163,14 @@ end
 
     # Use NullLogger to suppress expected error logs from validation tests
     Logging.with_logger(Logging.NullLogger()) do
-        # Test negative slopes returns false
+        # Test that negative slopes are NOW ALLOWED in is_valid_data
+        # (use is_strictly_increasing/decreasing to check slope sign)
         negative_slope_pld = IS.PiecewiseLinearData([
             (x = 0.0, y = 10.0),
             (x = 1.0, y = 5.0),   # slope = -5
             (x = 2.0, y = 15.0),
         ])
-        @test IS.is_valid_data(negative_slope_pld) == false
+        @test IS.is_valid_data(negative_slope_pld) == true  # No longer rejected
 
         # Test negative costs (y-values) returns false
         negative_cost_pld = IS.PiecewiseLinearData([
@@ -179,13 +180,21 @@ end
         ])
         @test IS.is_valid_data(negative_cost_pld) == false
 
-        # Test excessive slopes returns false
+        # Test excessive slopes returns false (positive)
         excessive_slope_pld = IS.PiecewiseLinearData([
             (x = 0.0, y = 0.0),
             (x = 1.0, y = 1e9),   # slope = 1e9 > 1e8
             (x = 2.0, y = 2e9),
         ])
         @test IS.is_valid_data(excessive_slope_pld) == false
+
+        # Test excessive slopes returns false (negative - abs value check)
+        excessive_negative_slope_pld = IS.PiecewiseLinearData([
+            (x = 0.0, y = 1e9),
+            (x = 1.0, y = 0.0),   # slope = -1e9, abs > 1e8
+            (x = 2.0, y = 1e9),
+        ])
+        @test IS.is_valid_data(excessive_negative_slope_pld) == false
 
         # Test excessive magnitudes returns false
         excessive_magnitude_pld = IS.PiecewiseLinearData([
@@ -195,27 +204,39 @@ end
         ])
         @test IS.is_valid_data(excessive_magnitude_pld) == false
 
-        # Test PiecewiseStepData with negative rates returns false
+        # Test PiecewiseStepData with negative rates is NOW ALLOWED
         negative_rate_psd = IS.PiecewiseStepData([0.0, 1.0, 2.0], [-5.0, 10.0])
-        @test IS.is_valid_data(negative_rate_psd) == false
+        @test IS.is_valid_data(negative_rate_psd) == true  # No longer rejected
 
-        # Test LinearFunctionData with negative slope
+        # Test PiecewiseStepData with excessive rates (negative, abs value check)
+        excessive_negative_rate_psd = IS.PiecewiseStepData([0.0, 1.0, 2.0], [-1e9, 10.0])
+        @test IS.is_valid_data(excessive_negative_rate_psd) == false
+
+        # Test LinearFunctionData with negative slope is NOW ALLOWED
         negative_slope_lfd = IS.LinearFunctionData(-5.0, 10.0)
-        @test IS.is_valid_data(negative_slope_lfd) == false
+        @test IS.is_valid_data(negative_slope_lfd) == true  # No longer rejected
 
-        # Test QuadraticFunctionData with negative proportional term
+        # Test LinearFunctionData with excessive negative slope
+        excessive_negative_lfd = IS.LinearFunctionData(-1e9, 10.0)
+        @test IS.is_valid_data(excessive_negative_lfd) == false
+
+        # Test QuadraticFunctionData with negative proportional term is NOW ALLOWED
         negative_proportional_qfd = IS.QuadraticFunctionData(0.1, -5.0, 10.0)
-        @test IS.is_valid_data(negative_proportional_qfd) == false
+        @test IS.is_valid_data(negative_proportional_qfd) == true  # No longer rejected
 
-        # Test ValueCurve wrapper with invalid data
-        invalid_ioc = IS.InputOutputCurve(
+        # Test QuadraticFunctionData with excessive negative proportional term
+        excessive_negative_qfd = IS.QuadraticFunctionData(0.1, -1e9, 10.0)
+        @test IS.is_valid_data(excessive_negative_qfd) == false
+
+        # Test ValueCurve wrapper with negative slopes is NOW ALLOWED
+        negative_slope_ioc = IS.InputOutputCurve(
             IS.PiecewiseLinearData([
                 (x = 0.0, y = 10.0),
                 (x = 1.0, y = 5.0),
                 (x = 2.0, y = 15.0),
             ]),
         )
-        @test IS.is_valid_data(invalid_ioc) == false
+        @test IS.is_valid_data(negative_slope_ioc) == true  # No longer rejected
     end
 
     # Test valid LinearFunctionData
@@ -235,4 +256,136 @@ end
     valid_arc_psd = IS.PiecewiseStepData([0.0, 1.0, 2.0], [1.0, 2.0])  # Valid average rates
     valid_arc = IS.AverageRateCurve(valid_arc_psd, 0.0)
     @test IS.is_valid_data(valid_arc) == true
+end
+
+@testset "Test Monotonicity Predicates" begin
+    # =========================================================================
+    # LinearFunctionData
+    # =========================================================================
+    # Positive slope -> strictly increasing
+    lfd_positive = IS.LinearFunctionData(5.0, 10.0)
+    @test IS.is_strictly_increasing(lfd_positive) == true
+    @test IS.is_strictly_decreasing(lfd_positive) == false
+
+    # Negative slope -> strictly decreasing
+    lfd_negative = IS.LinearFunctionData(-5.0, 10.0)
+    @test IS.is_strictly_increasing(lfd_negative) == false
+    @test IS.is_strictly_decreasing(lfd_negative) == true
+
+    # Zero slope -> both true (within tolerance)
+    lfd_zero = IS.LinearFunctionData(0.0, 10.0)
+    @test IS.is_strictly_increasing(lfd_zero) == true
+    @test IS.is_strictly_decreasing(lfd_zero) == true
+
+    # Near-zero slope (within tolerance) -> both true
+    lfd_tiny = IS.LinearFunctionData(1e-12, 10.0)
+    @test IS.is_strictly_increasing(lfd_tiny) == true
+    @test IS.is_strictly_decreasing(lfd_tiny) == true
+
+    # =========================================================================
+    # PiecewiseLinearData
+    # =========================================================================
+    # All positive slopes -> strictly increasing
+    pld_increasing = IS.PiecewiseLinearData([
+        (x = 0.0, y = 0.0),
+        (x = 1.0, y = 10.0),  # slope = 10
+        (x = 2.0, y = 25.0),  # slope = 15
+    ])
+    @test IS.is_strictly_increasing(pld_increasing) == true
+    @test IS.is_strictly_decreasing(pld_increasing) == false
+
+    # All negative slopes -> strictly decreasing
+    pld_decreasing = IS.PiecewiseLinearData([
+        (x = 0.0, y = 25.0),
+        (x = 1.0, y = 15.0),  # slope = -10
+        (x = 2.0, y = 0.0),   # slope = -15
+    ])
+    @test IS.is_strictly_increasing(pld_decreasing) == false
+    @test IS.is_strictly_decreasing(pld_decreasing) == true
+
+    # Mixed slopes -> neither
+    pld_mixed = IS.PiecewiseLinearData([
+        (x = 0.0, y = 10.0),
+        (x = 1.0, y = 5.0),   # slope = -5
+        (x = 2.0, y = 15.0),  # slope = +10
+    ])
+    @test IS.is_strictly_increasing(pld_mixed) == false
+    @test IS.is_strictly_decreasing(pld_mixed) == false
+
+    # All zero slopes -> both true
+    pld_flat = IS.PiecewiseLinearData([
+        (x = 0.0, y = 10.0),
+        (x = 1.0, y = 10.0),
+        (x = 2.0, y = 10.0),
+    ])
+    @test IS.is_strictly_increasing(pld_flat) == true
+    @test IS.is_strictly_decreasing(pld_flat) == true
+
+    # =========================================================================
+    # PiecewiseStepData
+    # =========================================================================
+    # All positive rates -> strictly increasing
+    psd_increasing = IS.PiecewiseStepData([0.0, 1.0, 2.0], [5.0, 10.0])
+    @test IS.is_strictly_increasing(psd_increasing) == true
+    @test IS.is_strictly_decreasing(psd_increasing) == false
+
+    # All negative rates -> strictly decreasing
+    psd_decreasing = IS.PiecewiseStepData([0.0, 1.0, 2.0], [-5.0, -10.0])
+    @test IS.is_strictly_increasing(psd_decreasing) == false
+    @test IS.is_strictly_decreasing(psd_decreasing) == true
+
+    # Mixed rates -> neither
+    psd_mixed = IS.PiecewiseStepData([0.0, 1.0, 2.0], [-5.0, 10.0])
+    @test IS.is_strictly_increasing(psd_mixed) == false
+    @test IS.is_strictly_decreasing(psd_mixed) == false
+
+    # All zero rates -> both true
+    psd_flat = IS.PiecewiseStepData([0.0, 1.0, 2.0], [0.0, 0.0])
+    @test IS.is_strictly_increasing(psd_flat) == true
+    @test IS.is_strictly_decreasing(psd_flat) == true
+
+    # =========================================================================
+    # InputOutputCurve (delegates to FunctionData)
+    # =========================================================================
+    ioc_increasing = IS.InputOutputCurve(lfd_positive)
+    @test IS.is_strictly_increasing(ioc_increasing) == true
+    @test IS.is_strictly_decreasing(ioc_increasing) == false
+
+    ioc_decreasing = IS.InputOutputCurve(lfd_negative)
+    @test IS.is_strictly_increasing(ioc_decreasing) == false
+    @test IS.is_strictly_decreasing(ioc_decreasing) == true
+
+    # =========================================================================
+    # IncrementalCurve (delegates to FunctionData, y-coords are slopes)
+    # =========================================================================
+    inc_psd_positive = IS.PiecewiseStepData([0.0, 1.0, 2.0], [5.0, 10.0])
+    inc_increasing = IS.IncrementalCurve(inc_psd_positive, 0.0)
+    @test IS.is_strictly_increasing(inc_increasing) == true
+    @test IS.is_strictly_decreasing(inc_increasing) == false
+
+    inc_psd_negative = IS.PiecewiseStepData([0.0, 1.0, 2.0], [-5.0, -10.0])
+    inc_decreasing = IS.IncrementalCurve(inc_psd_negative, 0.0)
+    @test IS.is_strictly_increasing(inc_decreasing) == false
+    @test IS.is_strictly_decreasing(inc_decreasing) == true
+
+    # Mixed slopes -> neither
+    inc_psd_mixed = IS.PiecewiseStepData([0.0, 1.0, 2.0], [-5.0, 10.0])
+    inc_mixed = IS.IncrementalCurve(inc_psd_mixed, 0.0)
+    @test IS.is_strictly_increasing(inc_mixed) == false
+    @test IS.is_strictly_decreasing(inc_mixed) == false
+
+    # =========================================================================
+    # AverageRateCurve (converts to InputOutputCurve first)
+    # =========================================================================
+    # Positive average rates -> check actual slopes after conversion
+    arc_psd_positive = IS.PiecewiseStepData([0.0, 1.0, 2.0], [5.0, 10.0])
+    arc_increasing = IS.AverageRateCurve(arc_psd_positive, 0.0)
+    @test IS.is_strictly_increasing(arc_increasing) == true
+    @test IS.is_strictly_decreasing(arc_increasing) == false
+
+    # Negative average rates
+    arc_psd_negative = IS.PiecewiseStepData([0.0, 1.0, 2.0], [-5.0, -10.0])
+    arc_decreasing = IS.AverageRateCurve(arc_psd_negative, 0.0)
+    @test IS.is_strictly_increasing(arc_decreasing) == false
+    @test IS.is_strictly_decreasing(arc_decreasing) == true
 end

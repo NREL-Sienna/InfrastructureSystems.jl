@@ -251,11 +251,15 @@ function make_convex_approximation(
     weights::Symbol = :length,
     anchor::Symbol = :first,
     merge_colinear::Bool = true,
+    generator_name::Union{String, Nothing} = nothing,
 )
     # Data quality validation - check for fundamentally invalid data
     if !is_valid_data(curve)
-        @error "Invalid data: curve data quality validation failed" curve_type =
-            typeof(curve)
+        log_kwargs = ()
+        if !isnothing(generator_name)
+            log_kwargs = (generator = generator_name,)
+        end
+        @error "Invalid data: curve data quality validation failed" log_kwargs...
         return nothing
     end
 
@@ -273,8 +277,11 @@ function make_convex_approximation(
     new_slopes = isotonic_regression(slopes, w)
     new_points = _reconstruct_points(points, new_slopes, anchor)
 
-    @warn "Transformed non-convex InputOutputCurve to convex approximation" curve_type =
-        typeof(curve)
+    log_kwargs = ()
+    if !isnothing(generator_name)
+        log_kwargs = (generator = generator_name,)
+    end
+    @warn "Transformed non-convex InputOutputCurve to convex approximation" log_kwargs...
     result = InputOutputCurve(PiecewiseLinearData(new_points), get_input_at_zero(curve))
 
     # Clean up any colinear segments (from original data or produced by isotonic regression)
@@ -290,11 +297,15 @@ function make_convex_approximation(
     weights::Symbol = :length,
     anchor::Symbol = :first,
     merge_colinear::Bool = true,
+    generator_name::Union{String, Nothing} = nothing,
 )
     # Data quality validation - check for fundamentally invalid data
     if !is_valid_data(curve)
-        @error "Invalid data: curve data quality validation failed" curve_type =
-            typeof(curve)
+        log_kwargs = ()
+        if !isnothing(generator_name)
+            log_kwargs = (generator = generator_name,)
+        end
+        @error "Invalid data: curve data quality validation failed" log_kwargs...
         return nothing
     end
 
@@ -310,10 +321,14 @@ function make_convex_approximation(
             weights = weights,
             anchor = anchor,
             merge_colinear = false,
+            generator_name = generator_name,
         )
     isnothing(convex_io) && return nothing
-    @warn "Transformed non-convex IncrementalCurve to convex approximation" curve_type =
-        typeof(curve)
+    log_kwargs = ()
+    if !isnothing(generator_name)
+        log_kwargs = (generator = generator_name,)
+    end
+    @warn "Transformed non-convex IncrementalCurve to convex approximation" log_kwargs...
     result = IncrementalCurve(convex_io)
 
     # Clean up any colinear segments (from original data or produced by convexification)
@@ -328,11 +343,15 @@ function make_convex_approximation(
     weights::Symbol = :length,
     anchor::Symbol = :first,
     merge_colinear::Bool = true,
+    generator_name::Union{String, Nothing} = nothing,
 )
     # Data quality validation - check for fundamentally invalid data
     if !is_valid_data(curve)
-        @error "Invalid data: curve data quality validation failed" curve_type =
-            typeof(curve)
+        log_kwargs = ()
+        if !isnothing(generator_name)
+            log_kwargs = (generator = generator_name,)
+        end
+        @error "Invalid data: curve data quality validation failed" log_kwargs...
         return nothing
     end
 
@@ -348,10 +367,14 @@ function make_convex_approximation(
             weights = weights,
             anchor = anchor,
             merge_colinear = false,
+            generator_name = generator_name
         )
     isnothing(convex_io) && return nothing
-    @warn "Transformed non-convex AverageRateCurve to convex approximation" curve_type =
-        typeof(curve)
+    log_kwargs = ()
+    if !isnothing(generator_name)
+        log_kwargs = (generator = generator_name,)
+    end
+    @warn "Transformed non-convex AverageRateCurve to convex approximation" log_kwargs...
     result = AverageRateCurve(convex_io)
 
     # Clean up any colinear segments (from original data or produced by convexification)
@@ -364,6 +387,7 @@ function _make_convex_approximation_internal(
     weights::Symbol = :length,
     anchor::Symbol = :first,
     merge_colinear::Bool = true,
+    generator_name::Union{String, Nothing} = nothing,
 )
     # If already convex, optionally clean up colinear segments and return
     if is_convex(curve)

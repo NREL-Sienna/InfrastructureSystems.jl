@@ -1020,19 +1020,26 @@ end
     new_y = IS.get_y_coords(IS.get_function_data(convex_curve))
     @test all(y ≈ 16.0 / 3.0 for y in new_y)
 
-    # Test with negative values - now returns nothing due to data validation
-    # Use NullLogger to suppress expected error logs
-    Logging.with_logger(Logging.NullLogger()) do
-        step_data_neg = IS.PiecewiseStepData([0.0, 1.0, 2.0, 3.0], [-5.0, -10.0, -3.0])
-        step_curve_neg = IS.IncrementalCurve(step_data_neg, 0.0)
-        convex_neg = IS.make_convex_approximation(step_curve_neg)
-        @test convex_neg === nothing
+    # Test with negative values - now allowed since is_valid_data no longer rejects negative slopes
+    # The function should process these normally (they're valid decreasing curves)
+    step_data_neg = IS.PiecewiseStepData([0.0, 1.0, 2.0, 3.0], [-5.0, -10.0, -3.0])
+    step_curve_neg = IS.IncrementalCurve(step_data_neg, 0.0)
+    convex_neg = IS.make_convex_approximation(step_curve_neg)
+    @test convex_neg !== nothing  # Should succeed now
 
-        # Test with large values - now returns nothing due to data validation
+    # Use NullLogger to suppress expected error logs for the validation tests that still fail
+    Logging.with_logger(Logging.NullLogger()) do
+        # Test with large values - still returns nothing due to data validation (excessive slope)
         step_data_large = IS.PiecewiseStepData([0.0, 1.0, 2.0], [1e10, 1e5])
         step_curve_large = IS.IncrementalCurve(step_data_large, 0.0)
         convex_large = IS.make_convex_approximation(step_curve_large)
         @test convex_large === nothing
+
+        # Test with excessively large negative values - still rejected (abs value check)
+        step_data_large_neg = IS.PiecewiseStepData([0.0, 1.0, 2.0], [-1e10, -1e5])
+        step_curve_large_neg = IS.IncrementalCurve(step_data_large_neg, 0.0)
+        convex_large_neg = IS.make_convex_approximation(step_curve_large_neg)
+        @test convex_large_neg === nothing
     end
 
     # Test approximation_error returns zero for identical data
@@ -1232,10 +1239,15 @@ end
     @test convex_last !== nothing
     @test IS.is_convex(convex_last)
 
-    # Test that data with negative slopes returns nothing
-    # Use NullLogger to suppress expected error logs
+    # Test that data with negative slopes is now allowed (no longer returns nothing)
+    # The function should process these normally since is_valid_data no longer rejects negative slopes
+    pac_with_neg = IS.PiecewiseAverageCurve(6.0, [1.0, 2.0, 3.0, 4.0], [10.0, 5.0, 15.0])
+    result_with_neg = IS.make_convex_approximation(pac_with_neg)
+    @test result_with_neg !== nothing  # Should succeed now
+
+    # Test that data with excessively large slopes still returns nothing
     Logging.with_logger(Logging.NullLogger()) do
-        pac_invalid = IS.PiecewiseAverageCurve(6.0, [1.0, 2.0, 3.0, 4.0], [10.0, 5.0, 15.0])
+        pac_invalid = IS.PiecewiseAverageCurve(6.0, [1.0, 2.0, 3.0, 4.0], [1e10, 5.0, 15.0])
         result_invalid = IS.make_convex_approximation(pac_invalid)
         @test result_invalid === nothing
     end
