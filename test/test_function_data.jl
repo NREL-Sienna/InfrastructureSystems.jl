@@ -860,7 +860,10 @@ end
     @test new_slopes[2] ≈ expected_pooled
 
     # Test invalid anchor
-    @test_throws ArgumentError IS.increasing_curve_convex_approximation(curve; anchor = :invalid)
+    @test_throws ArgumentError IS.increasing_curve_convex_approximation(
+        curve;
+        anchor = :invalid,
+    )
 end
 
 @testset "Test approximation_error" begin
