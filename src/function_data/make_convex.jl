@@ -22,7 +22,7 @@ non-convex detections, unnecessary curve complexity, and unstable numerical beha
 # Arguments
 - `curve`: A piecewise `ValueCurve` to clean up
 - `ε`: Tolerance for comparing slopes (default: `$(_COLINEARITY_TOLERANCE)`)
-- `device_name`: Optional generator name for logging (default: `nothing`)
+- `device_name`: Optional device name for logging (default: `nothing`)
 
 # Returns
 A new curve with colinear segments merged. Endpoints are preserved exactly.
@@ -37,7 +37,7 @@ When segments are merged, an `@info` log is printed indicating the merge occurre
 function merge_colinear_segments end
 
 """
-    merge_colinear_segments(curve::PiecewisePointCurve, ε, device_name) -> PiecewisePointCurve
+    merge_colinear_segments(curve::PiecewisePointCurve, ε::Float64 = _COLINEARITY_TOLERANCE, device_name::Union{String, Nothing} = nothing) -> PiecewisePointCurve
 
 Merge colinear segments in a `PiecewisePointCurve` (InputOutputCurve{PiecewiseLinearData}).
 
@@ -99,7 +99,7 @@ function merge_colinear_segments(
 end
 
 """
-    merge_colinear_segments(curve::PiecewiseIncrementalCurve, ε, device_name) -> PiecewiseIncrementalCurve
+    merge_colinear_segments(curve::PiecewiseIncrementalCurve, ε::Float64 = _COLINEARITY_TOLERANCE, device_name::Union{String, Nothing} = nothing) -> PiecewiseIncrementalCurve
 
 Merge colinear segments in a `PiecewiseIncrementalCurve` (IncrementalCurve{PiecewiseStepData}).
 
@@ -272,7 +272,7 @@ Returns `nothing` if validation passes, or an error message string if it fails.
 
 # Arguments
 - `curve`: The curve to validate
-- `device_name::Union{String, Nothing}`: Optional generator name for error messages
+- `device_name::Union{String, Nothing}`: Optional device name for error messages
 - `negative_slope_atol::Float64`: Tolerance for negative slope detection
 """
 function _validate_increasing_curve(
@@ -317,10 +317,10 @@ function increasing_curve_convex_approximation(
 
     # If already convex, optionally clean up colinear segments and return
     if is_convex(curve)
-        return if merge_colinear
-            merge_colinear_segments(curve, _COLINEARITY_TOLERANCE, device_name)
+        if merge_colinear
+            return merge_colinear_segments(curve, _COLINEARITY_TOLERANCE, device_name)
         else
-            curve
+            return curve
         end
     end
 
@@ -337,10 +337,10 @@ function increasing_curve_convex_approximation(
     result = InputOutputCurve(PiecewiseLinearData(new_points), get_input_at_zero(curve))
 
     # Clean up any colinear segments (from original data or produced by isotonic regression)
-    return if merge_colinear
-        merge_colinear_segments(result, _COLINEARITY_TOLERANCE, device_name)
+    if merge_colinear
+        return merge_colinear_segments(result, _COLINEARITY_TOLERANCE, device_name)
     else
-        result
+        return result
     end
 end
 
@@ -367,9 +367,9 @@ function increasing_curve_convex_approximation(
     # If already convex, optionally clean up colinear segments and return
     if is_convex(curve)
         return if merge_colinear
-            merge_colinear_segments(curve, _COLINEARITY_TOLERANCE, device_name)
+            return merge_colinear_segments(curve, _COLINEARITY_TOLERANCE, device_name)
         else
-            curve
+            return curve
         end
     end
 
@@ -389,10 +389,10 @@ function increasing_curve_convex_approximation(
     result = IncrementalCurve(convex_io)
 
     # Clean up any colinear segments (from original data or produced by convexification)
-    return if merge_colinear
-        merge_colinear_segments(result, _COLINEARITY_TOLERANCE, device_name)
+    if merge_colinear
+        return merge_colinear_segments(result, _COLINEARITY_TOLERANCE, device_name)
     else
-        result
+        return result
     end
 end
 
@@ -417,10 +417,10 @@ function increasing_curve_convex_approximation(
 
     # If already convex, optionally clean up colinear segments and return
     if is_convex(curve)
-        return if merge_colinear
-            merge_colinear_segments(curve, _COLINEARITY_TOLERANCE, device_name)
+        if merge_colinear
+            return merge_colinear_segments(curve, _COLINEARITY_TOLERANCE, device_name)
         else
-            curve
+            return curve
         end
     end
 
@@ -440,10 +440,10 @@ function increasing_curve_convex_approximation(
     result = AverageRateCurve(convex_io)
 
     # Clean up any colinear segments (from original data or produced by convexification)
-    return if merge_colinear
-        merge_colinear_segments(result, _COLINEARITY_TOLERANCE, device_name)
+    if merge_colinear
+        return merge_colinear_segments(result, _COLINEARITY_TOLERANCE, device_name)
     else
-        result
+        return result
     end
 end
 
