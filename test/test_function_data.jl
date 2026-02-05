@@ -978,20 +978,21 @@ end
         # Test with negative values - now rejected because curve is not strictly increasing
         step_data_neg = IS.PiecewiseStepData([0.0, 1.0, 2.0, 3.0], [-5.0, -10.0, -3.0])
         step_curve_neg = IS.IncrementalCurve(step_data_neg, 0.0)
-        convex_neg = IS.increasing_curve_convex_approximation(step_curve_neg)
-        @test convex_neg === nothing  # Should fail: not strictly increasing
+        @test_throws ErrorException IS.increasing_curve_convex_approximation(step_curve_neg)
 
-        # Test with large values - still returns nothing due to data validation (excessive slope)
+        # Test with large values - throws error due to data validation (excessive slope)
         step_data_large = IS.PiecewiseStepData([0.0, 1.0, 2.0], [1e10, 1e5])
         step_curve_large = IS.IncrementalCurve(step_data_large, 0.0)
-        convex_large = IS.increasing_curve_convex_approximation(step_curve_large)
-        @test convex_large === nothing
+        @test_throws ErrorException IS.increasing_curve_convex_approximation(
+            step_curve_large,
+        )
 
         # Test with excessively large negative values - still rejected (abs value check)
         step_data_large_neg = IS.PiecewiseStepData([0.0, 1.0, 2.0], [-1e10, -1e5])
         step_curve_large_neg = IS.IncrementalCurve(step_data_large_neg, 0.0)
-        convex_large_neg = IS.increasing_curve_convex_approximation(step_curve_large_neg)
-        @test convex_large_neg === nothing
+        @test_throws ErrorException IS.increasing_curve_convex_approximation(
+            step_curve_large_neg,
+        )
     end
 
     # Test approximation_error returns zero for identical data
@@ -1192,19 +1193,17 @@ end
     @test convex_last !== nothing
     @test IS.is_convex(convex_last)
 
-    # Test that data with negative slopes returns nothing (not strictly increasing)
+    # Use NullLogger to suppress expected error logs from validation tests
     Logging.with_logger(Logging.NullLogger()) do
+        # Test that data with negative slopes throws error (not strictly increasing)
         pac_with_neg =
             IS.PiecewiseAverageCurve(6.0, [1.0, 2.0, 3.0, 4.0], [10.0, 5.0, 15.0])
-        result_with_neg = IS.increasing_curve_convex_approximation(pac_with_neg)
-        @test result_with_neg === nothing  # Should fail: not strictly increasing
-    end
+        @test_throws ErrorException IS.increasing_curve_convex_approximation(pac_with_neg)
 
-    # Test that data with excessively large slopes still returns nothing
-    Logging.with_logger(Logging.NullLogger()) do
-        pac_invalid = IS.PiecewiseAverageCurve(6.0, [1.0, 2.0, 3.0, 4.0], [1e10, 5.0, 15.0])
-        result_invalid = IS.increasing_curve_convex_approximation(pac_invalid)
-        @test result_invalid === nothing
+        # Test that data with excessively large slopes still throws error
+        pac_invalid =
+            IS.PiecewiseAverageCurve(6.0, [1.0, 2.0, 3.0, 4.0], [1e10, 5.0, 15.0])
+        @test_throws ErrorException IS.increasing_curve_convex_approximation(pac_invalid)
     end
 end
 

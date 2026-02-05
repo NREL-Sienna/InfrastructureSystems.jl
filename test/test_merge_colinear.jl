@@ -87,7 +87,7 @@
 
         # With small tolerance, should merge only the equal slopes (1.1, 1.1)
         # Slopes [1.0, 1.1, 1.1] -> second and third are equal, so merge those segments
-        result_small_tol = IS.merge_colinear_segments(curve_custom; ε = 1e-10)
+        result_small_tol = IS.merge_colinear_segments(curve_custom, 1e-10)
         points_small = IS.get_points(IS.get_function_data(result_small_tol))
         @test length(points_small) == 3  # (0,0), (1,1), (3,3.2)
         @test points_small[1] == (x = 0.0, y = 0.0)
@@ -95,7 +95,7 @@
         @test points_small[3] == (x = 3.0, y = 3.2)
 
         # With larger tolerance (0.2), should merge all (1.0 and 1.1 are within 0.2)
-        result_large_tol = IS.merge_colinear_segments(curve_custom; ε = 0.2)
+        result_large_tol = IS.merge_colinear_segments(curve_custom, 0.2)
         @test length(IS.get_points(IS.get_function_data(result_large_tol))) == 2
 
         # Test 7: Input with input_at_zero preserves it

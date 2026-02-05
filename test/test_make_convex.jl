@@ -124,25 +124,19 @@
         ioc_neg = IS.InputOutputCurve(pld_neg)
         @test !IS.is_strictly_increasing(ioc_neg)
 
-        # Should return nothing and log error
-        Logging.with_logger(Logging.NullLogger()) do
-            result = IS.increasing_curve_convex_approximation(ioc_neg)
-            @test result === nothing
-        end
+        # Should throw an error
+        @test_throws ErrorException IS.increasing_curve_convex_approximation(ioc_neg)
 
         # Same test with IncrementalCurve
         psd_neg = IS.PiecewiseStepData([0.0, 1.0, 2.0], [-1.0, 2.0])
         pic_neg = IS.IncrementalCurve(psd_neg, 0.0)
         @test !IS.is_strictly_increasing(pic_neg)
 
-        Logging.with_logger(Logging.NullLogger()) do
-            result = IS.increasing_curve_convex_approximation(pic_neg)
-            @test result === nothing
-        end
+        @test_throws ErrorException IS.increasing_curve_convex_approximation(pic_neg)
     end
 
-    @testset "Test increasing_curve_convex_approximation generator_name in logs" begin
-        # Non-convex curve that will produce a warning
+    @testset "Test increasing_curve_convex_approximation device_name parameter" begin
+        # Non-convex curve that will be convexified
         pld = IS.PiecewiseLinearData([
             (x = 0.0, y = 0.0),
             (x = 1.0, y = 10.0),  # slope = 10
@@ -150,19 +144,147 @@
         ])
         ioc = IS.InputOutputCurve(pld)
 
-        # Capture logs and verify generator name appears in warning
-        # Note: @test_logs with min_level can capture expected logs without failing on additional ones
-        logs = Test.@test_logs(
-            (:warn, r".*for generator TestGen123.*"),
-            min_level = Logging.Warn,
-            IS.increasing_curve_convex_approximation(ioc; generator_name = "TestGen123"),
+        # Test that device_name parameter is accepted and function works
+        result_with_name = IS.increasing_curve_convex_approximation(
+            ioc;
+            device_name = "TestGen123",
+        )
+        @test IS.is_convex(result_with_name)
+
+        # Without device_name also works
+        result_no_name = IS.increasing_curve_convex_approximation(ioc)
+        @test IS.is_convex(result_no_name)
+    end
+
+    @testset "Test increasing_curve_convex_approximation for CostCurve" begin
+        # Convex CostCurve - should return unchanged
+        pld_convex = IS.PiecewiseLinearData([
+            (x = 0.0, y = 0.0),
+            (x = 1.0, y = 1.0),
+            (x = 2.0, y = 3.0),
+        ])
+        ioc_convex = IS.InputOutputCurve(pld_convex)
+        vom_cost = IS.LinearCurve(0.5)
+        cost_curve_convex = IS.CostCurve(;
+            value_curve = ioc_convex,
+            power_units = IS.UnitSystem.NATURAL_UNITS,
+            vom_cost = vom_cost,
         )
 
-        # Without generator_name, message should not include "for generator"
-        Test.@test_logs(
-            (:warn, r"^Transformed non-convex InputOutputCurve to convex approximation$"),
-            min_level = Logging.Warn,
-            IS.increasing_curve_convex_approximation(ioc),
+        result = IS.increasing_curve_convex_approximation(cost_curve_convex)
+        @test result isa IS.CostCurve
+        @test IS.is_convex(result)
+        @test IS.get_power_units(result) == IS.UnitSystem.NATURAL_UNITS
+        @test IS.get_vom_cost(result) == vom_cost
+
+        # Non-convex CostCurve - should be convexified
+        pld_concave = IS.PiecewiseLinearData([
+            (x = 0.0, y = 0.0),
+            (x = 1.0, y = 2.0),  # slope = 2
+            (x = 2.0, y = 3.0),  # slope = 1 (non-convex)
+        ])
+        ioc_concave = IS.InputOutputCurve(pld_concave)
+        vom_cost_2 = IS.LinearCurve(1.0)
+        cost_curve_concave = IS.CostCurve(;
+            value_curve = ioc_concave,
+            power_units = IS.UnitSystem.SYSTEM_BASE,
+            vom_cost = vom_cost_2,
+        )
+
+        result_concave = IS.increasing_curve_convex_approximation(cost_curve_concave)
+        @test result_concave isa IS.CostCurve
+        @test IS.is_convex(result_concave)
+        @test IS.get_power_units(result_concave) == IS.UnitSystem.SYSTEM_BASE
+        @test IS.get_vom_cost(result_concave) == vom_cost_2
+
+        # Invalid CostCurve (not strictly increasing) - should throw error
+        pld_invalid = IS.PiecewiseLinearData([
+            (x = 0.0, y = 10.0),
+            (x = 1.0, y = 5.0),   # decreasing
+            (x = 2.0, y = 8.0),
+        ])
+        ioc_invalid = IS.InputOutputCurve(pld_invalid)
+        cost_curve_invalid = IS.CostCurve(ioc_invalid)
+
+        @test_throws ErrorException IS.increasing_curve_convex_approximation(
+            cost_curve_invalid,
+        )
+    end
+
+    @testset "Test increasing_curve_convex_approximation for FuelCurve" begin
+        # Convex FuelCurve - should return unchanged
+        pld_convex = IS.PiecewiseLinearData([
+            (x = 0.0, y = 0.0),
+            (x = 1.0, y = 1.0),
+            (x = 2.0, y = 3.0),
+        ])
+        ioc_convex = IS.InputOutputCurve(pld_convex)
+        vom_cost = IS.LinearCurve(0.5)
+        fuel_curve_convex = IS.FuelCurve(;
+            value_curve = ioc_convex,
+            power_units = IS.UnitSystem.NATURAL_UNITS,
+            fuel_cost = 25.0,
+            vom_cost = vom_cost,
+        )
+
+        result = IS.increasing_curve_convex_approximation(fuel_curve_convex)
+        @test result isa IS.FuelCurve
+        @test IS.is_convex(result)
+        @test IS.get_power_units(result) == IS.UnitSystem.NATURAL_UNITS
+        @test result.fuel_cost == 25.0
+        @test IS.get_vom_cost(result) == vom_cost
+
+        # Non-convex FuelCurve - should be convexified
+        pld_concave = IS.PiecewiseLinearData([
+            (x = 0.0, y = 0.0),
+            (x = 1.0, y = 2.0),  # slope = 2
+            (x = 2.0, y = 3.0),  # slope = 1 (non-convex)
+        ])
+        ioc_concave = IS.InputOutputCurve(pld_concave)
+        vom_cost_2 = IS.LinearCurve(1.0)
+        fuel_curve_concave = IS.FuelCurve(;
+            value_curve = ioc_concave,
+            power_units = IS.UnitSystem.SYSTEM_BASE,
+            fuel_cost = 30.0,
+            vom_cost = vom_cost_2,
+        )
+
+        result_concave = IS.increasing_curve_convex_approximation(fuel_curve_concave)
+        @test result_concave isa IS.FuelCurve
+        @test IS.is_convex(result_concave)
+        @test IS.get_power_units(result_concave) == IS.UnitSystem.SYSTEM_BASE
+        @test result_concave.fuel_cost == 30.0
+        @test IS.get_vom_cost(result_concave) == vom_cost_2
+
+        # FuelCurve with IncrementalCurve (PiecewiseStepData)
+        psd_convex = IS.PiecewiseStepData([0.0, 1.0, 2.0], [1.0, 2.0])
+        inc_convex = IS.IncrementalCurve(psd_convex, 0.0)
+        fuel_curve_inc = IS.FuelCurve(;
+            value_curve = inc_convex,
+            power_units = IS.UnitSystem.NATURAL_UNITS,
+            fuel_cost = 20.0,
+        )
+
+        result_inc = IS.increasing_curve_convex_approximation(fuel_curve_inc)
+        @test result_inc isa IS.FuelCurve
+        @test IS.is_convex(result_inc)
+        @test result_inc.fuel_cost == 20.0
+
+        # Invalid FuelCurve (not strictly increasing) - should throw error
+        pld_invalid = IS.PiecewiseLinearData([
+            (x = 0.0, y = 10.0),
+            (x = 1.0, y = 5.0),   # decreasing
+            (x = 2.0, y = 8.0),
+        ])
+        ioc_invalid = IS.InputOutputCurve(pld_invalid)
+        fuel_curve_invalid = IS.FuelCurve(;
+            value_curve = ioc_invalid,
+            power_units = IS.UnitSystem.NATURAL_UNITS,
+            fuel_cost = 25.0,
+        )
+
+        @test_throws ErrorException IS.increasing_curve_convex_approximation(
+            fuel_curve_invalid,
         )
     end
 end
