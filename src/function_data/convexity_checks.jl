@@ -1,7 +1,7 @@
 # CONVEXITY CHECKING UTILITIES
 # Functions for analyzing convexity properties of FunctionData and ValueCurve types.
 
-const _SLOPE_COMPARISON_ATOL = 1e-10
+const _STRICT_SLOPE_COMPARISON_ATOL = 1e-10
 
 # ============================================================================
 # DATA QUALITY VALIDATION
@@ -175,7 +175,7 @@ end
 Check if a ValueCurve has valid data suitable for convexification.
 
 For `InputOutputCurve` and `IncrementalCurve`, delegates to the underlying FunctionData check.
-For `AverageRateCurve`, converts to `InputOutputCurve` first since average rates are NOT 
+For `AverageRateCurve`, converts to `InputOutputCurve` first since average rates are NOT
 the same as slopes - the actual slopes must be validated.
 """
 is_valid_data(curve::InputOutputCurve) = is_valid_data(get_function_data(curve))
@@ -195,16 +195,22 @@ end
 # ============================================================================
 
 """
-    is_strictly_increasing(data::FunctionData) -> Bool
-    is_strictly_increasing(curve::ValueCurve) -> Bool
+    is_strictly_increasing(data::FunctionData, atol=_STRICT_SLOPE_COMPARISON_ATOL) -> Bool
+    is_strictly_increasing(curve::ValueCurve, atol=_STRICT_SLOPE_COMPARISON_ATOL) -> Bool
 
-Returns `true` if all slopes are non-negative (>= 0 within tolerance), `false` otherwise.
+Returns `true` if all slopes are non-negative (>= -atol), `false` otherwise.
+
+# Arguments
+- `atol::Float64`: Absolute tolerance for negative slope detection. Slopes greater than
+  or equal to `-atol` are considered non-negative. Default is `_STRICT_SLOPE_COMPARISON_ATOL` (1e-10).
+  - For `LinearFunctionData`: uses fixed `_STRICT_SLOPE_COMPARISON_ATOL` (1e-10), `atol` parameter is ignored
+  - For `PiecewiseLinearData` and `PiecewiseStepData`: uses provided `atol`
 
 # FunctionData types
 Defined for:
-- `LinearFunctionData`: true iff proportional term >= 0
-- `PiecewiseLinearData`: true iff all segment slopes >= 0
-- `PiecewiseStepData`: true iff all marginal rates >= 0
+- `LinearFunctionData`: true iff proportional term >= 0 (within small tolerance)
+- `PiecewiseLinearData`: true iff all segment slopes >= -atol
+- `PiecewiseStepData`: true iff all marginal rates >= -atol
 
 Not defined for `QuadraticFunctionData` (slope varies with x).
 
@@ -217,24 +223,44 @@ Defined for:
 function is_strictly_increasing end
 
 # FunctionData implementations
-is_strictly_increasing(fd::LinearFunctionData) =
-    get_proportional_term(fd) >= -_SLOPE_COMPARISON_ATOL
+# LinearFunctionData uses fixed small tolerance - atol parameter ignored
+is_strictly_increasing(
+    fd::LinearFunctionData,
+    atol::Float64 = _STRICT_SLOPE_COMPARISON_ATOL,
+) =
+    get_proportional_term(fd) >= -_STRICT_SLOPE_COMPARISON_ATOL
 
-is_strictly_increasing(fd::PiecewiseLinearData) =
-    all(s -> s >= -_SLOPE_COMPARISON_ATOL, get_slopes(fd))
+# PiecewiseLinearData and PiecewiseStepData use configurable tolerance
+is_strictly_increasing(
+    fd::PiecewiseLinearData,
+    atol::Float64 = _STRICT_SLOPE_COMPARISON_ATOL,
+) =
+    all(s -> s >= -atol, get_slopes(fd))
 
-is_strictly_increasing(fd::PiecewiseStepData) =
-    all(r -> r >= -_SLOPE_COMPARISON_ATOL, get_y_coords(fd))
+is_strictly_increasing(
+    fd::PiecewiseStepData,
+    atol::Float64 = _STRICT_SLOPE_COMPARISON_ATOL,
+) =
+    all(r -> r >= -atol, get_y_coords(fd))
 
 # ValueCurve implementations
-is_strictly_increasing(curve::InputOutputCurve) =
-    is_strictly_increasing(get_function_data(curve))
+is_strictly_increasing(
+    curve::InputOutputCurve,
+    atol::Float64 = _STRICT_SLOPE_COMPARISON_ATOL,
+) =
+    is_strictly_increasing(get_function_data(curve), atol)
 
-is_strictly_increasing(curve::IncrementalCurve) =
-    is_strictly_increasing(get_function_data(curve))
+is_strictly_increasing(
+    curve::IncrementalCurve,
+    atol::Float64 = _STRICT_SLOPE_COMPARISON_ATOL,
+) =
+    is_strictly_increasing(get_function_data(curve), atol)
 
-is_strictly_increasing(curve::AverageRateCurve) =
-    is_strictly_increasing(InputOutputCurve(curve))
+is_strictly_increasing(
+    curve::AverageRateCurve,
+    atol::Float64 = _STRICT_SLOPE_COMPARISON_ATOL,
+) =
+    is_strictly_increasing(InputOutputCurve(curve), atol)
 
 """
     is_strictly_decreasing(data::FunctionData) -> Bool
@@ -260,13 +286,13 @@ function is_strictly_decreasing end
 
 # FunctionData implementations
 is_strictly_decreasing(fd::LinearFunctionData) =
-    get_proportional_term(fd) <= _SLOPE_COMPARISON_ATOL
+    get_proportional_term(fd) <= _STRICT_SLOPE_COMPARISON_ATOL
 
 is_strictly_decreasing(fd::PiecewiseLinearData) =
-    all(s -> s <= _SLOPE_COMPARISON_ATOL, get_slopes(fd))
+    all(s -> s <= _STRICT_SLOPE_COMPARISON_ATOL, get_slopes(fd))
 
 is_strictly_decreasing(fd::PiecewiseStepData) =
-    all(r -> r <= _SLOPE_COMPARISON_ATOL, get_y_coords(fd))
+    all(r -> r <= _STRICT_SLOPE_COMPARISON_ATOL, get_y_coords(fd))
 
 # ValueCurve implementations
 is_strictly_decreasing(curve::InputOutputCurve) =
@@ -284,7 +310,7 @@ is_strictly_decreasing(curve::AverageRateCurve) =
 
 function _slope_convexity_check(slopes::Vector{Float64})
     for ix in 1:(length(slopes) - 1)
-        if slopes[ix] > slopes[ix + 1] + _SLOPE_COMPARISON_ATOL
+        if slopes[ix] > slopes[ix + 1] + _STRICT_SLOPE_COMPARISON_ATOL
             @debug slopes
             return false
         end
@@ -294,7 +320,7 @@ end
 
 function _slope_concavity_check(slopes::Vector{Float64})
     for ix in 1:(length(slopes) - 1)
-        if slopes[ix] < slopes[ix + 1] - _SLOPE_COMPARISON_ATOL
+        if slopes[ix] < slopes[ix + 1] - _STRICT_SLOPE_COMPARISON_ATOL
             return false
         end
     end
@@ -314,7 +340,8 @@ Linear functions (straight lines) are considered convex.
 """
 is_convex(::LinearFunctionData) = true
 
-is_convex(f::QuadraticFunctionData) = get_quadratic_term(f) >= -_SLOPE_COMPARISON_ATOL
+is_convex(f::QuadraticFunctionData) =
+    get_quadratic_term(f) >= -_STRICT_SLOPE_COMPARISON_ATOL
 
 is_convex(pwl::PiecewiseLinearData) =
     _slope_convexity_check(get_slopes(pwl))
@@ -348,14 +375,14 @@ is_concave(pwl::PiecewiseStepData) =
 
 Check if a `ValueCurve` is convex.
 
-- `InputOutputCurve` (including `LinearCurve`, `QuadraticCurve`, `PiecewisePointCurve`): 
+- `InputOutputCurve` (including `LinearCurve`, `QuadraticCurve`, `PiecewisePointCurve`):
   Delegates to convexity check of the underlying `FunctionData`.
-- `IncrementalCurve` (including `PiecewiseIncrementalCurve`): Delegates to convexity check 
-  of the underlying `FunctionData`. This works because for `IncrementalCurve`, the 
-  `FunctionData` y-coordinates represent marginal rates (slopes), so checking if they are 
+- `IncrementalCurve` (including `PiecewiseIncrementalCurve`): Delegates to convexity check
+  of the underlying `FunctionData`. This works because for `IncrementalCurve`, the
+  `FunctionData` y-coordinates represent marginal rates (slopes), so checking if they are
   non-decreasing is equivalent to checking convexity of the original curve.
-- `AverageRateCurve` (including `PiecewiseAverageCurve`): Converts to `InputOutputCurve` 
-  first, then checks. This is necessary because average rates are NOT the same as slopes; 
+- `AverageRateCurve` (including `PiecewiseAverageCurve`): Converts to `InputOutputCurve`
+  first, then checks. This is necessary because average rates are NOT the same as slopes;
   non-decreasing average rates do not imply convexity.
 """
 is_convex(curve::InputOutputCurve) = is_convex(get_function_data(curve))
@@ -367,14 +394,14 @@ is_convex(curve::AverageRateCurve) = is_convex(InputOutputCurve(curve))
 
 Check if a `ValueCurve` is concave.
 
-- `InputOutputCurve` (including `LinearCurve`, `QuadraticCurve`, `PiecewisePointCurve`): 
+- `InputOutputCurve` (including `LinearCurve`, `QuadraticCurve`, `PiecewisePointCurve`):
   Delegates to concavity check of the underlying `FunctionData`.
-- `IncrementalCurve` (including `PiecewiseIncrementalCurve`): Delegates to concavity check 
-  of the underlying `FunctionData`. This works because for `IncrementalCurve`, the 
-  `FunctionData` y-coordinates represent marginal rates (slopes), so checking if they are 
+- `IncrementalCurve` (including `PiecewiseIncrementalCurve`): Delegates to concavity check
+  of the underlying `FunctionData`. This works because for `IncrementalCurve`, the
+  `FunctionData` y-coordinates represent marginal rates (slopes), so checking if they are
   non-increasing is equivalent to checking concavity of the original curve.
-- `AverageRateCurve` (including `PiecewiseAverageCurve`): Converts to `InputOutputCurve` 
-  first, then checks. This is necessary because average rates are NOT the same as slopes; 
+- `AverageRateCurve` (including `PiecewiseAverageCurve`): Converts to `InputOutputCurve`
+  first, then checks. This is necessary because average rates are NOT the same as slopes;
   non-increasing average rates do not imply concavity.
 """
 is_concave(curve::InputOutputCurve) = is_concave(get_function_data(curve))
