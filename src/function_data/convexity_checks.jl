@@ -380,5 +380,3 @@ Check if a `ValueCurve` is concave.
 is_concave(curve::InputOutputCurve) = is_concave(get_function_data(curve))
 is_concave(curve::IncrementalCurve) = is_concave(get_function_data(curve))
 is_concave(curve::AverageRateCurve) = is_concave(InputOutputCurve(curve))
-
-
