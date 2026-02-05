@@ -82,8 +82,9 @@ Structs can be auto-generated from JSON descriptors using Mustache templates. Ge
 1. **Auto-generated files** — Never edit files in `src/generated/` directly. Modify `src/descriptors/structs.json` instead and run the generation command.
 2. **Performance is critical** — This is a foundational library. Apply performance best practices rigorously in hot paths.
 3. **Type stability** — Use `@code_warntype` to verify performance-critical functions.
-4. **Public API documentation** — Add docstrings to all public interface elements using `DocStringExtensions.TYPEDSIGNATURES`.
-5. **Formatter** — Run `julia -e 'include("scripts/formatter/formatter_code.jl")'` on all changes.
+4. **Avoid kwargs as much as possible** — Since InfrastructureSystems is a utility library consumed by other applications, avoid using `kwargs...` especially in functions that may be called in hot loops. Use explicit keyword arguments instead for better performance and type stability or avoid keyword arguments all together.
+5. **Public API documentation** — Add docstrings to all public interface elements using `DocStringExtensions.TYPEDSIGNATURES`.
+6. **Formatter** — Run `julia -e 'include("scripts/formatter/formatter_code.jl")'` on all changes.
 
 ### When Modifying Code
 
