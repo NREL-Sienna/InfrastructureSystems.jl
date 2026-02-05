@@ -4,12 +4,14 @@
 
 The first time you compile documentation for a package, make sure the `docs/` environment
 (i.e., `docs/Manifest.toml`, not the main `Manifest.toml` in the root of the repository)
-is pointing to your local version of the package, so it compiles your local changes:
+is pointing to your local version of the package, so it compiles your local changes.
+
+From a terminal at the root of the repository (i.e., `PowerSystems.jl`), run:
 
 ```
 julia --project=docs
 using Pkg
-Pkg.develop(path = "..")
+Pkg.develop(path = ".")
 ```
 
 ## Pre-Step b: Auto-Generate Structs (If Needed)
