@@ -754,7 +754,11 @@ end
     curve = IS.IncrementalCurve(step_data, 0.0)
     # Segment lengths: [2, 1, 3]
     convex_curve =
-        IS.increasing_curve_convex_approximation(curve; weights = :length, merge_colinear = false)
+        IS.increasing_curve_convex_approximation(
+            curve;
+            weights = :length,
+            merge_colinear = false,
+        )
     @test IS.is_convex(convex_curve)
     new_y = IS.get_y_coords(IS.get_function_data(convex_curve))
     # Pooled value = (10*2 + 5*1) / (2+1) = 25/3 ≈ 8.33
