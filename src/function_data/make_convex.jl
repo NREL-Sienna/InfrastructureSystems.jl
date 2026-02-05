@@ -257,11 +257,28 @@ Note 3: `InputOutputCurve{QuadraticFunctionData}` is not supported given that it
 # Returns
 - The convex curve (original or approximation) if successful
 - `nothing` if data quality validation fails or curve is not strictly increasing
-
-# See also
-- [`decreasing_curve_convex_approximation`](@ref): for strictly decreasing curves
 """
 function increasing_curve_convex_approximation end
+
+"""
+    _validate_increasing_curve(curve, generator_name::Union{String, Nothing}) -> Union{String, Nothing}
+
+Internal helper to validate that a curve has valid data and is strictly increasing.
+Returns `nothing` if validation passes, or an error message string if it fails.
+"""
+function _validate_increasing_curve(curve, generator_name::Union{String, Nothing})
+    gen_msg = isnothing(generator_name) ? "" : " for generator $(generator_name)"
+
+    if !is_valid_data(curve)
+        return "Invalid curve data$(gen_msg): data quality validation failed"
+    end
+
+    if !is_strictly_increasing(curve)
+        return "Invalid curve data$(gen_msg): curve is not strictly increasing"
+    end
+
+    return nothing
+end
 
 """
     increasing_curve_convex_approximation(curve::InputOutputCurve{PiecewiseLinearData}; kwargs...) -> Union{InputOutputCurve{PiecewiseLinearData}, Nothing}"""
@@ -275,16 +292,13 @@ function increasing_curve_convex_approximation(
 )
     gen_msg = isnothing(generator_name) ? "" : " for generator $(generator_name)"
 
-    # Data quality validation - check for fundamentally invalid data
-    if !_skip_validation && !is_valid_data(curve)
-        @error "Invalid curve data$(gen_msg): data quality validation failed"
-        return nothing
-    end
-
-    # Check that the curve is strictly increasing (cost should increase with output)
-    if !_skip_validation && !is_strictly_increasing(curve)
-        @error "Invalid curve data$(gen_msg): curve is not strictly increasing"
-        return nothing
+    # Validate data quality and monotonicity
+    if !_skip_validation
+        validation_error = _validate_increasing_curve(curve, generator_name)
+        if !isnothing(validation_error)
+            error(validation_error)
+            return nothing
+        end
     end
 
     # If already convex, optionally clean up colinear segments and return
@@ -328,15 +342,10 @@ function increasing_curve_convex_approximation(
 )
     gen_msg = isnothing(generator_name) ? "" : " for generator $(generator_name)"
 
-    # Data quality validation - check for fundamentally invalid data
-    if !is_valid_data(curve)
-        @error "Invalid curve data$(gen_msg): data quality validation failed"
-        return nothing
-    end
-
-    # Check that the curve is strictly increasing (cost should increase with output)
-    if !is_strictly_increasing(curve)
-        @error "Invalid curve data$(gen_msg): curve is not strictly increasing"
+    # Validate data quality and monotonicity
+    validation_error = _validate_increasing_curve(curve, generator_name)
+    if !isnothing(validation_error)
+        error(validation_error)
         return nothing
     end
 
@@ -383,16 +392,10 @@ function increasing_curve_convex_approximation(
 )
     gen_msg = isnothing(generator_name) ? "" : " for generator $(generator_name)"
 
-    # Data quality validation - check for fundamentally invalid data
-    if !is_valid_data(curve)
-        @error "Invalid curve data$(gen_msg): data quality validation failed"
-        return nothing
-    end
-
-    # Check that the curve is strictly increasing (cost should increase with output)
-    if !is_strictly_increasing(curve)
-        @error "Invalid curve data$(gen_msg): curve is not strictly increasing"
-        return nothing
+    # Validate data quality and monotonicity
+    validation_error = _validate_increasing_curve(curve, generator_name)
+    if !isnothing(validation_error)
+        error(validation_error)
     end
 
     # If already convex, optionally clean up colinear segments and return
