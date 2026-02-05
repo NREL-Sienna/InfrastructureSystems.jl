@@ -338,7 +338,11 @@ function increasing_curve_convex_approximation(
 
     # If already convex, optionally clean up colinear segments and return
     if is_convex(curve)
-        return merge_colinear ? merge_colinear_segments(curve; generator_name = generator_name) : curve
+        return if merge_colinear
+            merge_colinear_segments(curve; generator_name = generator_name)
+        else
+            curve
+        end
     end
 
     # Convert to InputOutputCurve, make convex, convert back
