@@ -305,7 +305,11 @@ function increasing_curve_convex_approximation(
     result = InputOutputCurve(PiecewiseLinearData(new_points), get_input_at_zero(curve))
 
     # Clean up any colinear segments (from original data or produced by isotonic regression)
-    return merge_colinear ? merge_colinear_segments(result; generator_name = generator_name) : result
+    return if merge_colinear
+        merge_colinear_segments(result; generator_name = generator_name)
+    else
+        result
+    end
 end
 
 """
