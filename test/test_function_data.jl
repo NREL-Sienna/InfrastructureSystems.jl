@@ -1178,7 +1178,8 @@ end
 
     # Test that data with negative slopes returns nothing (not strictly increasing)
     Logging.with_logger(Logging.NullLogger()) do
-        pac_with_neg = IS.PiecewiseAverageCurve(6.0, [1.0, 2.0, 3.0, 4.0], [10.0, 5.0, 15.0])
+        pac_with_neg =
+            IS.PiecewiseAverageCurve(6.0, [1.0, 2.0, 3.0, 4.0], [10.0, 5.0, 15.0])
         result_with_neg = IS.increasing_curve_convex_approximation(pac_with_neg)
         @test result_with_neg === nothing  # Should fail: not strictly increasing
     end
