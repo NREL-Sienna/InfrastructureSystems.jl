@@ -404,7 +404,11 @@ function increasing_curve_convex_approximation(
     result = AverageRateCurve(convex_io)
 
     # Clean up any colinear segments (from original data or produced by convexification)
-    return merge_colinear ? merge_colinear_segments(result; generator_name = generator_name) : result
+    return if merge_colinear
+        merge_colinear_segments(result; generator_name = generator_name)
+    else
+        result
+    end
 end
 
 # ProductionVariableCostCurve methods (CostCurve, FuelCurve)
