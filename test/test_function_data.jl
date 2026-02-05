@@ -863,8 +863,6 @@ end
     @test_throws ArgumentError IS.increasing_curve_convex_approximation(curve; anchor = :invalid)
 end
 
-
-
 @testset "Test approximation_error" begin
     # Test PiecewiseStepData error
     original = IS.PiecewiseStepData([0.0, 1.0, 2.0, 3.0], [10.0, 5.0, 15.0])
