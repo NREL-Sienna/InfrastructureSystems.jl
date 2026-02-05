@@ -946,7 +946,8 @@ end
     # Colinear segments are merged, so we get 2 points instead of 4
     @test length(IS.get_points(IS.get_function_data(result))) == 2
     # With merge_colinear=false, should return unchanged
-    result_no_merge = IS.increasing_curve_convex_approximation(curve; merge_colinear = false)
+    result_no_merge =
+        IS.increasing_curve_convex_approximation(curve; merge_colinear = false)
     @test result_no_merge === curve
 
     # Test severe violation (all slopes need to pool)
