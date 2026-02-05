@@ -833,7 +833,8 @@ end
     # The last two segments have slope 10, so they're merged
     @test length(IS.get_points(IS.get_function_data(result))) == 3
     # With merge_colinear=false, convex curve should be returned unchanged
-    result_no_merge = IS.increasing_curve_convex_approximation(curve; merge_colinear = false)
+    result_no_merge =
+        IS.increasing_curve_convex_approximation(curve; merge_colinear = false)
     @test result_no_merge === curve
 
     # Test with length weighting (merge_colinear=false to verify pooled slopes)
