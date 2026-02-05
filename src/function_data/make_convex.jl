@@ -6,10 +6,11 @@
 # Functions for removing artificial segmentation from piecewise curves.
 # ============================================================================
 
+const CONVEXIFICATION_NEGATIVE_SLOPE_TOLERANCE = 0.1
 const _COLINEARITY_TOLERANCE = 1e-6
 
 """
-    merge_colinear_segments(curve::ValueCurve; ε::Float64 = _COLINEARITY_TOLERANCE, generator_name::Union{String, Nothing} = nothing) -> ValueCurve
+    merge_colinear_segments(curve::ValueCurve, ε::Float64 = _COLINEARITY_TOLERANCE, device_name::Union{String, Nothing} = nothing) -> ValueCurve
 
 Merge consecutive colinear segments in a piecewise curve.
 
@@ -21,7 +22,7 @@ non-convex detections, unnecessary curve complexity, and unstable numerical beha
 # Arguments
 - `curve`: A piecewise `ValueCurve` to clean up
 - `ε`: Tolerance for comparing slopes (default: `$(_COLINEARITY_TOLERANCE)`)
-- `generator_name`: Optional generator name for logging (default: `nothing`)
+- `device_name`: Optional generator name for logging (default: `nothing`)
 
 # Returns
 A new curve with colinear segments merged. Endpoints are preserved exactly.
@@ -36,7 +37,7 @@ When segments are merged, an `@info` log is printed indicating the merge occurre
 function merge_colinear_segments end
 
 """
-    merge_colinear_segments(curve::PiecewisePointCurve; ε) -> PiecewisePointCurve
+    merge_colinear_segments(curve::PiecewisePointCurve, ε, device_name) -> PiecewisePointCurve
 
 Merge colinear segments in a `PiecewisePointCurve` (InputOutputCurve{PiecewiseLinearData}).
 
@@ -47,9 +48,9 @@ Algorithm:
 4. Preserve first and last endpoints exactly
 """
 function merge_colinear_segments(
-    curve::InputOutputCurve{PiecewiseLinearData};
+    curve::InputOutputCurve{PiecewiseLinearData},
     ε::Float64 = _COLINEARITY_TOLERANCE,
-    generator_name::Union{String, Nothing} = nothing,
+    device_name::Union{String, Nothing} = nothing,
 )
     fd = get_function_data(curve)
     points = get_points(fd)
@@ -88,7 +89,7 @@ function merge_colinear_segments(
     length(keep_indices) == n_points && return curve
 
     # Log the merge
-    gen_msg = isnothing(generator_name) ? "" : " for generator $(generator_name)"
+    gen_msg = isnothing(device_name) ? "" : " for generator $(device_name)"
     @info "Merged colinear segments$(gen_msg)"
 
     # Build new points array
@@ -98,7 +99,7 @@ function merge_colinear_segments(
 end
 
 """
-    merge_colinear_segments(curve::PiecewiseIncrementalCurve; ε) -> PiecewiseIncrementalCurve
+    merge_colinear_segments(curve::PiecewiseIncrementalCurve, ε, device_name) -> PiecewiseIncrementalCurve
 
 Merge colinear segments in a `PiecewiseIncrementalCurve` (IncrementalCurve{PiecewiseStepData}).
 
@@ -106,9 +107,9 @@ For step data, slopes are directly stored as y-coordinates.
 Consecutive steps with y-values within tolerance ε are merged.
 """
 function merge_colinear_segments(
-    curve::IncrementalCurve{PiecewiseStepData};
+    curve::IncrementalCurve{PiecewiseStepData},
     ε::Float64 = _COLINEARITY_TOLERANCE,
-    generator_name::Union{String, Nothing} = nothing,
+    device_name::Union{String, Nothing} = nothing,
 )
     fd = get_function_data(curve)
     x_coords = get_x_coords(fd)
@@ -144,7 +145,7 @@ function merge_colinear_segments(
     length(new_y) == n_segments && return curve
 
     # Log the merge
-    gen_msg = isnothing(generator_name) ? "" : " for generator $(generator_name)"
+    gen_msg = isnothing(device_name) ? "" : " for generator $(device_name)"
     @info "Merged colinear segments$(gen_msg)"
 
     return IncrementalCurve(
@@ -155,7 +156,7 @@ function merge_colinear_segments(
 end
 
 """
-    merge_colinear_segments(curve::PiecewiseAverageCurve; ε) -> PiecewiseAverageCurve
+    merge_colinear_segments(curve::PiecewiseAverageCurve, ε, device_name) -> PiecewiseAverageCurve
 
 Merge colinear segments in a `PiecewiseAverageCurve` (AverageRateCurve{PiecewiseStepData}).
 
@@ -163,9 +164,9 @@ For step data, average rates are directly stored as y-coordinates.
 Consecutive steps with y-values within tolerance ε are merged.
 """
 function merge_colinear_segments(
-    curve::AverageRateCurve{PiecewiseStepData};
+    curve::AverageRateCurve{PiecewiseStepData},
     ε::Float64 = _COLINEARITY_TOLERANCE,
-    generator_name::Union{String, Nothing} = nothing,
+    device_name::Union{String, Nothing} = nothing,
 )
     fd = get_function_data(curve)
     x_coords = get_x_coords(fd)
@@ -201,7 +202,7 @@ function merge_colinear_segments(
     length(new_y) == n_segments && return curve
 
     # Log the merge
-    gen_msg = isnothing(generator_name) ? "" : " for generator $(generator_name)"
+    gen_msg = isnothing(device_name) ? "" : " for generator $(device_name)"
     @info "Merged colinear segments$(gen_msg)"
 
     return AverageRateCurve(
@@ -253,6 +254,9 @@ Note 3: `InputOutputCurve{QuadraticFunctionData}` is not supported given that it
 - `merge_colinear`: Whether to merge colinear segments before convexification (default: `true`)
   - Colinear segments are those where consecutive slopes differ by less than a tolerance
   - This cleanup step removes artificial segmentation that can cause false non-convex detections
+- `negative_slope_atol`: Absolute tolerance for negative slope detection (default: `CONVEXIFICATION_NEGATIVE_SLOPE_TOLERANCE` = 0.1)
+  - Slopes greater than or equal to `-negative_slope_atol` are considered non-negative
+  - Increase this value to allow small negative slopes that may result from data noise
 
 # Returns
 - The convex curve (original or approximation) if successful
@@ -261,19 +265,28 @@ Note 3: `InputOutputCurve{QuadraticFunctionData}` is not supported given that it
 function increasing_curve_convex_approximation end
 
 """
-    _validate_increasing_curve(curve, generator_name::Union{String, Nothing}) -> Union{String, Nothing}
+    _validate_increasing_curve(curve, device_name, negative_slope_atol) -> Union{String, Nothing}
 
 Internal helper to validate that a curve has valid data and is strictly increasing.
 Returns `nothing` if validation passes, or an error message string if it fails.
+
+# Arguments
+- `curve`: The curve to validate
+- `device_name::Union{String, Nothing}`: Optional generator name for error messages
+- `negative_slope_atol::Float64`: Tolerance for negative slope detection
 """
-function _validate_increasing_curve(curve, generator_name::Union{String, Nothing})
-    gen_msg = isnothing(generator_name) ? "" : " for generator $(generator_name)"
+function _validate_increasing_curve(
+    curve,
+    device_name::Union{String, Nothing},
+    negative_slope_atol::Float64,
+)
+    gen_msg = isnothing(device_name) ? "" : " for generator $(device_name)"
 
     if !is_valid_data(curve)
         return "Invalid curve data$(gen_msg): data quality validation failed"
     end
 
-    if !is_strictly_increasing(curve)
+    if !is_strictly_increasing(curve, negative_slope_atol)
         return "Invalid curve data$(gen_msg): curve is not strictly increasing"
     end
 
@@ -287,24 +300,25 @@ function increasing_curve_convex_approximation(
     weights::Symbol = :length,
     anchor::Symbol = :first,
     merge_colinear::Bool = true,
-    generator_name::Union{String, Nothing} = nothing,
+    device_name::Union{String, Nothing} = nothing,
+    negative_slope_atol::Float64 = CONVEXIFICATION_NEGATIVE_SLOPE_TOLERANCE,
     _skip_validation::Bool = false,
 )
-    gen_msg = isnothing(generator_name) ? "" : " for generator $(generator_name)"
+    gen_msg = isnothing(device_name) ? "" : " for generator $(device_name)"
 
     # Validate data quality and monotonicity
     if !_skip_validation
-        validation_error = _validate_increasing_curve(curve, generator_name)
+        validation_error =
+            _validate_increasing_curve(curve, device_name, negative_slope_atol)
         if !isnothing(validation_error)
             error(validation_error)
-            return nothing
         end
     end
 
     # If already convex, optionally clean up colinear segments and return
     if is_convex(curve)
         return if merge_colinear
-            merge_colinear_segments(curve; generator_name = generator_name)
+            merge_colinear_segments(curve, _COLINEARITY_TOLERANCE, device_name)
         else
             curve
         end
@@ -319,12 +333,12 @@ function increasing_curve_convex_approximation(
     new_slopes = isotonic_regression(slopes, w)
     new_points = _reconstruct_points(points, new_slopes, anchor)
 
-    @warn "Transformed non-convex InputOutputCurve to convex approximation$(gen_msg)"
+    @info "Transformed non-convex InputOutputCurve to convex approximation$(gen_msg)"
     result = InputOutputCurve(PiecewiseLinearData(new_points), get_input_at_zero(curve))
 
     # Clean up any colinear segments (from original data or produced by isotonic regression)
     return if merge_colinear
-        merge_colinear_segments(result; generator_name = generator_name)
+        merge_colinear_segments(result, _COLINEARITY_TOLERANCE, device_name)
     else
         result
     end
@@ -338,21 +352,22 @@ function increasing_curve_convex_approximation(
     weights::Symbol = :length,
     anchor::Symbol = :first,
     merge_colinear::Bool = true,
-    generator_name::Union{String, Nothing} = nothing,
+    device_name::Union{String, Nothing} = nothing,
+    negative_slope_atol::Float64 = CONVEXIFICATION_NEGATIVE_SLOPE_TOLERANCE,
 )
-    gen_msg = isnothing(generator_name) ? "" : " for generator $(generator_name)"
+    gen_msg = isnothing(device_name) ? "" : " for generator $(device_name)"
 
     # Validate data quality and monotonicity
-    validation_error = _validate_increasing_curve(curve, generator_name)
+    validation_error =
+        _validate_increasing_curve(curve, device_name, negative_slope_atol)
     if !isnothing(validation_error)
         error(validation_error)
-        return nothing
     end
 
     # If already convex, optionally clean up colinear segments and return
     if is_convex(curve)
         return if merge_colinear
-            merge_colinear_segments(curve; generator_name = generator_name)
+            merge_colinear_segments(curve, _COLINEARITY_TOLERANCE, device_name)
         else
             curve
         end
@@ -365,17 +380,17 @@ function increasing_curve_convex_approximation(
         weights = weights,
         anchor = anchor,
         merge_colinear = false,
-        generator_name = generator_name,
+        device_name = device_name,
+        negative_slope_atol = negative_slope_atol,
         _skip_validation = true,  # Already validated above
     )
-    isnothing(convex_io) && return nothing
 
-    @warn "Transformed non-convex IncrementalCurve to convex approximation$(gen_msg)"
+    @info "Transformed non-convex IncrementalCurve to convex approximation$(gen_msg)"
     result = IncrementalCurve(convex_io)
 
     # Clean up any colinear segments (from original data or produced by convexification)
     return if merge_colinear
-        merge_colinear_segments(result; generator_name = generator_name)
+        merge_colinear_segments(result, _COLINEARITY_TOLERANCE, device_name)
     else
         result
     end
@@ -388,12 +403,14 @@ function increasing_curve_convex_approximation(
     weights::Symbol = :length,
     anchor::Symbol = :first,
     merge_colinear::Bool = true,
-    generator_name::Union{String, Nothing} = nothing,
+    device_name::Union{String, Nothing} = nothing,
+    negative_slope_atol::Float64 = CONVEXIFICATION_NEGATIVE_SLOPE_TOLERANCE,
 )
-    gen_msg = isnothing(generator_name) ? "" : " for generator $(generator_name)"
+    gen_msg = isnothing(device_name) ? "" : " for generator $(device_name)"
 
     # Validate data quality and monotonicity
-    validation_error = _validate_increasing_curve(curve, generator_name)
+    validation_error =
+        _validate_increasing_curve(curve, device_name, negative_slope_atol)
     if !isnothing(validation_error)
         error(validation_error)
     end
@@ -401,7 +418,7 @@ function increasing_curve_convex_approximation(
     # If already convex, optionally clean up colinear segments and return
     if is_convex(curve)
         return if merge_colinear
-            merge_colinear_segments(curve; generator_name = generator_name)
+            merge_colinear_segments(curve, _COLINEARITY_TOLERANCE, device_name)
         else
             curve
         end
@@ -414,17 +431,17 @@ function increasing_curve_convex_approximation(
         weights = weights,
         anchor = anchor,
         merge_colinear = false,
-        generator_name = generator_name,
+        device_name = device_name,
+        negative_slope_atol = negative_slope_atol,
         _skip_validation = true,  # Already validated above
     )
-    isnothing(convex_io) && return nothing
 
-    @warn "Transformed non-convex AverageRateCurve to convex approximation$(gen_msg)"
+    @info "Transformed non-convex AverageRateCurve to convex approximation$(gen_msg)"
     result = AverageRateCurve(convex_io)
 
     # Clean up any colinear segments (from original data or produced by convexification)
     return if merge_colinear
-        merge_colinear_segments(result; generator_name = generator_name)
+        merge_colinear_segments(result, _COLINEARITY_TOLERANCE, device_name)
     else
         result
     end
