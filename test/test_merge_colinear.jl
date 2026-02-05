@@ -245,7 +245,8 @@
         @test length(IS.get_points(IS.get_function_data(result))) == 3
 
         # Test with merge_colinear=false to verify the option works
-        result_no_merge = IS.increasing_curve_convex_approximation(curve; merge_colinear = false)
+        result_no_merge =
+            IS.increasing_curve_convex_approximation(curve; merge_colinear = false)
         @test IS.is_convex(result_no_merge)
         # Without merge, convexity check passes since slopes are non-decreasing
         # and original curve is returned
