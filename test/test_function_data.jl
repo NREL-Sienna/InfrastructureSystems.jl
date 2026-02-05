@@ -1027,7 +1027,8 @@ end
 
         # Make convex via InputOutputCurve
         curve = IS.InputOutputCurve(pointwise)
-        convex_curve = IS.increasing_curve_convex_approximation(curve; merge_colinear = false)
+        convex_curve =
+            IS.increasing_curve_convex_approximation(curve; merge_colinear = false)
         @test convex_curve !== nothing
         convex = IS.get_function_data(convex_curve)
         @test IS.is_convex(convex)
