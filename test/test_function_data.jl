@@ -820,7 +820,11 @@ end
 
     # Test with anchor=:centroid
     convex_curve =
-        IS.increasing_curve_convex_approximation(curve; weights = :uniform, anchor = :centroid)
+        IS.increasing_curve_convex_approximation(
+            curve;
+            weights = :uniform,
+            anchor = :centroid,
+        )
     @test IS.is_convex(convex_curve)
 
     # Test already convex data (with colinear segments)
