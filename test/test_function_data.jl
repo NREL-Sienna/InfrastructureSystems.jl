@@ -983,7 +983,9 @@ end
         # Test with large values - throws error due to data validation (excessive slope)
         step_data_large = IS.PiecewiseStepData([0.0, 1.0, 2.0], [1e10, 1e5])
         step_curve_large = IS.IncrementalCurve(step_data_large, 0.0)
-        @test_throws ErrorException IS.increasing_curve_convex_approximation(step_curve_large)
+        @test_throws ErrorException IS.increasing_curve_convex_approximation(
+            step_curve_large,
+        )
 
         # Test with excessively large negative values - throws error (abs value check)
         step_data_large_neg = IS.PiecewiseStepData([0.0, 1.0, 2.0], [-1e10, -1e5])
