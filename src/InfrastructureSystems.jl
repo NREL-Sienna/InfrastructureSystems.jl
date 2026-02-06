@@ -27,6 +27,7 @@ import TOML
 using DataStructures: OrderedDict, SortedDict
 import SQLite
 import Tables
+using LinearAlgebra: norm, dot
 
 using DocStringExtensions
 
@@ -142,7 +143,7 @@ include("utils/lazy_dict_from_iterator.jl")
 include("utils/logging.jl")
 include("utils/stdout_redirector.jl")
 include("utils/sqlite.jl")
-include("function_data.jl")
+include("function_data/function_data.jl")
 include("utils/utils.jl")
 include("definitions.jl")
 include("internal.jl")
@@ -196,7 +197,9 @@ include("utils/test.jl")
 include("units.jl")
 include("value_curve.jl")
 include("cost_aliases.jl")
+include("function_data/convexity_checks.jl")
 include("production_variable_cost_curve.jl")
+include("function_data/make_convex.jl")
 include("deprecated.jl")
 include("Optimization/Optimization.jl")
 include("Simulation/Simulation.jl")

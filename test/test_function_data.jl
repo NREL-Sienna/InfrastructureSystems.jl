@@ -125,20 +125,17 @@ end
     concave_pld = IS.PiecewiseLinearData([(0, 3), (1, 2), (1.1, 1), (1.2, 0)])
     non_concave_pld = IS.PiecewiseLinearData([(0, 3), (1, 2), (1.1, 1), (1.2, 5)])
 
-    @test IS.is_concave(concave_pld)
-    @test !IS.is_concave(non_concave_pld)
-
-    @test IS.is_concave(IS.InputOutputCurve(concave_pld))
-    @test !IS.is_concave(IS.InputOutputCurve(non_concave_pld))
-
-    @test IS.is_concave(IS.CostCurve(IS.InputOutputCurve(concave_pld)))
-    @test !IS.is_concave(IS.CostCurve(IS.InputOutputCurve(non_concave_pld)))
-
-    @test IS.is_concave(
-        IS.PiecewiseStepData(; x_coords = [0.0, 1.0, 2.0], y_coords = [2.0, 1.0]),
+    # Test convexity checks (is_nonconvex removed)
+    @test IS.is_convex(IS.LinearFunctionData(5.0, 1.0))
+    @test IS.is_convex(IS.QuadraticFunctionData(2.0, 3.0, 4.0))  # a > 0
+    @test !IS.is_convex(IS.QuadraticFunctionData(-2.0, 3.0, 4.0))  # a < 0
+    @test IS.is_convex(convex_pld)
+    @test !IS.is_convex(non_convex_pld)
+    @test IS.is_convex(
+        IS.PiecewiseStepData(; x_coords = [0.0, 1.0, 2.0], y_coords = [1.0, 2.0]),
     )
-    @test !IS.is_concave(
-        IS.PiecewiseStepData(; x_coords = [0.0, 1.0, 2.0], y_coords = [0.9, 1.0]),
+    @test !IS.is_convex(
+        IS.PiecewiseStepData(; x_coords = [0.0, 1.0, 2.0], y_coords = [2.0, 1.0]),
     )
 
     @test IS.QuadraticFunctionData(IS.LinearFunctionData(1, 2)) ==
@@ -690,6 +687,383 @@ end
     end
 end
 
+@testset "Test isotonic regression" begin
+    # Test basic isotonic regression
+    values = [3.0, 1.0, 4.0, 1.0, 5.0]
+    weights = ones(5)
+    result = IS.isotonic_regression(values, weights)
+    @test issorted(result)  # Result should be non-decreasing
+
+    # Test with uniform weights - first two should pool
+    values = [10.0, 5.0, 15.0]
+    weights = [1.0, 1.0, 1.0]
+    result = IS.isotonic_regression(values, weights)
+    @test result[1] ≈ 7.5  # (10 + 5) / 2
+    @test result[2] ≈ 7.5
+    @test result[3] ≈ 15.0
+    @test issorted(result)
+
+    # Test with different weights
+    values = [10.0, 5.0, 15.0]
+    weights = [2.0, 1.0, 1.0]  # First element has twice the weight
+    result = IS.isotonic_regression(values, weights)
+    expected_pooled = (10.0 * 2.0 + 5.0 * 1.0) / (2.0 + 1.0)  # 25/3 ≈ 8.33
+    @test result[1] ≈ expected_pooled
+    @test result[2] ≈ expected_pooled
+    @test result[3] ≈ 15.0
+
+    # Test already monotone sequence
+    values = [1.0, 2.0, 3.0, 4.0]
+    weights = ones(4)
+    result = IS.isotonic_regression(values, weights)
+    @test result ≈ values
+
+    # Test constant sequence
+    values = [5.0, 5.0, 5.0]
+    weights = ones(3)
+    result = IS.isotonic_regression(values, weights)
+    @test result ≈ values
+
+    # Test empty input
+    @test IS.isotonic_regression(Float64[], Float64[]) == Float64[]
+
+    # Test mismatched lengths
+    @test_throws ArgumentError IS.isotonic_regression([1.0, 2.0], [1.0])
+end
+
+@testset "Test increasing_curve_convex_approximation for PiecewiseStepData" begin
+    # Test basic non-convex case via IncrementalCurve
+    # Slopes: [10, 5, 15] - violation at index 1 (10 > 5)
+    step_data = IS.PiecewiseStepData([0.0, 1.0, 2.0, 3.0], [10.0, 5.0, 15.0])
+    curve = IS.IncrementalCurve(step_data, 0.0)
+    @test !IS.is_convex(curve)
+
+    convex_curve =
+        IS.increasing_curve_convex_approximation(
+            curve;
+            weights = :uniform,
+            merge_colinear = false,
+        )
+    @test IS.is_convex(convex_curve)
+    convex_step = IS.get_function_data(convex_curve)
+    @test IS.get_x_coords(convex_step) == IS.get_x_coords(step_data)
+
+    # Check that the first two slopes are pooled
+    new_y = IS.get_y_coords(convex_step)
+    @test new_y[1] ≈ new_y[2] ≈ 7.5  # (10 + 5) / 2
+    @test new_y[3] ≈ 15.0
+
+    # Test with length weighting
+    step_data = IS.PiecewiseStepData([0.0, 2.0, 3.0, 6.0], [10.0, 5.0, 15.0])
+    curve = IS.IncrementalCurve(step_data, 0.0)
+    # Segment lengths: [2, 1, 3]
+    convex_curve =
+        IS.increasing_curve_convex_approximation(
+            curve;
+            weights = :length,
+            merge_colinear = false,
+        )
+    @test IS.is_convex(convex_curve)
+    new_y = IS.get_y_coords(IS.get_function_data(convex_curve))
+    # Pooled value = (10*2 + 5*1) / (2+1) = 25/3 ≈ 8.33
+    @test new_y[1] ≈ new_y[2] ≈ 25.0 / 3.0
+
+    # Test already convex data (should return equivalent curve)
+    convex_data = IS.PiecewiseStepData([0.0, 1.0, 2.0], [1.0, 2.0])
+    curve = IS.IncrementalCurve(convex_data, 0.0)
+    @test IS.is_convex(curve)
+    result = IS.increasing_curve_convex_approximation(curve)
+    @test result == curve  # Should be equivalent curve
+
+    # Test multiple violations
+    step_data = IS.PiecewiseStepData([0.0, 1.0, 2.0, 3.0, 4.0], [5.0, 3.0, 1.0, 10.0])
+    curve = IS.IncrementalCurve(step_data, 0.0)
+    convex_curve = IS.increasing_curve_convex_approximation(curve; weights = :uniform)
+    @test IS.is_convex(convex_curve)
+
+    # Test uniform weights
+    step_data = IS.PiecewiseStepData([0.0, 1.0, 2.0, 3.0], [10.0, 5.0, 15.0])
+    curve = IS.IncrementalCurve(step_data, 0.0)
+    convex_curve = IS.increasing_curve_convex_approximation(curve; weights = :uniform)
+    @test IS.is_convex(convex_curve)
+end
+
+@testset "Test increasing_curve_convex_approximation for PiecewiseLinearData" begin
+    # Test basic non-convex case via InputOutputCurve
+    linear_data = IS.PiecewiseLinearData([
+        (x = 0.0, y = 0.0),
+        (x = 1.0, y = 10.0),   # slope = 10
+        (x = 2.0, y = 15.0),   # slope = 5  <- violation!
+        (x = 3.0, y = 30.0),   # slope = 15
+    ])
+    curve = IS.InputOutputCurve(linear_data)
+    @test !IS.is_convex(curve)
+
+    # Test with anchor=:first (with merge_colinear=false to preserve x-coords)
+    convex_curve =
+        IS.increasing_curve_convex_approximation(
+            curve;
+            weights = :uniform,
+            anchor = :first,
+            merge_colinear = false,
+        )
+    @test IS.is_convex(convex_curve)
+    convex_linear = IS.get_function_data(convex_curve)
+    @test IS.get_x_coords(convex_linear) == IS.get_x_coords(linear_data)
+    # First point should be preserved
+    @test IS.get_points(convex_linear)[1] == IS.get_points(linear_data)[1]
+
+    # Test with anchor=:last (with merge_colinear=false to preserve x-coords)
+    convex_curve =
+        IS.increasing_curve_convex_approximation(
+            curve;
+            weights = :uniform,
+            anchor = :last,
+            merge_colinear = false,
+        )
+    @test IS.is_convex(convex_curve)
+    convex_linear = IS.get_function_data(convex_curve)
+    # Last point should be preserved
+    @test IS.get_points(convex_linear)[end] == IS.get_points(linear_data)[end]
+
+    # Test with anchor=:centroid
+    convex_curve =
+        IS.increasing_curve_convex_approximation(
+            curve;
+            weights = :uniform,
+            anchor = :centroid,
+        )
+    @test IS.is_convex(convex_curve)
+
+    # Test already convex data (with colinear segments)
+    convex_data = IS.PiecewiseLinearData([(0, 0), (1, 1), (1.1, 2), (1.2, 3)])
+    curve = IS.InputOutputCurve(convex_data)
+    @test IS.is_convex(curve)
+    result = IS.increasing_curve_convex_approximation(curve)
+    @test IS.is_convex(result)
+    # With merge_colinear=true (default), colinear segments may be merged
+    # The last two segments have slope 10, so they're merged
+    @test length(IS.get_points(IS.get_function_data(result))) == 3
+    # With merge_colinear=false, convex curve should be returned unchanged
+    result_no_merge =
+        IS.increasing_curve_convex_approximation(curve; merge_colinear = false)
+    @test result_no_merge === curve
+
+    # Test with length weighting (merge_colinear=false to verify pooled slopes)
+    linear_data = IS.PiecewiseLinearData([
+        (x = 0.0, y = 0.0),
+        (x = 2.0, y = 20.0),  # slope = 10, length = 2
+        (x = 3.0, y = 25.0),  # slope = 5, length = 1
+        (x = 6.0, y = 70.0),  # slope = 15, length = 3
+    ])
+    curve = IS.InputOutputCurve(linear_data)
+    convex_curve =
+        IS.increasing_curve_convex_approximation(
+            curve;
+            weights = :length,
+            anchor = :first,
+            merge_colinear = false,
+        )
+    @test IS.is_convex(convex_curve)
+
+    # Check the pooled slope value
+    new_slopes = IS.get_slopes(IS.get_function_data(convex_curve))
+    expected_pooled = (10.0 * 2.0 + 5.0 * 1.0) / 3.0  # 25/3
+    @test new_slopes[1] ≈ expected_pooled
+    @test new_slopes[2] ≈ expected_pooled
+
+    # Test invalid anchor
+    @test_throws ArgumentError IS.increasing_curve_convex_approximation(
+        curve;
+        anchor = :invalid,
+    )
+end
+
+@testset "Test approximation_error" begin
+    # Test PiecewiseStepData error
+    original = IS.PiecewiseStepData([0.0, 1.0, 2.0, 3.0], [10.0, 5.0, 15.0])
+    approximated = IS.PiecewiseStepData([0.0, 1.0, 2.0, 3.0], [7.5, 7.5, 15.0])
+
+    # L2 error with uniform weights
+    err_l2 =
+        IS.approximation_error(original, approximated; metric = :L2, weights = :uniform)
+    diff = [10.0 - 7.5, 5.0 - 7.5, 15.0 - 15.0]
+    expected_l2 = sqrt(sum(diff .^ 2) / 3)
+    @test err_l2 ≈ expected_l2
+
+    # L1 error
+    err_l1 =
+        IS.approximation_error(original, approximated; metric = :L1, weights = :uniform)
+    expected_l1 = sum(abs.(diff)) / 3
+    @test err_l1 ≈ expected_l1
+
+    # Linf error
+    err_linf =
+        IS.approximation_error(original, approximated; metric = :Linf, weights = :uniform)
+    @test err_linf ≈ 2.5  # max(|2.5|, |-2.5|, |0|)
+
+    # Test with length weighting
+    original = IS.PiecewiseStepData([0.0, 2.0, 3.0, 6.0], [10.0, 5.0, 15.0])
+    approximated = IS.PiecewiseStepData([0.0, 2.0, 3.0, 6.0], [8.0, 8.0, 15.0])
+    err = IS.approximation_error(original, approximated; metric = :L2, weights = :length)
+    # Weights: [2, 1, 3]
+    diff = [10.0 - 8.0, 5.0 - 8.0, 15.0 - 15.0]
+    expected = sqrt((4.0 * 2 + 9.0 * 1 + 0.0 * 3) / 6)
+    @test err ≈ expected
+
+    # Test invalid metric
+    @test_throws ArgumentError IS.approximation_error(
+        original,
+        approximated;
+        metric = :invalid,
+    )
+
+    # Test PiecewiseLinearData error (based on slopes)
+    # Use merge_colinear=false so dimensions match for error computation
+    original = IS.PiecewiseLinearData([
+        (x = 0.0, y = 0.0),
+        (x = 1.0, y = 10.0),
+        (x = 2.0, y = 15.0),
+        (x = 3.0, y = 30.0),
+    ])
+    curve = IS.InputOutputCurve(original)
+    convex_curve =
+        IS.increasing_curve_convex_approximation(
+            curve;
+            weights = :uniform,
+            anchor = :first,
+            merge_colinear = false,
+        )
+    convex = IS.get_function_data(convex_curve)
+    err = IS.approximation_error(original, convex; weights = :uniform)
+    @test err >= 0.0  # Error should be non-negative
+end
+
+@testset "Test convex approximation edge cases" begin
+    # Test with two points (single segment) via InputOutputCurve
+    linear_data = IS.PiecewiseLinearData([(0.0, 0.0), (1.0, 10.0)])
+    curve = IS.InputOutputCurve(linear_data)
+    @test IS.is_convex(curve)
+    @test IS.increasing_curve_convex_approximation(curve) === curve
+
+    step_data = IS.PiecewiseStepData([0.0, 1.0], [5.0])
+    step_curve = IS.IncrementalCurve(step_data, 0.0)
+    @test IS.is_convex(step_curve)
+    @test IS.increasing_curve_convex_approximation(step_curve) == step_curve
+
+    # Test with equal slopes (colinear segments should be merged)
+    linear_data = IS.PiecewiseLinearData([(0.0, 0.0), (1.0, 5.0), (2.0, 10.0), (3.0, 15.0)])
+    curve = IS.InputOutputCurve(linear_data)
+    @test IS.is_convex(curve)
+    result = IS.increasing_curve_convex_approximation(curve)
+    @test IS.is_convex(result)
+    # Colinear segments are merged, so we get 2 points instead of 4
+    @test length(IS.get_points(IS.get_function_data(result))) == 2
+    # With merge_colinear=false, should return unchanged
+    result_no_merge =
+        IS.increasing_curve_convex_approximation(curve; merge_colinear = false)
+    @test result_no_merge === curve
+
+    # Test severe violation (all slopes need to pool)
+    step_data = IS.PiecewiseStepData([0.0, 1.0, 2.0, 3.0], [10.0, 5.0, 1.0])
+    step_curve = IS.IncrementalCurve(step_data, 0.0)
+    convex_curve = IS.increasing_curve_convex_approximation(step_curve; weights = :uniform)
+    @test IS.is_convex(convex_curve)
+    # All should pool to average: (10 + 5 + 1) / 3 ≈ 5.33
+    new_y = IS.get_y_coords(IS.get_function_data(convex_curve))
+    @test all(y ≈ 16.0 / 3.0 for y in new_y)
+
+    # Use NullLogger to suppress expected @error logs from is_valid_data()
+    Logging.with_logger(Logging.NullLogger()) do
+        # Test with negative values - throws error because curve is not strictly increasing
+        step_data_neg = IS.PiecewiseStepData([0.0, 1.0, 2.0, 3.0], [-5.0, -10.0, -3.0])
+        step_curve_neg = IS.IncrementalCurve(step_data_neg, 0.0)
+        @test_throws ErrorException IS.increasing_curve_convex_approximation(step_curve_neg)
+
+        # Test with large values - throws error due to data validation (excessive slope)
+        step_data_large = IS.PiecewiseStepData([0.0, 1.0, 2.0], [1e10, 1e5])
+        step_curve_large = IS.IncrementalCurve(step_data_large, 0.0)
+        @test_throws ErrorException IS.increasing_curve_convex_approximation(
+            step_curve_large,
+        )
+
+        # Test with excessively large negative values - throws error (abs value check)
+        step_data_large_neg = IS.PiecewiseStepData([0.0, 1.0, 2.0], [-1e10, -1e5])
+        step_curve_large_neg = IS.IncrementalCurve(step_data_large_neg, 0.0)
+        @test_throws ErrorException IS.increasing_curve_convex_approximation(
+            step_curve_large_neg,
+        )
+    end
+
+    # Test approximation_error returns zero for identical data
+    original = IS.PiecewiseStepData([0.0, 1.0, 2.0], [5.0, 10.0])
+    @test IS.approximation_error(original, original) ≈ 0.0
+end
+
+@testset "Test convex approximation consistency" begin
+    # Test that increasing_curve_convex_approximation is idempotent (second call returns same object)
+    linear_data = IS.PiecewiseLinearData([
+        (x = 0.0, y = 0.0),
+        (x = 1.0, y = 10.0),
+        (x = 2.0, y = 15.0),
+        (x = 3.0, y = 30.0),
+    ])
+    curve = IS.InputOutputCurve(linear_data)
+    convex1 = IS.increasing_curve_convex_approximation(curve)
+    convex2 = IS.increasing_curve_convex_approximation(convex1)
+    # After colinearity cleanup + convexification, result is already clean
+    # So second call should produce equivalent result  
+    @test IS.is_convex(convex1)
+    @test IS.is_convex(convex2)
+    # Check structural equality (both should be convex and cleaned)
+    @test IS.get_function_data(convex2) == IS.get_function_data(convex1)
+
+    # Test with step data
+    step_data = IS.PiecewiseStepData([0.0, 1.0, 2.0, 3.0], [10.0, 5.0, 15.0])
+    step_curve = IS.IncrementalCurve(step_data, 0.0)
+    convex1 = IS.increasing_curve_convex_approximation(step_curve)
+    convex2 = IS.increasing_curve_convex_approximation(convex1)
+    @test IS.is_convex(convex1)
+    @test IS.is_convex(convex2)
+    # Check structural equality
+    @test IS.get_function_data(convex2) == IS.get_function_data(convex1)
+end
+
+@testset "Test convex approximation with random data" begin
+    rng = Random.Xoshiro(42)
+    n_tests = 20
+    n_points = 10
+
+    for _ in 1:n_tests
+        # Generate random piecewise linear data with positive slopes (valid cost curve)
+        rand_x = sort(rand(rng, n_points))
+        # Cumsum of positive values ensures monotonically increasing y (non-negative slopes)
+        rand_y = cumsum(rand(rng, n_points) * 10)
+        pointwise = IS.PiecewiseLinearData(collect(zip(rand_x, rand_y)))
+
+        # Make convex via InputOutputCurve
+        curve = IS.InputOutputCurve(pointwise)
+        convex_curve =
+            IS.increasing_curve_convex_approximation(curve; merge_colinear = false)
+        @test convex_curve !== nothing
+        convex = IS.get_function_data(convex_curve)
+        @test IS.is_convex(convex)
+        @test IS.get_x_coords(convex) == IS.get_x_coords(pointwise)
+
+        # Generate random step data with positive marginal rates (valid cost curve)
+        rand_x_step = sort(rand(rng, n_points))
+        rand_y_step = rand(rng, n_points - 1) * 100  # Positive marginal rates
+        stepwise = IS.PiecewiseStepData(rand_x_step, rand_y_step)
+
+        # Make convex via IncrementalCurve
+        step_curve = IS.IncrementalCurve(stepwise, 0.0)
+        convex_step_curve = IS.increasing_curve_convex_approximation(step_curve)
+        @test convex_step_curve !== nothing
+        convex_step = IS.get_function_data(convex_step_curve)
+        @test IS.is_convex(convex_step)
+    end
+end
+
 @testset "Test piecewise domain checking" begin
     pwl = IS.PiecewiseStepData([1, 3, 5], [8, 10])
 
@@ -708,4 +1082,186 @@ end
     @assert isapprox(5 + eps() / 2, 5)
     pwl(1 - eps() / 2)
     pwl(5 + eps() / 2)
+end
+
+# =============================================================================
+# INCREASING_CURVE_CONVEX_APPROXIMATION TESTS FOR VALUE CURVES
+# =============================================================================
+
+@testset "Test increasing_curve_convex_approximation for PiecewisePointCurve" begin
+    # Non-convex piecewise curve (slopes decrease then increase)
+    ppc = IS.PiecewisePointCurve([
+        (0.0, 0.0),
+        (1.0, 10.0),   # slope = 10
+        (2.0, 15.0),   # slope = 5 <- violation
+        (3.0, 30.0),   # slope = 15
+    ])
+    @test !IS.is_convex(ppc)
+
+    convex_ppc = IS.increasing_curve_convex_approximation(ppc; merge_colinear = false)
+    @test IS.is_convex(convex_ppc)
+    @test convex_ppc isa IS.PiecewisePointCurve
+    @test IS.get_x_coords(convex_ppc) == IS.get_x_coords(ppc)
+
+    # Already convex - should return same object
+    ppc_convex = IS.PiecewisePointCurve([(0.0, 0.0), (1.0, 1.0), (2.0, 3.0)])
+    @test IS.is_convex(ppc_convex)
+    result = IS.increasing_curve_convex_approximation(ppc_convex)
+    @test result === ppc_convex
+
+    # With input_at_zero - should be preserved
+    ppc_iaz = IS.InputOutputCurve(
+        IS.PiecewiseLinearData([(0.0, 0.0), (1.0, 10.0), (2.0, 15.0)]),
+        100.0,
+    )
+    result_iaz = IS.increasing_curve_convex_approximation(ppc_iaz)
+    @test IS.get_input_at_zero(result_iaz) == 100.0
+
+    # Test with different anchor options
+    convex_last = IS.increasing_curve_convex_approximation(ppc; anchor = :last)
+    @test IS.is_convex(convex_last)
+    @test IS.get_points(convex_last)[end] == IS.get_points(ppc)[end]
+
+    convex_centroid = IS.increasing_curve_convex_approximation(ppc; anchor = :centroid)
+    @test IS.is_convex(convex_centroid)
+
+    # Test with different weight options
+    convex_uniform = IS.increasing_curve_convex_approximation(ppc; weights = :uniform)
+    @test IS.is_convex(convex_uniform)
+
+    convex_length = IS.increasing_curve_convex_approximation(ppc; weights = :length)
+    @test IS.is_convex(convex_length)
+end
+
+@testset "Test increasing_curve_convex_approximation for PiecewiseIncrementalCurve" begin
+    # Non-convex: slopes decrease then increase [10, 5, 15]
+    pic = IS.PiecewiseIncrementalCurve(0.0, [0.0, 1.0, 2.0, 3.0], [10.0, 5.0, 15.0])
+    @test !IS.is_convex(pic)
+
+    convex_pic = IS.increasing_curve_convex_approximation(pic; merge_colinear = false)
+    @test IS.is_convex(convex_pic)
+    @test convex_pic isa IS.PiecewiseIncrementalCurve
+    @test IS.get_x_coords(convex_pic) == IS.get_x_coords(pic)
+
+    # Already convex - should return equivalent curve
+    pic_convex = IS.PiecewiseIncrementalCurve(0.0, [0.0, 1.0, 2.0], [5.0, 10.0])
+    @test IS.is_convex(pic_convex)
+    result = IS.increasing_curve_convex_approximation(pic_convex)
+    @test result == pic_convex
+
+    # With input_at_zero - should be preserved
+    pic_iaz = IS.IncrementalCurve(
+        IS.PiecewiseStepData([0.0, 1.0, 2.0, 3.0], [10.0, 5.0, 15.0]),
+        0.0,
+        200.0,
+    )
+    result_iaz = IS.increasing_curve_convex_approximation(pic_iaz)
+    @test IS.is_convex(result_iaz)
+    @test IS.get_input_at_zero(result_iaz) == 200.0
+
+    # Test with different weight options
+    convex_uniform = IS.increasing_curve_convex_approximation(pic; weights = :uniform)
+    @test IS.is_convex(convex_uniform)
+
+    convex_length = IS.increasing_curve_convex_approximation(pic; weights = :length)
+    @test IS.is_convex(convex_length)
+end
+
+@testset "Test increasing_curve_convex_approximation for PiecewiseAverageCurve" begin
+    # Non-convex average rate curve (but with valid positive slopes after conversion)
+    # Use average rates that produce non-convex but positive-slope curves
+    pac = IS.PiecewiseAverageCurve(0.0, [0.0, 1.0, 2.0, 3.0], [5.0, 3.0, 6.0])
+    @test !IS.is_convex(pac)
+
+    convex_pac = IS.increasing_curve_convex_approximation(pac)
+    @test convex_pac !== nothing
+    @test IS.is_convex(convex_pac)
+    @test convex_pac isa IS.PiecewiseAverageCurve
+
+    # Already convex - should return equivalent object (not necessarily same reference)
+    pac_convex = IS.PiecewiseAverageCurve(0.0, [0.0, 1.0, 2.0], [5.0, 10.0])
+    @test IS.is_convex(pac_convex)
+    result = IS.increasing_curve_convex_approximation(pac_convex)
+    @test result == pac_convex
+
+    # Test with different options
+    convex_uniform = IS.increasing_curve_convex_approximation(pac; weights = :uniform)
+    @test convex_uniform !== nothing
+    @test IS.is_convex(convex_uniform)
+
+    convex_last = IS.increasing_curve_convex_approximation(pac; anchor = :last)
+    @test convex_last !== nothing
+    @test IS.is_convex(convex_last)
+
+    # Use NullLogger to suppress expected @error logs from is_valid_data()
+    Logging.with_logger(Logging.NullLogger()) do
+        # Test that data with negative slopes throws error (not strictly increasing)
+        pac_with_neg =
+            IS.PiecewiseAverageCurve(6.0, [1.0, 2.0, 3.0, 4.0], [10.0, 5.0, 15.0])
+        @test_throws ErrorException IS.increasing_curve_convex_approximation(pac_with_neg)
+
+        # Test that data with excessively large slopes also throws error
+        pac_invalid =
+            IS.PiecewiseAverageCurve(6.0, [1.0, 2.0, 3.0, 4.0], [1e10, 5.0, 15.0])
+        @test_throws ErrorException IS.increasing_curve_convex_approximation(pac_invalid)
+    end
+end
+
+@testset "Test increasing_curve_convex_approximation idempotency for ValueCurves" begin
+    # Test that applying increasing_curve_convex_approximation twice returns the same object on second call
+    # Note: IncrementalCurve{LinearFunctionData} and AverageRateCurve{LinearFunctionData}
+    # are intentionally not included - increasing_curve_convex_approximation is not defined for these types.
+    # Note: LinearCurve and QuadraticCurve are not supported by increasing_curve_convex_approximation
+
+    # Use non-convex data with valid (positive, reasonable) costs that produce positive slopes
+    curves = [
+        IS.PiecewisePointCurve([(0.0, 0.0), (1.0, 10.0), (2.0, 15.0), (3.0, 30.0)]),
+        IS.PiecewiseIncrementalCurve(0.0, [0.0, 1.0, 2.0, 3.0], [10.0, 5.0, 8.0]),  # Non-convex (10 > 5) but all positive
+        IS.PiecewiseAverageCurve(6.0, [1.0, 2.0, 3.0, 4.0], [6.0, 5.0, 6.0]),  # Non-convex but produces positive slopes
+    ]
+
+    for curve in curves
+        convex1 = IS.increasing_curve_convex_approximation(curve)
+        @test convex1 !== nothing
+        @test IS.is_convex(convex1)
+        convex2 = IS.increasing_curve_convex_approximation(convex1)
+        @test convex2 == convex1  # Second call should return equivalent object
+    end
+end
+
+@testset "Test increasing_curve_convex_approximation consistency across curve representations" begin
+    # Create equivalent curves in different representations and verify
+    # that increasing_curve_convex_approximation produces consistent results
+
+    # Non-convex PiecewisePointCurve
+    ppc = IS.PiecewisePointCurve([
+        (1.0, 6.0),
+        (3.0, 16.0),   # slope = 5
+        (5.0, 21.0),   # slope = 2.5 <- violation
+    ])
+
+    # Equivalent IncrementalCurve
+    pic = IS.IncrementalCurve(ppc)
+
+    # Equivalent AverageRateCurve
+    pac = IS.AverageRateCurve(ppc)
+
+    # All should be non-convex
+    @test !IS.is_convex(ppc)
+    @test !IS.is_convex(pic)
+    @test !IS.is_convex(pac)
+
+    # Make convex
+    convex_ppc = IS.increasing_curve_convex_approximation(ppc)
+    convex_pic = IS.increasing_curve_convex_approximation(pic)
+    convex_pac = IS.increasing_curve_convex_approximation(pac)
+
+    # All should now be convex
+    @test IS.is_convex(convex_ppc)
+    @test IS.is_convex(convex_pic)
+    @test IS.is_convex(convex_pac)
+
+    # Convert all to InputOutputCurve and verify they're all convex
+    @test IS.is_convex(IS.InputOutputCurve(convex_pic))
+    @test IS.is_convex(IS.InputOutputCurve(convex_pac))
 end

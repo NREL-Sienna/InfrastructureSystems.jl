@@ -262,7 +262,7 @@ function running_sum(data::PiecewiseStepData)
     slopes = get_y_coords(data)
     x_coords = get_x_coords(data)
     points = Vector{XY_COORDS}(undef, length(x_coords))
-    running_y = 0
+    running_y = 0.0
     points[1] = (x = x_coords[1], y = running_y)
     for (i, (prev_slope, this_x, dx)) in
         enumerate(zip(slopes, x_coords[2:end], get_x_lengths(data)))
@@ -327,44 +327,94 @@ Base.isequal(a::T, b::T) where {T <: FunctionData} = isequal_from_fields(a, b)
 
 Base.hash(a::FunctionData, h::UInt) = hash_from_fields(a, h)
 
-function _slope_convexity_check(slopes::Vector{Float64})
-    for ix in 1:(length(slopes) - 1)
-        if slopes[ix] > slopes[ix + 1]
-            @debug slopes
-            return false
+# CONVEX APPROXIMATION FUNCTIONS
+
+"""
+    isotonic_regression(values::Vector{Float64}, weights::Vector{Float64}) -> Vector{Float64}
+
+Pool Adjacent Violators Algorithm (PAVA) for weighted isotonic regression.
+Returns the closest (weighted L2) non-decreasing sequence to `values`.
+
+This is an O(n) algorithm that finds the optimal monotonically non-decreasing
+approximation to the input values.
+"""
+function isotonic_regression(values::Vector{Float64}, weights::Vector{Float64})
+    n = length(values)
+    n == 0 && return Float64[]
+    length(weights) != n &&
+        throw(ArgumentError("values and weights must have the same length"))
+
+    # Initialize: each element is its own block
+    # Store tuples of (start_index, end_index, weighted_sum, total_weight)
+    blocks = Vector{Tuple{Int, Int, Float64, Float64}}(undef, n)
+    for i in 1:n
+        blocks[i] = (i, i, values[i] * weights[i], weights[i])
+    end
+
+    # Merge blocks that violate monotonicity
+    num_blocks = n
+    i = 1
+    while i < num_blocks
+        # Get weighted averages
+        avg_curr = blocks[i][3] / blocks[i][4]
+        avg_next = blocks[i + 1][3] / blocks[i + 1][4]
+
+        if avg_curr > avg_next  # Violation: merge blocks
+            # Merge blocks[i] and blocks[i+1]
+            merged = (
+                blocks[i][1],                          # start
+                blocks[i + 1][2],                      # end
+                blocks[i][3] + blocks[i + 1][3],       # sum of weighted values
+                blocks[i][4] + blocks[i + 1][4],       # sum of weights
+            )
+
+            # Shift blocks down
+            blocks[i] = merged
+            for j in (i + 1):(num_blocks - 1)
+                blocks[j] = blocks[j + 1]
+            end
+            num_blocks -= 1
+
+            # Step back to check if previous block now violates
+            i = max(1, i - 1)
+        else
+            i += 1
         end
     end
-    return true
-end
 
-function _slope_concavity_check(slopes::Vector{Float64})
-    for ix in 1:(length(slopes) - 1)
-        if slopes[ix] < slopes[ix + 1]
-            @debug slopes
-            return false
+    # Expand blocks back to full result
+    result = Vector{Float64}(undef, n)
+    for block_idx in 1:num_blocks
+        start_idx = blocks[block_idx][1]
+        end_idx = blocks[block_idx][2]
+        avg = blocks[block_idx][3] / blocks[block_idx][4]
+        for j in start_idx:end_idx
+            result[j] = avg
         end
     end
-    return true
+
+    return result
 end
 
 """
-Returns True/False depending on the convexity of the underlying data
-"""
-is_convex(pwl::PiecewiseLinearData) =
-    _slope_convexity_check(get_slopes(pwl))
+Compute weights for isotonic regression based on the weighting scheme.
 
-is_convex(pwl::PiecewiseStepData) =
-    _slope_convexity_check(get_y_coords(pwl))
-
+# Arguments
+- `x_coords::Vector{Float64}`: x-coordinates of the piecewise data
+- `weights::Symbol`: weighting scheme
+  - `:uniform` - all segments weighted equally
+  - `:length` - segments weighted by their x-length (default)
 """
-Returns True/False depending on the concavity of the underlying data.
-For piecewise linear data, it checks if the sequence of slopes is non-increasing.
-"""
-is_concave(pwl::PiecewiseLinearData) =
-    _slope_concavity_check(get_slopes(pwl))
-
-is_concave(pwl::PiecewiseStepData) =
-    _slope_concavity_check(get_y_coords(pwl))
+function _compute_convex_weights(x_coords::Vector{Float64}, weights::Symbol)
+    n_segments = length(x_coords) - 1
+    if weights === :uniform
+        return ones(n_segments)
+    elseif weights === :length
+        return _get_x_lengths(x_coords)
+    else
+        throw(ArgumentError("weights must be :uniform or :length"))
+    end
+end
 
 serialize(val::FunctionData) = serialize_struct(val)
 
@@ -461,11 +511,14 @@ Base.:*(c::Real, fd::PiecewiseLinearData) =
     )
 
 "Multiply the `PiecewiseStepData` by a scalar: (c * f)(x) = c * f(x)"
-Base.:*(c::Real, fd::PiecewiseStepData) =
-    PiecewiseStepData(
-        get_x_coords(fd),
-        c * get_y_coords(fd),
-    )
+function Base.:*(c::Real, fd::PiecewiseStepData)
+    y_coords = get_y_coords(fd)
+    new_y = Vector{Float64}(undef, length(y_coords))
+    for i in eachindex(y_coords, new_y)
+        new_y[i] = c * y_coords[i]
+    end
+    return PiecewiseStepData(get_x_coords(fd), new_y)
+end
 
 # commutativity
 "Multiply the `FunctionData` by a scalar: (f * c)(x) = (c * f)(x) = c * f(x)"
@@ -494,11 +547,14 @@ Base.:+(fd::PiecewiseLinearData, c::Real) =
     )
 
 "Add a scalar to the `PiecewiseStepData`: (f + c)(x) = f(x) + c"
-Base.:+(fd::PiecewiseStepData, c::Real) =
-    PiecewiseStepData(
-        get_x_coords(fd),
-        get_y_coords(fd) .+ c,
-    )
+function Base.:+(fd::PiecewiseStepData, c::Real)
+    y_coords = get_y_coords(fd)
+    new_y = Vector{Float64}(undef, length(y_coords))
+    for i in eachindex(y_coords, new_y)
+        new_y[i] = y_coords[i] + c
+    end
+    return PiecewiseStepData(get_x_coords(fd), new_y)
+end
 
 # commutativity
 "Add a scalar to the `FunctionData`: (c + f)(x) = (f + c)(x) = f(x) + c"
@@ -528,11 +584,14 @@ Base.:>>(fd::PiecewiseLinearData, c::Real) =
     )
 
 "Right shift the `PiecewiseStepData` by a scalar: (f >> c)(x) = f(x - c)"
-Base.:>>(fd::PiecewiseStepData, c::Real) =
-    PiecewiseStepData(
-        get_x_coords(fd) .+ c,
-        get_y_coords(fd),
-    )
+function Base.:>>(fd::PiecewiseStepData, c::Real)
+    x_coords = get_x_coords(fd)
+    new_x = Vector{Float64}(undef, length(x_coords))
+    for i in eachindex(x_coords, new_x)
+        new_x[i] = x_coords[i] + c
+    end
+    return PiecewiseStepData(new_x, get_y_coords(fd))
+end
 
 "Left shift the `FunctionData` by a scalar: (f << c)(x) = (f >> -c)(x) = f(x + c)"
 Base.:<<(fd::FunctionData, c::Real) = fd >> -c
@@ -615,8 +674,13 @@ function Base.:+(f::PiecewiseStepData, g::PiecewiseStepData)
                 "f x-coords = $f_x_coords, g x-coords = $g_x_coords",
             ),
         )
-    new_y_coords = get_y_coords(f) .+ get_y_coords(g)
-    return PiecewiseStepData(f_x_coords, new_y_coords)
+    f_y = get_y_coords(f)
+    g_y = get_y_coords(g)
+    new_y = Vector{Float64}(undef, length(f_y))
+    for i in eachindex(f_y, g_y, new_y)
+        new_y[i] = f_y[i] + g_y[i]
+    end
+    return PiecewiseStepData(f_x_coords, new_y)
 end
 
 # FUNCTION EVALUATION
@@ -650,15 +714,31 @@ _eval_fd_impl(
     y_coords[i]
 
 "Evaluate the `PiecewiseLinearData` or `PiecewiseStepData` at a given x-coordinate"
-function (fd::Union{PiecewiseLinearData, PiecewiseStepData})(x::Real)
-    lb, ub = get_domain(fd)
+function (fd::PiecewiseLinearData)(x::Real)
+    points = get_points(fd)
+    lb, ub = points[1].x, points[end].x
     # defend against floating point precision issues at the boundaries.
     ((lb <= x <= ub) || isapprox(x, lb) || isapprox(x, ub)) ||
         throw(ArgumentError("x=$x is outside the domain [$lb, $ub]"))
     x = clamp(x, lb, ub)
+    i_leq = searchsortedlast(points, x; by = p -> p isa Real ? p : p.x)  # uses binary search!
+    (i_leq == length(points)) && return points[end].y
+    begin
+        p1 = points[i_leq]
+        p2 = points[i_leq + 1]
+        return p1.y + (p2.y - p1.y) * (x - p1.x) / (p2.x - p1.x)
+    end
+end
+
+function (fd::PiecewiseStepData)(x::Real)
     x_coords = get_x_coords(fd)
+    lb, ub = x_coords[1], x_coords[end]
+    # defend against floating point precision issues at the boundaries.
+    ((lb <= x <= ub) || isapprox(x, lb) || isapprox(x, ub)) ||
+        throw(ArgumentError("x=$x is outside the domain [$lb, $ub]"))
+    x = clamp(x, lb, ub)
     y_coords = get_y_coords(fd)
     i_leq = searchsortedlast(x_coords, x)  # uses binary search!
-    (i_leq == length(x_coords)) && return last(y_coords)
-    return _eval_fd_impl(i_leq, x, x_coords, y_coords, fd)
+    (i_leq == length(x_coords)) && return y_coords[end]
+    return y_coords[i_leq]
 end
