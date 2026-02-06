@@ -77,7 +77,8 @@
         @test length(result_points) < 5  # Less than original 5 points
 
         # With merge_colinear=false, all original segments are preserved (except for isotonic pooling)
-        result_no_merge = IS.increasing_curve_convex_approximation(ioc; merge_colinear = false)
+        result_no_merge =
+            IS.increasing_curve_convex_approximation(ioc; merge_colinear = false)
         @test IS.is_convex(result_no_merge)
         result_no_merge_points = IS.get_points(IS.get_function_data(result_no_merge))
         @test length(result_no_merge_points) == 5  # All 5 points preserved
