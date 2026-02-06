@@ -319,7 +319,9 @@
                 fuel_cost = 25.0,
             )
 
-            @test_throws ErrorException IS.increasing_curve_convex_approximation(fuel_curve_invalid)
+            @test_throws ErrorException IS.increasing_curve_convex_approximation(
+                fuel_curve_invalid,
+            )
         end
     end
 end
