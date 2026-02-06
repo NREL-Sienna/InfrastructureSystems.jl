@@ -262,7 +262,9 @@ Note 3: `InputOutputCurve{QuadraticFunctionData}` is not supported given that it
   - `:first`: preserve first point, propagate forward
   - `:last`: preserve last point, propagate backward
   - `:centroid`: minimize total vertical displacement
-- `merge_colinear::Bool`: Whether to merge colinear segments (default: `true`)
+- `merge_colinear::Bool`: Whether to merge colinear segments before and after convexification (default: `true`).
+  Merging before removes artificial segmentation that can affect weighting; merging after cleans up
+  any new colinear segments produced by isotonic regression.
 - `device_name::Union{String, Nothing}`: Optional device name for logging (default: `nothing`)
 - `negative_slope_atol::Float64`: Tolerance for negative slope detection (default: `$CONVEXIFICATION_NEGATIVE_SLOPE_TOLERANCE`)
 
@@ -306,6 +308,10 @@ end
 
 Core implementation for piecewise linear curves. Applies isotonic regression on slopes
 to produce a convex approximation. Other curve types delegate to this method.
+
+When `merge_colinear=true`, colinear segments are merged both before and after convexification:
+- Before: removes artificial segmentation that can affect weighting and produce suboptimal results
+- After: cleans up any new colinear segments produced by isotonic regression
 """
 function increasing_curve_convex_approximation(
     curve::InputOutputCurve{PiecewiseLinearData};
@@ -324,16 +330,20 @@ function increasing_curve_convex_approximation(
         error(validation_error)
     end
 
-    # If already convex, optionally clean up colinear segments and return
-    if is_convex(curve)
-        if merge_colinear
-            return merge_colinear_segments(curve, _COLINEARITY_TOLERANCE, device_name)
-        else
-            return curve
-        end
+    # Optionally merge colinear segments before processing
+    # This removes artificial segmentation that can affect weighting
+    working_curve = if merge_colinear
+        merge_colinear_segments(curve, _COLINEARITY_TOLERANCE, device_name)
+    else
+        curve
     end
 
-    fd = get_function_data(curve)
+    # If already convex, return
+    if is_convex(working_curve)
+        return working_curve
+    end
+
+    fd = get_function_data(working_curve)
     points = get_points(fd)
     x_coords = get_x_coords(fd)
     slopes = get_slopes(fd)
@@ -343,9 +353,9 @@ function increasing_curve_convex_approximation(
     new_points = _reconstruct_points(points, new_slopes, anchor)
 
     @info "Transformed non-convex InputOutputCurve to convex approximation$(gen_msg)"
-    result = InputOutputCurve(PiecewiseLinearData(new_points), get_input_at_zero(curve))
+    result = InputOutputCurve(PiecewiseLinearData(new_points), get_input_at_zero(working_curve))
 
-    # Clean up any colinear segments (from original data or produced by isotonic regression)
+    # Clean up any colinear segments produced by isotonic regression
     if merge_colinear
         return merge_colinear_segments(result, _COLINEARITY_TOLERANCE, device_name)
     else

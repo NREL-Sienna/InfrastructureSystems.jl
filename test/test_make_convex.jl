@@ -56,6 +56,33 @@
         @test IS.is_convex(result)
     end
 
+    @testset "Test merge_colinear before and after convexification" begin
+        # Create a non-convex curve with colinear segments that would affect weighting
+        # Slopes: [1.0, 1.0, 3.0, 2.0] - first two are colinear, last two are concave
+        pld = IS.PiecewiseLinearData([
+            (x = 0.0, y = 0.0),
+            (x = 1.0, y = 1.0),   # slope 1.0
+            (x = 2.0, y = 2.0),   # slope 1.0 (colinear with previous)
+            (x = 3.0, y = 5.0),   # slope 3.0
+            (x = 4.0, y = 7.0),   # slope 2.0 (non-convex: 3.0 > 2.0)
+        ])
+        ioc = IS.InputOutputCurve(pld)
+        @test !IS.is_convex(ioc)
+
+        # With merge_colinear=true (default), colinear segments are merged first
+        result = IS.increasing_curve_convex_approximation(ioc)
+        @test IS.is_convex(result)
+        # The result should have fewer points due to merging
+        result_points = IS.get_points(IS.get_function_data(result))
+        @test length(result_points) < 5  # Less than original 5 points
+
+        # With merge_colinear=false, all original segments are preserved (except for isotonic pooling)
+        result_no_merge = IS.increasing_curve_convex_approximation(ioc; merge_colinear = false)
+        @test IS.is_convex(result_no_merge)
+        result_no_merge_points = IS.get_points(IS.get_function_data(result_no_merge))
+        @test length(result_no_merge_points) == 5  # All 5 points preserved
+    end
+
     @testset "Test is_convex for ValueCurves with integration" begin
         # Test that IncrementalCurve performs integration for convexity check
         psd = IS.PiecewiseStepData([0.0, 1.0, 2.0], [3.0, 5.0])
