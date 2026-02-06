@@ -102,7 +102,7 @@ exports code from `InfrastructureSystems.jl`:
     
     ````markdown
     ```@autodocs
-    Modules = [InfrastructureSystems]
+    Modules = [IS] # Use IS due to syntax: import InfrastructureSystems as IS
     Pages   = ["production_variable_cost_curve.jl", # examples
                 "cost_aliases.jl",
             ]
