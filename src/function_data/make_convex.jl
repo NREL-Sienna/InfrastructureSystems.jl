@@ -217,14 +217,20 @@ end
 # ============================================================================
 
 """
-    increasing_curve_convex_approximation(curve::ValueCurve; kwargs...) -> Union{ValueCurve, Nothing}
+    increasing_curve_convex_approximation(
+        curve::ValueCurve;
+        weights::Symbol = :length,
+        anchor::Symbol = :first,
+        merge_colinear::Bool = true,
+        device_name::Union{String, Nothing} = nothing,
+        negative_slope_atol::Float64 = CONVEXIFICATION_NEGATIVE_SLOPE_TOLERANCE,
+    ) -> ValueCurve
 
 Transform a strictly increasing `ValueCurve` into a convex form, with data quality validation.
 
 This function first validates that the curve data is reasonable and physically meaningful
 using [`is_valid_data`](@ref). It also checks that the curve is strictly increasing using
-[`is_strictly_increasing`](@ref). If either check fails, the function logs an error and
-returns `nothing` to trigger a fallback path.
+[`is_strictly_increasing`](@ref). If either check fails, the function throws an error.
 
 If the data passes validation and is already convex, returns the original curve
 (optionally with colinear segments merged).
@@ -233,9 +239,11 @@ If the data passes validation but is non-convex, applies isotonic regression to
 produce a convex approximation.
 
 # Supported curve types
-- `InputOutputCurve{PiecewiseLinearData}`: Isotonic regression on slopes
+- `InputOutputCurve{PiecewiseLinearData}`: Isotonic regression on slopes (core implementation)
 - `IncrementalCurve{PiecewiseStepData}`: Converts to IO curve, makes convex, converts back
 - `AverageRateCurve{PiecewiseStepData}`: Converts to IO curve, makes convex, converts back
+- `CostCurve`: Delegates to underlying ValueCurve, preserves all other fields
+- `FuelCurve`: Delegates to underlying ValueCurve, preserves all other fields
 
 Note 1: `IncrementalCurve{LinearFunctionData}` and `AverageRateCurve{LinearFunctionData}` are
 intentionally NOT supported. These represent derivatives of quadratic functions and rarely
@@ -243,24 +251,24 @@ appear in real data. The arbitrary projection approach used for quadratics is no
 Note 2: `InputOutputCurve{LinearFunctionData}` is not supported because it never presents convexity issues.
 Note 3: `InputOutputCurve{QuadraticFunctionData}` is not supported given that it represents a significant change on the curve
 
+# Arguments
+- `curve`: The curve to transform (or `cost` for CostCurve/FuelCurve methods)
+
 # Keyword Arguments
-- `weights::Symbol`: Weighting scheme for isotonic regression (affects how violations are resolved)
-  - `:length` (default): weight segments by x-extent (wider segments have more influence)
+- `weights::Symbol`: Weighting scheme for isotonic regression (default: `:length`)
+  - `:length`: weight segments by x-extent (wider segments have more influence)
   - `:uniform`: all segments equally weighted
-- `anchor`: Point preservation strategy for reconstructing points from new slopes
-  - `:first` (default): preserve first point, propagate forward
+- `anchor::Symbol`: Point preservation strategy for reconstructing points from new slopes (default: `:first`)
+  - `:first`: preserve first point, propagate forward
   - `:last`: preserve last point, propagate backward
   - `:centroid`: minimize total vertical displacement
-- `merge_colinear`: Whether to merge colinear segments before convexification (default: `true`)
-  - Colinear segments are those where consecutive slopes differ by less than a tolerance
-  - This cleanup step removes artificial segmentation that can cause false non-convex detections
-- `negative_slope_atol`: Absolute tolerance for negative slope detection (default: `CONVEXIFICATION_NEGATIVE_SLOPE_TOLERANCE` = 0.1)
-  - Slopes greater than or equal to `-negative_slope_atol` are considered non-negative
-  - Increase this value to allow small negative slopes that may result from data noise
+- `merge_colinear::Bool`: Whether to merge colinear segments (default: `true`)
+- `device_name::Union{String, Nothing}`: Optional device name for logging (default: `nothing`)
+- `negative_slope_atol::Float64`: Tolerance for negative slope detection (default: `$CONVEXIFICATION_NEGATIVE_SLOPE_TOLERANCE`)
 
 # Returns
-- The convex curve (original or approximation) if successful
-- `nothing` if data quality validation fails or curve is not strictly increasing
+- The convex curve (original or approximation) if validation passes
+- Throws an error if validation fails (with message indicating reason and device name if provided)
 """
 function increasing_curve_convex_approximation end
 
@@ -294,7 +302,11 @@ function _validate_increasing_curve(
 end
 
 """
-    increasing_curve_convex_approximation(curve::InputOutputCurve{PiecewiseLinearData}; kwargs...) -> Union{InputOutputCurve{PiecewiseLinearData}, Nothing}"""
+    increasing_curve_convex_approximation(curve::InputOutputCurve{PiecewiseLinearData}; kwargs...)
+
+Core implementation for piecewise linear curves. Applies isotonic regression on slopes
+to produce a convex approximation. Other curve types delegate to this method.
+"""
 function increasing_curve_convex_approximation(
     curve::InputOutputCurve{PiecewiseLinearData};
     weights::Symbol = :length,
@@ -302,17 +314,14 @@ function increasing_curve_convex_approximation(
     merge_colinear::Bool = true,
     device_name::Union{String, Nothing} = nothing,
     negative_slope_atol::Float64 = CONVEXIFICATION_NEGATIVE_SLOPE_TOLERANCE,
-    _skip_validation::Bool = false,
 )
     gen_msg = isnothing(device_name) ? "" : " for generator $(device_name)"
 
     # Validate data quality and monotonicity
-    if !_skip_validation
-        validation_error =
-            _validate_increasing_curve(curve, device_name, negative_slope_atol)
-        if !isnothing(validation_error)
-            error(validation_error)
-        end
+    validation_error =
+        _validate_increasing_curve(curve, device_name, negative_slope_atol)
+    if !isnothing(validation_error)
+        error(validation_error)
     end
 
     # If already convex, optionally clean up colinear segments and return
@@ -345,7 +354,9 @@ function increasing_curve_convex_approximation(
 end
 
 """
-    increasing_curve_convex_approximation(curve::IncrementalCurve{PiecewiseStepData}; kwargs...) -> Union{IncrementalCurve{PiecewiseStepData}, Nothing}
+    increasing_curve_convex_approximation(curve::IncrementalCurve{PiecewiseStepData}; kwargs)
+
+Converts to `InputOutputCurve`, applies convexification, and converts back.
 """
 function increasing_curve_convex_approximation(
     curve::IncrementalCurve{PiecewiseStepData};
@@ -355,49 +366,23 @@ function increasing_curve_convex_approximation(
     device_name::Union{String, Nothing} = nothing,
     negative_slope_atol::Float64 = CONVEXIFICATION_NEGATIVE_SLOPE_TOLERANCE,
 )
-    gen_msg = isnothing(device_name) ? "" : " for generator $(device_name)"
-
-    # Validate data quality and monotonicity
-    validation_error =
-        _validate_increasing_curve(curve, device_name, negative_slope_atol)
-    if !isnothing(validation_error)
-        error(validation_error)
-    end
-
-    # If already convex, optionally clean up colinear segments and return
-    if is_convex(curve)
-        return if merge_colinear
-            return merge_colinear_segments(curve, _COLINEARITY_TOLERANCE, device_name)
-        else
-            return curve
-        end
-    end
-
-    # Convert to InputOutputCurve, make convex, convert back
     io_curve = InputOutputCurve(curve)
     convex_io = increasing_curve_convex_approximation(
         io_curve;
         weights = weights,
         anchor = anchor,
-        merge_colinear = false,
+        merge_colinear = merge_colinear,
         device_name = device_name,
         negative_slope_atol = negative_slope_atol,
-        _skip_validation = true,  # Already validated above
     )
-
-    @info "Transformed non-convex IncrementalCurve to convex approximation$(gen_msg)"
-    result = IncrementalCurve(convex_io)
-
-    # Clean up any colinear segments (from original data or produced by convexification)
-    if merge_colinear
-        return merge_colinear_segments(result, _COLINEARITY_TOLERANCE, device_name)
-    else
-        return result
-    end
+    return IncrementalCurve(convex_io)
 end
 
 """
-    increasing_curve_convex_approximation(curve::AverageRateCurve{PiecewiseStepData}; kwargs...) -> Union{AverageRateCurve{PiecewiseStepData}, Nothing}"""
+    increasing_curve_convex_approximation(curve::AverageRateCurve{PiecewiseStepData}; kwargs...)
+
+Converts to `InputOutputCurve`, applies convexification, and converts back.
+"""
 function increasing_curve_convex_approximation(
     curve::AverageRateCurve{PiecewiseStepData};
     weights::Symbol = :length,
@@ -406,72 +391,65 @@ function increasing_curve_convex_approximation(
     device_name::Union{String, Nothing} = nothing,
     negative_slope_atol::Float64 = CONVEXIFICATION_NEGATIVE_SLOPE_TOLERANCE,
 )
-    gen_msg = isnothing(device_name) ? "" : " for generator $(device_name)"
-
-    # Validate data quality and monotonicity
-    validation_error =
-        _validate_increasing_curve(curve, device_name, negative_slope_atol)
-    if !isnothing(validation_error)
-        error(validation_error)
-    end
-
-    # If already convex, optionally clean up colinear segments and return
-    if is_convex(curve)
-        if merge_colinear
-            return merge_colinear_segments(curve, _COLINEARITY_TOLERANCE, device_name)
-        else
-            return curve
-        end
-    end
-
-    # Convert to InputOutputCurve, make convex, convert back
     io_curve = InputOutputCurve(curve)
     convex_io = increasing_curve_convex_approximation(
         io_curve;
         weights = weights,
         anchor = anchor,
-        merge_colinear = false,
+        merge_colinear = merge_colinear,
         device_name = device_name,
         negative_slope_atol = negative_slope_atol,
-        _skip_validation = true,  # Already validated above
     )
-
-    @info "Transformed non-convex AverageRateCurve to convex approximation$(gen_msg)"
-    result = AverageRateCurve(convex_io)
-
-    # Clean up any colinear segments (from original data or produced by convexification)
-    if merge_colinear
-        return merge_colinear_segments(result, _COLINEARITY_TOLERANCE, device_name)
-    else
-        return result
-    end
+    return AverageRateCurve(convex_io)
 end
 
 # ProductionVariableCostCurve methods (CostCurve, FuelCurve)
 # These delegate to the underlying ValueCurve and reconstruct the wrapper.
 """
-    increasing_curve_convex_approximation(cost::CostCurve; kwargs...) -> Union{CostCurve, Nothing}
+    increasing_curve_convex_approximation(cost::CostCurve; kwargs...)
 
-Transform the underlying `ValueCurve` of a `CostCurve` into a convex approximation.
-Returns a new `CostCurve` with the convexified value curve, preserving `power_units` and `vom_cost`.
-Returns `nothing` if data quality validation fails or curve is not strictly increasing.
+Delegates to underlying ValueCurve. Preserves `power_units` and `vom_cost`.
 """
-function increasing_curve_convex_approximation(cost::CostCurve; kwargs...)
-    convex_vc = increasing_curve_convex_approximation(get_value_curve(cost); kwargs...)
-    isnothing(convex_vc) && return nothing
+function increasing_curve_convex_approximation(
+    cost::CostCurve;
+    weights::Symbol = :length,
+    anchor::Symbol = :first,
+    merge_colinear::Bool = true,
+    device_name::Union{String, Nothing} = nothing,
+    negative_slope_atol::Float64 = CONVEXIFICATION_NEGATIVE_SLOPE_TOLERANCE,
+)
+    convex_vc = increasing_curve_convex_approximation(
+        get_value_curve(cost);
+        weights = weights,
+        anchor = anchor,
+        merge_colinear = merge_colinear,
+        device_name = device_name,
+        negative_slope_atol = negative_slope_atol,
+    )
     return CostCurve(convex_vc, get_power_units(cost), get_vom_cost(cost))
 end
 
 """
-    increasing_curve_convex_approximation(cost::FuelCurve; kwargs...) -> Union{FuelCurve, Nothing}
+    increasing_curve_convex_approximation(cost::FuelCurve; kwargs...)
 
-Transform the underlying `ValueCurve` of a `FuelCurve` into a convex approximation.
-Returns a new `FuelCurve` with the convexified value curve, preserving all other fields.
-Returns `nothing` if data quality validation fails or curve is not strictly increasing.
+Delegates to underlying ValueCurve. Preserves `power_units`, `fuel_cost`, `startup_fuel_offtake`, `vom_cost`.
 """
-function increasing_curve_convex_approximation(cost::FuelCurve; kwargs...)
-    convex_vc = increasing_curve_convex_approximation(get_value_curve(cost); kwargs...)
-    isnothing(convex_vc) && return nothing
+function increasing_curve_convex_approximation(
+    cost::FuelCurve;
+    weights::Symbol = :length,
+    anchor::Symbol = :first,
+    merge_colinear::Bool = true,
+    device_name::Union{String, Nothing} = nothing,
+    negative_slope_atol::Float64 = CONVEXIFICATION_NEGATIVE_SLOPE_TOLERANCE,
+)
+    convex_vc = increasing_curve_convex_approximation(
+        get_value_curve(cost);
+        weights = weights,
+        anchor = anchor,
+        merge_colinear = merge_colinear,
+        device_name = device_name,
+        negative_slope_atol = negative_slope_atol,
+    )
     return FuelCurve(;
         value_curve = convex_vc,
         power_units = get_power_units(cost),

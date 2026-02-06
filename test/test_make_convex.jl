@@ -34,7 +34,7 @@
         pic_convex = IS.IncrementalCurve(psd_convex, 0.0)
         result = IS.increasing_curve_convex_approximation(pic_convex)
         @test IS.is_convex(result)
-        @test result === pic_convex
+        @test result == pic_convex
 
         # Concave (decreasing y-coords) - apply isotonic regression
         psd_concave = IS.PiecewiseStepData([0.0, 1.0, 2.0, 3.0], [3.0, 2.0, 1.0])
@@ -91,7 +91,7 @@
               IS.get_y_coords(IS.get_function_data(convex_twice))
         @test IS.is_convex(convex_once)
         @test IS.is_convex(convex_twice)
-        @test convex_twice === convex_once  # Should return same object
+        @test convex_twice == convex_once  # Should return equivalent object
     end
 
     @testset "Test increasing_curve_convex_approximation anchor options for PiecewiseLinearData" begin
@@ -114,25 +114,28 @@
         @test points_last[end] == (x = 2.0, y = 3.0)  # Last point preserved
     end
 
-    @testset "Test increasing_curve_convex_approximation rejects non-strictly-increasing curves" begin
-        # Curve with a negative slope segment (not strictly increasing)
-        pld_neg = IS.PiecewiseLinearData([
-            (x = 0.0, y = 10.0),
-            (x = 1.0, y = 5.0),   # slope = -5 (decreasing)
-            (x = 2.0, y = 8.0),
-        ])
-        ioc_neg = IS.InputOutputCurve(pld_neg)
-        @test !IS.is_strictly_increasing(ioc_neg)
+    @testset "Test increasing_curve_convex_approximation throws error for non-strictly-increasing curves" begin
+        # Use NullLogger to suppress expected @error logs from is_valid_data()
+        Logging.with_logger(Logging.NullLogger()) do
+            # Curve with a negative slope segment (not strictly increasing)
+            pld_neg = IS.PiecewiseLinearData([
+                (x = 0.0, y = 10.0),
+                (x = 1.0, y = 5.0),   # slope = -5 (decreasing)
+                (x = 2.0, y = 8.0),
+            ])
+            ioc_neg = IS.InputOutputCurve(pld_neg)
+            @test !IS.is_strictly_increasing(ioc_neg)
 
-        # Should throw an error
-        @test_throws ErrorException IS.increasing_curve_convex_approximation(ioc_neg)
+            # Should throw an error
+            @test_throws ErrorException IS.increasing_curve_convex_approximation(ioc_neg)
 
-        # Same test with IncrementalCurve
-        psd_neg = IS.PiecewiseStepData([0.0, 1.0, 2.0], [-1.0, 2.0])
-        pic_neg = IS.IncrementalCurve(psd_neg, 0.0)
-        @test !IS.is_strictly_increasing(pic_neg)
+            # Same test with IncrementalCurve
+            psd_neg = IS.PiecewiseStepData([0.0, 1.0, 2.0], [-1.0, 2.0])
+            pic_neg = IS.IncrementalCurve(psd_neg, 0.0)
+            @test !IS.is_strictly_increasing(pic_neg)
 
-        @test_throws ErrorException IS.increasing_curve_convex_approximation(pic_neg)
+            @test_throws ErrorException IS.increasing_curve_convex_approximation(pic_neg)
+        end
     end
 
     @testset "Test increasing_curve_convex_approximation device_name parameter" begin
@@ -198,17 +201,18 @@
         @test IS.get_vom_cost(result_concave) == vom_cost_2
 
         # Invalid CostCurve (not strictly increasing) - should throw error
-        pld_invalid = IS.PiecewiseLinearData([
-            (x = 0.0, y = 10.0),
-            (x = 1.0, y = 5.0),   # decreasing
-            (x = 2.0, y = 8.0),
-        ])
-        ioc_invalid = IS.InputOutputCurve(pld_invalid)
-        cost_curve_invalid = IS.CostCurve(ioc_invalid)
+        # Use NullLogger to suppress expected @error logs from is_valid_data()
+        Logging.with_logger(Logging.NullLogger()) do
+            pld_invalid = IS.PiecewiseLinearData([
+                (x = 0.0, y = 10.0),
+                (x = 1.0, y = 5.0),   # decreasing
+                (x = 2.0, y = 8.0),
+            ])
+            ioc_invalid = IS.InputOutputCurve(pld_invalid)
+            cost_curve_invalid = IS.CostCurve(ioc_invalid)
 
-        @test_throws ErrorException IS.increasing_curve_convex_approximation(
-            cost_curve_invalid,
-        )
+            @test_throws ErrorException IS.increasing_curve_convex_approximation(cost_curve_invalid)
+        end
     end
 
     @testset "Test increasing_curve_convex_approximation for FuelCurve" begin
@@ -271,20 +275,21 @@
         @test result_inc.fuel_cost == 20.0
 
         # Invalid FuelCurve (not strictly increasing) - should throw error
-        pld_invalid = IS.PiecewiseLinearData([
-            (x = 0.0, y = 10.0),
-            (x = 1.0, y = 5.0),   # decreasing
-            (x = 2.0, y = 8.0),
-        ])
-        ioc_invalid = IS.InputOutputCurve(pld_invalid)
-        fuel_curve_invalid = IS.FuelCurve(;
-            value_curve = ioc_invalid,
-            power_units = IS.UnitSystem.NATURAL_UNITS,
-            fuel_cost = 25.0,
-        )
+        # Use NullLogger to suppress expected @error logs from is_valid_data()
+        Logging.with_logger(Logging.NullLogger()) do
+            pld_invalid = IS.PiecewiseLinearData([
+                (x = 0.0, y = 10.0),
+                (x = 1.0, y = 5.0),   # decreasing
+                (x = 2.0, y = 8.0),
+            ])
+            ioc_invalid = IS.InputOutputCurve(pld_invalid)
+            fuel_curve_invalid = IS.FuelCurve(;
+                value_curve = ioc_invalid,
+                power_units = IS.UnitSystem.NATURAL_UNITS,
+                fuel_cost = 25.0,
+            )
 
-        @test_throws ErrorException IS.increasing_curve_convex_approximation(
-            fuel_curve_invalid,
-        )
+            @test_throws ErrorException IS.increasing_curve_convex_approximation(fuel_curve_invalid)
+        end
     end
 end

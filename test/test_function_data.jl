@@ -768,12 +768,12 @@ end
     # Pooled value = (10*2 + 5*1) / (2+1) = 25/3 ≈ 8.33
     @test new_y[1] ≈ new_y[2] ≈ 25.0 / 3.0
 
-    # Test already convex data (should return same)
+    # Test already convex data (should return equivalent curve)
     convex_data = IS.PiecewiseStepData([0.0, 1.0, 2.0], [1.0, 2.0])
     curve = IS.IncrementalCurve(convex_data, 0.0)
     @test IS.is_convex(curve)
     result = IS.increasing_curve_convex_approximation(curve)
-    @test result === curve  # Should be exactly the same object
+    @test result == curve  # Should be equivalent curve
 
     # Test multiple violations
     step_data = IS.PiecewiseStepData([0.0, 1.0, 2.0, 3.0, 4.0], [5.0, 3.0, 1.0, 10.0])
@@ -949,7 +949,7 @@ end
     step_data = IS.PiecewiseStepData([0.0, 1.0], [5.0])
     step_curve = IS.IncrementalCurve(step_data, 0.0)
     @test IS.is_convex(step_curve)
-    @test IS.increasing_curve_convex_approximation(step_curve) === step_curve
+    @test IS.increasing_curve_convex_approximation(step_curve) == step_curve
 
     # Test with equal slopes (colinear segments should be merged)
     linear_data = IS.PiecewiseLinearData([(0.0, 0.0), (1.0, 5.0), (2.0, 10.0), (3.0, 15.0)])
@@ -973,9 +973,9 @@ end
     new_y = IS.get_y_coords(IS.get_function_data(convex_curve))
     @test all(y ≈ 16.0 / 3.0 for y in new_y)
 
-    # Use NullLogger to suppress expected error logs for all validation tests
+    # Use NullLogger to suppress expected @error logs from is_valid_data()
     Logging.with_logger(Logging.NullLogger()) do
-        # Test with negative values - now rejected because curve is not strictly increasing
+        # Test with negative values - throws error because curve is not strictly increasing
         step_data_neg = IS.PiecewiseStepData([0.0, 1.0, 2.0, 3.0], [-5.0, -10.0, -3.0])
         step_curve_neg = IS.IncrementalCurve(step_data_neg, 0.0)
         @test_throws ErrorException IS.increasing_curve_convex_approximation(step_curve_neg)
@@ -983,16 +983,12 @@ end
         # Test with large values - throws error due to data validation (excessive slope)
         step_data_large = IS.PiecewiseStepData([0.0, 1.0, 2.0], [1e10, 1e5])
         step_curve_large = IS.IncrementalCurve(step_data_large, 0.0)
-        @test_throws ErrorException IS.increasing_curve_convex_approximation(
-            step_curve_large,
-        )
+        @test_throws ErrorException IS.increasing_curve_convex_approximation(step_curve_large)
 
-        # Test with excessively large negative values - still rejected (abs value check)
+        # Test with excessively large negative values - throws error (abs value check)
         step_data_large_neg = IS.PiecewiseStepData([0.0, 1.0, 2.0], [-1e10, -1e5])
         step_curve_large_neg = IS.IncrementalCurve(step_data_large_neg, 0.0)
-        @test_throws ErrorException IS.increasing_curve_convex_approximation(
-            step_curve_large_neg,
-        )
+        @test_throws ErrorException IS.increasing_curve_convex_approximation(step_curve_large_neg)
     end
 
     # Test approximation_error returns zero for identical data
@@ -1143,11 +1139,11 @@ end
     @test convex_pic isa IS.PiecewiseIncrementalCurve
     @test IS.get_x_coords(convex_pic) == IS.get_x_coords(pic)
 
-    # Already convex - should return same object
+    # Already convex - should return equivalent curve
     pic_convex = IS.PiecewiseIncrementalCurve(0.0, [0.0, 1.0, 2.0], [5.0, 10.0])
     @test IS.is_convex(pic_convex)
     result = IS.increasing_curve_convex_approximation(pic_convex)
-    @test result === pic_convex
+    @test result == pic_convex
 
     # With input_at_zero - should be preserved
     pic_iaz = IS.IncrementalCurve(
@@ -1178,11 +1174,11 @@ end
     @test IS.is_convex(convex_pac)
     @test convex_pac isa IS.PiecewiseAverageCurve
 
-    # Already convex - should return same object
+    # Already convex - should return equivalent object (not necessarily same reference)
     pac_convex = IS.PiecewiseAverageCurve(0.0, [0.0, 1.0, 2.0], [5.0, 10.0])
     @test IS.is_convex(pac_convex)
     result = IS.increasing_curve_convex_approximation(pac_convex)
-    @test result === pac_convex
+    @test result == pac_convex
 
     # Test with different options
     convex_uniform = IS.increasing_curve_convex_approximation(pac; weights = :uniform)
@@ -1193,14 +1189,14 @@ end
     @test convex_last !== nothing
     @test IS.is_convex(convex_last)
 
-    # Use NullLogger to suppress expected error logs from validation tests
+    # Use NullLogger to suppress expected @error logs from is_valid_data()
     Logging.with_logger(Logging.NullLogger()) do
         # Test that data with negative slopes throws error (not strictly increasing)
         pac_with_neg =
             IS.PiecewiseAverageCurve(6.0, [1.0, 2.0, 3.0, 4.0], [10.0, 5.0, 15.0])
         @test_throws ErrorException IS.increasing_curve_convex_approximation(pac_with_neg)
 
-        # Test that data with excessively large slopes still throws error
+        # Test that data with excessively large slopes also throws error
         pac_invalid =
             IS.PiecewiseAverageCurve(6.0, [1.0, 2.0, 3.0, 4.0], [1e10, 5.0, 15.0])
         @test_throws ErrorException IS.increasing_curve_convex_approximation(pac_invalid)
@@ -1225,7 +1221,7 @@ end
         @test convex1 !== nothing
         @test IS.is_convex(convex1)
         convex2 = IS.increasing_curve_convex_approximation(convex1)
-        @test convex2 === convex1  # Second call should return same object
+        @test convex2 == convex1  # Second call should return equivalent object
     end
 end
 
