@@ -239,7 +239,9 @@
             ioc_invalid = IS.InputOutputCurve(pld_invalid)
             cost_curve_invalid = IS.CostCurve(ioc_invalid)
 
-            @test_throws ErrorException IS.increasing_curve_convex_approximation(cost_curve_invalid)
+            @test_throws ErrorException IS.increasing_curve_convex_approximation(
+                cost_curve_invalid,
+            )
         end
     end
 
