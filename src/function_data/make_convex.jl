@@ -353,7 +353,8 @@ function increasing_curve_convex_approximation(
     new_points = _reconstruct_points(points, new_slopes, anchor)
 
     @info "Transformed non-convex InputOutputCurve to convex approximation$(gen_msg)"
-    result = InputOutputCurve(PiecewiseLinearData(new_points), get_input_at_zero(working_curve))
+    result =
+        InputOutputCurve(PiecewiseLinearData(new_points), get_input_at_zero(working_curve))
 
     # Clean up any colinear segments produced by isotonic regression
     if merge_colinear
