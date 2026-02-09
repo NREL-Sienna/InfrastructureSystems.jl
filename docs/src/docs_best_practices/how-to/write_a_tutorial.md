@@ -45,13 +45,13 @@ code blocks.
 !!! tip "Do"
     
     Unlike other documentation categories (e.g., How-To's), write tutorials as a .jl script
-    in [`Literate.jl`](https://fredrikekre.github.io/Literate.jl/stable/) format, to
-    auto-generate a Jupyter Notebook and documentation Markdown file from that script.
+    in [`Literate.jl`](https://fredrikekre.github.io/Literate.jl/stable/) format to
+    enable the auto-generation of a Jupyter Notebook that users can run directly.
     
-    Refer to
+    Most Sienna repos contain functionality in the `make.jl` and `make_tutorials.jl` files
+    to automate Notebook generation from .jl scripts in the docs/src/tutorials/ folder. See
     [`SiennaTemplate.jl`](https://github.com/NREL-Sienna/SiennaTemplate.jltree/main/docs)
-    for example code to automate the addition of Jupyter Notebook and Julia script links in
-    the Markdown version.
+    for the code.
 
 !!! tip "Do"
     
