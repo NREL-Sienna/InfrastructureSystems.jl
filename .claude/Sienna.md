@@ -100,6 +100,8 @@ API docs:
 
 ## Contribution Workflow
 
+**Note:** The default branch for all Sienna packages is `main`, not `master`.
+
 Branch naming: `feature/description` or `fix/description`
 
 1. Create feature branch
