@@ -34,6 +34,7 @@ function begin_supplemental_attributes_update(
         SQLite.transaction(mgr.associations.db) do
             func()
         end
+        optimize_database!(mgr.associations)
     catch
         mgr.data = orig_data
         rethrow()

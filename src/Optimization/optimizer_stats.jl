@@ -1,3 +1,37 @@
+"""
+    mutable struct OptimizerStats
+
+Statistics and performance metrics from an optimization solver run.
+
+Captures solver-reported metrics (termination status, objective value, solve time) as well as
+timing information for auxiliary computations. Fields marked as `Union{Missing, T}` may not
+be available for all solvers.
+
+# Fields
+- `detailed_stats::Bool`: Whether detailed statistics are available
+- `objective_value::Float64`: Optimal objective function value
+- `termination_status::Int`: Solver termination status code
+- `primal_status::Int`: Status of the primal solution
+- `dual_status::Int`: Status of the dual solution
+- `solver_solve_time::Float64`: Time reported by the solver for the solve
+- `result_count::Int`: Number of solutions found
+- `has_values::Bool`: Whether primal values are available
+- `has_duals::Bool`: Whether dual values are available
+- `objective_bound::Union{Missing, Float64}`: Bound on the objective (for MIP solvers)
+- `relative_gap::Union{Missing, Float64}`: Relative optimality gap (for MIP solvers)
+- `dual_objective_value::Union{Missing, Float64}`: Dual objective value
+- `solve_time::Float64`: Total solve time
+- `barrier_iterations::Union{Missing, Int}`: Number of barrier iterations
+- `simplex_iterations::Union{Missing, Int}`: Number of simplex iterations
+- `node_count::Union{Missing, Int}`: Number of branch-and-bound nodes explored
+- `timed_solve_time::Float64`: Externally timed solve duration
+- `timed_calculate_aux_variables::Float64`: Time to calculate auxiliary variables
+- `timed_calculate_dual_variables::Float64`: Time to calculate dual variables
+- `solve_bytes_alloc::Union{Missing, Float64}`: Memory allocated during solve
+- `sec_in_gc::Union{Missing, Float64}`: Time spent in garbage collection
+
+See also: [`OptimizationProblemResults`](@ref)
+"""
 mutable struct OptimizerStats
     detailed_stats::Bool
     objective_value::Float64

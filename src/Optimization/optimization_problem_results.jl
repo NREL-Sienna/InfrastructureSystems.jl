@@ -1,4 +1,32 @@
 # This needs renaming to avoid collision with the DecisionModelResults/EmulationModelResults
+"""
+    mutable struct OptimizationProblemResults <: Results
+
+Container for the results of an optimization problem, including variable values, dual values,
+parameter values, expression values, and optimizer statistics.
+
+This type stores all output data from solving an optimization problem and provides methods
+to read, export, and serialize the results. Instead of accessing the result dictionary 
+fields directly, use the `read_foo` functions.
+
+# Fields
+- `base_power::Float64`: Base power used for per-unit conversion
+- `timestamps::Vector{Dates.DateTime}`: Time stamps for each step in the results
+- `source_data::Union{Nothing, InfrastructureSystemsType}`: Reference to the source data (e.g., system)
+- `source_data_uuid::Base.UUID`: UUID of the source data for validation. Internal usage.
+- `aux_variable_values::Dict{AuxVarKey, DataFrame}`: Auxiliary variable results. See [`read_aux_variable`](@ref) and [`read_aux_variables`](@ref)
+- `variable_values::Dict{VariableKey, DataFrame}`: Decision variable results. See [`read_variable`](@ref) and [`read_variables`](@ref)
+- `dual_values::Dict{ConstraintKey, DataFrame}`: Dual results. See [`read_dual`](@ref) and [`read_duals`](@ref)
+- `parameter_values::Dict{ParameterKey, DataFrame}`: Parameter results. See [`read_parameter`](@ref) and [`read_parameters`](@ref)
+- `expression_values::Dict{ExpressionKey, DataFrame}`: Expression results. See [`read_expression`](@ref) and [`read_expressions`](@ref)
+- `optimizer_stats::DataFrame`: Optimizer statistics for each solve
+- `optimization_container_metadata::OptimizationContainerMetadata`: Metadata about the optimization container. Internal usage.
+- `model_type::String`: Type of optimization model. Internal usage.
+- `results_dir::String`: Directory where results are stored
+- `output_dir::String`: Directory for exported output
+
+See also: [`Results`](@ref), [`OptimizerStats`](@ref), [`OptimizationProblemResultsExport`](@ref)
+"""
 mutable struct OptimizationProblemResults <: Results
     base_power::Float64
     timestamps::Vector{Dates.DateTime}
