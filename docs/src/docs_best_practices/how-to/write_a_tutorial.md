@@ -35,41 +35,23 @@ Pages = ["write_a_tutorial.md"]
 Depth = 3:3
 ```
 
-### Give it a story
+### Make it reproducible
 
-The tutorial should have a logical flow, rather than be a series of disconnected code
-demonstrations.
+A user should be able to run the code in the tutorial from start to finish and get the exact
+results seen on the documentation page. Provide multiple file formats for users for ease of
+use: Jupyter Notebooks, Julia scripts, and the documentation Markdown with copy/pastable
+code blocks.
 
 !!! tip "Do"
     
-    Use either named
-    [`@example`](https://documenter.juliadocs.org/stable/man/syntax/#reference-at-example)
-    or named
-    [`@repl`](https://documenter.juliadocs.org/stable/man/syntax/#@repl-block) blocks to
-    ensure all code compiles in order in the same environment and ensuring each step builds
-    on the previous steps in your story:
+    Unlike other documentation categories (e.g., How-To's), write tutorials as a .jl script
+    in [`Literate.jl`](https://fredrikekre.github.io/Literate.jl/stable/) format to
+    enable the auto-generation of a Jupyter Notebook that users can run directly.
     
-    ````markdown
-    ```@example my_tutorial
-    <Some code here>
-    ```
-    ````
-
-!!! warning "Don't"
-    
-    Use a series of `julia` markdown blocks. These won't be compiled, failing the
-    intention of a tutorial and introducing high likelihood of errors as syntax changes.
-    
-    ````markdown
-    ```julia
-    <Some code here>
-    ```
-    ````
-
-### Make it reproducible
-
-A user should be able to copy and paste every code block in the tutorial in order and get
-the exact results seen on the documentation page.
+    Most Sienna repos contain functionality in the `make.jl` and `make_tutorials.jl` files
+    to automate Notebook generation from .jl scripts in the docs/src/tutorials/ folder. See
+    [`SiennaTemplate.jl`](https://github.com/NREL-Sienna/SiennaTemplate.jltree/main/docs)
+    for the code.
 
 !!! tip "Do"
     
@@ -81,6 +63,36 @@ the exact results seen on the documentation page.
     Use `#hide` or
     [`@setup`](https://documenter.juliadocs.org/stable/man/syntax/#reference-at-setup)
     blocks.
+
+### Give it a story
+
+The tutorial should have a logical flow, rather than be a series of disconnected code
+demonstrations.
+
+!!! tip "Do"
+    
+    Using the [`Literate.jl`](https://fredrikekre.github.io/Literate.jl/stable/) script format (above),
+    all code blocks will render in the resulting markdown as named
+    [`@example`](https://documenter.juliadocs.org/stable/man/syntax/#reference-at-example) blocks,
+    ensuring all code compiles in order in the same environment and that each step builds
+    on the previous steps in your story:
+    
+    ````markdown
+    ```@example my_tutorial
+    <Some code here>
+    ```
+    ````
+
+!!! warning "Don't"
+    
+    Write markdown with a series of `julia` markdown blocks. These won't be compiled, failing the
+    intention of a tutorial and introducing high likelihood of errors as syntax changes.
+    
+    ````markdown
+    ```julia
+    <Some code here>
+    ```
+    ````
 
 ### Make it effortless to read
 

@@ -79,6 +79,11 @@ Framework: [Diataxis](https://diataxis.fr/)
 
 Sienna guide: <https://nrel-sienna.github.io/InfrastructureSystems.jl/stable/docs_best_practices/explanation/>
 
+Sienna guide for Diataxis-style tutorials: <https://nrel-sienna.github.io/InfrastructureSystems.jl/stable/docs_best_practices/how-to/write_a_tutorial/>
+Format for tutorial scripts: <https://fredrikekre.github.io/Literate.jl/v2/>
+Sienna guide for Diataxis-style how-to's: <https://nrel-sienna.github.io/InfrastructureSystems.jl/stable/docs_best_practices/how-to/write_a_how-to/>
+Sienna guide for APIs: <https://nrel-sienna.github.io/InfrastructureSystems.jl/stable/docs_best_practices/how-to/write_docstrings_org_api/>
+
 Docstring requirements:
 
 - Scope: all elements of public interface (IS is selective about exports)
