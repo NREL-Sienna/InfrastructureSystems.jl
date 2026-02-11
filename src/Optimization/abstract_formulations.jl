@@ -44,22 +44,17 @@ Abstract type for Load Formulations.
 abstract type AbstractLoadFormulation <: AbstractDeviceFormulation end
 
 """
+Root of the infrastructure model formulation type hierarchy.
+Originally defined in InfrastructureModels.jl; now lives in IS so that
+AbstractPowerModel can subtype it without circular dependencies.
+"""
+abstract type AbstractInfrastructureModel end
+
+"""
 Abstract type for Power Model Formulations.
 Subtypes define the network representation (e.g., copper plate, PTDF, AC power flow).
 """
-abstract type AbstractPowerModel end
-
-"""
-Abstract type for PTDF-based power flow formulations.
-Subtypes use the Power Transfer Distribution Factor matrix for network modeling.
-"""
-abstract type AbstractPTDFModel <: AbstractPowerModel end
-
-"""
-Abstract type for Security-Constrained PTDF power flow formulations.
-Subtypes include contingency analysis with LODF matrices.
-"""
-abstract type AbstractSecurityConstrainedPTDFModel <: AbstractPTDFModel end
+abstract type AbstractPowerModel <: AbstractInfrastructureModel end
 
 """
 Abstract type for Active Power Model Formulations.
@@ -67,24 +62,14 @@ Subtypes model only active power (no reactive power).
 """
 abstract type AbstractActivePowerModel <: AbstractPowerModel end
 
-"""
-Abstract type for AC Power Model Formulations.
-Subtypes model both active and reactive power with AC power flow equations.
-"""
-abstract type AbstractACPowerModel <: AbstractPowerModel end
+## AbstractPTDFModel and AbstractSecurityConstrainedPTDFModel are defined in
+## PowerOperationsModels.jl where they can subtype PM.AbstractDCPModel.
 
 """
 Abstract type for ACP (AC Polar) Power Model Formulations.
 Concrete subtypes define specific polar AC formulations.
 """
-abstract type AbstractACPModel <: AbstractACPowerModel end
-
-# Alias for PowerModels compatibility
-const AbstractPowerFormulation = AbstractPowerModel
-
-# Placeholder types - concrete implementations defined in downstream packages
-# These enable IOM to reference these types without importing PowerModels
-abstract type ACPPowerModel <: AbstractACPModel end
+abstract type AbstractACPModel <: AbstractPowerModel end
 
 """
 Abstract type for HVDC Network Model Formulations.
