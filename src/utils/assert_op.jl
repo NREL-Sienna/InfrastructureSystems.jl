@@ -21,7 +21,7 @@ function assert_op(expr::Expr)
     if length(expr.args) == 3 && expr.head == :call
         return assert_op(expr.args[1], expr.args[2], expr.args[3])
     else
-        return :(@assert $(expr))
+        return :(@assert $(esc(expr)))
     end
 end
 
