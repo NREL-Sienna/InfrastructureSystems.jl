@@ -56,7 +56,8 @@ end
 end
 
 @testset "IS.Optimization enums" begin
-    @test IS.Optimization.ModelBuildStatus.IN_PROGRESS == IS.Optimization.ModelBuildStatus(-1)
+    @test IS.Optimization.ModelBuildStatus.IN_PROGRESS ==
+          IS.Optimization.ModelBuildStatus(-1)
     @test IS.Optimization.ModelBuildStatus.BUILT == IS.Optimization.ModelBuildStatus(0)
     @test IS.Optimization.ModelBuildStatus.FAILED == IS.Optimization.ModelBuildStatus(1)
     @test IS.Optimization.ModelBuildStatus.EMPTY == IS.Optimization.ModelBuildStatus(2)
