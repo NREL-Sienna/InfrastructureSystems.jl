@@ -16,9 +16,9 @@ struct MockStoreParams <: IS.Optimization.AbstractModelStoreParams
 end
 
 # Extend utility functions for custom types
-IS.Optimization.convert_result_to_natural_units(::Type{MockVariable2}) = true
+IS.Optimization.convert_output_to_natural_units(::Type{MockVariable2}) = true
 IS.Optimization.should_write_resulting_value(::Type{MockVariable2}) = false
-IS.Optimization.convert_result_to_natural_units(::Type{MockExpression2}) = true
+IS.Optimization.convert_output_to_natural_units(::Type{MockExpression2}) = true
 IS.Optimization.should_write_resulting_value(::Type{MockExpression2}) = false
 
 @testset "IS.Optimization abstract types" begin
@@ -37,21 +37,21 @@ end
 
 @testset "IS.Optimization utility functions" begin
     # Test default values
-    @test IS.Optimization.convert_result_to_natural_units(MockVariable) == false
+    @test IS.Optimization.convert_output_to_natural_units(MockVariable) == false
     @test IS.Optimization.should_write_resulting_value(MockVariable) == true
-    @test IS.Optimization.convert_result_to_natural_units(MockConstraint) == false
+    @test IS.Optimization.convert_output_to_natural_units(MockConstraint) == false
     @test IS.Optimization.should_write_resulting_value(MockConstraint) == true
-    @test IS.Optimization.convert_result_to_natural_units(MockAuxVariable) == false
+    @test IS.Optimization.convert_output_to_natural_units(MockAuxVariable) == false
     @test IS.Optimization.should_write_resulting_value(MockAuxVariable) == true
-    @test IS.Optimization.convert_result_to_natural_units(MockExpression) == false
+    @test IS.Optimization.convert_output_to_natural_units(MockExpression) == false
     @test IS.Optimization.should_write_resulting_value(MockExpression) == false
-    @test IS.Optimization.convert_result_to_natural_units(MockParameter) == false
+    @test IS.Optimization.convert_output_to_natural_units(MockParameter) == false
     @test IS.Optimization.should_write_resulting_value(MockParameter) == false
 
     # Test overridden values
-    @test IS.Optimization.convert_result_to_natural_units(MockVariable2) == true
+    @test IS.Optimization.convert_output_to_natural_units(MockVariable2) == true
     @test IS.Optimization.should_write_resulting_value(MockVariable2) == false
-    @test IS.Optimization.convert_result_to_natural_units(MockExpression2) == true
+    @test IS.Optimization.convert_output_to_natural_units(MockExpression2) == true
     @test IS.Optimization.should_write_resulting_value(MockExpression2) == false
 end
 
