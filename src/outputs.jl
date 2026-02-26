@@ -2,8 +2,8 @@
 To implement a sub-type of this you need to implement the methods below.
 """
 abstract type Outputs end
-function get_results_base_power(r::T) where {T <: Outputs}
-    error("get_results_base_power must be implemented for $T")
+function get_outputs_base_power(r::T) where {T <: Outputs}
+    error("get_outputs_base_power must be implemented for $T")
 end
 
 function get_variables(r::T) where {T <: Outputs}
@@ -26,8 +26,8 @@ function get_timestamp(r::T) where {T <: Outputs}
     error("get_timestamp must be implemented for $T")
 end
 
-function write_results(r::T) where {T <: Outputs}
-    error("write_results must be implemented for $T")
+function write_outputs(r::T) where {T <: Outputs}
+    error("write_output must be implemented for $T")
 end
 
 # Must override if your concrete Outputs subtype has the notion of an associated source data
