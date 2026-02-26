@@ -182,7 +182,7 @@ include("system_data.jl")
 include("subsystems.jl")
 include("validation.jl")
 include("component_selector.jl")
-include("results.jl")
+include("outputs.jl")
 include("utils/print.jl")
 @static if pkgversion(PrettyTables).major == 2
     # When PrettyTables v2 is more widely adopted in the ecosystem, we can remove this file.
