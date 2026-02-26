@@ -1,5 +1,5 @@
 # Test abstract types from IS.Optimization
-# Note: Concrete implementations (Keys, Stores, Results) are in InfrastructureOptimizationModels
+# Note: Concrete implementations (Keys, Stores, Outputs) are in InfrastructureOptimizationModels
 
 # Mock types extending IS.Optimization abstract types
 struct MockContainer <: IS.Optimization.AbstractOptimizationContainer end
