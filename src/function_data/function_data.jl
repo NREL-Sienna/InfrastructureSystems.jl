@@ -1,3 +1,9 @@
+"""
+Supertype for all function data representations used in cost modeling.
+
+Concrete subtypes include [`LinearFunctionData`](@ref), [`QuadraticFunctionData`](@ref),
+[`PiecewiseLinearData`](@ref), and [`PiecewiseStepData`](@ref).
+"""
 abstract type FunctionData end
 
 """
