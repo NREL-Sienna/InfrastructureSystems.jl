@@ -8,8 +8,8 @@
 # methods being defined for all the `ValueCurve{FunctionData}` types, not just the ones we
 # have here nicely packaged and presented to the user.
 
-"Whether there is a cost alias for the instance or type under consideration"
-is_cost_alias(::Union{ValueCurve, Type{<:ValueCurve}}) = false
+# Default `is_cost_alias` is defined in value_curve.jl so it's available to
+# time_series_value_curve.jl show methods (included before this file).
 
 """
     LinearCurve(proportional_term::Float64)
@@ -197,3 +197,107 @@ Base.show(io::IO, vc::PiecewiseAverageCurve) =
     else
         Base.show_default(io, vc)
     end
+
+# ── Time-series cost aliases ──────────────────────────────────────────────────
+
+"""
+    TimeSeriesLinearCurve
+
+A time-series-backed linear input-output curve. Alias for
+`TimeSeriesInputOutputCurve{TimeSeriesLinearFunctionData}`.
+"""
+const TimeSeriesLinearCurve =
+    TimeSeriesInputOutputCurve{TimeSeriesLinearFunctionData}
+
+is_cost_alias(::Union{TimeSeriesLinearCurve, Type{TimeSeriesLinearCurve}}) = true
+
+TimeSeriesInputOutputCurve{TimeSeriesLinearFunctionData}(key::TimeSeriesKey) =
+    TimeSeriesInputOutputCurve(TimeSeriesLinearFunctionData(key))
+
+"""
+    TimeSeriesQuadraticCurve
+
+A time-series-backed quadratic input-output curve. Alias for
+`TimeSeriesInputOutputCurve{TimeSeriesQuadraticFunctionData}`.
+"""
+const TimeSeriesQuadraticCurve =
+    TimeSeriesInputOutputCurve{TimeSeriesQuadraticFunctionData}
+
+is_cost_alias(::Union{TimeSeriesQuadraticCurve, Type{TimeSeriesQuadraticCurve}}) = true
+
+TimeSeriesInputOutputCurve{TimeSeriesQuadraticFunctionData}(key::TimeSeriesKey) =
+    TimeSeriesInputOutputCurve(TimeSeriesQuadraticFunctionData(key))
+
+"""
+    TimeSeriesPiecewisePointCurve
+
+A time-series-backed piecewise linear input-output curve. Alias for
+`TimeSeriesInputOutputCurve{TimeSeriesPiecewiseLinearData}`.
+"""
+const TimeSeriesPiecewisePointCurve =
+    TimeSeriesInputOutputCurve{TimeSeriesPiecewiseLinearData}
+
+is_cost_alias(
+    ::Union{TimeSeriesPiecewisePointCurve, Type{TimeSeriesPiecewisePointCurve}},
+) = true
+
+TimeSeriesInputOutputCurve{TimeSeriesPiecewiseLinearData}(key::TimeSeriesKey) =
+    TimeSeriesInputOutputCurve(TimeSeriesPiecewiseLinearData(key))
+
+"""
+    TimeSeriesPiecewiseIncrementalCurve
+
+A time-series-backed piecewise incremental curve. Alias for
+`TimeSeriesIncrementalCurve{TimeSeriesPiecewiseStepData}`.
+"""
+const TimeSeriesPiecewiseIncrementalCurve =
+    TimeSeriesIncrementalCurve{TimeSeriesPiecewiseStepData}
+
+is_cost_alias(
+    ::Union{
+        TimeSeriesPiecewiseIncrementalCurve,
+        Type{TimeSeriesPiecewiseIncrementalCurve},
+    },
+) = true
+
+TimeSeriesIncrementalCurve{TimeSeriesPiecewiseStepData}(
+    key::TimeSeriesKey,
+    initial_input::Union{Nothing, TimeSeriesKey},
+) = TimeSeriesIncrementalCurve(TimeSeriesPiecewiseStepData(key), initial_input)
+
+TimeSeriesIncrementalCurve{TimeSeriesPiecewiseStepData}(
+    key::TimeSeriesKey,
+    initial_input::Union{Nothing, TimeSeriesKey},
+    input_at_zero::Union{Nothing, TimeSeriesKey},
+) = TimeSeriesIncrementalCurve(
+    TimeSeriesPiecewiseStepData(key), initial_input, input_at_zero,
+)
+
+"""
+    TimeSeriesPiecewiseAverageCurve
+
+A time-series-backed piecewise average rate curve. Alias for
+`TimeSeriesAverageRateCurve{TimeSeriesPiecewiseStepData}`.
+"""
+const TimeSeriesPiecewiseAverageCurve =
+    TimeSeriesAverageRateCurve{TimeSeriesPiecewiseStepData}
+
+is_cost_alias(
+    ::Union{
+        TimeSeriesPiecewiseAverageCurve,
+        Type{TimeSeriesPiecewiseAverageCurve},
+    },
+) = true
+
+TimeSeriesAverageRateCurve{TimeSeriesPiecewiseStepData}(
+    key::TimeSeriesKey,
+    initial_input::Union{Nothing, TimeSeriesKey},
+) = TimeSeriesAverageRateCurve(TimeSeriesPiecewiseStepData(key), initial_input)
+
+TimeSeriesAverageRateCurve{TimeSeriesPiecewiseStepData}(
+    key::TimeSeriesKey,
+    initial_input::Union{Nothing, TimeSeriesKey},
+    input_at_zero::Union{Nothing, TimeSeriesKey},
+) = TimeSeriesAverageRateCurve(
+    TimeSeriesPiecewiseStepData(key), initial_input, input_at_zero,
+)

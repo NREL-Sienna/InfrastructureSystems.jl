@@ -237,6 +237,9 @@ end
 IncrementalCurve(data::AverageRateCurve) = IncrementalCurve(InputOutputCurve(data))
 
 # PRINTING
+"Whether there is a cost alias for the instance or type under consideration"
+is_cost_alias(::Union{ValueCurve, Type{<:ValueCurve}}) = false
+
 # For cost aliases, return the alias name; otherwise, return the type name without the parameter
 simple_type_name(curve::ValueCurve) =
     string(is_cost_alias(curve) ? typeof(curve) : nameof(typeof(curve)))

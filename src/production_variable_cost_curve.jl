@@ -20,6 +20,12 @@ get_initial_input(cost::ProductionVariableCostCurve) =
 is_convex(cost::ProductionVariableCostCurve) = is_convex(get_value_curve(cost))
 "Calculate the concavity of the underlying data"
 is_concave(cost::ProductionVariableCostCurve) = is_concave(get_value_curve(cost))
+"Check if the cost curve is backed by time series data"
+is_time_series_backed(cost::ProductionVariableCostCurve) =
+    is_time_series_backed(get_value_curve(cost))
+"Get the `TimeSeriesKey` from the underlying `ValueCurve`"
+get_time_series_key(cost::ProductionVariableCostCurve) =
+    get_time_series_key(get_value_curve(cost))
 
 Base.:(==)(a::T, b::T) where {T <: ProductionVariableCostCurve} =
     double_equals_from_fields(a, b)
