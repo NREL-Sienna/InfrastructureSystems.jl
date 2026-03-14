@@ -1,5 +1,5 @@
 @testset "TimeSeriesFunctionData" begin
-    forecast_key = IS.ForecastKey(
+    forecast_key = IS.ForecastKey(;
         time_series_type = IS.Deterministic,
         name = "test_forecast",
         initial_timestamp = Dates.DateTime("2020-01-01"),
