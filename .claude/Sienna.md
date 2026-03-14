@@ -114,6 +114,29 @@ Branch naming: `feature/description` or `fix/description`
 3. Ensure tests pass
 4. Submit pull request
 
+## Testing Guidelines
+
+**Test custom logic, not language guarantees.** Do not write tests that only verify Julia's
+built-in behavior. Focus tests on code you wrote, not on things the compiler already ensures.
+
+Avoid:
+- `@test obj isa SomeType` when the type hierarchy makes it a tautology (e.g., testing that
+  a `FooBar <: Bar` instance `isa Bar`).
+- Testing that a struct constructed with a value stores that value, when the struct is a plain
+  data holder with no validation or transformation.
+- Testing `==` / `isequal` / `hash` when those methods are inherited from a parent type and
+  the subtype adds no custom logic.
+- Duplicating the same test with trivially different inputs that exercise no additional code
+  path (e.g., constructing with two different subtypes of the same abstract field type when
+  the struct does not distinguish between them).
+
+Instead test:
+- Custom dispatch logic and predicates you defined.
+- Type-mapping tables and accessor functions that could have typos or wrong entries.
+- Serialization round-trips (integration with the serialization infrastructure).
+- Custom `show` / display output that formats domain-specific information.
+- Validation logic, error paths, and edge cases.
+
 ## AI Agent Guidance
 
 **Key priorities:** Read existing patterns first, maintain consistency, use concrete types in hot paths, run formatter, add docstrings to public API, ensure tests pass.
