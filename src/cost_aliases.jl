@@ -8,19 +8,27 @@
 # methods being defined for all the `ValueCurve{FunctionData}` types, not just the ones we
 # have here nicely packaged and presented to the user.
 
-"Whether there is a cost alias for the instance or type under consideration"
-is_cost_alias(::Union{ValueCurve, Type{<:ValueCurve}}) = false
+# Default `is_cost_alias` is defined in value_curve.jl so it's available to
+# time_series_value_curve.jl show methods (included before this file).
 
 """
     LinearCurve(proportional_term::Float64)
     LinearCurve(proportional_term::Float64, constant_term::Float64)
 
-A linear input-output curve, representing a constant marginal rate. May have zero no-load
-cost (i.e., constant average rate) or not.
+A constant-marginal-rate cost curve: `cost(x) = m·x + b`.
+
+The simplest cost representation. Use when marginal cost doesn't change with output level.
+If cost increases with output, use [`QuadraticCurve`](@ref) or
+[`PiecewiseIncrementalCurve`](@ref) instead.
 
 # Arguments
-- `proportional_term::Float64`: marginal rate
-- `constant_term::Float64`: optional, cost at zero production, defaults to `0.0`
+- `proportional_term::Float64`: marginal rate (e.g., \$/MWh)
+- `constant_term::Float64`: no-load cost (e.g., \$/h), defaults to `0.0`
+
+# Example
+```julia
+curve = LinearCurve(50.0, 100.0)  # \$50/MWh marginal rate, \$100/h no-load cost
+```
 """
 const LinearCurve = InputOutputCurve{LinearFunctionData}
 
@@ -48,12 +56,21 @@ Base.show(io::IO, vc::LinearCurve) =
 """
     QuadraticCurve(quadratic_term::Float64, proportional_term::Float64, constant_term::Float64)
 
-A quadratic input-output curve, may have nonzero no-load cost.
+A smooth quadratic cost curve: `cost(x) = q·x² + m·x + b`.
+
+Use when you have a polynomial fit to heat rate data with a smooth, increasing marginal
+cost. For non-smooth piecewise costs (e.g., market bid stacks), use
+[`PiecewiseIncrementalCurve`](@ref) instead.
 
 # Arguments
-- `quadratic_term::Float64`: quadratic term of the curve
-- `proportional_term::Float64`: proportional term of the curve
-- `constant_term::Float64`: constant term of the curve
+- `quadratic_term::Float64`: quadratic coefficient (≥ 0 for a convex, physical cost curve)
+- `proportional_term::Float64`: linear coefficient
+- `constant_term::Float64`: constant (no-load) term
+
+# Example
+```julia
+curve = QuadraticCurve(0.002, 25.0, 150.0)  # slightly increasing marginal cost, \$150/h no-load
+```
 """
 const QuadraticCurve = InputOutputCurve{QuadraticFunctionData}
 
@@ -86,10 +103,26 @@ Base.show(io::IO, vc::QuadraticCurve) =
 """
     PiecewisePointCurve(points::Vector{Tuple{Float64, Float64}})
 
-A piecewise linear curve specified by cost values at production points.
+A piecewise linear cost curve defined by **absolute (production, total-cost) points**.
+
+Each point is `(MW, \$/h)`. The curve linearly interpolates between them. The y-values are
+**total costs**, not marginal rates. If your data instead gives marginal rates between
+breakpoints (e.g., a bid stack), use [`PiecewiseIncrementalCurve`](@ref).
+
+**Optimization formulation:** uses the **lambda (convex combination)** formulation — one
+λ variable per breakpoint, `P = Σ λᵢ·Pᵢ`, `C = Σ λᵢ·Cᵢ`. For non-convex cost curves
+(marginal rate decreases at some breakpoint) an SOS2 binary constraint is automatically
+added, making the problem a MILP. Use [`PiecewiseIncrementalCurve`](@ref) if you want
+the delta formulation, which avoids SOS2 entirely.
 
 # Arguments
-- `points::Vector{Tuple{Float64, Float64}}` or similar: vector of `(production, cost)` pairs
+- `points`: vector of `(production, total_cost)` pairs in ascending production order
+
+# Example
+```julia
+# 100 MW → \$400/h, 200 MW → \$900/h, 300 MW → \$1500/h
+curve = PiecewisePointCurve([(100.0, 400.0), (200.0, 900.0), (300.0, 1500.0)])
+```
 """
 const PiecewisePointCurve = InputOutputCurve{PiecewiseLinearData}
 
@@ -119,18 +152,34 @@ Base.show(io::IO, vc::PiecewisePointCurve) =
     end
 
 """
-    PiecewiseIncrementalCurve(initial_input::Union{Float64, Nothing}, x_coords::Vector{Float64}, slopes::Vector{Float64})
-    PiecewiseIncrementalCurve(input_at_zero::Union{Nothing, Float64}, initial_input::Union{Float64, Nothing}, x_coords::Vector{Float64}, slopes::Vector{Float64})
+    PiecewiseIncrementalCurve(initial_input, x_coords, slopes)
+    PiecewiseIncrementalCurve(input_at_zero, initial_input, x_coords, slopes)
 
-A piecewise linear curve specified by marginal rates (slopes) between production points. May
-have nonzero initial value.
+A piecewise marginal-rate curve: each segment has a constant \$/MWh rate.
+
+**This is the standard format for generator bid stacks and market offers.** The y-values
+are marginal rates (slopes), not total costs. If your data gives total cost at each output
+level, use [`PiecewisePointCurve`](@ref) instead.
+
+**Optimization formulation:** uses the **delta (block-offer)** formulation — one δ variable
+per segment, `P = Σ δₖ + offset`, `C = Σ δₖ · slopeₖ`, with per-segment width bounds
+`δₖ ≤ Pₖ₊₁ - Pₖ`. The segment bounds enforce ordering without SOS2, so **non-convex
+curves (decreasing slopes) do not require binary variables**. This is why market offer
+stacks always use this format rather than [`PiecewisePointCurve`](@ref).
 
 # Arguments
-- `input_at_zero::Union{Nothing, Float64}`: (optional, defaults to `nothing`) cost at zero production, does NOT represent a part of the curve
-- `initial_input::Union{Float64, Nothing}`: cost at minimum production point `first(x_coords)` (NOT at zero production), defines the start of the curve
-- `x_coords::Vector{Float64}`: vector of `n` production points
-- `slopes::Vector{Float64}`: vector of `n-1` marginal rates/slopes of the curve segments between
-  the points
+- `input_at_zero`: (optional) cost at zero production — separate from the curve, use when
+  the generator has a cost even at zero output (e.g., spinning reserve)
+- `initial_input`: **total cost at `x_coords[1]`** (the minimum production point), anchors
+  the curve. Set to `nothing` if only the shape matters (e.g., dispatch without costing).
+- `x_coords`: `n` production breakpoints in ascending order (e.g., MW)
+- `slopes`: `n-1` marginal rates between consecutive breakpoints (e.g., \$/MWh)
+
+# Example
+```julia
+# \$30/MWh from 100→150 MW, \$35/MWh from 150→200 MW; total cost at 100 MW = \$500/h
+curve = PiecewiseIncrementalCurve(500.0, [100.0, 150.0, 200.0], [30.0, 35.0])
+```
 """
 const PiecewiseIncrementalCurve = IncrementalCurve{PiecewiseStepData}
 
@@ -164,16 +213,18 @@ Base.show(io::IO, vc::PiecewiseIncrementalCurve) =
     )
 
 """
-    PiecewiseAverageCurve(initial_input::Union{Float64, Nothing}, x_coords::Vector{Float64}, slopes::Vector{Float64})
+    PiecewiseAverageCurve(initial_input, x_coords, y_coords)
 
-A piecewise linear curve specified by average rates between production points. May have
-nonzero initial value.
+A piecewise average-rate curve: each segment gives average cost per unit output.
+
+Use when your data source gives **average** heat rates or costs (total fuel / total output)
+at each production level, not incremental/marginal rates. Less common than
+[`PiecewiseIncrementalCurve`](@ref) for market bids; more common for fuel efficiency tables.
 
 # Arguments
-- `initial_input::Union{Float64, Nothing}`: cost at minimum production point `first(x_coords)` (NOT at zero production), defines the start of the curve
-- `x_coords::Vector{Float64}`: vector of `n` production points
-- `slopes::Vector{Float64}`: vector of `n-1` average rates/slopes of the curve segments between
-  the points
+- `initial_input`: **total cost at `x_coords[1]`** (the minimum production point)
+- `x_coords`: `n` production breakpoints in ascending order (e.g., MW)
+- `y_coords`: `n-1` average rates per segment (e.g., MBTU/MWh — total fuel / total output)
 """
 const PiecewiseAverageCurve = AverageRateCurve{PiecewiseStepData}
 
@@ -193,6 +244,154 @@ Base.show(io::IO, vc::PiecewiseAverageCurve) =
         print(
             io,
             "$(typeof(vc))($(get_initial_input(vc)), $(get_x_coords(vc)), $(get_average_rates(vc)))",
+        )
+    else
+        Base.show_default(io, vc)
+    end
+
+# ── Time-series cost aliases ──────────────────────────────────────────────────
+# Helper: format a TimeSeriesKey or Nothing for compact show output.
+_ts_key_repr(key::TimeSeriesKey) = repr(get_name(key))
+_ts_key_repr(::Nothing) = "nothing"
+
+"""
+    TimeSeriesLinearCurve
+
+A time-series-backed linear input-output curve. Alias for
+`TimeSeriesInputOutputCurve{TimeSeriesLinearFunctionData}`.
+"""
+const TimeSeriesLinearCurve =
+    TimeSeriesInputOutputCurve{TimeSeriesLinearFunctionData}
+
+is_cost_alias(::Union{TimeSeriesLinearCurve, Type{TimeSeriesLinearCurve}}) = true
+
+TimeSeriesInputOutputCurve{TimeSeriesLinearFunctionData}(key::TimeSeriesKey) =
+    TimeSeriesInputOutputCurve(TimeSeriesLinearFunctionData(key))
+
+Base.show(io::IO, vc::TimeSeriesLinearCurve) =
+    if isnothing(get_input_at_zero(vc))
+        print(io, "$(typeof(vc))($(_ts_key_repr(get_time_series_key(vc))))")
+    else
+        Base.show_default(io, vc)
+    end
+
+"""
+    TimeSeriesQuadraticCurve
+
+A time-series-backed quadratic input-output curve. Alias for
+`TimeSeriesInputOutputCurve{TimeSeriesQuadraticFunctionData}`.
+"""
+const TimeSeriesQuadraticCurve =
+    TimeSeriesInputOutputCurve{TimeSeriesQuadraticFunctionData}
+
+is_cost_alias(::Union{TimeSeriesQuadraticCurve, Type{TimeSeriesQuadraticCurve}}) = true
+
+TimeSeriesInputOutputCurve{TimeSeriesQuadraticFunctionData}(key::TimeSeriesKey) =
+    TimeSeriesInputOutputCurve(TimeSeriesQuadraticFunctionData(key))
+
+Base.show(io::IO, vc::TimeSeriesQuadraticCurve) =
+    if isnothing(get_input_at_zero(vc))
+        print(io, "$(typeof(vc))($(_ts_key_repr(get_time_series_key(vc))))")
+    else
+        Base.show_default(io, vc)
+    end
+
+"""
+    TimeSeriesPiecewisePointCurve
+
+A time-series-backed piecewise linear input-output curve. Alias for
+`TimeSeriesInputOutputCurve{TimeSeriesPiecewiseLinearData}`.
+"""
+const TimeSeriesPiecewisePointCurve =
+    TimeSeriesInputOutputCurve{TimeSeriesPiecewiseLinearData}
+
+is_cost_alias(
+    ::Union{TimeSeriesPiecewisePointCurve, Type{TimeSeriesPiecewisePointCurve}},
+) = true
+
+TimeSeriesInputOutputCurve{TimeSeriesPiecewiseLinearData}(key::TimeSeriesKey) =
+    TimeSeriesInputOutputCurve(TimeSeriesPiecewiseLinearData(key))
+
+Base.show(io::IO, vc::TimeSeriesPiecewisePointCurve) =
+    if isnothing(get_input_at_zero(vc))
+        print(io, "$(typeof(vc))($(_ts_key_repr(get_time_series_key(vc))))")
+    else
+        Base.show_default(io, vc)
+    end
+
+"""
+    TimeSeriesPiecewiseIncrementalCurve
+
+A time-series-backed piecewise incremental curve. Alias for
+`TimeSeriesIncrementalCurve{TimeSeriesPiecewiseStepData}`.
+"""
+const TimeSeriesPiecewiseIncrementalCurve =
+    TimeSeriesIncrementalCurve{TimeSeriesPiecewiseStepData}
+
+is_cost_alias(
+    ::Union{
+        TimeSeriesPiecewiseIncrementalCurve,
+        Type{TimeSeriesPiecewiseIncrementalCurve},
+    },
+) = true
+
+TimeSeriesIncrementalCurve{TimeSeriesPiecewiseStepData}(
+    key::TimeSeriesKey,
+    initial_input::Union{Nothing, TimeSeriesKey},
+) = TimeSeriesIncrementalCurve(TimeSeriesPiecewiseStepData(key), initial_input)
+
+TimeSeriesIncrementalCurve{TimeSeriesPiecewiseStepData}(
+    key::TimeSeriesKey,
+    initial_input::Union{Nothing, TimeSeriesKey},
+    input_at_zero::Union{Nothing, TimeSeriesKey},
+) = TimeSeriesIncrementalCurve(
+    TimeSeriesPiecewiseStepData(key), initial_input, input_at_zero,
+)
+
+Base.show(io::IO, vc::TimeSeriesPiecewiseIncrementalCurve) =
+    print(
+        io,
+        if isnothing(get_input_at_zero(vc))
+            "$(typeof(vc))($(_ts_key_repr(get_time_series_key(vc))), $(_ts_key_repr(get_initial_input(vc))))"
+        else
+            "$(typeof(vc))($(_ts_key_repr(get_time_series_key(vc))), $(_ts_key_repr(get_initial_input(vc))), $(_ts_key_repr(get_input_at_zero(vc))))"
+        end,
+    )
+
+"""
+    TimeSeriesPiecewiseAverageCurve
+
+A time-series-backed piecewise average rate curve. Alias for
+`TimeSeriesAverageRateCurve{TimeSeriesPiecewiseStepData}`.
+"""
+const TimeSeriesPiecewiseAverageCurve =
+    TimeSeriesAverageRateCurve{TimeSeriesPiecewiseStepData}
+
+is_cost_alias(
+    ::Union{
+        TimeSeriesPiecewiseAverageCurve,
+        Type{TimeSeriesPiecewiseAverageCurve},
+    },
+) = true
+
+TimeSeriesAverageRateCurve{TimeSeriesPiecewiseStepData}(
+    key::TimeSeriesKey,
+    initial_input::Union{Nothing, TimeSeriesKey},
+) = TimeSeriesAverageRateCurve(TimeSeriesPiecewiseStepData(key), initial_input)
+
+TimeSeriesAverageRateCurve{TimeSeriesPiecewiseStepData}(
+    key::TimeSeriesKey,
+    initial_input::Union{Nothing, TimeSeriesKey},
+    input_at_zero::Union{Nothing, TimeSeriesKey},
+) = TimeSeriesAverageRateCurve(
+    TimeSeriesPiecewiseStepData(key), initial_input, input_at_zero,
+)
+
+Base.show(io::IO, vc::TimeSeriesPiecewiseAverageCurve) =
+    if isnothing(get_input_at_zero(vc))
+        print(
+            io,
+            "$(typeof(vc))($(_ts_key_repr(get_time_series_key(vc))), $(_ts_key_repr(get_initial_input(vc))))",
         )
     else
         Base.show_default(io, vc)
