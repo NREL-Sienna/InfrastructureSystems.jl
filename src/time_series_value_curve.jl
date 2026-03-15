@@ -102,8 +102,9 @@ get_initial_input(
 is_time_series_backed(curve::ValueCurve) =
     is_time_series_backed(get_function_data(curve))
 
-"Get the `TimeSeriesKey` from the underlying function data of a `ValueCurve`."
-get_time_series_key(curve::ValueCurve) = get_time_series_key(get_function_data(curve))
+"Get the `TimeSeriesKey` from the underlying function data of a time-series-backed `ValueCurve`."
+get_time_series_key(curve::ValueCurve{<:TimeSeriesFunctionData}) =
+    get_time_series_key(get_function_data(curve))
 
 # GENERIC CONSTRUCTORS (Julia #35053 workaround)
 TimeSeriesInputOutputCurve(

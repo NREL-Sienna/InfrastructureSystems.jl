@@ -1,10 +1,16 @@
 """
     TimeSeriesFunctionData <: FunctionData
 
-Abstract supertype for `FunctionData` variants whose numerical data is stored in
-a time series referenced by a [`TimeSeriesKey`](@ref). Each concrete subtype
-mirrors a concrete `FunctionData` subtype and indicates that the time series
-elements are of that type.
+Abstract supertype for `FunctionData` variants whose numerical data lives in a time series
+rather than inline.
+
+Each concrete subtype mirrors a static [`FunctionData`](@ref) subtype — same shape, but
+instead of holding numbers directly, it holds a [`TimeSeriesKey`](@ref) that points to a
+time series of the corresponding static type. Use these when cost function parameters change
+at each simulation timestep (e.g., time-varying market offers).
+
+Use [`is_time_series_backed`](@ref) to check at runtime, and [`get_time_series_key`](@ref)
+to retrieve the key.
 """
 abstract type TimeSeriesFunctionData <: FunctionData end
 
