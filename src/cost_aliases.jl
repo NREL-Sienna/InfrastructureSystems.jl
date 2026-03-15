@@ -250,6 +250,9 @@ Base.show(io::IO, vc::PiecewiseAverageCurve) =
     end
 
 # ── Time-series cost aliases ──────────────────────────────────────────────────
+# Helper: format a TimeSeriesKey or Nothing for compact show output.
+_ts_key_repr(key::TimeSeriesKey) = repr(get_name(key))
+_ts_key_repr(::Nothing) = "nothing"
 
 """
     TimeSeriesLinearCurve
@@ -265,6 +268,13 @@ is_cost_alias(::Union{TimeSeriesLinearCurve, Type{TimeSeriesLinearCurve}}) = tru
 TimeSeriesInputOutputCurve{TimeSeriesLinearFunctionData}(key::TimeSeriesKey) =
     TimeSeriesInputOutputCurve(TimeSeriesLinearFunctionData(key))
 
+Base.show(io::IO, vc::TimeSeriesLinearCurve) =
+    if isnothing(get_input_at_zero(vc))
+        print(io, "$(typeof(vc))($(_ts_key_repr(get_time_series_key(vc))))")
+    else
+        Base.show_default(io, vc)
+    end
+
 """
     TimeSeriesQuadraticCurve
 
@@ -278,6 +288,13 @@ is_cost_alias(::Union{TimeSeriesQuadraticCurve, Type{TimeSeriesQuadraticCurve}})
 
 TimeSeriesInputOutputCurve{TimeSeriesQuadraticFunctionData}(key::TimeSeriesKey) =
     TimeSeriesInputOutputCurve(TimeSeriesQuadraticFunctionData(key))
+
+Base.show(io::IO, vc::TimeSeriesQuadraticCurve) =
+    if isnothing(get_input_at_zero(vc))
+        print(io, "$(typeof(vc))($(_ts_key_repr(get_time_series_key(vc))))")
+    else
+        Base.show_default(io, vc)
+    end
 
 """
     TimeSeriesPiecewisePointCurve
@@ -294,6 +311,13 @@ is_cost_alias(
 
 TimeSeriesInputOutputCurve{TimeSeriesPiecewiseLinearData}(key::TimeSeriesKey) =
     TimeSeriesInputOutputCurve(TimeSeriesPiecewiseLinearData(key))
+
+Base.show(io::IO, vc::TimeSeriesPiecewisePointCurve) =
+    if isnothing(get_input_at_zero(vc))
+        print(io, "$(typeof(vc))($(_ts_key_repr(get_time_series_key(vc))))")
+    else
+        Base.show_default(io, vc)
+    end
 
 """
     TimeSeriesPiecewiseIncrementalCurve
@@ -324,6 +348,16 @@ TimeSeriesIncrementalCurve{TimeSeriesPiecewiseStepData}(
     TimeSeriesPiecewiseStepData(key), initial_input, input_at_zero,
 )
 
+Base.show(io::IO, vc::TimeSeriesPiecewiseIncrementalCurve) =
+    print(
+        io,
+        if isnothing(get_input_at_zero(vc))
+            "$(typeof(vc))($(_ts_key_repr(get_time_series_key(vc))), $(_ts_key_repr(get_initial_input(vc))))"
+        else
+            "$(typeof(vc))($(_ts_key_repr(get_time_series_key(vc))), $(_ts_key_repr(get_initial_input(vc))), $(_ts_key_repr(get_input_at_zero(vc))))"
+        end,
+    )
+
 """
     TimeSeriesPiecewiseAverageCurve
 
@@ -352,3 +386,13 @@ TimeSeriesAverageRateCurve{TimeSeriesPiecewiseStepData}(
 ) = TimeSeriesAverageRateCurve(
     TimeSeriesPiecewiseStepData(key), initial_input, input_at_zero,
 )
+
+Base.show(io::IO, vc::TimeSeriesPiecewiseAverageCurve) =
+    if isnothing(get_input_at_zero(vc))
+        print(
+            io,
+            "$(typeof(vc))($(_ts_key_repr(get_time_series_key(vc))), $(_ts_key_repr(get_initial_input(vc))))",
+        )
+    else
+        Base.show_default(io, vc)
+    end

@@ -115,10 +115,11 @@
                 @test IS.is_time_series_backed(ts_fd)
                 @test IS.get_name(IS.get_time_series_key(ts_fd)) == name
 
-                # Retrieve the time series using the key from the wrapper
+                # Retrieve the time series via the key extracted from the wrapper,
+                # exercising the key-based retrieval path rather than by-name.
                 retrieved_key = IS.get_time_series_key(ts_fd)
                 retrieved_ts = IS.get_time_series(
-                    IS.Deterministic, component, name;
+                    component, retrieved_key;
                     start_time = initial_time, len = horizon_count,
                     count = 1,
                 )
@@ -201,22 +202,23 @@
                     resolution = resolution)
                 key = IS.add_time_series!(sys, component, forecast)
 
-                # Create TimeSeriesFunctionData from the key
+                # Create TimeSeriesFunctionData from the key, then retrieve via that
+                # key to exercise the wrapper's key-based retrieval path.
                 ts_fd = TSType(key)
                 retrieved_key = IS.get_time_series_key(ts_fd)
 
                 # Retrieve the first window and verify data survived HDF5 round-trip
                 retrieved_ts = IS.get_time_series(
-                    IS.Deterministic, component, name;
+                    component, retrieved_key;
                     start_time = initial_time, len = horizon_count,
                     count = 1,
                 )
                 retrieved_values = first(values(IS.get_data(retrieved_ts)))
                 @test retrieved_values == fd_data
 
-                # Retrieve the second window
+                # Retrieve the second window via the same key
                 retrieved_ts_2 = IS.get_time_series(
-                    IS.Deterministic, component, name;
+                    component, retrieved_key;
                     start_time = other_time, len = horizon_count,
                     count = 1,
                 )
