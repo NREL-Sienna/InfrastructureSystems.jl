@@ -37,7 +37,7 @@ end
 ```
 """
 function create_sienna_archive(fill!::Function, path::AbstractString; force::Bool = false)
-    if !is_sienna_archive(path)
+    if !_is_sienna_archive(path)
         throw(
             DataFormatError(
                 "$path does not end in $SIENNA_ARCHIVE_EXTENSION; a Sienna archive requires " *
@@ -61,7 +61,11 @@ function create_sienna_archive(fill!::Function, path::AbstractString; force::Boo
         fill!(staging)
         ZipArchives.ZipWriter(path) do archive
             for name in readdir(staging)
-                ZipArchives.zip_newfile(archive, name; compress = _should_compress_member(name))
+                ZipArchives.zip_newfile(
+                    archive,
+                    name;
+                    compress = _should_compress_member(name),
+                )
                 open(joinpath(staging, name), "r") do io
                     write(archive, io)
                 end
