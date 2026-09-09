@@ -23,6 +23,23 @@ this, so a writer is held to it too (see [`create_sienna_archive`](@ref)).
 is_sienna_archive(path::AbstractString) =
     lowercase(splitext(path)[2]) == SIENNA_ARCHIVE_EXTENSION
 
+_should_compress_member(name::AbstractString) =
+    lowercase(splitext(name)[2]) ∉ NO_COMPRESS_EXTENSIONS
+
+"""Write one member, named by its path relative to the staging directory."""
+function _add_archive_member!(
+    archive::ZipArchives.ZipWriter,
+    file::AbstractString,
+    staging::AbstractString,
+)
+    name = join(splitpath(relpath(file, staging)), "/")
+    ZipArchives.zip_newfile(archive, name; compress = _should_compress_member(name))
+    open(file, "r") do io
+        write(archive, io)
+    end
+    return nothing
+end
+
 """
 $(TYPEDSIGNATURES)
 
@@ -76,23 +93,6 @@ function create_sienna_archive(fill!::Function, path::AbstractString; force::Boo
                 end
             end
         end
-    end
-    return nothing
-end
-
-_should_compress_member(name::AbstractString) =
-    lowercase(splitext(name)[2]) ∉ NO_COMPRESS_EXTENSIONS
-
-"""Write one member, named by its path relative to the staging directory."""
-function _add_archive_member!(
-    archive::ZipArchives.ZipWriter,
-    file::AbstractString,
-    staging::AbstractString,
-)
-    name = join(splitpath(relpath(file, staging)), "/")
-    ZipArchives.zip_newfile(archive, name; compress = _should_compress_member(name))
-    open(file, "r") do io
-        write(archive, io)
     end
     return nothing
 end
