@@ -12,7 +12,12 @@ const SIENNA_ARCHIVE_EXTENSION = ".sn"
 """HDF5 are already compressed; don't recompress for archive."""
 const NO_COMPRESS_EXTENSIONS = (".h5", ".hdf5")
 
-_is_sienna_archive(path::AbstractString) =
+"""
+$(TYPEDSIGNATURES)
+
+Whether `path` names a Sienna archive, by its extension.
+"""
+is_sienna_archive(path::AbstractString) =
     lowercase(splitext(path)[2]) == SIENNA_ARCHIVE_EXTENSION
 
 _should_compress_member(name::AbstractString) =
@@ -23,9 +28,9 @@ $(TYPEDSIGNATURES)
 
 Archive a directory into the single zip archive at `path`, calling `fill!` to populate it.
 
-`fill!` receives a temporary directory and writes the archive's members into
-the top-level so the archive is kept flat. Members are compressed except for
-the extensions in [`NO_COMPRESS_EXTENSIONS`](@ref).
+`fill!` receives a temporary directory that does not exist yet and writes the
+archive's members into the top-level so the archive is kept flat. Members are
+compressed except for the extensions in [`NO_COMPRESS_EXTENSIONS`](@ref).
 
 Refuses, before calling `fill!`, a `path` that is not `$SIENNA_ARCHIVE_EXTENSION`, a
 `path` that is a directory, and an existing file unless `force`.
@@ -37,7 +42,7 @@ end
 ```
 """
 function create_sienna_archive(fill!::Function, path::AbstractString; force::Bool = false)
-    if !_is_sienna_archive(path)
+    if !is_sienna_archive(path)
         throw(
             DataFormatError(
                 "$path does not end in $SIENNA_ARCHIVE_EXTENSION; a Sienna archive requires " *
