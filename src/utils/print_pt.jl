@@ -142,7 +142,7 @@ end
 """
     show_components(io, components, component_type, additional_columns = []; units = nothing, kwargs...)
 
-Vector-form `additional_columns` accepts `units` (e.g. `SU`, `DU`, or a
+Vector-form `additional_columns` accepts `units` (e.g. `SU`, `CU`, or a
 domain-provided unit like `MW`) to force every unit-converted column to
 display in that unit system instead of each column's own `display_units_arg`
 default. To vary the unit by column, pass a mapping from column name to unit
