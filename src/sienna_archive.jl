@@ -1,4 +1,4 @@
-# The Sienna archive: a directory of files, tar'd and gzip'd into one `.sn`.
+# The Sienna archive: a directory of files, zipped into one `.sn`.
 #
 # The container only — nothing here knows what the members are. A package decides that: a
 # PowerSystems archive holds a system document plus its time-series sidecars, a portfolio
@@ -8,6 +8,9 @@
 
 """Extension a Sienna archive is recognized by, on write and on read."""
 const SIENNA_ARCHIVE_EXTENSION = ".sn"
+
+"""HDF5 is already compressed."""
+const NO_COMPRESS_EXTENSIONS = (".h5", ".hdf5")
 
 """
 $(TYPEDSIGNATURES)
@@ -23,12 +26,15 @@ is_sienna_archive(path::AbstractString) =
 """
 $(TYPEDSIGNATURES)
 
-Archive a directory into the single gzip'd tar at `path`, calling `fill!` to populate it.
+Archive a directory into the single zip archive at `path`, calling `fill!` to populate it.
 
 `fill!` receives a staging directory that does not yet exist and writes the archive's members
-into it; everything in it afterwards becomes the archive. The staging directory is temporary
-and its name never reaches the archive — `Tar.create` archives a directory's *contents*, so
-the members sit at the archive root rather than under a prefix.
+into it; every file in it afterwards becomes a member. The staging directory is temporary and
+its name never reaches the archive — members are named by their path relative to it, so they
+sit at the archive root rather than under a prefix. Empty directories are not members.
+
+Members are deflated except for the extensions in [`NO_COMPRESS_EXTENSIONS`](@ref),
+which are stored as they are.
 
 Refuses, before calling `fill!`, a `path` that is not `$SIENNA_ARCHIVE_EXTENSION` (the reader
 recognizes the format by extension, so a differently named archive could not be read back), a
@@ -63,8 +69,56 @@ function create_sienna_archive(fill!::Function, path::AbstractString; force::Boo
     mktempdir() do dir
         staging = joinpath(dir, "archive")
         fill!(staging)
-        open(CodecZlib.GzipCompressorStream, path, "w") do io
-            Tar.create(staging, io)
+        ZipArchives.ZipWriter(path) do archive
+            for (root, _, files) in walkdir(staging)
+                for file in files
+                    _add_archive_member!(archive, joinpath(root, file), staging)
+                end
+            end
+        end
+    end
+    return nothing
+end
+
+_should_compress_member(name::AbstractString) =
+    lowercase(splitext(name)[2]) ∉ NO_COMPRESS_EXTENSIONS
+
+"""Write one member, named by its path relative to the staging directory."""
+function _add_archive_member!(
+    archive::ZipArchives.ZipWriter,
+    file::AbstractString,
+    staging::AbstractString,
+)
+    name = join(splitpath(relpath(file, staging)), "/")
+    ZipArchives.zip_newfile(archive, name; compress = _should_compress_member(name))
+    open(file, "r") do io
+        write(archive, io)
+    end
+    return nothing
+end
+
+function _extract_archive_member(
+    archive::ZipArchives.ZipReader,
+    i::Int,
+    dir::AbstractString,
+)
+    name = ZipArchives.zip_name(archive, i)
+    if isabspath(name) || ".." in splitpath(name)
+        throw(
+            DataFormatError(
+                "archive member \"$name\" points outside the archive; refusing to extract it",
+            ),
+        )
+    end
+    destination = joinpath(dir, name)
+    if endswith(name, "/")
+        mkpath(destination)
+        return nothing
+    end
+    mkpath(dirname(destination))
+    ZipArchives.zip_openentry(archive, i) do member
+        open(destination, "w") do io
+            write(io, member)
         end
     end
     return nothing
@@ -85,8 +139,11 @@ function extract_sienna_archive(path::AbstractString)
         throw(DataFormatError("$path does not exist"))
     end
     dir = mktempdir()
-    open(CodecZlib.GzipDecompressorStream, path, "r") do io
-        Tar.extract(io, dir)
+    open(path, "r") do io
+        archive = ZipArchives.ZipReader(Mmap.mmap(io))
+        for i in 1:ZipArchives.zip_nentries(archive)
+            _extract_archive_member(archive, i, dir)
+        end
     end
     return dir
 end
