@@ -1,4 +1,4 @@
-# The Sienna archive: a directory of files, zipped into one `.sn`.
+# The Sienna archive: a flat directory of files, zipped into one `.sn`.
 #
 # The container only — nothing here knows what the members are. A package decides that: a
 # PowerSystems archive holds a system document plus its time-series sidecars, a portfolio
@@ -9,52 +9,25 @@
 """Extension a Sienna archive is recognized by, on write and on read."""
 const SIENNA_ARCHIVE_EXTENSION = ".sn"
 
-"""HDF5 is already compressed."""
+"""HDF5 are already compressed; don't recompress for archive."""
 const NO_COMPRESS_EXTENSIONS = (".h5", ".hdf5")
 
-"""
-$(TYPEDSIGNATURES)
-
-Whether `path` names a Sienna archive, by its extension.
-
-The extension is the whole test: a reader picks the archive path over the directory path from
-this, so a writer is held to it too (see [`create_sienna_archive`](@ref)).
-"""
-is_sienna_archive(path::AbstractString) =
+_is_sienna_archive(path::AbstractString) =
     lowercase(splitext(path)[2]) == SIENNA_ARCHIVE_EXTENSION
 
 _should_compress_member(name::AbstractString) =
     lowercase(splitext(name)[2]) ∉ NO_COMPRESS_EXTENSIONS
-
-"""Write one member, named by its path relative to the staging directory."""
-function _add_archive_member!(
-    archive::ZipArchives.ZipWriter,
-    file::AbstractString,
-    staging::AbstractString,
-)
-    name = join(splitpath(relpath(file, staging)), "/")
-    ZipArchives.zip_newfile(archive, name; compress = _should_compress_member(name))
-    open(file, "r") do io
-        write(archive, io)
-    end
-    return nothing
-end
 
 """
 $(TYPEDSIGNATURES)
 
 Archive a directory into the single zip archive at `path`, calling `fill!` to populate it.
 
-`fill!` receives a staging directory that does not yet exist and writes the archive's members
-into it; every file in it afterwards becomes a member. The staging directory is temporary and
-its name never reaches the archive — members are named by their path relative to it, so they
-sit at the archive root rather than under a prefix. Empty directories are not members.
+`fill!` receives a temporary directory and writes the archive's members into
+the top-level so the archive is kept flat. Members are compressed except for
+the extensions in [`NO_COMPRESS_EXTENSIONS`](@ref).
 
-Members are deflated except for the extensions in [`NO_COMPRESS_EXTENSIONS`](@ref),
-which are stored as they are.
-
-Refuses, before calling `fill!`, a `path` that is not `$SIENNA_ARCHIVE_EXTENSION` (the reader
-recognizes the format by extension, so a differently named archive could not be read back), a
+Refuses, before calling `fill!`, a `path` that is not `$SIENNA_ARCHIVE_EXTENSION`, a
 `path` that is a directory, and an existing file unless `force`.
 
 ```julia
@@ -87,38 +60,12 @@ function create_sienna_archive(fill!::Function, path::AbstractString; force::Boo
         staging = joinpath(dir, "archive")
         fill!(staging)
         ZipArchives.ZipWriter(path) do archive
-            for (root, _, files) in walkdir(staging)
-                for file in files
-                    _add_archive_member!(archive, joinpath(root, file), staging)
+            for name in readdir(staging)
+                ZipArchives.zip_newfile(archive, name; compress = _should_compress_member(name))
+                open(joinpath(staging, name), "r") do io
+                    write(archive, io)
                 end
             end
-        end
-    end
-    return nothing
-end
-
-function _extract_archive_member(
-    archive::ZipArchives.ZipReader,
-    i::Int,
-    dir::AbstractString,
-)
-    name = ZipArchives.zip_name(archive, i)
-    if isabspath(name) || ".." in splitpath(name)
-        throw(
-            DataFormatError(
-                "archive member \"$name\" points outside the archive; refusing to extract it",
-            ),
-        )
-    end
-    destination = joinpath(dir, name)
-    if endswith(name, "/")
-        mkpath(destination)
-        return nothing
-    end
-    mkpath(dirname(destination))
-    ZipArchives.zip_openentry(archive, i) do member
-        open(destination, "w") do io
-            write(io, member)
         end
     end
     return nothing
@@ -127,12 +74,8 @@ end
 """
 $(TYPEDSIGNATURES)
 
-Extract the Sienna archive at `path` and return the directory holding its members.
-
-The directory lives for the rest of the session rather than the rest of this call.
-`mktempdir()`'s default `cleanup = true` registers it for deletion at exit, which is what a
-caller that keeps reading from the extracted files needs — a store opened in place out of the
-archive, say — while still not leaking into the OS temp root permanently.
+Extract the Sienna archive at `path` and return the directory holding its
+members, which persists until the Julia session ends.
 """
 function extract_sienna_archive(path::AbstractString)
     if !isfile(path)
@@ -142,7 +85,12 @@ function extract_sienna_archive(path::AbstractString)
     open(path, "r") do io
         archive = ZipArchives.ZipReader(Mmap.mmap(io))
         for i in 1:ZipArchives.zip_nentries(archive)
-            _extract_archive_member(archive, i, dir)
+            name = ZipArchives.zip_name(archive, i)
+            ZipArchives.zip_openentry(archive, i) do member
+                open(joinpath(dir, name), "w") do io
+                    write(io, member)
+                end
+            end
         end
     end
     return dir

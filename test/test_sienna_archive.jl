@@ -1,9 +1,9 @@
-"""Members exercising both compression paths and a nested path, written into `staging`."""
+"""Members exercising both compression paths, written into `staging`."""
 function _fill_test_archive(staging::AbstractString)
-    mkpath(joinpath(staging, "nested"))
+    mkpath(staging)
     write(joinpath(staging, "document.json"), repeat("{\"a\": 1}", 500))
     write(joinpath(staging, "arrays.h5"), UInt8[(37 * i) % 256 for i in 1:4096])
-    write(joinpath(staging, "nested", "extras.json"), "{}")
+    write(joinpath(staging, "extras.json"), "{}")
     return nothing
 end
 
@@ -16,11 +16,11 @@ end
         extracted = IS.extract_sienna_archive(path)
         staging = joinpath(dir, "expected")
         _fill_test_archive(staging)
-        for member in ("document.json", "arrays.h5", joinpath("nested", "extras.json"))
+        for member in ("document.json", "arrays.h5", "extras.json")
             @test read(joinpath(extracted, member)) == read(joinpath(staging, member))
         end
         # The staging directory's own name must not become a prefix inside the archive.
-        @test sort(readdir(extracted)) == ["arrays.h5", "document.json", "nested"]
+        @test sort(readdir(extracted)) == ["arrays.h5", "document.json", "extras.json"]
     end
 end
 
@@ -36,7 +36,7 @@ end
             i in 1:IS.ZipArchives.zip_nentries(archive)
         )
         @test compressed["document.json"]
-        @test compressed["nested/extras.json"]
+        @test compressed["extras.json"]
         @test !compressed["arrays.h5"]
     end
 end
@@ -48,7 +48,7 @@ end
 
         @test_throws IS.DataFormatError IS.create_sienna_archive(
             filler,
-            joinpath(dir, "case.tar.gz"),
+            joinpath(dir, "case.zip"),
         )
         @test_throws IS.DataFormatError IS.create_sienna_archive(
             filler,
