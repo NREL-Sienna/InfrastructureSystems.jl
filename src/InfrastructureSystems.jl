@@ -53,9 +53,9 @@ import SHA
 import StringTemplates
 import TerminalLoggers: TerminalLogger, ProgressLevel
 import TimeSeries
-import CodecZlib
 import InfraStore
-import Tar
+import Mmap
+import ZipArchives
 import TimerOutputs
 import TOML
 using DataStructures: OrderedDict, SortedDict

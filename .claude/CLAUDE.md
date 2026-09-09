@@ -41,7 +41,7 @@ were factored out for.
 
 ## The Sienna archive and the store's two halves
 
-`src/sienna_archive.jl` owns the **`.sn`** container: a directory of files, tar'd and gzip'd into one
+`src/sienna_archive.jl` owns the **`.sn`** container: a directory of files, zipped into one
 file. It lives here rather than in a consumer because nothing about the container is specific to a
 `System` — PowerSystems packs a system document plus its time-series sidecars, PowerSystemsInvestments-
 Portfolios will pack whatever a portfolio needs, and reimplementing the rules per package is how two
@@ -53,10 +53,15 @@ create_sienna_archive(fill!, path; force = false)  # fill! populates a staging d
 extract_sienna_archive(path)                       # -> directory holding the members
 ```
 
-Three things to know before touching it:
+Four things to know before touching it:
 
 - **`fill!` decides the contents, this file decides nothing about them.** Keep it that way; a member
   list belongs to the package that writes it.
+- **Zip, because compression is a per-member choice.** Members are deflated except for the
+  extensions in `NO_COMPRESS_EXTENSIONS` (`.h5`, `.hdf5`), which are stored as they are: an archive
+  is mostly its HDF5 sidecar, and deflating it walks every byte to save almost nothing. A gzip'd tar
+  is one stream over the concatenated members and compresses all of them or none, which is why the
+  format changed.
 - **The extension is enforced on write** because it is the whole read-side test. An archive named
   otherwise could not be found again, so a non-`.sn` path is a `DataFormatError`, not a warning.
 - **`extract_sienna_archive`'s directory outlives the call.** `mktempdir()`'s default
@@ -64,7 +69,9 @@ Three things to know before touching it:
   extracted files needs — a store opened in place out of the archive, say. Do not wrap it in a
   `do` block.
 
-`Tar` and `CodecZlib` are dependencies for this and nothing else.
+`ZipArchives` and `Mmap` are dependencies for this and nothing else (`extract_sienna_archive` maps
+the archive rather than reading it into memory, since a stored HDF5 member makes an archive as large
+as the data it holds).
 
 ### Arrays with and without the catalog
 
