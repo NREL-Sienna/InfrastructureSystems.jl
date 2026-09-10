@@ -35,8 +35,8 @@ YAML = "ddb6d928-2868-570f-bddf-ab3f9cf99eb6"
 ZipArchives = "49080126-0e18-4c2a-b176-c102e4b3760c"
 
 [sources]
-InfrastructureCoreOpenAPIModels = {rev = "jd/schemas-0.1.0", subdir = "InfrastructureCoreOpenAPIModels.jl", url = "https://github.com/Sienna-Platform/PowerOpenAPIModels.git"}
-InfrastructureTimeSeriesOpenAPIModels = {rev = "jd/schemas-0.1.0", subdir = "InfrastructureTimeSeriesOpenAPIModels.jl", url = "https://github.com/Sienna-Platform/PowerOpenAPIModels.git"}
+InfrastructureCoreOpenAPIModels = {path = "../PowerOpenAPIModels/InfrastructureCoreOpenAPIModels.jl"}
+InfrastructureTimeSeriesOpenAPIModels = {path = "../PowerOpenAPIModels/InfrastructureTimeSeriesOpenAPIModels.jl"}
 
 [compat]
 DataFrames = "^1.7"
@@ -53,7 +53,7 @@ LinearAlgebra = "1"
 Logging = "1"
 Mmap = "1"
 Mustache = "1"
-OpenAPI = "0.2"
+OpenAPI = "1"
 Pkg = "1"
 PrettyTables = "3.1"
 Printf = "1"

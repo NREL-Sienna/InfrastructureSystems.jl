@@ -45,11 +45,16 @@ list_supplemental_attribute_association_rows(data::SystemData) =
 
 # ── typed OpenAPI rows ──────────────────────────────────────────────────────────
 
-# `JSON.parse` yields `AbstractDict{String, Any}` rows, which `OpenAPI.from_json` takes
-# as-is. A oneOf wrapper picks its concrete member type from the row's own discriminator
-# field, so no dispatch is needed here.
+# `JSON.parse` yields `AbstractDict{String, Any}` rows, which `decode` takes as-is. A oneOf
+# wrapper picks its concrete member type from the row's own discriminator field, so no
+# dispatch is needed here.
+#
+# `decode` is the generated packages' public entry point, replacing OpenAPI.jl 0.2's
+# `OpenAPI.from_json`, which 1.x deleted along with the rest of that model runtime.
 function _openapi_rows(::Type{T}, json::AbstractString) where {T}
-    return T[OpenAPI.from_json(T, row) for row in JSON.parse(json)]
+    return T[
+        InfrastructureCoreOpenAPIModels.decode(T, row) for row in JSON.parse(json)
+    ]
 end
 
 """
