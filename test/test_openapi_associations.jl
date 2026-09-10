@@ -116,7 +116,7 @@ end
     @test row.time_series_type == "SingleTimeSeries"
     @test row.owner_id == IS.get_id(component)
     @test row.owner_type == "TestComponent"
-    @test row.owner_category == "Component"
+    @test row.owner_category.value == "Component"
     @test row.name == "static"
     @test row.resolution == "PT1H"
     @test row.length == 6
@@ -126,12 +126,13 @@ end
     @test row.data_hash == row.uri
     @test row.units == "MW"
     @test row.quantity_kind == "ActivePower"
-    # Declared by nobody stays unset: unspecified is deliberately not NATURAL_UNITS.
-    @test isnothing(row.unit_system)
+    # Declared by nobody stays unset: unspecified is deliberately not NATURAL_UNITS, and
+    # under OpenAPI.jl 1.x an absent optional field decodes to `ABSENT`, not `nothing`
+    # (`nothing` is reserved for an explicit JSON `null`).
+    @test row.unit_system isa OpenAPI.Runtime.Absent
     # From the catalog, never re-derived: a scalar series has an empty per-step shape.
     @test row.element_type == "f64"
     @test isempty(row.element_shape)
-    @test OpenAPI.check_required(row)
 end
 
 @testset "openapi_time_series_association_rows: NonSequentialTimeSeries declares no grid at all" begin
@@ -156,7 +157,8 @@ end
     for absent in (:initial_timestamp, :resolution, :horizon, :interval, :count)
         @test !hasfield(typeof(row), absent)
     end
-    @test OpenAPI.check_required(row)
+    # `OpenAPI.check_required` is gone from OpenAPI.jl 1.x: `decode` itself raises on a
+    # missing required field, so a row that exists has already passed that check.
 end
 
 @testset "openapi_time_series_association_rows: every forecast type carries its own window geometry" begin
@@ -206,10 +208,6 @@ end
     @test typeof(scen) === InfrastructureTimeSeriesOpenAPIModels.Scenarios
     @test scen.scenario_count == 5
     @test scen.count == 2
-
-    for row in (det, prob, scen)
-        @test OpenAPI.check_required(row)
-    end
 end
 
 @testset "openapi_time_series_association_rows: transform_single_time_series! rows keep their own discriminator, distinct from Deterministic" begin
@@ -242,7 +240,6 @@ end
     @test derived.time_series_type == "DeterministicSingleTimeSeries"
     @test derived.count == 3
     @test !any(r -> typeof(r) === InfrastructureTimeSeriesOpenAPIModels.Deterministic, rows)
-    @test OpenAPI.check_required(derived)
 end
 
 @testset "openapi_time_series_association_rows: the unit system a series declares round trips, unset stays absent" begin
@@ -270,9 +267,9 @@ end
             ),
         )
         row = _openapi_row(data, string("series_", spelling))
-        @test row.unit_system == spelling
+        @test row.unit_system.value == spelling
     end
-    @test isnothing(_openapi_row(data, "series_unset").unit_system)
+    @test _openapi_row(data, "series_unset").unit_system isa OpenAPI.Runtime.Absent
 end
 
 @testset "openapi_time_series_association_rows: a sub-second resolution round trips through the document" begin
@@ -291,7 +288,6 @@ end
     )
     row = _openapi_row(data, "subsecond")
     @test row.resolution == "PT0.5S"
-    @test OpenAPI.check_required(row)
 end
 
 @testset "openapi_time_series_association_json: raw JSON matches the typed rows field-for-field" begin
@@ -371,9 +367,6 @@ end
     @test all(r -> r.attribute_id == IS.get_id(shared), rows)
     @test all(r -> r.attribute_type == "GeographicInfo", rows)
     @test all(r -> r.component_type == "TestComponent", rows)
-    for row in rows
-        @test OpenAPI.check_required(row)
-    end
 end
 
 @testset "list_supplemental_attribute_association_rows reads the whole table" begin
