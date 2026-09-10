@@ -258,7 +258,7 @@ end
             ),
         ),
     )
-    for (basis, spelling) in ((IS.NU, "NATURAL_UNITS"), (IS.DU, "COMPONENT_BASE"))
+    for (basis, spelling) in ((IS.NU, "NATURAL_UNITS"), (IS.CU, "COMPONENT_BASE"))
         IS.add_time_series!(
             data, component,
             IS.SingleTimeSeries(

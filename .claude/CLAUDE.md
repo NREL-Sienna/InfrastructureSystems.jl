@@ -93,7 +93,7 @@ These wrap `Store::persist_arrays_to` and `Store::open_without_catalog`, which a
 
 ## Units Layer (RelativeUnits)
 
-IS provides unit-system *plumbing* only — SU/DU/NU acquire domain meaning in PowerSystems.jl.
+IS provides unit-system *plumbing* only — SU/CU/NU acquire domain meaning in PowerSystems.jl.
 IS itself performs no domain conversions; only the plumbing and `convert_cost_coefficient`
 math are testable here. IS exports the markers and `RelativeQuantity` only — there is **no
 unit-string vocabulary in IS**; that vocabulary lives in `SiennaSchemas/Core/units.json` for
@@ -101,17 +101,17 @@ the data pipeline.
 
 ```
 RelativeUnits submodule (src/relative_units.jl)
-  AbstractUnitSystem ⊃ {AbstractRelativeUnit ⊃ {DeviceBaseUnit, SystemBaseUnit}, NaturalUnit}
-  const singletons DU, SU, NU
-  RelativeQuantity{T<:Number, U<:AbstractRelativeUnit} <: Number  (built via `0.6 * DU`)
+  AbstractUnitSystem ⊃ {AbstractRelativeUnit ⊃ {ComponentBaseUnit, SystemBaseUnit}, NaturalUnit}
+  const singletons CU, SU, NU
+  RelativeQuantity{T<:Number, U<:AbstractRelativeUnit} <: Number  (built via `0.6 * CU`)
   convert_cost_coefficient + 9-method _cost_coeff_ratio dispatch table (+ erroring catch-all)
   traits: _strip_units (domain packages MUST extend for their quantity types), display_units_arg
 ```
 
 Guard rails (all dispatch-based, erroring `ArgumentError`s):
-- Re-tagging a tagged value (`(0.6DU) * SU`) throws — no silent nesting.
+- Re-tagging a tagged value (`(0.6CU) * SU`) throws — no silent nesting.
 - Cross-unit `+`, `-`, `==`, `<`, `<=`, `isless`, `isapprox` throw — convert explicitly first.
-- Tagged-vs-untagged `==`/`+`/`-` (`0.6DU == 0.5`) throw.
+- Tagged-vs-untagged `==`/`+`/`-` (`0.6CU == 0.5`) throw.
 - `Base.hash` is defined consistently with the cross-payload `==` (Dict/Set safe for same-unit keys).
 - Note: `isequal` falls back to the throwing `==`, so *mixed-unit* Dict keys can throw on
   hash collision — define a non-throwing `isequal` if that's ever needed.
@@ -122,7 +122,7 @@ Guard rails (all dispatch-based, erroring `ArgumentError`s):
 decodes that name back to the singleton. IS4 is a breaking release: the legacy IS3
 `UnitSystem` enum is **no longer accepted** anywhere in the cost-curve API — not as a
 constructor argument, not as a serialized value-name (`"SYSTEM_BASE"`). Downstream packages
-(PowerSystemCaseBuilder, PowerSystems) must pass `SystemBaseUnit()`/`DeviceBaseUnit()`/
+(PowerSystemCaseBuilder, PowerSystems) must pass `SystemBaseUnit()`/`ComponentBaseUnit()`/
 `NaturalUnit()` instances. `zero(c)` preserves the unit parameter; `zero(CostCurve)`
 (type form) defaults to NU.
 
@@ -216,7 +216,7 @@ produces two getter variants and one setter:
 - `set_X!(value, val)` — takes **no** `units` argument. The caller must supply a value that
   already carries its own unit tag (a `RelativeQuantity` or domain quantity); `set_value`
   strips it internally. This asymmetry is intentional: getters need to know the target unit
-  system (e.g. `SU`, `DU`, `MW`) at call time, while setters rely on the value itself to
+  system (e.g. `SU`, `CU`, `MW`) at call time, while setters rely on the value itself to
   carry unit information.
 
 An `exclude_getter` field means the public getter is hand-written elsewhere; the
@@ -318,7 +318,7 @@ label (`"MW"`), read with `get_units`, defaulting to `nothing`. It is distinct f
 - IS neither interprets nor validates it — no units vocabulary in IS. `nothing` is left
   alone; "unknown" vs "dimensionless" is the caller's convention.
 
-Not to be confused with the `RelativeUnits` system markers (`SU`/`DU`/`NU`) — a per-unit
+Not to be confused with the `RelativeUnits` system markers (`SU`/`CU`/`NU`) — a per-unit
 normalization base, not a physical dimension. Note the accessor-side `units::AbstractUnitSystem`
 kwarg documented under "Time series accessors" is **not present on this branch**
 (`default_units` in `src/units.jl` has no callers here); when that line merges, the two
@@ -403,7 +403,7 @@ exists; the arg was never read — renamed to `time_series_transaction`),
 - `ValueCurve` (static and `TimeSeries*` curves)
 - `ProductionVariableCostCurve` (`CostCurve{T,U}`, `FuelCurve{T,U}`)
 - `FunctionData` (`StaticFunctionData`, `TimeSeriesFunctionData`)
-- `RelativeUnits.AbstractUnitSystem` (`DU`, `SU`, `NU` singletons)
+- `RelativeUnits.AbstractUnitSystem` (`CU`, `SU`, `NU` singletons)
 - `ComponentSelector`
 - `Outputs`
 

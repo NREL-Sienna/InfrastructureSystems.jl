@@ -90,7 +90,7 @@ and they filter a query. The label is a description of the values, so:
 
 IS neither interprets nor validates it: there is no units vocabulary in IS, so a consumer
 that converts values on read owns both the vocabulary and the conversion. Do not confuse it
-with the unit *system* concept in `RelativeUnits` (`SU`/`DU`/`NU`), which selects a per-unit
+with the unit *system* concept in `RelativeUnits` (`SU`/`CU`/`NU`), which selects a per-unit
 normalization base rather than naming a physical dimension. The two are independent: a
 series labeled `"MW"` may still be read against any normalization base.
 

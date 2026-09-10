@@ -20,7 +20,7 @@ get_value_curve(curve::ValueCurveWithUnits) = curve.value_curve
 """
 Get the units marker for the power axes of the curve as an instance of the
 second type parameter (e.g. `NaturalUnit()`, `SystemBaseUnit()`,
-`DeviceBaseUnit()`). Always the units of the x-axis; also the units of the y-axis when
+`ComponentBaseUnit()`). Always the units of the x-axis; also the units of the y-axis when
 [`y_axis_power_dimension`](@ref) is nonzero, as it is for a [`LossCurve`](@ref).
 """
 get_power_units(::ValueCurveWithUnits{T, U}) where {T, U} = U()
@@ -115,7 +115,7 @@ _unit_system_instance(name::AbstractString) = _unit_system_instance(String(name)
 function _unit_system_instance(name::String)
     name == "NaturalUnit" && return NaturalUnit()
     name == "SystemBaseUnit" && return SystemBaseUnit()
-    name == "DeviceBaseUnit" && return DeviceBaseUnit()
+    name == "ComponentBaseUnit" && return ComponentBaseUnit()
     throw(ArgumentError("$name is not a known AbstractUnitSystem"))
 end
 

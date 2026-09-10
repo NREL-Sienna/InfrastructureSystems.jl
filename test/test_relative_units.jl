@@ -1,7 +1,7 @@
 @testset "RelativeQuantity construction and arithmetic" begin
-    a = 0.6 * IS.DU
-    b = 0.4 * IS.DU
-    @test a isa IS.RelativeQuantity{Float64, IS.DeviceBaseUnit}
+    a = 0.6 * IS.CU
+    b = 0.4 * IS.CU
+    @test a isa IS.RelativeQuantity{Float64, IS.ComponentBaseUnit}
     @test IS._strip_units(a + b) ≈ 1.0
     @test IS._strip_units(a - b) ≈ 0.2
     @test IS._strip_units(-a) ≈ -0.6
@@ -12,67 +12,67 @@
 end
 
 @testset "RelativeQuantity comparisons" begin
-    @test 0.6 * IS.DU < 0.7 * IS.DU
-    @test 0.6 * IS.DU <= 0.6 * IS.DU
-    @test isapprox(0.6 * IS.DU, 0.60000001 * IS.DU; atol = 1e-6)
-    @test isless(0.6 * IS.DU, 0.7 * IS.DU)
+    @test 0.6 * IS.CU < 0.7 * IS.CU
+    @test 0.6 * IS.CU <= 0.6 * IS.CU
+    @test isapprox(0.6 * IS.CU, 0.60000001 * IS.CU; atol = 1e-6)
+    @test isless(0.6 * IS.CU, 0.7 * IS.CU)
 end
 
-@testset "DU and SU cannot be mixed" begin
+@testset "CU and SU cannot be mixed" begin
     # Cross-unit operations now throw ArgumentError with a clear message
     # instead of a cryptic ErrorException from Base's promotion path.
-    @test_throws ArgumentError 0.6 * IS.DU + 0.4 * IS.SU
-    @test_throws ArgumentError 0.6 * IS.DU == 0.4 * IS.SU
-    @test_throws ArgumentError 0.6 * IS.DU < 0.4 * IS.SU
+    @test_throws ArgumentError 0.6 * IS.CU + 0.4 * IS.SU
+    @test_throws ArgumentError 0.6 * IS.CU == 0.4 * IS.SU
+    @test_throws ArgumentError 0.6 * IS.CU < 0.4 * IS.SU
     # isapprox lives outside the @eval loop (needs kwargs) — most regression-prone
-    @test_throws ArgumentError isapprox(0.6 * IS.DU, 0.6 * IS.SU)
+    @test_throws ArgumentError isapprox(0.6 * IS.CU, 0.6 * IS.SU)
     # subtraction and isless are inside the @eval loop — verify they also throw
-    @test_throws ArgumentError 0.6 * IS.DU - 0.4 * IS.SU
-    @test_throws ArgumentError isless(0.6 * IS.DU, 0.7 * IS.SU)
+    @test_throws ArgumentError 0.6 * IS.CU - 0.4 * IS.SU
+    @test_throws ArgumentError isless(0.6 * IS.CU, 0.7 * IS.SU)
 end
 
 @testset "tagged-vs-untagged mixing raises ArgumentError" begin
     # RelativeQuantity <: Number but NOT <: Real: the (RQ, Real) and (Real, RQ)
     # erroring methods use Real to avoid any ambiguity with (RQ, RQ) pairs.
-    @test_throws ArgumentError 0.6 * IS.DU == 0.5
-    @test_throws ArgumentError 0.5 + 0.6 * IS.DU
-    @test_throws ArgumentError 0.6 * IS.DU - 0.5
+    @test_throws ArgumentError 0.6 * IS.CU == 0.5
+    @test_throws ArgumentError 0.5 + 0.6 * IS.CU
+    @test_throws ArgumentError 0.6 * IS.CU - 0.5
     # Same-unit comparison must still work (more-specific dispatch is not disrupted)
-    @test (0.6 * IS.DU == 0.6 * IS.DU)
+    @test (0.6 * IS.CU == 0.6 * IS.CU)
 end
 
 @testset "RelativeQuantity zero and one" begin
-    @test zero(IS.RelativeQuantity{Float64, IS.DeviceBaseUnit}) == 0.0 * IS.DU
-    @test one(IS.RelativeQuantity{Float64, IS.DeviceBaseUnit}) == 1.0 * IS.DU
+    @test zero(IS.RelativeQuantity{Float64, IS.ComponentBaseUnit}) == 0.0 * IS.CU
+    @test one(IS.RelativeQuantity{Float64, IS.ComponentBaseUnit}) == 1.0 * IS.CU
 end
 
 @testset "RelativeQuantity display" begin
-    @test sprint(show, 0.6 * IS.DU) == "0.6 DU"
+    @test sprint(show, 0.6 * IS.CU) == "0.6 CU"
     @test sprint(show, 0.3 * IS.SU) == "0.3 SU"
-    @test sprint(show, IS.DU) == "DU"
+    @test sprint(show, IS.CU) == "CU"
     @test sprint(show, IS.SU) == "SU"
     @test sprint(show, IS.NU) == "NU"
 end
 
 @testset "unit markers broadcast as scalars" begin
     # Regression for #629: without `broadcastable`, Base's fallback tries to
-    # `collect` the marker and fails with `no method matching length(::DeviceBaseUnit)`.
+    # `collect` the marker and fails with `no method matching length(::ComponentBaseUnit)`.
     scale(x, ::IS.AbstractUnitSystem) = x
-    for units in (IS.DU, IS.SU, IS.NU)
+    for units in (IS.CU, IS.SU, IS.NU)
         @test scale.([1.0, 2.0, 3.0], units) == [1.0, 2.0, 3.0]
     end
     # an array of markers is still broadcast element-wise
-    @test ([IS.DU, IS.SU] .=== IS.DU) == [true, false]
+    @test ([IS.CU, IS.SU] .=== IS.CU) == [true, false]
 end
 
 @testset "Double-tagging is rejected" begin
-    @test_throws ArgumentError (0.6 * IS.DU) * IS.SU
-    @test_throws ArgumentError IS.SU * (0.6 * IS.DU)
+    @test_throws ArgumentError (0.6 * IS.CU) * IS.SU
+    @test_throws ArgumentError IS.SU * (0.6 * IS.CU)
 end
 
 @testset "RelativeQuantity hash matches ==" begin
-    q1 = 1.0 * IS.DU
-    q2 = 1 * IS.DU
+    q1 = 1.0 * IS.CU
+    q2 = 1 * IS.CU
     @test q1 == q2
     @test hash(q1) == hash(q2)
     d = Dict(q1 => "a")
@@ -81,16 +81,16 @@ end
 end
 
 @testset "RelativeQuantity Number interface completeness" begin
-    q = 0.6 * IS.DU
+    q = 0.6 * IS.CU
 
     @testset "instance zero/one and predicates" begin
-        @test zero(q) == 0.0 * IS.DU
-        @test one(q) == 1.0 * IS.DU
+        @test zero(q) == 0.0 * IS.CU
+        @test one(q) == 1.0 * IS.CU
         @test !iszero(q)
         @test iszero(zero(q))
         @test isfinite(q)
         @test !isnan(q)
-        @test isnan(IS.RelativeQuantity(NaN, IS.DU))
+        @test isnan(IS.RelativeQuantity(NaN, IS.CU))
         @test !isfinite(IS.RelativeQuantity(Inf, IS.SU))
         @test isinf(IS.RelativeQuantity(Inf, IS.SU))
         @test abs(-q) == q
@@ -102,20 +102,20 @@ end
     end
 
     @testset "isequal is total for container semantics" begin
-        @test isequal(0.6 * IS.DU, 0.6 * IS.DU)
-        @test !isequal(0.6 * IS.DU, 0.6 * IS.SU)
+        @test isequal(0.6 * IS.CU, 0.6 * IS.CU)
+        @test !isequal(0.6 * IS.CU, 0.6 * IS.SU)
         @test !isequal(q, 0.6)
         @test !isequal(0.6, q)
-        d = Dict((0.6 * IS.DU) => 1)
+        d = Dict((0.6 * IS.CU) => 1)
         @test !haskey(d, 0.6 * IS.SU)
-        s = Set([0.6 * IS.DU])
+        s = Set([0.6 * IS.CU])
         @test !(0.6 * IS.SU in s)
     end
 
     @testset "products of tagged quantities error clearly" begin
         @test_throws ArgumentError q * q
         @test_throws ArgumentError q^2
-        @test_throws ArgumentError q / (0.5 * IS.DU)
+        @test_throws ArgumentError q / (0.5 * IS.CU)
     end
 end
 
@@ -149,7 +149,7 @@ end
     end
 end
 @testset "display_string spells per-unit tags out" begin
-    @test IS.display_string(0.6 * IS.DU) == "0.6 p.u. in component base"
+    @test IS.display_string(0.6 * IS.CU) == "0.6 p.u. in component base"
     @test IS.display_string(0.3 * IS.SU) == "0.3 p.u. in system base"
     # Untagged values render exactly as `print` would.
     @test IS.display_string(1.5) == "1.5"
@@ -159,7 +159,7 @@ end
     @test IS.display_string((min = 0.0 * IS.SU, max = 2.5 * IS.SU)) ==
           "(min = 0.0 p.u., max = 2.5 p.u.) in system base"
     # Mixed bases have nothing to factor out, so each element is spelled out.
-    @test IS.display_string((min = 0.0 * IS.SU, max = 2.5 * IS.DU)) ==
+    @test IS.display_string((min = 0.0 * IS.SU, max = 2.5 * IS.CU)) ==
           "(min = 0.0 p.u. in system base, max = 2.5 p.u. in component base)"
     # So does a tuple that is not all tagged.
     @test IS.display_string((min = 0.0 * IS.SU, max = 2.5)) ==

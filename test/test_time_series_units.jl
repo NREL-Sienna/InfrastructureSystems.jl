@@ -188,19 +188,19 @@ end
 
     sts = IS.SingleTimeSeries(
         "sts", initial_time, resolution, rand(24);
-        units = "MW", quantity_kind = "ActivePower", unit_system = IS.DU,
+        units = "MW", quantity_kind = "ActivePower", unit_system = IS.CU,
     )
-    @test descriptors(sts) == ("ActivePower", IS.DU)
+    @test descriptors(sts) == ("ActivePower", IS.CU)
     IS.add_time_series!(sys, component, sts)
     @test descriptors(IS.get_time_series(IS.SingleTimeSeries, component, "sts")) ==
-          ("ActivePower", IS.DU)
+          ("ActivePower", IS.CU)
 
     # A sliced read describes the same values, so it keeps both.
     sliced = IS.get_time_series(
         IS.SingleTimeSeries, component, "sts";
         start_time = initial_time + Dates.Hour(2), len = 4,
     )
-    @test descriptors(sliced) == ("ActivePower", IS.DU)
+    @test descriptors(sliced) == ("ActivePower", IS.CU)
 
     stamps = [initial_time, initial_time + Dates.Hour(1), initial_time + Dates.Hour(4)]
     nts = IS.NonSequentialTimeSeries(
@@ -216,11 +216,11 @@ end
         other_time => rand(horizon_count),
     )
     det = IS.Deterministic(
-        "det", one_dim, resolution; quantity_kind = "ActivePower", unit_system = IS.DU,
+        "det", one_dim, resolution; quantity_kind = "ActivePower", unit_system = IS.CU,
     )
     IS.add_time_series!(sys, component, det)
     @test descriptors(IS.get_time_series(IS.Deterministic, component, "det")) ==
-          ("ActivePower", IS.DU)
+          ("ActivePower", IS.CU)
 
     two_dim = SortedDict(
         initial_time => rand(horizon_count, 3),
@@ -235,11 +235,11 @@ end
           ("ActivePower", IS.NU)
 
     scen = IS.Scenarios(
-        "scen", two_dim, resolution; quantity_kind = "ActivePower", unit_system = IS.DU,
+        "scen", two_dim, resolution; quantity_kind = "ActivePower", unit_system = IS.CU,
     )
     IS.add_time_series!(sys, component, scen)
     @test descriptors(IS.get_time_series(IS.Scenarios, component, "scen")) ==
-          ("ActivePower", IS.DU)
+          ("ActivePower", IS.CU)
 end
 
 @testset "Test unset unit_system stays unspecified rather than NaturalUnit" begin
@@ -275,9 +275,9 @@ end
 
     sts = IS.SingleTimeSeries(
         "sts", initial_time, resolution, rand(24);
-        quantity_kind = "ActivePower", unit_system = IS.DU,
+        quantity_kind = "ActivePower", unit_system = IS.CU,
     )
-    @test descriptors(IS.SingleTimeSeries(sts, "other_name")) == ("ActivePower", IS.DU)
+    @test descriptors(IS.SingleTimeSeries(sts, "other_name")) == ("ActivePower", IS.CU)
 
     stamps = [initial_time, initial_time + Dates.Hour(1), initial_time + Dates.Hour(4)]
     nts = IS.NonSequentialTimeSeries(
@@ -290,10 +290,10 @@ end
         other_time => rand(horizon_count),
     )
     det = IS.Deterministic(
-        "det", one_dim, resolution; quantity_kind = "ActivePower", unit_system = IS.DU,
+        "det", one_dim, resolution; quantity_kind = "ActivePower", unit_system = IS.CU,
     )
-    @test descriptors(IS.Deterministic(det, "other_name")) == ("ActivePower", IS.DU)
-    @test descriptors(IS.Deterministic(det, one_dim)) == ("ActivePower", IS.DU)
+    @test descriptors(IS.Deterministic(det, "other_name")) == ("ActivePower", IS.CU)
+    @test descriptors(IS.Deterministic(det, one_dim)) == ("ActivePower", IS.CU)
 
     two_dim = SortedDict(
         initial_time => rand(horizon_count, 3),
@@ -301,14 +301,14 @@ end
     )
     prob = IS.Probabilistic(
         "prob", two_dim, [0.1, 0.5, 0.9], resolution;
-        quantity_kind = "ActivePower", unit_system = IS.DU,
+        quantity_kind = "ActivePower", unit_system = IS.CU,
     )
-    @test descriptors(IS.Probabilistic(prob, "other_name")) == ("ActivePower", IS.DU)
+    @test descriptors(IS.Probabilistic(prob, "other_name")) == ("ActivePower", IS.CU)
 
     scen = IS.Scenarios(
-        "scen", two_dim, resolution; quantity_kind = "ActivePower", unit_system = IS.DU,
+        "scen", two_dim, resolution; quantity_kind = "ActivePower", unit_system = IS.CU,
     )
-    @test descriptors(IS.Scenarios(scen, "other_name")) == ("ActivePower", IS.DU)
+    @test descriptors(IS.Scenarios(scen, "other_name")) == ("ActivePower", IS.CU)
 end
 
 @testset "Test SystemBaseUnit is rejected by the store rather than downgraded" begin
@@ -319,7 +319,7 @@ end
     resolution = Dates.Hour(1)
 
     # IS names three bases; the store represents two. A system-base series is
-    # refused at the boundary instead of being written as device base or dropped
+    # refused at the boundary instead of being written as component base or dropped
     # to unspecified -- either would misreport the basis of every value to the
     # next reader, unrecoverably.
     ts = IS.SingleTimeSeries(
@@ -329,7 +329,7 @@ end
     @test_throws ArgumentError IS.add_time_series!(sys, component, ts)
 
     # The two the store does represent go through.
-    for (name, marker) in (("du", IS.DU), ("nu", IS.NU))
+    for (name, marker) in (("cu", IS.CU), ("nu", IS.NU))
         ok = IS.SingleTimeSeries(
             name, initial_time, resolution, rand(24); unit_system = marker,
         )

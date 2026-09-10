@@ -124,11 +124,11 @@ end
 # Unit system, between IS's `RelativeUnits` markers and the store's two-valued enum.
 _to_store_unit_system(::Nothing) = nothing
 _to_store_unit_system(::NaturalUnit) = InfraStore.NaturalUnits
-_to_store_unit_system(::DeviceBaseUnit) = InfraStore.ComponentBase
+_to_store_unit_system(::ComponentBaseUnit) = InfraStore.ComponentBase
 _to_store_unit_system(::SystemBaseUnit) = throw(
     ArgumentError(
         "the time series store cannot represent SystemBaseUnit (SU): it records only " *
-        "natural units (NU) and the component's own base (DU). Normalize the values to " *
+        "natural units (NU) and the component's own base (CU). Normalize the values to " *
         "one of those before adding the time series.",
     ),
 )
@@ -138,7 +138,7 @@ _to_store_unit_system(::SystemBaseUnit) = throw(
 _from_store_unit_system(::Nothing) = nothing
 function _from_store_unit_system(unit_system::InfraStore.UnitSystem)
     unit_system === InfraStore.NaturalUnits && return NU
-    unit_system === InfraStore.ComponentBase && return DU
+    unit_system === InfraStore.ComponentBase && return CU
     throw(ArgumentError("unrecognized store unit system: $unit_system"))
 end
 

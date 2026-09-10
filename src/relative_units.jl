@@ -14,16 +14,16 @@
 
 """
 Relative (per-unit) markers and the [`RelativeQuantity`](@ref) wrapper. Domain-agnostic:
-expresses "device base" / "system base" / "natural unit" without assuming any particular
+expresses "component base" / "system base" / "natural unit" without assuming any particular
 physical domain. Downstream packages (e.g. PowerSystems) attach domain-specific meaning
 via categories and conversions.
 """
 module RelativeUnits
 
 export AbstractUnitSystem, AbstractRelativeUnit
-export DeviceBaseUnit, SystemBaseUnit, NaturalUnit
+export ComponentBaseUnit, SystemBaseUnit, NaturalUnit
 export RelativeQuantity
-export DU, SU, NU
+export CU, SU, NU
 export display_units_arg
 export unitful_variant
 export display_string
@@ -41,9 +41,9 @@ Supertype of per-unit (relative) unit markers.
 abstract type AbstractRelativeUnit <: AbstractUnitSystem end
 
 """
-Device base per-unit. Values are normalized to the component's own base.
+Component base per-unit. Values are normalized to the component's own base.
 """
-struct DeviceBaseUnit <: AbstractRelativeUnit end
+struct ComponentBaseUnit <: AbstractRelativeUnit end
 
 """
 System base per-unit. Values are normalized to the system's base.
@@ -59,7 +59,7 @@ Deliberately *not* `<: AbstractRelativeUnit` — "convert to NU" yields a
 """
 struct NaturalUnit <: AbstractUnitSystem end
 
-const DU = DeviceBaseUnit()
+const CU = ComponentBaseUnit()
 const SU = SystemBaseUnit()
 const NU = NaturalUnit()
 
@@ -70,7 +70,7 @@ A quantity tagged with a per-unit marker.
 
 # Examples
 ```julia
-0.6 * DU  # 0.6 per-unit on component base
+0.6 * CU  # 0.6 per-unit on component base
 0.3 * SU  # 0.3 per-unit on system base
 ```
 """
@@ -95,7 +95,7 @@ RelativeQuantity{T, U}(
 RelativeQuantity(value::T, ::U) where {T <: Number, U <: AbstractRelativeUnit} =
     RelativeQuantity{T, U}(value)
 
-"Return the unit marker instance (`DU`/`SU`) of a `RelativeQuantity`."
+"Return the unit marker instance (`CU`/`SU`) of a `RelativeQuantity`."
 unit(::RelativeQuantity{<:Any, U}) where {U} = U()
 
 # Construction via multiplication
@@ -239,27 +239,27 @@ Base.promote_rule(
 ) where {T, S, U} = RelativeQuantity{promote_type(T, S), U}
 
 # Display
-Base.show(io::IO, q::RelativeQuantity{T, DeviceBaseUnit}) where {T} =
-    print(io, q.value, " DU")
+Base.show(io::IO, q::RelativeQuantity{T, ComponentBaseUnit}) where {T} =
+    print(io, q.value, " CU")
 Base.show(io::IO, q::RelativeQuantity{T, SystemBaseUnit}) where {T} =
     print(io, q.value, " SU")
-Base.show(io::IO, ::DeviceBaseUnit) = print(io, "DU")
+Base.show(io::IO, ::ComponentBaseUnit) = print(io, "CU")
 Base.show(io::IO, ::SystemBaseUnit) = print(io, "SU")
 Base.show(io::IO, ::NaturalUnit) = print(io, "NU")
 
-# Unit markers are scalars in a broadcast (`get_rating.(components, DU)`), not
+# Unit markers are scalars in a broadcast (`get_rating.(components, CU)`), not
 # containers to iterate over: without this, Base's `broadcastable` fallback tries
 # to `collect` the marker and fails with a confusing `no method matching
-# length(::DeviceBaseUnit)`. Same treatment Base gives its own parameter-like
+# length(::ComponentBaseUnit)`. Same treatment Base gives its own parameter-like
 # values (`RoundingMode`, `Val`) and Unitful gives its units — which is why
-# broadcasting already worked with `MW` but not with `DU`/`SU`/`NU`.
+# broadcasting already worked with `MW` but not with `CU`/`SU`/`NU`.
 Base.Broadcast.broadcastable(u::AbstractUnitSystem) = Ref(u)
 
 """
     display_string(x) -> String
 
 Render `x` for human-facing display, spelling relative-unit tags out in full
-("0.6 p.u. in component base") where `show` prints the terse "0.6 DU". `DU`/`SU`
+("0.6 p.u. in component base") where `show` prints the terse "0.6 CU". `CU`/`SU`
 are convenient to type but are not standard terminology, so verbose output
 (e.g. a component's `text/plain` display) spells them out; terse contexts such
 as tabular cells keep the short tags.
@@ -277,7 +277,7 @@ display_string(q::RelativeQuantity) =
     string(_per_unit_string(q), " in ", _base_label(unit(q)))
 
 _per_unit_string(q::RelativeQuantity) = string(q.value, " p.u.")
-_base_label(::DeviceBaseUnit) = "component base"
+_base_label(::ComponentBaseUnit) = "component base"
 _base_label(::SystemBaseUnit) = "system base"
 
 function display_string(t::NamedTuple)

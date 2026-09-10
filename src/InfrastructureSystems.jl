@@ -168,11 +168,11 @@ include("relative_units.jl")
 using .RelativeUnits:
     AbstractUnitSystem,
     AbstractRelativeUnit,
-    DeviceBaseUnit,
+    ComponentBaseUnit,
     SystemBaseUnit,
     NaturalUnit,
     RelativeQuantity,
-    DU,
+    CU,
     SU,
     NU,
     display_units_arg,

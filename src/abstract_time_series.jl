@@ -77,10 +77,10 @@ get_quantity_kind(value::TimeSeriesData) = value.quantity_kind
 
 """
 Return the unit system a time series' values are **already expressed in** — one of the
-[`RelativeUnits`](@ref) markers `NU` (natural units), `DU` (device base), or `SU` (system
+[`RelativeUnits`](@ref) markers `NU` (natural units), `CU` (component base), or `SU` (system
 base) — or `nothing` when the series declares none.
 
-Note the direction: `SU`/`DU`/`NU` are used elsewhere in IS as a *target* to convert
+Note the direction: `SU`/`CU`/`NU` are used elsewhere in IS as a *target* to convert
 **to**, whereas here the marker records the basis the stored values are **in**. It is a
 declaration, not a conversion: IS rescales nothing on the strength of it, and converting
 per-unit values back to natural units needs the base that lives on the owning component
@@ -93,7 +93,7 @@ See [`get_units`](@ref) for the immutability and identity contract the three lab
 
 !!! note
 
-    The backing store represents only `NU` and `DU`. A series declaring `SU` is rejected
+    The backing store represents only `NU` and `CU`. A series declaring `SU` is rejected
     when it is added — see [`get_time_series`](@ref) and the store adapter — rather than
     being silently downgraded.
 """

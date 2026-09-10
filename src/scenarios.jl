@@ -25,7 +25,7 @@ A Discrete Scenario Based time series for a particular data field in a Component
   - `quantity_kind::Union{Nothing, String}`: optional label for the kind of physical
     quantity the values measure (e.g. `"ActivePower"`)
   - `unit_system::Union{Nothing, AbstractUnitSystem}`: optional declaration of the basis
-    the values are already expressed in (`NU`, `DU`, or `SU`)
+    the values are already expressed in (`NU`, `CU`, or `SU`)
   - `internal::InfrastructureSystemsInternal`
 
 See [`get_units`](@ref), [`get_quantity_kind`](@ref), [`get_unit_system`](@ref).
@@ -45,7 +45,7 @@ struct Scenarios{T, N} <: Forecast{T}
     units::Union{Nothing, String}
     "kind of physical quantity the values measure (e.g. `\"ActivePower\"`), or `nothing`"
     quantity_kind::Union{Nothing, String}
-    "unit system the values are already expressed in (`NU`/`DU`/`SU`), or `nothing`"
+    "unit system the values are already expressed in (`NU`/`CU`/`SU`), or `nothing`"
     unit_system::Union{Nothing, AbstractUnitSystem}
 end
 

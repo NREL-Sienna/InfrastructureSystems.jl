@@ -108,9 +108,9 @@ end
     @test occursin("SU", text)
 
     # An explicit `units` override wins over the trait default.
-    IS.show_components(io, sys.components, IS.TestComponent, [:val]; units = IS.DU)
+    IS.show_components(io, sys.components, IS.TestComponent, [:val]; units = IS.CU)
     text = String(take!(io))
-    @test occursin("DU", text)
+    @test occursin("CU", text)
     @test !occursin(r"\bSU\b", text)
 
     # Column order is preserved (not alphabetized) for Vector-form columns,
@@ -129,10 +129,10 @@ end
         sys.components,
         IS.TestComponent,
         [:val, :val2];
-        units = Dict(:val => IS.DU),
+        units = Dict(:val => IS.CU),
     )
     text = String(take!(io))
-    @test occursin("DU", text)
+    @test occursin("CU", text)
     @test !occursin(r"\bSU\b", text)
 
     IS.show_components(
@@ -140,15 +140,15 @@ end
         sys.components,
         IS.TestComponent,
         [:val];
-        units = Dict(:val2 => IS.DU),
+        units = Dict(:val2 => IS.CU),
     )
     text = String(take!(io))
     @test occursin("SU", text)
 
     # NamedTuple mappings work the same way.
-    IS.show_components(io, sys.components, IS.TestComponent, [:val]; units = (val = IS.DU,))
+    IS.show_components(io, sys.components, IS.TestComponent, [:val]; units = (val = IS.CU,))
     text = String(take!(io))
-    @test occursin("DU", text)
+    @test occursin("CU", text)
 
     # `units` is ignored (not an error) for Dict-form additional_columns.
     IS.show_components(
@@ -156,7 +156,7 @@ end
         sys.components,
         IS.TestComponent,
         Dict("val" => x -> x.val * 10);
-        units = IS.DU,
+        units = IS.CU,
     )
     text = String(take!(io))
     @test occursin("val", text)

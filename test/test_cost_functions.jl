@@ -325,8 +325,8 @@ end
         IS.CostCurve(zero(IS.InputOutputCurve), IS.SystemBaseUnit()),
     ) == IS.SystemBaseUnit()
     @test IS.get_power_units(
-        IS.FuelCurve(zero(IS.InputOutputCurve), IS.DeviceBaseUnit(), 1.0),
-    ) == IS.DeviceBaseUnit()
+        IS.FuelCurve(zero(IS.InputOutputCurve), IS.ComponentBaseUnit(), 1.0),
+    ) == IS.ComponentBaseUnit()
 
     @test IS.get_vom_cost(cc) == IS.LinearCurve(0.0)
     @test IS.get_vom_cost(fc) == IS.LinearCurve(0.0)
@@ -470,7 +470,7 @@ end
 
 @testset "CostCurve/FuelCurve serialize round-trip all unit systems" begin
     vc = IS.InputOutputCurve(IS.QuadraticFunctionData(1.0, 2.0, 3.0))
-    for U in (IS.NaturalUnit(), IS.SystemBaseUnit(), IS.DeviceBaseUnit())
+    for U in (IS.NaturalUnit(), IS.SystemBaseUnit(), IS.ComponentBaseUnit())
         cc = IS.CostCurve(vc, U)
         cc_rt = IS.deserialize(IS.CostCurve, IS.serialize(cc))
         @test cc_rt == cc
@@ -485,7 +485,7 @@ end
 
 @testset "unit-system string decode" begin
     @test IS._unit_system_instance("SystemBaseUnit") == IS.SystemBaseUnit()
-    @test IS._unit_system_instance("DeviceBaseUnit") == IS.DeviceBaseUnit()
+    @test IS._unit_system_instance("ComponentBaseUnit") == IS.ComponentBaseUnit()
     @test IS._unit_system_instance("NaturalUnit") == IS.NaturalUnit()
     @test_throws ArgumentError IS._unit_system_instance("bogus")
     # Legacy IS3 `UnitSystem` enum value-names are no longer accepted.
@@ -496,7 +496,7 @@ end
 @testset "zero preserves unit system (PVC-002)" begin
     vc = IS.InputOutputCurve(IS.LinearFunctionData(1.0, 1.0))
     # Full 6-combo matrix: 3 unit systems × {CostCurve, FuelCurve}
-    for U in (IS.NaturalUnit(), IS.SystemBaseUnit(), IS.DeviceBaseUnit())
+    for U in (IS.NaturalUnit(), IS.SystemBaseUnit(), IS.ComponentBaseUnit())
         c = IS.CostCurve(vc, U)
         @test IS.get_power_units(zero(c)) == U
         f = IS.FuelCurve(vc, U, 3.0)
@@ -513,7 +513,7 @@ end
     # would collide across unit systems
     curves = [
         IS.CostCurve(vc, U)
-        for U in (IS.NaturalUnit(), IS.SystemBaseUnit(), IS.DeviceBaseUnit())
+        for U in (IS.NaturalUnit(), IS.SystemBaseUnit(), IS.ComponentBaseUnit())
     ]
     @test length(unique(hash.(curves))) == length(curves)
     # Same unit system still satisfies the isequal => hash contract, including the
@@ -562,14 +562,14 @@ end
     @test_throws Union{MethodError, UndefKeywordError} IS.LossCurve(; value_curve = vc)
     @test_throws MethodError zero(IS.LossCurve)
     # ...but a curve that already has a base can hand it to its own zero
-    for U in (IS.NaturalUnit(), IS.SystemBaseUnit(), IS.DeviceBaseUnit())
+    for U in (IS.NaturalUnit(), IS.SystemBaseUnit(), IS.ComponentBaseUnit())
         @test IS.get_power_units(zero(IS.LossCurve(vc, U))) == U
     end
 end
 
 @testset "LossCurve serialize round-trip all unit systems" begin
     vc = IS.InputOutputCurve(IS.LinearFunctionData(1.5, 0.25))
-    for U in (IS.NaturalUnit(), IS.SystemBaseUnit(), IS.DeviceBaseUnit())
+    for U in (IS.NaturalUnit(), IS.SystemBaseUnit(), IS.ComponentBaseUnit())
         lc = IS.LossCurve(vc, U)
         data = IS.serialize(lc)
         @test data["power_units"] == string(nameof(typeof(U)))
@@ -591,7 +591,7 @@ end
 # = 1, i.e. P already in MW) gives `x_from = (base_to / base_from) * x_to`.
 _x_base(::IS.NaturalUnit, _, _) = 1.0
 _x_base(::IS.SystemBaseUnit, sb, _) = sb
-_x_base(::IS.DeviceBaseUnit, _, db) = db
+_x_base(::IS.ComponentBaseUnit, _, db) = db
 
 _convert(curve, to, sb, db) = IS.convert_power_units(
     curve,
@@ -611,13 +611,13 @@ _convert(curve, to, sb, db) = IS.convert_power_units(
     # only the constant term, which is a bare power, rescales.
     @test IS.get_function_data(su) == IS.LinearFunctionData(0.05, 2.0 / sys_base)
 
-    du = _convert(lc, IS.DeviceBaseUnit(), sys_base, dev_base)
+    du = _convert(lc, IS.ComponentBaseUnit(), sys_base, dev_base)
     @test IS.get_function_data(du) == IS.LinearFunctionData(0.05, 2.0 / dev_base)
 
-    # SU <-> DU directly, and every round trip
-    @test _convert(su, IS.DeviceBaseUnit(), sys_base, dev_base) == du
-    for U in (IS.NaturalUnit(), IS.SystemBaseUnit(), IS.DeviceBaseUnit()),
-        V in (IS.NaturalUnit(), IS.SystemBaseUnit(), IS.DeviceBaseUnit())
+    # SU <-> CU directly, and every round trip
+    @test _convert(su, IS.ComponentBaseUnit(), sys_base, dev_base) == du
+    for U in (IS.NaturalUnit(), IS.SystemBaseUnit(), IS.ComponentBaseUnit()),
+        V in (IS.NaturalUnit(), IS.SystemBaseUnit(), IS.ComponentBaseUnit())
 
         start = _convert(lc, U, sys_base, dev_base)
         there = _convert(start, V, sys_base, dev_base)
@@ -789,11 +789,11 @@ end
 @testset "convert_power_units for CostCurve and FuelCurve" begin
     sb, db = 100.0, 50.0
     # The cost of producing a given *physical* quantity must not change with the units
-    # it is expressed in: x_NU MW == x_NU/sb system-base pu == x_NU/db device-base pu.
-    denominators = Dict(IS.NU => 1.0, IS.SU => sb, IS.DU => db)
+    # it is expressed in: x_NU MW == x_NU/sb system-base pu == x_NU/db component-base pu.
+    denominators = Dict(IS.NU => 1.0, IS.SU => sb, IS.CU => db)
 
     cc = IS.CostCurve(IS.QuadraticCurve(2.0, 3.0, 4.0), IS.NU, IS.LinearCurve(7.0, 1.0))
-    for to in (IS.NU, IS.SU, IS.DU)
+    for to in (IS.NU, IS.SU, IS.CU)
         converted = _convert(cc, to, sb, db)
         @test converted isa IS.CostCurve
         @test IS.get_power_units(converted) == to
@@ -805,7 +805,7 @@ end
     end
 
     # Round trips through every intermediate unit system return the original curve
-    for mid in (IS.NU, IS.SU, IS.DU)
+    for mid in (IS.NU, IS.SU, IS.CU)
         there = _convert(cc, mid, sb, db)
         back = _convert(there, IS.NU, sb, db)
         @test fd_approx(IS.get_function_data(back), IS.get_function_data(cc))
@@ -847,7 +847,7 @@ end
     # duration and its y-axis a fuel quantity, so a change of power units must not touch
     # it. Guards against it being swept up with the power-indexed fields.
     @test IS.get_startup_fuel_offtake(fc_su) == IS.get_startup_fuel_offtake(fc)
-    for to in (IS.NU, IS.SU, IS.DU)
+    for to in (IS.NU, IS.SU, IS.CU)
         @test IS.get_startup_fuel_offtake(_convert(fc, to, sb, db)) ==
               IS.get_startup_fuel_offtake(fc)
     end
@@ -882,7 +882,7 @@ end
     @test IS.get_vom_cost(cc) == IS.get_vom_cost(fc)
 
     # The unit system is preserved
-    for units in (IS.NU, IS.SU, IS.DU)
+    for units in (IS.NU, IS.SU, IS.CU)
         @test IS.get_power_units(
             IS.CostCurve(IS.FuelCurve(IS.LinearCurve(5.0), units, 2.0)),
         ) == units
