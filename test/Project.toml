@@ -36,7 +36,7 @@ InfraStore = "0.12"
 # IS itself has no self-pin here (unlike sibling repos' test/Project.toml): `dev` it
 # explicitly when instantiating this env.
 [sources]
-# Branch pins until the OpenAPI packages are registered and the psy6-line branches merge.
-InfrastructureCoreOpenAPIModels = {url = "https://github.com/Sienna-Platform/PowerOpenAPIModels.git", rev = "jd/openapi_deps_update", subdir = "InfrastructureCoreOpenAPIModels.jl"}
-InfrastructureTimeSeriesOpenAPIModels = {url = "https://github.com/Sienna-Platform/PowerOpenAPIModels.git", rev = "jd/openapi_deps_update", subdir = "InfrastructureTimeSeriesOpenAPIModels.jl"}
+# Pins until the OpenAPI packages are registered.
+InfrastructureCoreOpenAPIModels = {url = "https://github.com/Sienna-Platform/PowerOpenAPIModels.git", rev = "main", subdir = "InfrastructureCoreOpenAPIModels.jl"}
+InfrastructureTimeSeriesOpenAPIModels = {url = "https://github.com/Sienna-Platform/PowerOpenAPIModels.git", rev = "main", subdir = "InfrastructureTimeSeriesOpenAPIModels.jl"}
 
