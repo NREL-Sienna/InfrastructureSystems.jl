@@ -126,9 +126,9 @@ end
     @test row.data_hash == row.uri
     @test row.units == "MW"
     @test row.quantity_kind == "ActivePower"
-    # Declared by nobody stays unset: unspecified is deliberately not NATURAL_UNITS, and
-    # under OpenAPI.jl 1.x an absent optional field decodes to `ABSENT`, not `nothing`
-    # (`nothing` is reserved for an explicit JSON `null`).
+    # Declared by nobody stays unset: unspecified is deliberately not NATURAL_UNITS. An
+    # absent optional field decodes to `ABSENT`, not `nothing` (`nothing` means an explicit
+    # JSON `null`).
     @test row.unit_system isa OpenAPI.Runtime.Absent
     # From the catalog, never re-derived: a scalar series has an empty per-step shape.
     @test row.element_type == "f64"
@@ -157,8 +157,8 @@ end
     for absent in (:initial_timestamp, :resolution, :horizon, :interval, :count)
         @test !hasfield(typeof(row), absent)
     end
-    # `OpenAPI.check_required` is gone from OpenAPI.jl 1.x: `decode` itself raises on a
-    # missing required field, so a row that exists has already passed that check.
+    # `decode` itself raises on a missing required field, so a row that exists has already
+    # passed that check.
 end
 
 @testset "openapi_time_series_association_rows: every forecast type carries its own window geometry" begin
@@ -330,10 +330,8 @@ end
         return IS.openapi_time_series_association_json(data)
     end
 
-    # The store assigns `id` from its own rowid counter, so it tracks INSERT order, not sort
-    # order — two stores built by inserting the same series in a different sequence get
-    # different rowids and are not byte-identical. What "the store sorts" guarantees is the
-    # ROW ORDER in the export, by the identity tuple, independent of insertion order.
+    # The store assigns `id` by insertion order, so two stores are not byte-identical; the
+    # export guarantees ROW ORDER by the identity tuple, independent of insertion order.
     forward = [row["name"] for row in JSON.parse(_build(names))]
     shuffled = [row["name"] for row in JSON.parse(_build(reverse(names)))]
     @test forward == shuffled == sort(names)
@@ -361,7 +359,7 @@ end
         r -> typeof(r) === InfrastructureCoreOpenAPIModels.SupplementalAttributeAssociation,
         rows,
     )
-    # Document/store ids agree by construction now: the association row's ids ARE the IS ids.
+    # Document/store ids agree by construction: the association row's ids ARE the IS ids.
     @test Set(r.component_id for r in rows) ==
           Set([IS.get_id(first_component), IS.get_id(second_component)])
     @test all(r -> r.attribute_id == IS.get_id(shared), rows)
@@ -406,7 +404,7 @@ end
     windows = [initial, initial + resolution]
     # The explicit-`scenario_count` constructor takes the count independently of the
     # per-window matrices, so it can disagree with their actual width (3 here, not 5) —
-    # the geometry-vs-association mismatch the store now rejects at addition.
+    # the geometry-vs-association mismatch the store rejects at addition.
     mismatched = IS.Scenarios(
         "scen_mismatch",
         SortedDict(w => rand(4, 3) for w in windows),
@@ -460,10 +458,9 @@ end
     # GeographicInfo does not support time series at all; TestSupplemental does.
     attribute = IS.TestSupplemental(; value = 1.0)
     IS.set_id!(attribute, 55)
-    # Simulate an importer adopting a sidecar that already carries a time series owned by
-    # this (not-yet-attached) attribute: wire the manager reference the way
-    # `attach_supplemental_attribute!` itself would, then add the series through the
-    # manager-level API, which needs only an owner id/category, not an association row.
+    # Simulate an importer adopting a sidecar that already carries a time series: wire the
+    # manager reference the way `attach_supplemental_attribute!` would, then add the series
+    # through the manager-level API directly (no association row yet).
     IS.set_shared_system_references!(
         attribute,
         IS.SharedSystemReferences(;
@@ -530,11 +527,9 @@ end
     end
     # The failed batch wrote nothing, so there is no half-applied association table.
     @test iszero(IS.get_num_associations(data.supplemental_attribute_manager.associations))
-    # Regression guard for the orphan bug: the first `add_supplemental_attribute!` attaches
-    # `shared` to the manager's `mgr.data` before buffering its association row, so without a
-    # rollback of the manager too, `shared` would be left attached with no association
-    # pointing at it. The SystemData-level `begin_association_batch` wraps the batch in
-    # `begin_supplemental_attributes_update`, which must undo that attach on failure.
+    # Regression guard: the first `add_supplemental_attribute!` attaches `shared` before
+    # buffering the association row, so a failed batch must roll back that attach too, or
+    # `shared` is left attached with no association pointing at it.
     @test isempty(collect(IS.iterate_supplemental_attributes(data)))
 end
 

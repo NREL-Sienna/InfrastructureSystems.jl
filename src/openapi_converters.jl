@@ -1,14 +1,12 @@
 # OpenAPI serde for the supplemental attributes InfrastructureSystems itself owns.
 #
 # `GeographicInfo` and `DataSource` are IS types, so their field mapping belongs here rather
-# than in a domain package: PowerSystems previously carried the `GeographicInfo` pair only
-# because it happened to own the document walk, which meant a second domain package wanting
-# the same attribute would have had to duplicate it.
+# than in a domain package: a second domain package wanting the same attribute does not have
+# to duplicate it.
 #
-# These take no `OpenAPIRefs`. That registry lives in the domain package because it carries
-# the document's `unit_system` and `base_power` — power-domain state IS has no notion of —
-# so the export direction takes the id its caller already resolved. Neither type has a
-# unit-bearing field, so there is nothing else the domain layer would need to supply.
+# These take no `OpenAPIRefs`: that registry carries power-domain state (`unit_system`,
+# `base_power`) IS has no notion of, so the export direction takes the id its caller already
+# resolved.
 
 """
 Convert an OpenAPI-model instance into the matching Sienna type.
